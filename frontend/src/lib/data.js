@@ -6,7 +6,8 @@ export async function getMembers() {
     const { data, error } = await supabase
       .from('members')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('firstname', { ascending: true })
+      .order('lastname', { ascending: true });
 
     if (error) {
       console.error('Error fetching members:', error);
@@ -15,18 +16,28 @@ export async function getMembers() {
 
     console.log('Raw members data:', data);
 
-    // Parse address JSON for each member
+    // Parse address JSON for each member and transform to camelCase
     const parsedData = data.map(member => {
       try {
         console.log('Processing member:', member.id);
         console.log('Address type:', typeof member.address);
         console.log('Raw address:', member.address);
 
+        // Transform snake_case to camelCase
+        const transformedMember = {
+          ...member,
+          firstName: member.firstname || '',
+          lastName: member.lastname || '',
+          joinDate: member.joindate,
+          createdAt: member.created_at,
+          updatedAt: member.updated_at
+        };
+
         // If address is already an object, use it directly
         if (typeof member.address === 'object' && member.address !== null) {
           console.log('Using address as object');
           return {
-            ...member,
+            ...transformedMember,
             address: member.address
           };
         }
@@ -35,20 +46,23 @@ export async function getMembers() {
         if (typeof member.address === 'string') {
           const cleanAddress = member.address.trim();
           if (!cleanAddress) {
-            return { ...member, address: null };
+            return { 
+              ...transformedMember,
+              address: null 
+            };
           }
           
           // Try to parse as JSON, but if it fails, use the string as is
           try {
             const parsed = JSON.parse(cleanAddress);
             return {
-              ...member,
+              ...transformedMember,
               address: parsed
             };
           } catch (parseError) {
             // If parsing fails, use the string as is
             return {
-              ...member,
+              ...transformedMember,
               address: cleanAddress
             };
           }
@@ -57,13 +71,18 @@ export async function getMembers() {
         // If address is null or undefined, return null
         console.log('Using null address');
         return {
-          ...member,
+          ...transformedMember,
           address: null
         };
       } catch (error) {
         console.error('Error processing member address:', member.id, error);
         return {
           ...member,
+          firstName: member.firstname || '',
+          lastName: member.lastname || '',
+          joinDate: member.joindate,
+          createdAt: member.created_at,
+          updatedAt: member.updated_at,
           address: null
         };
       }
@@ -82,7 +101,7 @@ export const addMember = async (member) => {
   const memberData = {
     ...member,
     // Don't modify the address object at all, let Supabase handle it
-    join_date: member.join_date ? new Date(member.join_date).toISOString() : new Date().toISOString()
+    joinDate: member.joinDate ? new Date(member.joinDate).toISOString() : new Date().toISOString()
   };
 
   console.log('Adding member with data:', memberData);
@@ -111,7 +130,7 @@ export const updateMember = async (id, updates) => {
   const memberData = {
     ...updates,
     // Don't modify the address object at all, let Supabase handle it
-    join_date: updates.join_date ? new Date(updates.join_date).toISOString() : undefined
+    joinDate: updates.joinDate ? new Date(updates.joinDate).toISOString() : undefined
   };
 
   console.log('Updating member with data:', memberData);

@@ -74,7 +74,7 @@ export function Events() {
           *,
           event_attendance (
             id,
-            member_id,
+            memberid,
             status
           )
         `)
@@ -206,7 +206,7 @@ export function Events() {
       const { data, error } = await supabase
         .from('event_attendance')
         .select(`
-          member_id,
+          memberid,
           status,
           events!inner (
             start_date
@@ -218,11 +218,11 @@ export function Events() {
 
       if (error) throw error;
 
-      // Create a map of member_id to their attendance status
+      // Create a map of memberid to their attendance status
       const attendanceMap = {};
       if (data && data.length > 0) {
         data.forEach(record => {
-          attendanceMap[record.member_id] = record.status;
+          attendanceMap[record.memberid] = record.status;
         });
       }
       setLastEventAttendance(attendanceMap);
@@ -251,7 +251,7 @@ export function Events() {
 
       // Set selected members based on existing records
       if (existingRecords && existingRecords.length > 0) {
-        const memberIds = existingRecords.map(record => record.member_id);
+        const memberIds = existingRecords.map(record => record.memberid);
         setSelectedMembers(memberIds);
       }
 
@@ -273,7 +273,7 @@ export function Events() {
         .from('event_attendance')
         .upsert({
           event_id: selectedEvent.id,
-          member_id: member.id,
+          memberid: member.id,
           status: 'attending'
         });
 
@@ -295,7 +295,7 @@ export function Events() {
         .eq('event_id', selectedEvent.id);
 
       if (!fetchError && existingRecords) {
-        setSelectedMembers(existingRecords.map(record => record.member_id));
+        setSelectedMembers(existingRecords.map(record => record.memberid));
       }
 
       // Refresh the events list to update attendance count
@@ -316,7 +316,7 @@ export function Events() {
         .from('event_attendance')
         .delete()
         .eq('event_id', selectedEvent.id)
-        .eq('member_id', memberId);
+        .eq('memberid', memberId);
 
       if (error) throw error;
 
@@ -335,7 +335,7 @@ export function Events() {
         .eq('event_id', selectedEvent.id);
 
       if (!fetchError && existingRecords) {
-        setSelectedMembers(existingRecords.map(record => record.member_id));
+        setSelectedMembers(existingRecords.map(record => record.memberid));
       }
 
       // Refresh the events list to update attendance count
@@ -373,7 +373,7 @@ export function Events() {
   // Filter members based on search query and exclude already RSVP'd members
   const filteredMembers = members
     .filter(member => {
-      const fullName = `${member.first_name} ${member.last_name}`.toLowerCase();
+      const fullName = `${member.firstname} ${member.lastname}`.toLowerCase();
       const query = memberSearchQuery.toLowerCase();
       const isSelected = selectedMembers.includes(member.id);
       // Only include members that haven't RSVP'd yet and match the search query
@@ -393,7 +393,7 @@ export function Events() {
       if (aAttendance !== 'attending' && bAttendance === 'attending') return 1;
 
       // If both have the same attendance status or neither attended, sort by name
-      return `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`);
+      return `${a.firstname} ${a.lastname}`.localeCompare(`${b.firstname} ${b.lastname}`);
     });
 
   const fetchAttendingMembers = async (eventId) => {
@@ -401,11 +401,11 @@ export function Events() {
       const { data, error } = await supabase
         .from('event_attendance')
         .select(`
-          member_id,
+          memberid,
           members (
             id,
-            first_name,
-            last_name,
+            firstname,
+            lastname,
             email,
             phone
           )
@@ -414,7 +414,12 @@ export function Events() {
         .eq('status', 'attending');
 
       if (error) throw error;
-      setAttendingMembers(data.map(item => item.members));
+      // Transform the data to camelCase for the frontend
+      setAttendingMembers(data.map(item => ({
+        ...item.members,
+        firstName: item.members.firstname,
+        lastName: item.members.lastname
+      })));
     } catch (error) {
       console.error('Error fetching attending members:', error);
     }
@@ -593,10 +598,10 @@ export function Events() {
                       >
                         <Avatar className="h-8 w-8">
                           <AvatarFallback>
-                            {member.first_name.charAt(0)}{member.last_name.charAt(0)}
+                            {member.firstname?.charAt(0)}{member.lastname?.charAt(0)}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="truncate">{member.first_name} {member.last_name}</span>
+                        <span className="truncate">{member.firstname} {member.lastname}</span>
                       </div>
                     ))}
                   </div>
@@ -621,10 +626,10 @@ export function Events() {
                       >
                         <Avatar className="h-8 w-8">
                           <AvatarFallback>
-                            {member.first_name.charAt(0)}{member.last_name.charAt(0)}
+                            {member.firstname?.charAt(0)}{member.lastname?.charAt(0)}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="truncate">{member.first_name} {member.last_name}</span>
+                        <span className="truncate">{member.firstname} {member.lastname}</span>
                         <div className="ml-auto flex items-center gap-2">
                           <CheckCircle2 className="h-4 w-4 text-green-500" />
                           <Button

@@ -2,18 +2,80 @@ import { supabase } from './supabaseClient';
 
 // Members
 export async function getMembers() {
-  const { data, error } = await supabase
-    .from('members')
-    .select('*')
-    .order('last_name', { ascending: true })
-    .order('first_name', { ascending: true });
+  try {
+    const { data, error } = await supabase
+      .from('members')
+      .select('*')
+      .order('lastName', { ascending: true })
+      .order('firstName', { ascending: true });
 
-  if (error) {
-    console.error('Error fetching members:', error);
-    throw error;
+    if (error) {
+      console.error('Error fetching members:', error);
+      throw error;
+    }
+
+    console.log('Raw members data:', data);
+
+    // Parse address JSON for each member
+    const parsedData = data.map(member => {
+      try {
+        console.log('Processing member:', member.id);
+        console.log('Address type:', typeof member.address);
+        console.log('Raw address:', member.address);
+
+        // If address is already an object, use it directly
+        if (typeof member.address === 'object' && member.address !== null) {
+          console.log('Using address as object');
+          return {
+            ...member,
+            address: member.address
+          };
+        }
+        
+        // If address is a string, check if it's already a valid object
+        if (typeof member.address === 'string') {
+          const cleanAddress = member.address.trim();
+          if (!cleanAddress) {
+            return { ...member, address: null };
+          }
+          
+          // Try to parse as JSON, but if it fails, use the string as is
+          try {
+            const parsed = JSON.parse(cleanAddress);
+            return {
+              ...member,
+              address: parsed
+            };
+          } catch (parseError) {
+            // If parsing fails, use the string as is
+            return {
+              ...member,
+              address: cleanAddress
+            };
+          }
+        }
+        
+        // If address is null or undefined, return null
+        console.log('Using null address');
+        return {
+          ...member,
+          address: null
+        };
+      } catch (error) {
+        console.error('Error processing member address:', member.id, error);
+        return {
+          ...member,
+          address: null
+        };
+      }
+    });
+
+    console.log('Parsed members data:', parsedData);
+    return parsedData;
+  } catch (error) {
+    console.error('Error in getMembers:', error);
+    return [];
   }
-
-  return data;
 }
 
 export const addMember = async (member) => {

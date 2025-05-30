@@ -38,6 +38,7 @@ import { Badge } from '@/components/ui/badge';
 import { AddressInput } from '@/components/ui/address-input';
 import { useAuth } from '@/lib/authContext';
 import { Textarea } from '@/components/ui/textarea';
+import { formatName, getInitials } from '@/lib/utils/formatters';
 
 export function People() {
   const [members, setMembers] = useState([]);
@@ -45,14 +46,14 @@ export function People() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('active');
   const [viewMode, setViewMode] = useState('grid');
-  const [sortField, setSortField] = useState('last_name');
+  const [sortField, setSortField] = useState('lastName');
   const [sortDirection, setSortDirection] = useState('asc');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
   const [newMember, setNewMember] = useState({
-    first_name: '',
-    last_name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     phone: '',
     address: {
@@ -63,7 +64,7 @@ export function People() {
     },
     status: 'active',
     notes: '',
-    join_date: new Date().toISOString().split('T')[0]
+    joinDate: new Date().toISOString().split('T')[0]
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -80,9 +81,9 @@ export function People() {
       const data = await getMembers();
       // Sort the data by last name and first name
       const sortedData = data.sort((a, b) => {
-        const lastNameCompare = (a.last_name || '').localeCompare(b.last_name || '');
+        const lastNameCompare = (a.lastName || '').localeCompare(b.lastName || '');
         if (lastNameCompare !== 0) return lastNameCompare;
-        return (a.first_name || '').localeCompare(b.first_name || '');
+        return (a.firstName || '').localeCompare(b.firstName || '');
       });
       setMembers(sortedData);
       setFilteredMembers(sortedData);
@@ -114,10 +115,10 @@ export function People() {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(member => 
-        member.first_name.toLowerCase().includes(query) ||
-        member.last_name.toLowerCase().includes(query) ||
-        member.email?.toLowerCase().includes(query) ||
-        member.phone?.includes(query)
+        member.firstName.toLowerCase().includes(query) ||
+        member.lastName.toLowerCase().includes(query) ||
+        (member.email && member.email.toLowerCase().includes(query)) ||
+        (member.phone && member.phone.toLowerCase().includes(query))
       );
     }
     
@@ -138,7 +139,7 @@ export function People() {
       }
       
       // Handle date fields
-      if (sortField === 'created_at' || sortField === 'join_date') {
+      if (sortField === 'created_at' || sortField === 'joinDate') {
         aValue = a[sortField] ? new Date(a[sortField]) : new Date(0);
         bValue = b[sortField] ? new Date(b[sortField]) : new Date(0);
       }
@@ -172,8 +173,8 @@ export function People() {
       setMembers(prev => [addedMember, ...prev]);
       setIsAddDialogOpen(false);
       setNewMember({
-        first_name: '',
-        last_name: '',
+        firstName: '',
+        lastName: '',
         email: '',
         phone: '',
         address: {
@@ -184,7 +185,7 @@ export function People() {
         },
         status: 'active',
         notes: '',
-        join_date: new Date().toISOString().split('T')[0]
+        joinDate: new Date().toISOString().split('T')[0]
       });
       toast({
         title: "Success",
@@ -202,20 +203,15 @@ export function People() {
   
   const handleUpdateMember = async () => {
     try {
-      // Only include address if at least one field is filled
-      const hasAddress = selectedMember.address?.street || selectedMember.address?.city || selectedMember.address?.state || selectedMember.address?.zip;
       const memberData = {
         ...selectedMember,
-        address: hasAddress ? {
-          street: selectedMember.address?.street || '',
-          city: selectedMember.address?.city || '',
-          state: selectedMember.address?.state || '',
-          zip: selectedMember.address?.zip || ''
-        } : null
+        firstName: selectedMember.firstName.trim(),
+        lastName: selectedMember.lastName.trim(),
+        email: selectedMember.email.trim() || null,
+        phone: selectedMember.phone.trim() || null,
+        address: selectedMember.address.street.trim() ? selectedMember.address : null
       };
-      console.log('Updating member with data:', memberData);
       const updatedMember = await updateMember(selectedMember.id, memberData);
-      console.log('Updated member:', updatedMember);
       setMembers(prev => prev.map(m => m.id === updatedMember.id ? updatedMember : m));
       setIsEditDialogOpen(false);
       setSelectedMember(null);
@@ -307,6 +303,18 @@ export function People() {
     </div>
   );
   
+  const formatDate = (dateString) => {
+    try {
+      if (!dateString) return 'N/A';
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'N/A';
+      return format(date, 'MMM d, yyyy');
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'N/A';
+    }
+  };
+  
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -380,11 +388,11 @@ export function People() {
                           <div className="flex items-center">
                             <Avatar className="h-12 w-12 mr-3">
                               <AvatarFallback className="bg-primary text-primary-foreground">
-                                {member.first_name.charAt(0)}{member.last_name.charAt(0)}
+                                {getInitials(member.firstName, member.lastName)}
                               </AvatarFallback>
                             </Avatar>
                             <div>
-                              <CardTitle className="text-xl">{member.first_name} {member.last_name}</CardTitle>
+                              <CardTitle className="text-xl">{formatName(member.firstName, member.lastName)}</CardTitle>
                               <CardDescription>
                                 {member.status === 'active' ? (
                                   <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
@@ -455,7 +463,7 @@ export function People() {
                           )}
                           <div className="flex items-center text-sm">
                             <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
-                            <span>Joined {format(new Date(member.join_date || member.created_at), 'MMM d, yyyy')}</span>
+                            <span>Joined {formatDate(member.joinDate || member.created_at)}</span>
                           </div>
                         </div>
                       </CardContent>
@@ -493,10 +501,10 @@ export function People() {
                             <Button 
                               variant="ghost" 
                               className="flex items-center gap-1"
-                              onClick={() => handleSort('last_name')}
+                              onClick={() => handleSort('lastName')}
                             >
                               Name
-                              {sortField === 'last_name' && (
+                              {sortField === 'lastName' && (
                                 sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
                               )}
                             </Button>
@@ -530,10 +538,10 @@ export function People() {
                           <Button 
                             variant="ghost" 
                             className="flex items-center gap-1"
-                            onClick={() => handleSort('join_date')}
+                            onClick={() => handleSort('joinDate')}
                           >
                             Join Date
-                            {sortField === 'join_date' && (
+                            {sortField === 'joinDate' && (
                               sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
                             )}
                           </Button>
@@ -570,16 +578,16 @@ export function People() {
                                 <div className="flex items-center">
                                   <Avatar className="h-8 w-8 mr-2">
                                     <AvatarFallback className="text-xs">
-                                      {member.first_name.charAt(0)}{member.last_name.charAt(0)}
+                                      {getInitials(member.firstName, member.lastName)}
                                     </AvatarFallback>
                                   </Avatar>
-                                  <span>{member.first_name} {member.last_name}</span>
+                                  <span>{formatName(member.firstName, member.lastName)}</span>
                                 </div>
                               </div>
                             </td>
                             <td className="p-4 align-middle">{member.email}</td>
                             <td className="p-4 align-middle">{member.phone}</td>
-                            <td className="p-4 align-middle">{format(new Date(member.join_date || member.created_at), 'MMM d, yyyy')}</td>
+                            <td className="p-4 align-middle">{formatDate(member.joinDate || member.created_at)}</td>
                             <td className="p-4 align-middle">
                               {member.status === 'active' ? (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
@@ -671,25 +679,25 @@ export function People() {
           <div className="grid gap-6 py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="first-name">First Name *</Label>
+                <Label htmlFor="firstName">First Name *</Label>
                 <Input
-                  id="first-name"
-                  value={newMember.first_name}
+                  id="firstName"
+                  value={newMember.firstName}
                   onChange={(e) => setNewMember({
                     ...newMember,
-                    first_name: e.target.value
+                    firstName: e.target.value
                   })}
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="last-name">Last Name *</Label>
+                <Label htmlFor="lastName">Last Name *</Label>
                 <Input
-                  id="last-name"
-                  value={newMember.last_name}
+                  id="lastName"
+                  value={newMember.lastName}
                   onChange={(e) => setNewMember({
                     ...newMember,
-                    last_name: e.target.value
+                    lastName: e.target.value
                   })}
                   required
                 />
@@ -735,14 +743,14 @@ export function People() {
                 </select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="join-date">Join Date</Label>
+                <Label htmlFor="joinDate">Join Date</Label>
                 <Input
-                  id="join-date"
+                  id="joinDate"
                   type="date"
-                  value={newMember.join_date}
+                  value={newMember.joinDate}
                   onChange={(e) => setNewMember({
                     ...newMember,
-                    join_date: e.target.value
+                    joinDate: e.target.value
                   })}
                 />
               </div>
@@ -833,25 +841,25 @@ export function People() {
             <div className="grid gap-6 py-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-first-name">First Name *</Label>
+                  <Label htmlFor="edit-firstName">First Name *</Label>
                   <Input
-                    id="edit-first-name"
-                    value={selectedMember.first_name}
+                    id="edit-firstName"
+                    value={selectedMember.firstName}
                     onChange={(e) => setSelectedMember({
                       ...selectedMember,
-                      first_name: e.target.value
+                      firstName: e.target.value
                     })}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-last-name">Last Name *</Label>
+                  <Label htmlFor="edit-lastName">Last Name *</Label>
                   <Input
-                    id="edit-last-name"
-                    value={selectedMember.last_name}
+                    id="edit-lastName"
+                    value={selectedMember.lastName}
                     onChange={(e) => setSelectedMember({
                       ...selectedMember,
-                      last_name: e.target.value
+                      lastName: e.target.value
                     })}
                     required
                   />
@@ -897,14 +905,14 @@ export function People() {
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-join-date">Join Date</Label>
+                  <Label htmlFor="edit-joinDate">Join Date</Label>
                   <Input
-                    id="edit-join-date"
+                    id="edit-joinDate"
                     type="date"
-                    value={selectedMember.join_date ? new Date(selectedMember.join_date).toISOString().split('T')[0] : ''}
+                    value={selectedMember.joinDate ? new Date(selectedMember.joinDate).toISOString().split('T')[0] : ''}
                     onChange={(e) => setSelectedMember({
                       ...selectedMember,
-                      join_date: e.target.value
+                      joinDate: e.target.value
                     })}
                   />
                 </div>

@@ -58,12 +58,21 @@ export function Groups() {
         .select(`
           *,
           group_members(count),
-          leader:members!leader_id(first_name, last_name)
+          leader:members!leader_id(firstname, lastname)
         `)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      setGroups(data || []);
-      setFilteredGroups(data || []);
+      // Transform the data to camelCase for the frontend
+      const transformedData = data.map(group => ({
+        ...group,
+        leader: group.leader ? {
+          ...group.leader,
+          firstName: group.leader.firstname,
+          lastName: group.leader.lastname
+        } : null
+      }));
+      setGroups(transformedData || []);
+      setFilteredGroups(transformedData || []);
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to fetch groups', variant: 'destructive' });
     }
@@ -73,9 +82,16 @@ export function Groups() {
     try {
       const { data, error } = await supabase
         .from('members')
-        .select('id, first_name, last_name');
+        .select('id, firstname, lastname');
       if (error) throw error;
-      setMembers(data || []);
+      // Transform the data to camelCase for the frontend
+      const transformedData = data.map(member => ({
+        ...member,
+        firstName: member.firstname,
+        lastName: member.lastname,
+        fullName: `${member.firstname} ${member.lastname}`
+      }));
+      setMembers(transformedData || []);
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to fetch members', variant: 'destructive' });
     }
@@ -144,11 +160,11 @@ export function Groups() {
         .select(`
           *,
           group_members(
-            member_id,
+            memberid,
             members(
               id,
-              first_name,
-              last_name
+              firstname,
+              lastname
             )
           )
         `)
@@ -161,8 +177,10 @@ export function Groups() {
       const transformedGroup = {
         ...completeGroup,
         members: completeGroup.group_members.map(gm => ({
-          id: gm.member_id,
-          name: `${gm.members.first_name} ${gm.members.last_name}`
+          id: gm.memberid,
+          firstName: gm.members.firstname,
+          lastName: gm.members.lastname,
+          fullName: `${gm.members.firstname} ${gm.members.lastname}`
         }))
       };
 
@@ -184,9 +202,9 @@ export function Groups() {
       // First check if the member is already in the group
       const { data: existingMembers, error: checkError } = await supabase
         .from('group_members')
-        .select('member_id')
+        .select('memberid')
         .eq('group_id', selectedGroup.id)
-        .eq('member_id', memberId);
+        .eq('memberid', memberId);
 
       if (checkError) throw checkError;
 
@@ -203,7 +221,7 @@ export function Groups() {
         .from('group_members')
         .insert([{
           group_id: selectedGroup.id,
-          member_id: memberId
+          memberid: memberId
         }]);
 
       if (error) throw error;
@@ -214,11 +232,11 @@ export function Groups() {
         .select(`
           *,
           group_members(
-            member_id,
+            memberid,
             members(
               id,
-              first_name,
-              last_name
+              firstname,
+              lastname
             )
           )
         `)
@@ -231,8 +249,10 @@ export function Groups() {
       const transformedGroup = {
         ...updatedGroup,
         members: updatedGroup.group_members.map(gm => ({
-          id: gm.member_id,
-          name: `${gm.members.first_name} ${gm.members.last_name}`
+          id: gm.memberid,
+          firstName: gm.members.firstname,
+          lastName: gm.members.lastname,
+          fullName: `${gm.members.firstname} ${gm.members.lastname}`
         }))
       };
 
@@ -259,7 +279,7 @@ export function Groups() {
         .from('group_members')
         .delete()
         .eq('group_id', selectedGroup.id)
-        .eq('member_id', memberId);
+        .eq('memberid', memberId);
 
       if (error) throw error;
 
@@ -269,11 +289,11 @@ export function Groups() {
         .select(`
           *,
           group_members(
-            member_id,
+            memberid,
             members(
               id,
-              first_name,
-              last_name
+              firstname,
+              lastname
             )
           )
         `)
@@ -286,8 +306,10 @@ export function Groups() {
       const transformedGroup = {
         ...updatedGroup,
         members: updatedGroup.group_members.map(gm => ({
-          id: gm.member_id,
-          name: `${gm.members.first_name} ${gm.members.last_name}`
+          id: gm.memberid,
+          firstName: gm.members.firstname,
+          lastName: gm.members.lastname,
+          fullName: `${gm.members.firstname} ${gm.members.lastname}`
         }))
       };
 
@@ -444,7 +466,7 @@ export function Groups() {
                       <div className="space-y-2">
                         <div className="flex items-center text-sm">
                           <User className="mr-2 h-4 w-4 text-muted-foreground" />
-                          <span>Leader: {group.leader ? `${group.leader.first_name} ${group.leader.last_name}` : 'Not assigned'}</span>
+                          <span>Leader: {group.leader ? `${group.leader.firstName} ${group.leader.lastName}` : 'Not assigned'}</span>
                         </div>
                         <div className="flex items-center text-sm">
                           <Users className="mr-2 h-4 w-4 text-muted-foreground" />
@@ -506,7 +528,7 @@ export function Groups() {
                           className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
                         >
                           <td className="p-4 align-middle font-medium">{group.name}</td>
-                          <td className="p-4 align-middle">{group.leader ? `${group.leader.first_name} ${group.leader.last_name}` : 'Not assigned'}</td>
+                          <td className="p-4 align-middle">{group.leader ? `${group.leader.firstName} ${group.leader.lastName}` : 'Not assigned'}</td>
                           <td className="p-4 align-middle">
                             <div className="flex -space-x-2">
                               {group.group_members?.[0]?.count > 0 && (
@@ -605,7 +627,7 @@ export function Groups() {
                 <SelectContent>
                   {members.map(member => (
                     <SelectItem key={member.id} value={`${member.id}`}>
-                      {member.first_name} {member.last_name}
+                      {member.firstName} {member.lastName}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -666,7 +688,7 @@ export function Groups() {
                 <div className="space-y-4">
                   <div>
                     <h4 className="text-sm font-medium text-muted-foreground mb-1">Leader</h4>
-                    <p>{selectedGroup.leader ? `${selectedGroup.leader.first_name} ${selectedGroup.leader.last_name}` : 'Not assigned'}</p>
+                    <p>{selectedGroup.leader ? `${selectedGroup.leader.firstName} ${selectedGroup.leader.lastName}` : 'Not assigned'}</p>
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-2">
@@ -687,10 +709,10 @@ export function Groups() {
                             <div className="flex items-center">
                               <Avatar className="h-8 w-8 mr-3">
                                 <AvatarFallback>
-                                  {member.name.split(' ').map(n => n[0]).join('')}
+                                  {`${member.firstName?.[0] || ''}${member.lastName?.[0] || ''}` || '?'}
                                 </AvatarFallback>
                               </Avatar>
-                              <span>{member.name}</span>
+                              <span>{member.fullName || 'Unknown Member'}</span>
                             </div>
                             <Button 
                               variant="ghost" 
@@ -747,14 +769,10 @@ export function Groups() {
             {members
               .filter(member => !selectedGroup?.members.some(m => m.id === member.id))
               .filter(member => {
-                const fullName = `${member.first_name} ${member.last_name}`.toLowerCase();
+                const fullName = member.fullName.toLowerCase();
                 return fullName.includes(searchQuery.toLowerCase());
               })
-              .sort((a, b) => {
-                const nameA = `${a.first_name} ${a.last_name}`.toLowerCase();
-                const nameB = `${b.first_name} ${b.last_name}`.toLowerCase();
-                return nameA.localeCompare(nameB);
-              })
+              .sort((a, b) => a.fullName.localeCompare(b.fullName))
               .map((member) => (
                 <div 
                   key={member.id} 
@@ -763,10 +781,10 @@ export function Groups() {
                 >
                   <Avatar className="h-8 w-8">
                     <AvatarFallback>
-                      {member.first_name.charAt(0)}{member.last_name.charAt(0)}
+                      {`${member.firstName?.[0] || ''}${member.lastName?.[0] || ''}` || '?'}
                     </AvatarFallback>
                   </Avatar>
-                  <span>{member.first_name} {member.last_name}</span>
+                  <span>{member.fullName || 'Unknown Member'}</span>
                 </div>
               ))}
           </div>
@@ -818,7 +836,7 @@ export function Groups() {
                   <SelectContent>
                     {members.map(member => (
                       <SelectItem key={member.id} value={`${member.id}`}>
-                        {member.first_name} {member.last_name}
+                        {member.firstName} {member.lastName}
                       </SelectItem>
                     ))}
                   </SelectContent>

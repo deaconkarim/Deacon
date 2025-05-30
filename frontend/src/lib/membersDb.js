@@ -5,7 +5,8 @@ export const fetchMembers = async () => {
   const { data, error } = await supabase
     .from('members')
     .select('*')
-    .order('created_at', { ascending: false });
+    .order('lastName', { ascending: true })
+    .order('firstName', { ascending: true });
 
   if (error) {
     console.error('Error fetching members:', error);

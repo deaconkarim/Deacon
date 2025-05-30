@@ -175,7 +175,7 @@ export function Dashboard() {
 
   // Filter people based on search query and exclude already RSVP'd people
   const filteredPeople = people.filter(person => {
-    const fullName = `${person.first_name} ${person.last_name}`.toLowerCase();
+    const fullName = `${person.firstName} ${person.lastName}`.toLowerCase();
     const query = personSearchQuery.toLowerCase();
     const isSelected = selectedPeople.includes(person.id);
     return fullName.includes(query) && !isSelected;
@@ -205,13 +205,23 @@ export function Dashboard() {
 
       if (peopleError) throw peopleError;
 
+      // Transform snake_case to camelCase
+      const transformedPeople = people?.map(person => ({
+        ...person,
+        firstName: person.firstname || '',
+        lastName: person.lastname || '',
+        joinDate: person.joindate,
+        createdAt: person.created_at,
+        updatedAt: person.updated_at
+      })) || [];
+
       // Calculate total active people
-      const totalPeople = people?.length || 0;
+      const totalPeople = transformedPeople.length;
 
       // Get recent people (last 5 active members)
-      const recentPeople = people
-        ?.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        .slice(0, 5) || [];
+      const recentPeople = transformedPeople
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 5);
 
       // Fetch groups
       const { data: groups, error: groupsError } = await supabase
@@ -453,9 +463,9 @@ export function Dashboard() {
                     <div key={person.id} className="flex items-center justify-between border-b pb-3">
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
-                          <AvatarFallback>{getInitials(person.first_name, person.last_name)}</AvatarFallback>
+                          <AvatarFallback>{getInitials(person.firstName, person.lastName)}</AvatarFallback>
                         </Avatar>
-                        <div>{formatName(person.first_name, person.last_name)}</div>
+                        <div>{formatName(person.firstName, person.lastName)}</div>
                       </div>
                       <Button 
                         variant="outline" 
@@ -552,9 +562,9 @@ export function Dashboard() {
                   onClick={() => handlePersonClick(person)}
                 >
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback>{getInitials(person.first_name, person.last_name)}</AvatarFallback>
+                    <AvatarFallback>{getInitials(person.firstName, person.lastName)}</AvatarFallback>
                   </Avatar>
-                  <span>{formatName(person.first_name, person.last_name)}</span>
+                  <span>{formatName(person.firstName, person.lastName)}</span>
                 </div>
               ))
             ) : (
@@ -575,9 +585,9 @@ export function Dashboard() {
                     className="flex items-center space-x-2 p-2 bg-muted/50 rounded-lg"
                   >
                     <Avatar className="h-8 w-8">
-                      <AvatarFallback>{getInitials(person.first_name, person.last_name)}</AvatarFallback>
+                      <AvatarFallback>{getInitials(person.firstName, person.lastName)}</AvatarFallback>
                     </Avatar>
-                    <span>{formatName(person.first_name, person.last_name)}</span>
+                    <span>{formatName(person.firstName, person.lastName)}</span>
                     <CheckCircle2 className="ml-auto h-4 w-4 text-green-500" />
                   </div>
                 ))}

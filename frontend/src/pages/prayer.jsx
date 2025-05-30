@@ -74,8 +74,8 @@ export function Prayer() {
             response,
             created_at,
             member:members (
-              first_name,
-              last_name
+              firstName,
+              lastName
             )
           )
         `)
@@ -238,7 +238,7 @@ export function Prayer() {
                         <div className="flex items-center space-x-2 mb-1">
                           <User className="h-4 w-4 text-muted-foreground" />
                           <span className="text-sm font-medium">
-                            {response.member.first_name} {response.member.last_name}
+                            {response.member.firstName} {response.member.lastName}
                           </span>
                           <span className="text-xs text-muted-foreground">
                             {format(new Date(response.created_at), 'MMM d, yyyy')}

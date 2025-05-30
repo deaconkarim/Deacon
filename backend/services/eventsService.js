@@ -117,9 +117,7 @@ async function fetchEvents() {
           location: 'Brentwood Lighthouse Baptist Church',
           url: url || 'https://www.blb.church/events/',
           created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          is_recurring: isRecurring,
-          recurrence_pattern: isRecurring ? recurringText : null
+          updated_at: new Date().toISOString()
         });
       }
     });

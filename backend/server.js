@@ -42,7 +42,7 @@ app.get('/api/members', async (req, res) => {
     const { data, error } = await supabase
       .from('members')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('createdAt', { ascending: false });
 
     if (error) throw error;
     res.json(data);
