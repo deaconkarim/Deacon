@@ -14,10 +14,17 @@ import {
   Church,
   BarChart2,
   FileText,
-  ClipboardList
+  ClipboardList,
+  MoreHorizontal
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function Layout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -35,18 +42,71 @@ export function Layout() {
     { name: 'Settings', href: '/settings', icon: SettingsIcon },
   ];
 
+  const mainNavItems = navigation.slice(0, 4);
+  const moreNavItems = navigation.slice(4);
+  
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <div className="flex-1 pb-20 lg:pb-0">
-        <main className="p-4 sm:p-6">
+        <main className="p-4 sm:p-6 pb-24 lg:pb-6">
           <Outlet />
         </main>
       </div>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg lg:static lg:border-t-0 lg:shadow-none z-50">
+      {/* Mobile Navigation (phones only) */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg lg:hidden z-50">
+        <div className="max-w-screen-xl mx-auto px-2">
+          <div className="flex justify-around items-center h-14">
+            {mainNavItems.map((item) => {
+              const isActive = location.pathname === item.href;
+              return (
+                <NavLink
+                  key={item.name}
+                  to={item.href}
+                  className={({ isActive }) => cn(
+                    "flex flex-col items-center justify-center px-2 py-1 text-[9px] font-medium rounded-md transition-all",
+                    isActive
+                      ? "text-primary"
+                      : "text-gray-500 hover:text-gray-900"
+                  )}
+                >
+                  <item.icon className={cn("h-4 w-4 mb-0.5", isActive ? "text-primary" : "text-gray-500")} />
+                  <span>{item.name}</span>
+                </NavLink>
+              );
+            })}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="flex flex-col items-center justify-center px-2 py-1 h-auto">
+                  <MoreHorizontal className="h-4 w-4 mb-0.5 text-gray-500" />
+                  <span className="text-[9px] font-medium">More</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {moreNavItems.map((item) => (
+                  <DropdownMenuItem key={item.name} asChild>
+                    <NavLink
+                      to={item.href}
+                      className={cn(
+                        "flex items-center gap-2",
+                        location.pathname === item.href ? "text-primary" : ""
+                      )}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.name}</span>
+                    </NavLink>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </nav>
+
+      {/* Desktop Navigation */}
+      <nav className="hidden lg:block border-t">
         <div className="max-w-screen-xl mx-auto px-4">
           <div className="flex justify-around items-center h-16">
             {navigation.map((item) => {
@@ -63,7 +123,7 @@ export function Layout() {
                   )}
                 >
                   <item.icon className={cn("h-5 w-5 mb-1", isActive ? "text-primary" : "text-gray-500")} />
-                  <span className="text-[10px]">{item.name}</span>
+                  <span>{item.name}</span>
                 </NavLink>
               );
             })}

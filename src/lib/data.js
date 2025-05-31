@@ -14,18 +14,18 @@ export async function getMembers() {
       throw error;
     }
 
-    console.log('Raw members data:', data);
+    //console.log('Raw members data:', data);
 
     // Parse address JSON for each member
     const parsedData = data.map(member => {
       try {
-        console.log('Processing member:', member.id);
-        console.log('Address type:', typeof member.address);
-        console.log('Raw address:', member.address);
+       // console.log('Processing member:', member.id);
+       // console.log('Address type:', typeof member.address);
+       // console.log('Raw address:', member.address);
 
         // If address is already an object, use it directly
         if (typeof member.address === 'object' && member.address !== null) {
-          console.log('Using address as object');
+         // console.log('Using address as object');
           return {
             ...member,
             address: member.address
@@ -56,7 +56,7 @@ export async function getMembers() {
         }
         
         // If address is null or undefined, return null
-        console.log('Using null address');
+       // console.log('Using null address');
         return {
           ...member,
           address: null
@@ -70,7 +70,7 @@ export async function getMembers() {
       }
     });
 
-    console.log('Parsed members data:', parsedData);
+    //console.log('Parsed members data:', parsedData);
     return parsedData;
   } catch (error) {
     console.error('Error in getMembers:', error);

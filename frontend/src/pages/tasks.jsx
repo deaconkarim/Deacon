@@ -63,7 +63,6 @@ export function Tasks() {
   });
 
   useEffect(() => {
-    console.log('Current user:', user);
     fetchTasks();
     fetchMembers();
   }, [user]);
@@ -186,19 +185,27 @@ export function Tasks() {
 
   const handleUpdateTaskStatus = async (taskId, newStatus) => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('tasks')
         .update({ status: newStatus })
-        .eq('id', taskId);
+        .eq('id', taskId)
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Update the task in the local state
+      setTasks(tasks.map(task => {
+        if (task.id === taskId) {
+          return { ...task, status: newStatus };
+        }
+        return task;
+      }));
 
       toast({
         title: "Success",
         description: "Task status updated successfully."
       });
-
-      fetchTasks();
     } catch (error) {
       toast({
         title: "Error",
@@ -358,6 +365,36 @@ export function Tasks() {
                       >
                         <CheckCircle2 className="mr-2 h-4 w-4" />
                         Mark Complete
+                      </Button>
+                    )}
+                    {task.status === 'completed' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleUpdateTaskStatus(task.id, 'in_progress')}
+                      >
+                        <Loader2 className="mr-2 h-4 w-4" />
+                        Back to In Progress
+                      </Button>
+                    )}
+                    {task.status !== 'in_progress' && task.status !== 'completed' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleUpdateTaskStatus(task.id, 'in_progress')}
+                      >
+                        <Loader2 className="mr-2 h-4 w-4" />
+                        Start Progress
+                      </Button>
+                    )}
+                    {task.status === 'in_progress' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleUpdateTaskStatus(task.id, 'pending')}
+                      >
+                        <AlertCircle className="mr-2 h-4 w-4" />
+                        Back to Pending
                       </Button>
                     )}
                     {task.status !== 'cancelled' && (
