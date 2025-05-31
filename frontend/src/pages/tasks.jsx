@@ -9,7 +9,8 @@ import {
   AlertCircle,
   CheckCircle2,
   XCircle,
-  Loader2
+  Loader2,
+  Pencil
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,6 +49,8 @@ export function Tasks() {
   const [staffMembers, setStaffMembers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedPriority, setSelectedPriority] = useState('all');
@@ -211,6 +214,82 @@ export function Tasks() {
     }
   };
 
+  const handleEditTask = async () => {
+    if (!editingTask.requestor_id) {
+      toast({
+        title: "Error",
+        description: "Please select a requestor for the task.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Extract only the database columns we want to update
+      const taskUpdate = {
+        title: editingTask.title,
+        description: editingTask.description,
+        priority: editingTask.priority,
+        status: editingTask.status,
+        assignee_id: editingTask.assignee_id,
+        requestor_id: editingTask.requestor_id,
+        due_date: editingTask.due_date,
+        updated_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
+        .from('tasks')
+        .update(taskUpdate)
+        .eq('id', editingTask.id)
+        .select(`
+          *,
+          requestor:requestor_id (id, firstname, lastname),
+          assignee:assignee_id (id, firstname, lastname)
+        `)
+        .single();
+
+      if (error) throw error;
+
+      // Format the response data to match our task structure
+      const formattedTask = {
+        ...data,
+        requestor: data.requestor ? {
+          ...data.requestor,
+          fullName: `${data.requestor.firstname} ${data.requestor.lastname}`
+        } : null,
+        assignee: data.assignee ? {
+          ...data.assignee,
+          fullName: `${data.assignee.firstname} ${data.assignee.lastname}`
+        } : null
+      };
+
+      setTasks(tasks.map(task => 
+        task.id === editingTask.id ? formattedTask : task
+      ));
+      setIsEditDialogOpen(false);
+      setEditingTask(null);
+
+      toast({
+        title: "Success",
+        description: "Task updated successfully."
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update task. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const openEditDialog = (task) => {
+    setEditingTask({
+      ...task,
+      due_date: task.due_date ? new Date(task.due_date) : null
+    });
+    setIsEditDialogOpen(true);
+  };
+
   const getPriorityColor = (priority) => {
     switch (priority) {
       case 'high':
@@ -221,6 +300,19 @@ export function Tasks() {
         return 'bg-green-500';
       default:
         return 'bg-gray-500';
+    }
+  };
+
+  const formatPriority = (priority) => {
+    switch (priority) {
+      case 'high':
+        return 'High Priority';
+      case 'medium':
+        return 'Medium Priority';
+      case 'low':
+        return 'Low Priority';
+      default:
+        return priority;
     }
   };
 
@@ -237,6 +329,21 @@ export function Tasks() {
     }
   };
 
+  const formatStatus = (status) => {
+    switch (status) {
+      case 'completed':
+        return 'Completed';
+      case 'in_progress':
+        return 'In Progress';
+      case 'cancelled':
+        return 'Cancelled';
+      case 'pending':
+        return 'Pending';
+      default:
+        return status;
+    }
+  };
+
   const filteredTasks = tasks.filter(task => {
     const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          task.description?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -248,14 +355,18 @@ export function Tasks() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Tasks</h1>
           <p className="text-muted-foreground">Manage and track church tasks and assignments.</p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
+        <Button 
+          onClick={() => setIsCreateDialogOpen(true)}
+          className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
+        >
           <Plus className="mr-2 h-4 w-4" />
-          New Task
+          <span className="hidden sm:inline">New Task</span>
+          <span className="sm:hidden">Add Task</span>
         </Button>
       </div>
 
@@ -316,20 +427,20 @@ export function Tasks() {
           filteredTasks.map(task => (
             <Card key={task.id}>
               <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle>{task.title}</CardTitle>
+                <div className="flex flex-col gap-2">
+                  <CardTitle>{task.title}</CardTitle>
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <CardDescription>
                       Requested by {task.requestor?.fullName || 'Unknown'}
                     </CardDescription>
-                  </div>
-                  <div className="flex gap-2">
-                    <Badge className={getPriorityColor(task.priority)}>
-                      {task.priority}
-                    </Badge>
-                    <Badge className={getStatusColor(task.status)}>
-                      {task.status}
-                    </Badge>
+                    <div className="flex gap-2">
+                      <Badge className={getPriorityColor(task.priority)}>
+                        {formatPriority(task.priority)}
+                      </Badge>
+                      <Badge className={getStatusColor(task.status)}>
+                        {formatStatus(task.status)}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
               </CardHeader>
@@ -352,57 +463,77 @@ export function Tasks() {
                       </div>
                     )}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-1.5">
                     {task.status !== 'completed' && (
                       <Button
-                        variant="outline"
+                        variant="secondary"
                         size="sm"
                         onClick={() => handleUpdateTaskStatus(task.id, 'completed')}
+                        className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
                       >
-                        <CheckCircle2 className="mr-2 h-4 w-4" />
-                        Mark Complete
+                        <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Mark Complete</span>
+                        <span className="sm:hidden">Complete</span>
                       </Button>
                     )}
                     {task.status === 'completed' && (
                       <Button
-                        variant="outline"
+                        variant="secondary"
                         size="sm"
                         onClick={() => handleUpdateTaskStatus(task.id, 'in_progress')}
+                        className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
                       >
-                        <Loader2 className="mr-2 h-4 w-4" />
-                        Back to In Progress
+                        <Loader2 className="mr-1 h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Back to In Progress</span>
+                        <span className="sm:hidden">In Progress</span>
                       </Button>
                     )}
                     {task.status !== 'in_progress' && task.status !== 'completed' && (
                       <Button
-                        variant="outline"
+                        variant="secondary"
                         size="sm"
                         onClick={() => handleUpdateTaskStatus(task.id, 'in_progress')}
+                        className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
                       >
-                        <Loader2 className="mr-2 h-4 w-4" />
-                        Start Progress
+                        <Loader2 className="mr-1 h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Start Progress</span>
+                        <span className="sm:hidden">Start</span>
                       </Button>
                     )}
                     {task.status === 'in_progress' && (
                       <Button
-                        variant="outline"
+                        variant="secondary"
                         size="sm"
                         onClick={() => handleUpdateTaskStatus(task.id, 'pending')}
+                        className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-200"
                       >
-                        <AlertCircle className="mr-2 h-4 w-4" />
-                        Back to Pending
+                        <AlertCircle className="mr-1 h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Back to Pending</span>
+                        <span className="sm:hidden">Pending</span>
                       </Button>
                     )}
                     {task.status !== 'cancelled' && (
                       <Button
-                        variant="outline"
+                        variant="secondary"
                         size="sm"
                         onClick={() => handleUpdateTaskStatus(task.id, 'cancelled')}
+                        className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
                       >
-                        <XCircle className="mr-2 h-4 w-4" />
-                        Cancel
+                        <XCircle className="mr-1 h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Cancel</span>
+                        <span className="sm:hidden">Cancel</span>
                       </Button>
                     )}
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => openEditDialog(task)}
+                      className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200"
+                    >
+                      <Pencil className="mr-1 h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Edit</span>
+                      <span className="sm:hidden">Edit</span>
+                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -532,6 +663,128 @@ export function Tasks() {
             </Button>
             <Button onClick={handleCreateTask}>
               Create Task
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Task Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Task</DialogTitle>
+            <DialogDescription>
+              Update task details and assignments.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-title">Title *</Label>
+              <Input
+                id="edit-title"
+                value={editingTask?.title || ''}
+                onChange={(e) => setEditingTask({...editingTask, title: e.target.value})}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                value={editingTask?.description || ''}
+                onChange={(e) => setEditingTask({...editingTask, description: e.target.value})}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Due Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !editingTask?.due_date && "text-muted-foreground"
+                      )}
+                    >
+                      <Calendar className="mr-2 h-4 w-4" />
+                      {editingTask?.due_date ? (
+                        format(editingTask.due_date, "PPP")
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <CalendarComponent
+                      mode="single"
+                      selected={editingTask?.due_date}
+                      onSelect={(date) => setEditingTask({...editingTask, due_date: date})}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-priority">Priority</Label>
+                <Select
+                  value={editingTask?.priority}
+                  onValueChange={(value) => setEditingTask({...editingTask, priority: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-assignee">Assign To</Label>
+              <Select
+                value={editingTask?.assignee_id}
+                onValueChange={(value) => setEditingTask({...editingTask, assignee_id: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select deacon" />
+                </SelectTrigger>
+                <SelectContent>
+                  {staffMembers.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.firstname} {member.lastname}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Requestor</label>
+              <Select
+                value={editingTask?.requestor_id}
+                onValueChange={(value) => setEditingTask({ ...editingTask, requestor_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select deacon" />
+                </SelectTrigger>
+                <SelectContent>
+                  {staffMembers.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.firstname} {member.lastname}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditTask}>
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
