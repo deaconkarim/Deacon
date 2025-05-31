@@ -13,7 +13,8 @@ import {
   ChevronDown,
   Church,
   BarChart2,
-  FileText
+  FileText,
+  ClipboardList
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,7 @@ export function Layout() {
     { name: 'Events', href: '/events', icon: Calendar },
     { name: 'Donations', href: '/donations', icon: DollarSign },
     { name: 'Groups', href: '/groups', icon: UserPlus },
+    { name: 'Tasks', href: '/tasks', icon: ClipboardList },
     { name: 'Reports', href: '/reports', icon: BarChart2 },
     { name: 'Bulletin', href: '/bulletin', icon: FileText },
     { name: 'Settings', href: '/settings', icon: SettingsIcon },

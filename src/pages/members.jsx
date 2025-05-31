@@ -634,9 +634,9 @@ export function People() {
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Add New Member</DialogTitle>
+            <DialogTitle>Add New Person</DialogTitle>
             <DialogDescription>
-              Enter the member's information below.
+              Enter the person's information below.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">

@@ -7,7 +7,8 @@ import {
   RefreshCw,
   CheckCircle2,
   XCircle,
-  HelpCircle
+  HelpCircle,
+  UserPlus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,6 +63,14 @@ export function Events() {
   const [memberSearchQuery, setMemberSearchQuery] = useState('');
   const [attendingMembers, setAttendingMembers] = useState([]);
   const [lastEventAttendance, setLastEventAttendance] = useState({});
+  const [isCreateMemberOpen, setIsCreateMemberOpen] = useState(false);
+  const [newMember, setNewMember] = useState({
+    firstname: '',
+    lastname: '',
+    email: '',
+    phone: '',
+    status: 'active'
+  });
 
   const fetchEvents = useCallback(async () => {
     setIsLoading(true);
@@ -425,6 +434,75 @@ export function Events() {
     }
   };
 
+  const handleCreateMember = async () => {
+    if (!newMember.firstname || !newMember.lastname) {
+      toast({
+        title: "Missing Information",
+        description: "Please provide at least first and last name.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // If email is empty, set it to null to avoid unique constraint issues
+      const memberData = {
+        firstname: newMember.firstname,
+        lastname: newMember.lastname,
+        email: newMember.email || null,
+        phone: newMember.phone || null,
+        status: newMember.status
+      };
+
+      const { data, error } = await supabase
+        .from('members')
+        .insert([memberData])
+        .select()
+        .single();
+
+      if (error) {
+        if (error.code === '23505' && error.message.includes('members_email_key')) {
+          toast({
+            title: "Email Already Exists",
+            description: "A person with this email already exists. Please use a different email or leave it empty.",
+            variant: "destructive"
+          });
+          return;
+        }
+        throw error;
+      }
+
+      // Add the new member to the event
+      await handleMemberClick(data);
+
+      // Reset form and close dialog
+      setNewMember({
+        firstname: '',
+        lastname: '',
+        email: '',
+        phone: '',
+        status: 'active'
+      });
+      setIsCreateMemberOpen(false);
+
+      toast({
+        title: "Success",
+        description: "New person created and added to the event."
+      });
+
+      // Refresh members list
+      const updatedMembers = await getMembers();
+      setMembers(updatedMembers);
+    } catch (error) {
+      console.error('Error creating member:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create new person. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -578,14 +656,23 @@ export function Events() {
           <div className="grid grid-cols-2 gap-6 flex-1 min-h-0">
             {/* Left Column - Select Member */}
             <div className="flex flex-col min-h-0">
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search members..."
-                  value={memberSearchQuery}
-                  onChange={(e) => setMemberSearchQuery(e.target.value)}
-                  className="pl-8 mb-4"
-                />
+              <div className="flex items-center gap-2 mb-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search members..."
+                    value={memberSearchQuery}
+                    onChange={(e) => setMemberSearchQuery(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsCreateMemberOpen(true)}
+                >
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  New Person
+                </Button>
               </div>
               <div className="flex-1 overflow-y-auto min-h-0">
                 {filteredMembers.length > 0 ? (
@@ -656,6 +743,84 @@ export function Events() {
           <DialogFooter className="mt-4">
             <Button onClick={handleDone}>
               Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create New Member Dialog */}
+      <Dialog open={isCreateMemberOpen} onOpenChange={setIsCreateMemberOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Create New Person</DialogTitle>
+            <DialogDescription>
+              Add a new person and automatically RSVP them to this event.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstname">First Name *</Label>
+                <Input
+                  id="firstname"
+                  value={newMember.firstname}
+                  onChange={(e) => setNewMember({...newMember, firstname: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastname">Last Name *</Label>
+                <Input
+                  id="lastname"
+                  value={newMember.lastname}
+                  onChange={(e) => setNewMember({...newMember, lastname: e.target.value})}
+                  required
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={newMember.email}
+                  onChange={(e) => setNewMember({...newMember, email: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={newMember.phone}
+                  onChange={(e) => setNewMember({...newMember, phone: e.target.value})}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select
+                value={newMember.status}
+                onValueChange={(value) => setNewMember({...newMember, status: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="visitor">Visitor</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateMemberOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateMember}>
+              Create & RSVP
             </Button>
           </DialogFooter>
         </DialogContent>
