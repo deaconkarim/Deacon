@@ -194,23 +194,19 @@ export function Tasks() {
 
       if (error) throw error;
 
-      // Update the task in the local state
-      setTasks(tasks.map(task => {
-        if (task.id === taskId) {
-          return { ...task, status: newStatus };
-        }
-        return task;
-      }));
+      setTasks(tasks.map(task => 
+        task.id === taskId ? { ...task, status: newStatus } : task
+      ));
 
       toast({
-        title: "Success",
-        description: "Task status updated successfully."
+        title: "Task updated",
+        description: `Task status changed to ${newStatus}`,
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to update task status. Please try again.",
-        variant: "destructive"
+        description: "Failed to update task status",
+        variant: "destructive",
       });
     }
   };

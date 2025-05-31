@@ -3,6 +3,8 @@ import { generateBulletin } from '../../lib/bulletinService';
 import { getRecentDonations } from '../../lib/donationService';
 import { Plus, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from '@/components/ui/use-toast';
+import { supabase } from '../../lib/supabase';
 
 const formatDonationAmounts = (donation) => {
   if (!donation.donation_amounts) return '';
@@ -49,10 +51,20 @@ const BulletinForm = () => {
   useEffect(() => {
     const fetchDonations = async () => {
       try {
-        const data = await getRecentDonations();
-        setDonations(data);
+        const { data, error } = await supabase
+          .from('donations')
+          .select('*')
+          .order('date', { ascending: false });
+
+        if (error) throw error;
+
+        setDonations(data || []);
       } catch (error) {
-        console.error('Error fetching donations:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch donations",
+          variant: "destructive",
+        });
       }
     };
     fetchDonations();

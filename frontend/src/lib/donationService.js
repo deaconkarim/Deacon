@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from './supabaseClient';
 
 // Mock data for development
 const mockDonations = [
@@ -33,6 +33,65 @@ const mockDonations = [
     attendance: 44
   }
 ];
+
+export async function getDonations() {
+  try {
+    const { data, error } = await supabase
+      .from('donations')
+      .select('*')
+      .order('date', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function addDonation(donation) {
+  try {
+    const { data, error } = await supabase
+      .from('donations')
+      .insert([donation])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function updateDonation(id, updates) {
+  try {
+    const { data, error } = await supabase
+      .from('donations')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function deleteDonation(id) {
+  try {
+    const { error } = await supabase
+      .from('donations')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    throw error;
+  }
+}
 
 export const getRecentDonations = async () => {
   try {

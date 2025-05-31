@@ -9,20 +9,11 @@ export async function getMembers() {
       .order('firstname', { ascending: true })
       .order('lastname', { ascending: true });
 
-    if (error) {
-      console.error('Error fetching members:', error);
-      throw error;
-    }
-
-    console.log('Raw members data:', data);
+    if (error) throw error;
 
     // Parse address JSON for each member and transform to camelCase
     const parsedData = data.map(member => {
       try {
-        console.log('Processing member:', member.id);
-        console.log('Address type:', typeof member.address);
-        console.log('Raw address:', member.address);
-
         // Transform snake_case to camelCase
         const transformedMember = {
           ...member,
@@ -35,7 +26,6 @@ export async function getMembers() {
 
         // If address is already an object, use it directly
         if (typeof member.address === 'object' && member.address !== null) {
-          console.log('Using address as object');
           return {
             ...transformedMember,
             address: member.address
@@ -69,13 +59,11 @@ export async function getMembers() {
         }
         
         // If address is null or undefined, return null
-        console.log('Using null address');
         return {
           ...transformedMember,
           address: null
         };
       } catch (error) {
-        console.error('Error processing member address:', member.id, error);
         return {
           ...member,
           firstName: member.firstname || '',
@@ -88,10 +76,8 @@ export async function getMembers() {
       }
     });
 
-    console.log('Parsed members data:', parsedData);
     return parsedData;
   } catch (error) {
-    console.error('Error in getMembers:', error);
     return [];
   }
 }
@@ -104,20 +90,14 @@ export const addMember = async (member) => {
     joinDate: member.joinDate ? new Date(member.joinDate).toISOString() : new Date().toISOString()
   };
 
-  console.log('Adding member with data:', memberData);
-
   const { data, error } = await supabase
     .from('members')
     .insert([memberData])
     .select()
     .single();
 
-  if (error) {
-    console.error('Error adding member:', error);
-    throw error;
-  }
+  if (error) throw error;
 
-  console.log('Added member:', data);
   // Parse the address before returning
   return {
     ...data,
@@ -133,8 +113,6 @@ export const updateMember = async (id, updates) => {
     joinDate: updates.joinDate ? new Date(updates.joinDate).toISOString() : undefined
   };
 
-  console.log('Updating member with data:', memberData);
-
   const { data, error } = await supabase
     .from('members')
     .update(memberData)
@@ -142,12 +120,8 @@ export const updateMember = async (id, updates) => {
     .select()
     .single();
 
-  if (error) {
-    console.error('Error updating member:', error);
-    throw error;
-  }
+  if (error) throw error;
 
-  console.log('Updated member:', data);
   // Parse the address before returning
   return {
     ...data,
@@ -168,7 +142,6 @@ export const deleteMember = async (id) => {
         throw eventAttendanceError;
       }
     } catch (error) {
-      console.error('Error deleting from event_attendance:', error);
       // Continue execution even if this fails
     }
 
@@ -183,7 +156,6 @@ export const deleteMember = async (id) => {
         throw memberEventAttendanceError;
       }
     } catch (error) {
-      console.error('Error deleting from member_event_attendance:', error);
       // Continue execution even if this fails
     }
 
@@ -197,7 +169,6 @@ export const deleteMember = async (id) => {
 
     return true;
   } catch (error) {
-    console.error('Error deleting member:', error);
     throw error;
   }
 };
@@ -209,10 +180,7 @@ export const getEvents = async () => {
     .select('*')
     .order('date', { ascending: true });
   
-  if (error) {
-    console.error('Error fetching events:', error);
-    return [];
-  }
+  if (error) return [];
   return data;
 };
 
@@ -222,10 +190,7 @@ export const addEvent = async (event) => {
     .insert([event])
     .select();
   
-  if (error) {
-    console.error('Error adding event:', error);
-    throw error;
-  }
+  if (error) throw error;
   return data[0];
 };
 
@@ -236,10 +201,7 @@ export const updateEvent = async (id, updates) => {
     .eq('id', id)
     .select();
   
-  if (error) {
-    console.error('Error updating event:', error);
-    throw error;
-  }
+  if (error) throw error;
   return data[0];
 };
 
@@ -249,10 +211,8 @@ export const deleteEvent = async (id) => {
     .delete()
     .eq('id', id);
   
-  if (error) {
-    console.error('Error deleting event:', error);
-    throw error;
-  }
+  if (error) throw error;
+  return true;
 };
 
 // Donations
@@ -263,14 +223,9 @@ export async function getDonations() {
       .select('*')
       .order('date', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching donations:', error);
-      throw error;
-    }
-
+    if (error) throw error;
     return data || [];
   } catch (error) {
-    console.error('Error in getDonations:', error);
     throw error;
   }
 }
@@ -285,26 +240,15 @@ export async function addDonation(donation) {
       attendance: donation.attendance ? parseInt(donation.attendance) : null
     };
 
-    console.log('Adding donation with data:', donationData);
-
     const { data, error } = await supabase
       .from('donations')
       .insert([donationData])
       .select()
       .single();
 
-    if (error) {
-      console.error('Error adding donation:', error);
-      if (error.code === '42501') {
-        console.error('Authentication error - please ensure you are logged in');
-      }
-      throw error;
-    }
-
-    console.log('Successfully added donation:', data);
+    if (error) throw error;
     return data;
   } catch (error) {
-    console.error('Error in addDonation:', error);
     throw error;
   }
 }
@@ -318,14 +262,9 @@ export async function updateDonation(id, updates) {
       .select()
       .single();
 
-    if (error) {
-      console.error('Error updating donation:', error);
-      throw error;
-    }
-
+    if (error) throw error;
     return data;
   } catch (error) {
-    console.error('Error in updateDonation:', error);
     throw error;
   }
 }
@@ -337,12 +276,9 @@ export async function deleteDonation(id) {
       .delete()
       .eq('id', id);
 
-    if (error) {
-      console.error('Error deleting donation:', error);
-      throw error;
-    }
+    if (error) throw error;
+    return true;
   } catch (error) {
-    console.error('Error in deleteDonation:', error);
     throw error;
   }
 }
@@ -353,16 +289,11 @@ export async function getGroups() {
     const { data, error } = await supabase
       .from('groups')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('name', { ascending: true });
 
-    if (error) {
-      console.error('Error fetching groups:', error);
-      throw error;
-    }
-
+    if (error) throw error;
     return data || [];
   } catch (error) {
-    console.error('Error in getGroups:', error);
     throw error;
   }
 }

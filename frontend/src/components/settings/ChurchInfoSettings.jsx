@@ -83,6 +83,27 @@ const ChurchInfoSettings = () => {
     fetchChurchSettings();
   }, [toast]);
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const { error } = await supabase
+        .from('church_info')
+        .upsert([churchSettings]);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Church information updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update church information",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="visible">

@@ -1,66 +1,68 @@
 import { supabase } from './supabaseClient';
 
 // Fetch all members
-export const fetchMembers = async () => {
-  const { data, error } = await supabase
-    .from('members')
-    .select('*')
-    .order('lastName', { ascending: true })
-    .order('firstName', { ascending: true });
+export async function getMembers() {
+  try {
+    const { data, error } = await supabase
+      .from('members')
+      .select('*')
+      .order('firstname', { ascending: true })
+      .order('lastname', { ascending: true });
 
-  if (error) {
-    console.error('Error fetching members:', error);
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
     throw error;
   }
-
-  return data;
-};
+}
 
 // Add a new member
-export const addMember = async (memberData) => {
-  const { data, error } = await supabase
-    .from('members')
-    .insert([memberData])
-    .select()
-    .single();
+export async function addMember(member) {
+  try {
+    const { data, error } = await supabase
+      .from('members')
+      .insert([member])
+      .select()
+      .single();
 
-  if (error) {
-    console.error('Error adding member:', error);
+    if (error) throw error;
+    return data;
+  } catch (error) {
     throw error;
   }
-
-  return data;
-};
+}
 
 // Update a member
-export const updateMember = async (id, memberData) => {
-  const { data, error } = await supabase
-    .from('members')
-    .update(memberData)
-    .eq('id', id)
-    .select()
-    .single();
+export async function updateMember(id, updates) {
+  try {
+    const { data, error } = await supabase
+      .from('members')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
 
-  if (error) {
-    console.error('Error updating member:', error);
+    if (error) throw error;
+    return data;
+  } catch (error) {
     throw error;
   }
-
-  return data;
-};
+}
 
 // Delete a member
-export const deleteMember = async (id) => {
-  const { error } = await supabase
-    .from('members')
-    .delete()
-    .eq('id', id);
+export async function deleteMember(id) {
+  try {
+    const { error } = await supabase
+      .from('members')
+      .delete()
+      .eq('id', id);
 
-  if (error) {
-    console.error('Error deleting member:', error);
+    if (error) throw error;
+    return true;
+  } catch (error) {
     throw error;
   }
-};
+}
 
 // Subscribe to members changes
 export const subscribeToMembers = (callback) => {

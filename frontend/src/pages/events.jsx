@@ -503,6 +503,32 @@ export function Events() {
     }
   };
 
+  const fetchEventAttendance = async (eventId) => {
+    try {
+      const { data, error } = await supabase
+        .from('event_attendance')
+        .select(`
+          *,
+          members (
+            id,
+            firstname,
+            lastname
+          )
+        `)
+        .eq('event_id', eventId);
+
+      if (error) throw error;
+
+      setAttendance(data || []);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch attendance",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
