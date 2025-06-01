@@ -11,6 +11,7 @@ import { NotFound } from '@/pages/not-found';
 import BulletinForm from '@/components/bulletin/BulletinForm';
 import { Tasks } from './pages/tasks';
 import { Prayer } from './pages/prayer';
+import WorshipCheckInPage from './pages/worship-check-in';
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
         <Route path="bulletin" element={<BulletinForm />} />
         <Route path="tasks" element={<Tasks />} />
         <Route path="prayer" element={<Prayer />} />
+        <Route path="worship-check-in" element={<WorshipCheckInPage />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

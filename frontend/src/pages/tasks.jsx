@@ -423,126 +423,214 @@ export function Tasks() {
           <div className="flex justify-center items-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
-        ) : filteredTasks.length > 0 ? (
-          filteredTasks.map(task => (
-            <Card key={task.id}>
-              <CardHeader>
-                <div className="flex flex-col gap-2">
-                  <CardTitle>{task.title}</CardTitle>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <CardDescription>
-                      Requested by {task.requestor?.fullName || 'Unknown'}
-                    </CardDescription>
-                    <div className="flex gap-2">
-                      <Badge className={getPriorityColor(task.priority)}>
-                        {formatPriority(task.priority)}
-                      </Badge>
-                      <Badge className={getStatusColor(task.status)}>
-                        {formatStatus(task.status)}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {task.description && (
-                    <p className="text-sm text-muted-foreground">{task.description}</p>
-                  )}
-                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                    {task.due_date && (
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4" />
-                        Due {format(new Date(task.due_date), 'MMM d, yyyy')}
-                      </div>
-                    )}
-                    {task.assignee && (
-                      <div className="flex items-center gap-2">
-                        <UserPlus className="h-4 w-4" />
-                        Assigned to {task.assignee.fullName}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {task.status !== 'completed' && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleUpdateTaskStatus(task.id, 'completed')}
-                        className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
-                      >
-                        <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">Mark Complete</span>
-                        <span className="sm:hidden">Complete</span>
-                      </Button>
-                    )}
-                    {task.status === 'completed' && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleUpdateTaskStatus(task.id, 'in_progress')}
-                        className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
-                      >
-                        <Loader2 className="mr-1 h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">Back to In Progress</span>
-                        <span className="sm:hidden">In Progress</span>
-                      </Button>
-                    )}
-                    {task.status !== 'in_progress' && task.status !== 'completed' && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleUpdateTaskStatus(task.id, 'in_progress')}
-                        className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
-                      >
-                        <Loader2 className="mr-1 h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">Start Progress</span>
-                        <span className="sm:hidden">Start</span>
-                      </Button>
-                    )}
-                    {task.status === 'in_progress' && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleUpdateTaskStatus(task.id, 'pending')}
-                        className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-200"
-                      >
-                        <AlertCircle className="mr-1 h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">Back to Pending</span>
-                        <span className="sm:hidden">Pending</span>
-                      </Button>
-                    )}
-                    {task.status !== 'cancelled' && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleUpdateTaskStatus(task.id, 'cancelled')}
-                        className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
-                      >
-                        <XCircle className="mr-1 h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">Cancel</span>
-                        <span className="sm:hidden">Cancel</span>
-                      </Button>
-                    )}
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => openEditDialog(task)}
-                      className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200"
-                    >
-                      <Pencil className="mr-1 h-3.5 w-3.5" />
-                      <span className="hidden sm:inline">Edit</span>
-                      <span className="sm:hidden">Edit</span>
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
         ) : (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">No tasks found.</p>
-          </div>
+          <>
+            {/* Active Tasks Section */}
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold">Active Tasks</h2>
+              {filteredTasks.filter(task => task.status !== 'completed').length > 0 ? (
+                filteredTasks
+                  .filter(task => task.status !== 'completed')
+                  .map(task => (
+                    <Card key={task.id}>
+                      <CardHeader>
+                        <div className="flex flex-col gap-2">
+                          <CardTitle>{task.title}</CardTitle>
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <CardDescription>
+                              Requested by {task.requestor?.fullName || 'Unknown'}
+                            </CardDescription>
+                            <div className="flex gap-2">
+                              <Badge className={getPriorityColor(task.priority)}>
+                                {formatPriority(task.priority)}
+                              </Badge>
+                              <Badge className={getStatusColor(task.status)}>
+                                {formatStatus(task.status)}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {task.description && (
+                            <p className="text-sm text-muted-foreground">{task.description}</p>
+                          )}
+                          <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                            {task.due_date && (
+                              <div className="flex items-center gap-2">
+                                <Clock className="h-4 w-4" />
+                                Due {format(new Date(task.due_date), 'MMM d, yyyy')}
+                              </div>
+                            )}
+                            {task.assignee && (
+                              <div className="flex items-center gap-2">
+                                <UserPlus className="h-4 w-4" />
+                                Assigned to {task.assignee.fullName}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {task.status !== 'completed' && (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => handleUpdateTaskStatus(task.id, 'completed')}
+                                className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                              >
+                                <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">Mark Complete</span>
+                                <span className="sm:hidden">Complete</span>
+                              </Button>
+                            )}
+                            {task.status === 'completed' && (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => handleUpdateTaskStatus(task.id, 'in_progress')}
+                                className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                              >
+                                <Loader2 className="mr-1 h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">Back to In Progress</span>
+                                <span className="sm:hidden">In Progress</span>
+                              </Button>
+                            )}
+                            {task.status !== 'in_progress' && task.status !== 'completed' && (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => handleUpdateTaskStatus(task.id, 'in_progress')}
+                                className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                              >
+                                <Loader2 className="mr-1 h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">Start Progress</span>
+                                <span className="sm:hidden">Start</span>
+                              </Button>
+                            )}
+                            {task.status === 'in_progress' && (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => handleUpdateTaskStatus(task.id, 'pending')}
+                                className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-200"
+                              >
+                                <AlertCircle className="mr-1 h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">Back to Pending</span>
+                                <span className="sm:hidden">Pending</span>
+                              </Button>
+                            )}
+                            {task.status !== 'cancelled' && (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => handleUpdateTaskStatus(task.id, 'cancelled')}
+                                className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
+                              >
+                                <XCircle className="mr-1 h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">Cancel</span>
+                                <span className="sm:hidden">Cancel</span>
+                              </Button>
+                            )}
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => openEditDialog(task)}
+                              className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200"
+                            >
+                              <Pencil className="mr-1 h-3.5 w-3.5" />
+                              <span className="hidden sm:inline">Edit</span>
+                              <span className="sm:hidden">Edit</span>
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">No active tasks found.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Completed Tasks Section */}
+            <div className="space-y-4 pt-8 border-t">
+              <h2 className="text-xl font-semibold">Completed Tasks</h2>
+              {filteredTasks.filter(task => task.status === 'completed').length > 0 ? (
+                filteredTasks
+                  .filter(task => task.status === 'completed')
+                  .map(task => (
+                    <Card key={task.id} className="bg-muted/50">
+                      <CardHeader>
+                        <div className="flex flex-col gap-2">
+                          <CardTitle className="text-muted-foreground">{task.title}</CardTitle>
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <CardDescription>
+                              Requested by {task.requestor?.fullName || 'Unknown'}
+                            </CardDescription>
+                            <div className="flex gap-2">
+                              <Badge className={getPriorityColor(task.priority)}>
+                                {formatPriority(task.priority)}
+                              </Badge>
+                              <Badge className={getStatusColor(task.status)}>
+                                {formatStatus(task.status)}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {task.description && (
+                            <p className="text-sm text-muted-foreground">{task.description}</p>
+                          )}
+                          <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                            {task.due_date && (
+                              <div className="flex items-center gap-2">
+                                <Clock className="h-4 w-4" />
+                                Due {format(new Date(task.due_date), 'MMM d, yyyy')}
+                              </div>
+                            )}
+                            {task.assignee && (
+                              <div className="flex items-center gap-2">
+                                <UserPlus className="h-4 w-4" />
+                                Assigned to {task.assignee.fullName}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => handleUpdateTaskStatus(task.id, 'in_progress')}
+                              className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                            >
+                              <Loader2 className="mr-1 h-3.5 w-3.5" />
+                              <span className="hidden sm:inline">Back to In Progress</span>
+                              <span className="sm:hidden">In Progress</span>
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => openEditDialog(task)}
+                              className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200"
+                            >
+                              <Pencil className="mr-1 h-3.5 w-3.5" />
+                              <span className="hidden sm:inline">Edit</span>
+                              <span className="sm:hidden">Edit</span>
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">No completed tasks found.</p>
+                </div>
+              )}
+            </div>
+          </>
         )}
       </div>
 

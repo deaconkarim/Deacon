@@ -37,6 +37,7 @@ export function Layout() {
     { name: 'Donations', href: '/donations', icon: DollarSign },
     { name: 'Groups', href: '/groups', icon: UserPlus },
     { name: 'Tasks', href: '/tasks', icon: ClipboardList },
+    { name: 'Church Check-In', href: '/worship-check-in', icon: Church },
     { name: 'Reports', href: '/reports', icon: BarChart2 },
     { name: 'Bulletin', href: '/bulletin', icon: FileText },
     { name: 'Settings', href: '/settings', icon: SettingsIcon },
