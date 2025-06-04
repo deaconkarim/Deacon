@@ -72,11 +72,6 @@ const EventCard = ({ event, onEdit, onDelete, onRSVP }) => {
                   {event.recurrence_pattern}
                 </Badge>
               )}
-              {isInstance && (
-                <Badge variant="outline" className="ml-2">
-                  Next Instance
-                </Badge>
-              )}
             </CardTitle>
             <CardDescription>
               {format(startDate, 'EEEE, MMMM d, yyyy')}
@@ -847,11 +842,6 @@ export function Events() {
                     {event.recurrence_pattern}
                   </Badge>
                 )}
-                {isInstance && (
-                  <Badge variant="outline" className="ml-2">
-                    Next Instance
-                  </Badge>
-                )}
               </CardTitle>
               <CardDescription>
                 {format(startDate, 'EEEE, MMMM d, yyyy')}
@@ -904,6 +894,87 @@ export function Events() {
         </CardContent>
       </Card>
     );
+  };
+
+  const processRecurringEvents = (events) => {
+    const processedEvents = [];
+    const now = new Date();
+    const endDate = new Date();
+    endDate.setMonth(endDate.getMonth() + 3); // Show events for next 3 months
+
+    events.forEach(event => {
+      if (!event.is_recurring) {
+        processedEvents.push(event);
+        return;
+      }
+
+      const startDate = new Date(event.start_date);
+      const endTime = new Date(event.end_date);
+      const duration = endTime - startDate;
+
+      let currentDate = new Date(startDate);
+      while (currentDate <= endDate) {
+        if (currentDate >= now) {
+          const eventInstance = {
+            ...event,
+            id: `${event.id}_${currentDate.toISOString()}`,
+            start_date: new Date(currentDate),
+            end_date: new Date(currentDate.getTime() + duration),
+            is_instance: true
+          };
+          processedEvents.push(eventInstance);
+        }
+
+        // Calculate next occurrence based on recurrence pattern
+        switch (event.recurrence_pattern) {
+          case 'daily':
+            currentDate.setDate(currentDate.getDate() + 1);
+            break;
+          case 'weekly':
+            currentDate.setDate(currentDate.getDate() + 7);
+            break;
+          case 'biweekly':
+            currentDate.setDate(currentDate.getDate() + 14);
+            break;
+          case 'monthly':
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            break;
+          case 'monthly_weekday':
+            // Get the next month
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            // Set to first day of the month
+            currentDate.setDate(1);
+            
+            // Get the target weekday (0-6, where 0 is Sunday)
+            const targetWeekday = parseInt(event.monthly_weekday);
+            // Get the target week (1-5, where 5 means last week)
+            const targetWeek = parseInt(event.monthly_week);
+            
+            // Find the target date
+            if (targetWeek === 5) {
+              // For last week, start from the end of the month
+              currentDate.setMonth(currentDate.getMonth() + 1);
+              currentDate.setDate(0); // Last day of the month
+              // Go backwards to find the target weekday
+              while (currentDate.getDay() !== targetWeekday) {
+                currentDate.setDate(currentDate.getDate() - 1);
+              }
+            } else {
+              // For other weeks, find the first occurrence of the target weekday
+              while (currentDate.getDay() !== targetWeekday) {
+                currentDate.setDate(currentDate.getDate() + 1);
+              }
+              // Add weeks to get to the target week
+              currentDate.setDate(currentDate.getDate() + (targetWeek - 1) * 7);
+            }
+            break;
+          default:
+            currentDate = endDate; // Stop processing for unknown patterns
+        }
+      }
+    });
+
+    return processedEvents;
   };
 
   return (

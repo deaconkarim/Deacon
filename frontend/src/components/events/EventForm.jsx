@@ -17,7 +17,9 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
     location: initialData.location || '',
     url: initialData.url || '',
     is_recurring: initialData.is_recurring || false,
-    recurrence_pattern: initialData.recurrence_pattern || ''
+    recurrence_pattern: initialData.recurrence_pattern || '',
+    monthly_week: initialData.monthly_week || '',
+    monthly_weekday: initialData.monthly_weekday || ''
   });
   const { toast } = useToast();
 
@@ -31,7 +33,9 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
       location: initialData.location || '',
       url: initialData.url || '',
       is_recurring: initialData.is_recurring || false,
-      recurrence_pattern: initialData.recurrence_pattern || ''
+      recurrence_pattern: initialData.recurrence_pattern || '',
+      monthly_week: initialData.monthly_week || '',
+      monthly_weekday: initialData.monthly_weekday || ''
     });
   }, [initialData]);
 
@@ -145,16 +149,76 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
       {eventData.is_recurring && (
         <div className="space-y-2">
           <Label htmlFor="recurrencePattern">Recurrence Pattern</Label>
-          <Select value={eventData.recurrence_pattern || ""} onValueChange={(value) => handleRecurrencePatternChange(value)}>
-            <SelectTrigger id="recurrencePattern"><SelectValue placeholder="Select pattern" /></SelectTrigger>
+          <Select
+            value={eventData.recurrence_pattern}
+            onValueChange={(value) => {
+              setEventData({
+                ...eventData,
+                recurrence_pattern: value,
+                is_recurring: value !== 'none'
+              });
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select recurrence pattern" />
+            </SelectTrigger>
             <SelectContent>
+              <SelectItem value="none">No Recurrence</SelectItem>
               <SelectItem value="daily">Daily</SelectItem>
               <SelectItem value="weekly">Weekly</SelectItem>
+              <SelectItem value="biweekly">Biweekly</SelectItem>
               <SelectItem value="monthly">Monthly</SelectItem>
-              <SelectItem value="quarterly">Quarterly</SelectItem>
-              <SelectItem value="yearly">Yearly</SelectItem>
+              <SelectItem value="monthly_weekday">Monthly (Specific Weekday)</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+      )}
+      {eventData.recurrence_pattern === 'monthly_weekday' && (
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="monthly_week">Week of Month</Label>
+            <Select
+              value={eventData.monthly_week}
+              onValueChange={(value) => setEventData({
+                ...eventData,
+                monthly_week: value
+              })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select week" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">First</SelectItem>
+                <SelectItem value="2">Second</SelectItem>
+                <SelectItem value="3">Third</SelectItem>
+                <SelectItem value="4">Fourth</SelectItem>
+                <SelectItem value="5">Last</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="monthly_weekday">Day of Week</Label>
+            <Select
+              value={eventData.monthly_weekday}
+              onValueChange={(value) => setEventData({
+                ...eventData,
+                monthly_weekday: value
+              })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select day" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">Sunday</SelectItem>
+                <SelectItem value="1">Monday</SelectItem>
+                <SelectItem value="2">Tuesday</SelectItem>
+                <SelectItem value="3">Wednesday</SelectItem>
+                <SelectItem value="4">Thursday</SelectItem>
+                <SelectItem value="5">Friday</SelectItem>
+                <SelectItem value="6">Saturday</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       )}
       <div className="flex justify-end space-x-2 pt-4">

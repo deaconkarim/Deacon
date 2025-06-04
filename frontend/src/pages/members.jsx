@@ -42,6 +42,7 @@ import { useAuth } from '@/lib/authContext';
 import { Textarea } from '@/components/ui/textarea';
 import { formatName, getInitials } from '@/lib/utils/formatters';
 import { useNavigate } from 'react-router-dom';
+import MemberForm from '@/components/members/MemberForm';
 
 export function People() {
   const [members, setMembers] = useState([]);
@@ -705,333 +706,103 @@ export function People() {
       
       {/* Add Person Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Add Person</DialogTitle>
+            <DialogTitle>Add New Member</DialogTitle>
             <DialogDescription>
-              Add a new person to your church database.
+              Enter the member's information below.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-6 py-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="firstName">First Name *</Label>
-                <Input
-                  id="firstName"
-                  value={newMember.firstName}
-                  onChange={(e) => setNewMember({
-                    ...newMember,
-                    firstName: e.target.value
-                  })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="lastName">Last Name *</Label>
-                <Input
-                  id="lastName"
-                  value={newMember.lastName}
-                  onChange={(e) => setNewMember({
-                    ...newMember,
-                    lastName: e.target.value
-                  })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={newMember.email}
-                  onChange={(e) => setNewMember({
-                    ...newMember,
-                    email: e.target.value
-                  })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={newMember.phone}
-                  onChange={(e) => setNewMember({
-                    ...newMember,
-                    phone: e.target.value
-                  })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
-                <select
-                  id="status"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  value={newMember.status}
-                  onChange={(e) => setNewMember({
-                    ...newMember,
-                    status: e.target.value
-                  })}
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="visitor">Visitor</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="joinDate">Join Date</Label>
-                <Input
-                  id="joinDate"
-                  type="date"
-                  value={newMember.joinDate}
-                  onChange={(e) => setNewMember({
-                    ...newMember,
-                    joinDate: e.target.value
-                  })}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="address-street">Street Address</Label>
-                <Input
-                  id="address-street"
-                  value={newMember.address.street}
-                  onChange={e => setNewMember({
-                    ...newMember,
-                    address: { ...newMember.address, street: e.target.value }
-                  })}
-                  placeholder="123 Main St"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="address-city">City</Label>
-                <Input
-                  id="address-city"
-                  value={newMember.address.city}
-                  onChange={e => setNewMember({
-                    ...newMember,
-                    address: { ...newMember.address, city: e.target.value }
-                  })}
-                  placeholder="City"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="address-state">State/Province</Label>
-                <Input
-                  id="address-state"
-                  value={newMember.address.state}
-                  onChange={e => setNewMember({
-                    ...newMember,
-                    address: { ...newMember.address, state: e.target.value }
-                  })}
-                  placeholder="State/Province"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="address-zip">Postal/Zip Code</Label>
-                <Input
-                  id="address-zip"
-                  value={newMember.address.zip}
-                  onChange={e => setNewMember({
-                    ...newMember,
-                    address: { ...newMember.address, zip: e.target.value }
-                  })}
-                  placeholder="Postal/Zip Code"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Input
-                id="notes"
-                value={newMember.notes}
-                onChange={(e) => setNewMember({
-                  ...newMember,
-                  notes: e.target.value
-                })}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAddMember}>
-              Add Person
-            </Button>
-          </DialogFooter>
+          <MemberForm
+            initialData={{
+              firstname: '',
+              lastname: '',
+              email: '',
+              phone: '',
+              status: 'active',
+              image_url: ''
+            }}
+            onSave={async (memberData) => {
+              try {
+                const addedMember = await addMember({
+                  firstName: memberData.firstname,
+                  lastName: memberData.lastname,
+                  email: memberData.email,
+                  phone: memberData.phone,
+                  status: memberData.status,
+                  image_url: memberData.image_url
+                });
+                setMembers(prev => [addedMember, ...prev]);
+                setIsAddDialogOpen(false);
+                toast({
+                  title: "Success",
+                  description: "Member added successfully"
+                });
+              } catch (error) {
+                console.error('Error adding member:', error);
+                toast({
+                  title: "Error",
+                  description: "Failed to add member",
+                  variant: "destructive",
+                });
+              }
+            }}
+            onCancel={() => setIsAddDialogOpen(false)}
+          />
         </DialogContent>
       </Dialog>
       
       {/* Edit Member Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Edit Person</DialogTitle>
+            <DialogTitle>Edit Member</DialogTitle>
             <DialogDescription>
-              Update person's information and view attendance history.
+              Update the member's information below.
             </DialogDescription>
           </DialogHeader>
           {selectedMember && (
-            <div className="grid gap-6 py-4">
-              <Tabs defaultValue="info">
-                <TabsList>
-                  <TabsTrigger value="info">Person Info</TabsTrigger>
-                  <TabsTrigger value="attendance">Attendance History</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="info">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-firstName">First Name *</Label>
-                      <Input
-                        id="edit-firstName"
-                        value={selectedMember.firstName}
-                        onChange={(e) => setSelectedMember({
-                          ...selectedMember,
-                          firstName: e.target.value
-                        })}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-lastName">Last Name *</Label>
-                      <Input
-                        id="edit-lastName"
-                        value={selectedMember.lastName}
-                        onChange={(e) => setSelectedMember({
-                          ...selectedMember,
-                          lastName: e.target.value
-                        })}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-email">Email</Label>
-                      <Input
-                        id="edit-email"
-                        type="email"
-                        value={selectedMember.email}
-                        onChange={(e) => setSelectedMember({
-                          ...selectedMember,
-                          email: e.target.value
-                        })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-phone">Phone</Label>
-                      <Input
-                        id="edit-phone"
-                        type="tel"
-                        value={selectedMember.phone}
-                        onChange={(e) => setSelectedMember({
-                          ...selectedMember,
-                          phone: e.target.value
-                        })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-status">Status</Label>
-                      <select
-                        id="edit-status"
-                        className="w-full rounded-md border border-input bg-background px-3 py-2"
-                        value={selectedMember.status}
-                        onChange={(e) => setSelectedMember({
-                          ...selectedMember,
-                          status: e.target.value
-                        })}
-                      >
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                        <option value="visitor">Visitor</option>
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-joinDate">Join Date</Label>
-                      <Input
-                        id="edit-joinDate"
-                        type="date"
-                        value={selectedMember.joinDate ? new Date(selectedMember.joinDate).toISOString().split('T')[0] : ''}
-                        onChange={(e) => setSelectedMember({
-                          ...selectedMember,
-                          joinDate: e.target.value
-                        })}
-                      />
-                    </div>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="attendance">
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-lg font-semibold">Attendance History</h3>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => loadMemberAttendance(selectedMember.id)}
-                        disabled={isAttendanceLoading[selectedMember.id]}
-                      >
-                        <RefreshCw className={`h-4 w-4 mr-2 ${isAttendanceLoading[selectedMember.id] ? 'animate-spin' : ''}`} />
-                        Refresh
-                      </Button>
-                    </div>
-                    
-                    {isAttendanceLoading[selectedMember.id] ? (
-                      <div className="text-center py-4">
-                        <p className="text-muted-foreground">Loading attendance history...</p>
-                      </div>
-                    ) : memberAttendance[selectedMember.id]?.length > 0 ? (
-                      <div className="space-y-2">
-                        {memberAttendance[selectedMember.id].map((record) => {
-                          const eventDate = new Date(record.events.start_date);
-                          const isPastEvent = eventDate < new Date();
-                          const status = isPastEvent ? 'attended' : record.status;
-                          
-                          return (
-                            <Card key={record.id}>
-                              <CardContent className="p-4">
-                                <div className="flex items-center justify-between">
-                                  <div className="space-y-1">
-                                    <p className="font-medium">{record.events.title}</p>
-                                    <div className="flex items-center text-sm text-muted-foreground">
-                                      <Calendar className="h-4 w-4 mr-2" />
-                                      {format(new Date(record.events.start_date), 'MMM d, yyyy • h:mm a')}
-                                    </div>
-                                    {record.events.location && (
-                                      <div className="flex items-center text-sm text-muted-foreground">
-                                        <MapPin className="h-4 w-4 mr-2" />
-                                        {record.events.location}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <Badge variant={isPastEvent ? "default" : "outline"} className="ml-2">
-                                    {status}
-                                  </Badge>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="text-center py-4">
-                        <p className="text-muted-foreground">No attendance records found.</p>
-                      </div>
-                    )}
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </div>
+            <MemberForm
+              initialData={{
+                firstname: selectedMember.firstName,
+                lastname: selectedMember.lastName,
+                email: selectedMember.email,
+                phone: selectedMember.phone,
+                status: selectedMember.status,
+                image_url: selectedMember.image_url
+              }}
+              onSave={async (memberData) => {
+                try {
+                  const updatedMember = await updateMember(selectedMember.id, {
+                    firstName: memberData.firstname,
+                    lastName: memberData.lastname,
+                    email: memberData.email,
+                    phone: memberData.phone,
+                    status: memberData.status,
+                    image_url: memberData.image_url
+                  });
+                  setMembers(prev => prev.map(m => m.id === updatedMember.id ? updatedMember : m));
+                  setIsEditDialogOpen(false);
+                  setSelectedMember(null);
+                  toast({
+                    title: "Success",
+                    description: "Member updated successfully"
+                  });
+                } catch (error) {
+                  console.error('Error updating member:', error);
+                  toast({
+                    title: "Error",
+                    description: "Failed to update member",
+                    variant: "destructive",
+                  });
+                }
+              }}
+              onCancel={() => {
+                setIsEditDialogOpen(false);
+                setSelectedMember(null);
+              }}
+            />
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleUpdateMember}>
-              Save Changes
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
       
