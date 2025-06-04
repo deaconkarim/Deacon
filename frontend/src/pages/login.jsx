@@ -1,65 +1,63 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/lib/authContext';
-import { useToast } from '@/components/ui/use-toast';
+import { supabase } from '../lib/supabaseClient';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/components/ui/use-toast';
 
 export function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const { signIn } = useAuth();
-  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const handleSubmit = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
+    setLoading(true);
 
     try {
-      const { error } = await signIn({ email, password });
-      if (error) throw error;
-      
-      toast({
-        title: "Success",
-        description: "You have been logged in successfully."
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
-      
+
+      if (error) throw error;
+
       navigate('/dashboard');
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to log in. Please try again.",
-        variant: "destructive"
+        description: error.message,
+        variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-background">
       <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold text-center">Welcome Back</CardTitle>
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl text-center">Welcome back</CardTitle>
           <CardDescription className="text-center">
-            Sign in to your account to continue
+            Enter your credentials to access your account
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
+                placeholder="name@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                placeholder="Enter your email"
               />
             </div>
             <div className="space-y-2">
@@ -70,19 +68,17 @@ export function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                placeholder="Enter your password"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Signing in..." : "Sign In"}
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={loading}
+            >
+              {loading ? 'Signing in...' : 'Sign in'}
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex justify-center">
-          <p className="text-sm text-muted-foreground">
-            Contact your administrator if you need access
-          </p>
-        </CardFooter>
       </Card>
     </div>
   );

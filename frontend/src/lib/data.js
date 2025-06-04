@@ -175,44 +175,272 @@ export const deleteMember = async (id) => {
 
 // Events
 export const getEvents = async () => {
-  const { data, error } = await supabase
-    .from('events')
-    .select('*')
-    .order('date', { ascending: true });
-  
-  if (error) return [];
-  return data;
+  try {
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .order('start_date', { ascending: true });
+    
+    if (error) throw error;
+
+    // Process recurring events to show only one instance
+    const processedEvents = data.reduce((acc, event) => {
+      // If it's not a recurring event, add it as is
+      if (!event.is_recurring) {
+        acc.push(event);
+        return acc;
+      }
+
+      // For recurring events, check if we already have an instance
+      const existingInstance = acc.find(e => 
+        e.title === event.title && 
+        e.is_recurring && 
+        e.recurrence_pattern === event.recurrence_pattern
+      );
+
+      // If no instance exists, add this one
+      if (!existingInstance) {
+        acc.push(event);
+      }
+
+      return acc;
+    }, []);
+
+    return processedEvents || [];
+  } catch (error) {
+    console.error('Error fetching events:', error);
+    return [];
+  }
 };
 
 export const addEvent = async (event) => {
-  const { data, error } = await supabase
-    .from('events')
-    .insert([event])
-    .select();
-  
-  if (error) throw error;
-  return data[0];
+  try {
+    // Generate a unique ID for the event
+    const eventId = `${event.title}-${new Date(event.startDate).toISOString()}`
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+
+    const eventData = {
+      id: eventId,
+      title: event.title,
+      description: event.description,
+      start_date: event.startDate,
+      end_date: event.endDate,
+      location: event.location,
+      url: event.url,
+      is_recurring: event.is_recurring || false,
+      recurrence_pattern: event.is_recurring ? event.recurrence_pattern : null,
+      parent_event_id: null // Will be set for instances
+    };
+
+    // If it's a recurring event, first create the master event
+    if (event.is_recurring) {
+      // Create master event with is_master flag
+      const masterEvent = {
+        ...eventData,
+        is_master: true,
+        is_recurring: true
+      };
+
+      // Insert master event
+      const { data: masterData, error: masterError } = await supabase
+        .from('events')
+        .insert([masterEvent])
+        .select()
+        .single();
+
+      if (masterError) throw masterError;
+
+      // Generate instances with parent_event_id pointing to master event
+      const instances = generateRecurringInstances({
+        ...eventData,
+        parent_event_id: masterData.id
+      });
+      
+      // Insert all instances
+      const { data: instancesData, error: instancesError } = await supabase
+        .from('events')
+        .insert(instances)
+        .select();
+      
+      if (instancesError) throw instancesError;
+      return masterData; // Return the master event
+    } else {
+      // For non-recurring events, just insert the single event
+      const { data, error } = await supabase
+        .from('events')
+        .insert([eventData])
+        .select();
+      
+      if (error) throw error;
+      return data[0];
+    }
+  } catch (error) {
+    throw error;
+  }
 };
 
 export const updateEvent = async (id, updates) => {
-  const { data, error } = await supabase
-    .from('events')
-    .update(updates)
-    .eq('id', id)
-    .select();
-  
-  if (error) throw error;
-  return data[0];
+  try {
+    // First, get the original event to check if it's recurring
+    const { data: originalEvent, error: fetchError } = await supabase
+      .from('events')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    const eventData = {
+      title: updates.title,
+      description: updates.description,
+      start_date: updates.startDate,
+      end_date: updates.endDate,
+      location: updates.location,
+      url: updates.url,
+      is_recurring: updates.is_recurring || false,
+      recurrence_pattern: updates.is_recurring ? updates.recurrence_pattern : null
+    };
+
+    // If it's a recurring event, update master and all instances
+    if (originalEvent.is_recurring) {
+      // First update the master event
+      const masterId = originalEvent.is_master ? originalEvent.id : originalEvent.parent_event_id;
+      
+      const { data: masterData, error: masterError } = await supabase
+        .from('events')
+        .update({
+          ...eventData,
+          is_master: true
+        })
+        .eq('id', masterId)
+        .select()
+        .single();
+
+      if (masterError) throw masterError;
+
+      // Then update all instances
+      const { data: instancesData, error: instancesError } = await supabase
+        .from('events')
+        .update(eventData)
+        .eq('parent_event_id', masterId)
+        .select();
+      
+      if (instancesError) throw instancesError;
+      return masterData;
+    } else {
+      // For non-recurring events, just update the single event
+      const { data, error } = await supabase
+        .from('events')
+        .update(eventData)
+        .eq('id', id)
+        .select();
+      
+      if (error) throw error;
+      return data[0];
+    }
+  } catch (error) {
+    throw error;
+  }
 };
 
 export const deleteEvent = async (id) => {
-  const { error } = await supabase
-    .from('events')
-    .delete()
-    .eq('id', id);
+  try {
+    // First, get the original event to check if it's recurring
+    const { data: originalEvent, error: fetchError } = await supabase
+      .from('events')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // If it's a recurring event, delete master and all instances
+    if (originalEvent.is_recurring) {
+      const masterId = originalEvent.is_master ? originalEvent.id : originalEvent.parent_event_id;
+      
+      // Delete all instances first
+      const { error: instancesError } = await supabase
+        .from('events')
+        .delete()
+        .eq('parent_event_id', masterId);
+      
+      if (instancesError) throw instancesError;
+
+      // Then delete the master event
+      const { error: masterError } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', masterId);
+      
+      if (masterError) throw masterError;
+    } else {
+      // For non-recurring events, just delete the single event
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    }
+    return true;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Helper function to generate recurring event instances
+const generateRecurringInstances = (event) => {
+  const instances = [];
+  const startDate = new Date(event.start_date);
+  const endDate = new Date(event.end_date);
+  const duration = endDate.getTime() - startDate.getTime();
   
-  if (error) throw error;
-  return true;
+  // Generate events for the next 3 months
+  const maxDate = new Date();
+  maxDate.setMonth(maxDate.getMonth() + 3);
+  
+  let currentDate = new Date(startDate);
+  
+  while (currentDate <= maxDate) {
+    const occurrenceEndDate = new Date(currentDate.getTime() + duration);
+    const instanceId = `${event.id}-${currentDate.toISOString()}`
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+    
+    instances.push({
+      ...event,
+      id: instanceId,
+      start_date: currentDate.toISOString(),
+      end_date: occurrenceEndDate.toISOString(),
+      is_master: false,
+      parent_event_id: event.parent_event_id
+    });
+    
+    // Increment based on recurrence pattern
+    switch (event.recurrence_pattern) {
+      case 'daily':
+        currentDate.setDate(currentDate.getDate() + 1);
+        break;
+      case 'weekly':
+        currentDate.setDate(currentDate.getDate() + 7);
+        break;
+      case 'biweekly':
+        currentDate.setDate(currentDate.getDate() + 14);
+        break;
+      case 'monthly':
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        break;
+      default:
+        currentDate.setDate(currentDate.getDate() + 7); // Default to weekly
+    }
+  }
+  
+  return instances;
 };
 
 // Donations
@@ -297,3 +525,66 @@ export async function getGroups() {
     throw error;
   }
 }
+
+export const getMemberAttendance = async (memberId) => {
+  try {
+    const { data, error } = await supabase
+      .from('event_attendance')
+      .select(`
+        *,
+        events (
+          id,
+          title,
+          start_date,
+          end_date,
+          location
+        )
+      `)
+      .eq('memberid', memberId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getMemberGroups = async (memberId) => {
+  try {
+    const { data, error } = await supabase
+      .from('group_members')
+      .select(`
+        *,
+        groups (
+          id,
+          name,
+          description,
+          leader:members!leader_id (
+            id,
+            firstname,
+            lastname
+          )
+        )
+      `)
+      .eq('memberid', memberId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    
+    // Transform the data to camelCase for the frontend
+    return data.map(item => ({
+      ...item,
+      group: {
+        ...item.groups,
+        leader: item.groups.leader ? {
+          ...item.groups.leader,
+          firstName: item.groups.leader.firstname,
+          lastName: item.groups.leader.lastname
+        } : null
+      }
+    }));
+  } catch (error) {
+    throw error;
+  }
+};

@@ -21,7 +21,9 @@ import {
   MapPin,
   ChevronDown,
   ChevronUp,
-  Pencil
+  Pencil,
+  Clock,
+  RefreshCw
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,12 +35,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/components/ui/use-toast';
-import { getMembers, addMember, updateMember, deleteMember } from '../lib/data';
+import { getMembers, addMember, updateMember, deleteMember, getMemberAttendance } from '../lib/data';
 import { Badge } from '@/components/ui/badge';
 import { AddressInput } from '@/components/ui/address-input';
 import { useAuth } from '@/lib/authContext';
 import { Textarea } from '@/components/ui/textarea';
 import { formatName, getInitials } from '@/lib/utils/formatters';
+import { useNavigate } from 'react-router-dom';
 
 export function People() {
   const [members, setMembers] = useState([]);
@@ -71,6 +74,9 @@ export function People() {
   const [selectedMembers, setSelectedMembers] = useState([]);
   const { toast } = useToast();
   const { user } = useAuth();
+  const [memberAttendance, setMemberAttendance] = useState({});
+  const [isAttendanceLoading, setIsAttendanceLoading] = useState({});
+  const navigate = useNavigate();
   
   useEffect(() => {
     loadMembers();
@@ -88,10 +94,10 @@ export function People() {
       setMembers(sortedData);
       setFilteredMembers(sortedData);
     } catch (error) {
-      console.error('Error loading members:', error);
+      console.error('Error loading people:', error);
       toast({
         title: "Error",
-        description: "Failed to load members",
+        description: "Failed to load people",
         variant: "destructive",
       });
     } finally {
@@ -167,9 +173,9 @@ export function People() {
           zip: newMember.address.zip || ''
         } : null
       };
-      console.log('Adding member with data:', memberData);
+      console.log('Adding person with data:', memberData);
       const addedMember = await addMember(memberData);
-      console.log('Added member:', addedMember);
+      console.log('Added person:', addedMember);
       setMembers(prev => [addedMember, ...prev]);
       setIsAddDialogOpen(false);
       setNewMember({
@@ -189,13 +195,13 @@ export function People() {
       });
       toast({
         title: "Success",
-        description: "Member added successfully"
+        description: "Person added successfully"
       });
     } catch (error) {
-      console.error('Error adding member:', error);
+      console.error('Error adding person:', error);
       toast({
         title: "Error",
-        description: "Failed to Add Person",
+        description: "Failed to add person",
         variant: "destructive",
       });
     }
@@ -217,13 +223,13 @@ export function People() {
       setSelectedMember(null);
       toast({
         title: "Success",
-        description: "Member updated successfully"
+        description: "Person updated successfully"
       });
     } catch (error) {
-      console.error('Error updating member:', error);
+      console.error('Error updating person:', error);
       toast({
         title: "Error",
-        description: "Failed to update member",
+        description: "Failed to update person",
         variant: "destructive",
       });
     }
@@ -237,13 +243,13 @@ export function People() {
       setSelectedMember(null);
       toast({
         title: "Success",
-        description: "Member deleted successfully"
+        description: "Person deleted successfully"
       });
     } catch (error) {
-      console.error('Error deleting member:', error);
+      console.error('Error deleting person:', error);
       toast({
         title: "Error",
-        description: "Failed to delete member",
+        description: "Failed to delete person",
         variant: "destructive",
       });
     }
@@ -290,16 +296,16 @@ export function People() {
   };
 
   const EmptyState = ({ onAddMember }) => (
-    <div className="flex flex-col items-center justify-center p-8 text-center">
-      <Users className="h-12 w-12 text-muted-foreground mb-4" />
-      <h3 className="text-lg font-semibold mb-2">No Members Yet</h3>
-      <p className="text-muted-foreground mb-4">
-        Start building your church community by adding your first member.
-      </p>
-      <Button onClick={onAddMember}>
-        <UserPlus className="mr-2 h-4 w-4" />
-        Add First Member
-      </Button>
+    <div className="text-center py-12">
+      <Users className="mx-auto h-12 w-12 text-gray-400" />
+      <h3 className="mt-2 text-sm font-semibold text-gray-900">No people</h3>
+      <p className="mt-1 text-sm text-gray-500">Get started by adding a new person.</p>
+      <div className="mt-6">
+        <Button onClick={onAddMember}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Person
+        </Button>
+      </div>
     </div>
   );
   
@@ -315,6 +321,29 @@ export function People() {
     }
   };
   
+  const loadMemberAttendance = async (memberId) => {
+    if (memberAttendance[memberId]) return; // Already loaded
+    
+    setIsAttendanceLoading(prev => ({ ...prev, [memberId]: true }));
+    try {
+      const data = await getMemberAttendance(memberId);
+      setMemberAttendance(prev => ({ ...prev, [memberId]: data }));
+    } catch (error) {
+      console.error('Error loading member attendance:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load attendance history",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAttendanceLoading(prev => ({ ...prev, [memberId]: false }));
+    }
+  };
+  
+  const handleMemberClick = (memberId) => {
+    navigate(`/members/${memberId}`);
+  };
+  
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -326,9 +355,9 @@ export function People() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Members</h1>
+        <h1 className="text-3xl font-bold tracking-tight">People</h1>
         <p className="text-muted-foreground">
-          Manage your church members and their information.
+          Manage your church's people directory.
         </p>
       </div>
       
@@ -336,7 +365,7 @@ export function People() {
         <div className="relative w-full sm:w-96">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search members..."
+            placeholder="Search people..."
             className="pl-8"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -382,7 +411,10 @@ export function People() {
               >
                 {filteredMembers.map((member) => (
                   <motion.div key={member.id} variants={itemVariants}>
-                    <Card className="overflow-hidden">
+                    <Card 
+                      className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => handleMemberClick(member.id)}
+                    >
                       <CardHeader className="pb-2">
                         <div className="flex justify-between items-start">
                           <div className="flex items-center">
@@ -415,7 +447,8 @@ export function People() {
                               variant="ghost" 
                               size="icon" 
                               className="h-8 w-8"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setSelectedMember(member);
                                 setIsEditDialogOpen(true);
                               }}
@@ -426,7 +459,8 @@ export function People() {
                               variant="ghost" 
                               size="icon" 
                               className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setSelectedMember(member);
                                 setIsDeleteDialogOpen(true);
                               }}
@@ -609,7 +643,8 @@ export function People() {
                                   variant="ghost" 
                                   size="icon" 
                                   className="h-8 w-8"
-                                  onClick={() => {
+                                  onClick={(e) => {
+                                    e.stopPropagation();
                                     setSelectedMember(member);
                                     setIsEditDialogOpen(true);
                                   }}
@@ -620,7 +655,8 @@ export function People() {
                                   variant="ghost" 
                                   size="icon" 
                                   className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                                  onClick={() => {
+                                  onClick={(e) => {
+                                    e.stopPropagation();
                                     setSelectedMember(member);
                                     setIsDeleteDialogOpen(true);
                                   }}
@@ -634,7 +670,7 @@ export function People() {
                       ) : (
                         <tr>
                           <td colSpan={6} className="p-4 text-center text-muted-foreground">
-                            No members found matching your criteria.
+                            No people found matching your criteria.
                           </td>
                         </tr>
                       )}
@@ -646,7 +682,7 @@ export function People() {
                 <CardFooter className="border-t p-4">
                   <div className="flex items-center space-x-2">
                     <span className="text-sm text-muted-foreground">
-                      {selectedMembers.length} {selectedMembers.length === 1 ? 'member' : 'members'} selected
+                      {selectedMembers.length} {selectedMembers.length === 1 ? 'person' : 'people'} selected
                     </span>
                     <Button variant="outline" size="sm" onClick={() => setSelectedMembers([])}>
                       Clear Selection
@@ -832,152 +868,160 @@ export function People() {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Edit Member</DialogTitle>
+            <DialogTitle>Edit Person</DialogTitle>
             <DialogDescription>
-              Update member's information.
+              Update person's information and view attendance history.
             </DialogDescription>
           </DialogHeader>
           {selectedMember && (
             <div className="grid gap-6 py-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-firstName">First Name *</Label>
-                  <Input
-                    id="edit-firstName"
-                    value={selectedMember.firstName}
-                    onChange={(e) => setSelectedMember({
-                      ...selectedMember,
-                      firstName: e.target.value
-                    })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-lastName">Last Name *</Label>
-                  <Input
-                    id="edit-lastName"
-                    value={selectedMember.lastName}
-                    onChange={(e) => setSelectedMember({
-                      ...selectedMember,
-                      lastName: e.target.value
-                    })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-email">Email</Label>
-                  <Input
-                    id="edit-email"
-                    type="email"
-                    value={selectedMember.email}
-                    onChange={(e) => setSelectedMember({
-                      ...selectedMember,
-                      email: e.target.value
-                    })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-phone">Phone</Label>
-                  <Input
-                    id="edit-phone"
-                    type="tel"
-                    value={selectedMember.phone}
-                    onChange={(e) => setSelectedMember({
-                      ...selectedMember,
-                      phone: e.target.value
-                    })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-status">Status</Label>
-                  <select
-                    id="edit-status"
-                    className="w-full rounded-md border border-input bg-background px-3 py-2"
-                    value={selectedMember.status}
-                    onChange={(e) => setSelectedMember({
-                      ...selectedMember,
-                      status: e.target.value
-                    })}
-                  >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                    <option value="visitor">Visitor</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-joinDate">Join Date</Label>
-                  <Input
-                    id="edit-joinDate"
-                    type="date"
-                    value={selectedMember.joinDate ? new Date(selectedMember.joinDate).toISOString().split('T')[0] : ''}
-                    onChange={(e) => setSelectedMember({
-                      ...selectedMember,
-                      joinDate: e.target.value
-                    })}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-address-street">Street Address</Label>
-                  <Input
-                    id="edit-address-street"
-                    value={selectedMember?.address?.street || ''}
-                    onChange={e => setSelectedMember({
-                      ...selectedMember,
-                      address: { ...selectedMember.address, street: e.target.value }
-                    })}
-                    placeholder="123 Main St"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-address-city">City</Label>
-                  <Input
-                    id="edit-address-city"
-                    value={selectedMember?.address?.city || ''}
-                    onChange={e => setSelectedMember({
-                      ...selectedMember,
-                      address: { ...selectedMember.address, city: e.target.value }
-                    })}
-                    placeholder="City"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-address-state">State/Province</Label>
-                  <Input
-                    id="edit-address-state"
-                    value={selectedMember?.address?.state || ''}
-                    onChange={e => setSelectedMember({
-                      ...selectedMember,
-                      address: { ...selectedMember.address, state: e.target.value }
-                    })}
-                    placeholder="State/Province"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-address-zip">Postal/Zip Code</Label>
-                  <Input
-                    id="edit-address-zip"
-                    value={selectedMember?.address?.zip || ''}
-                    onChange={e => setSelectedMember({
-                      ...selectedMember,
-                      address: { ...selectedMember.address, zip: e.target.value }
-                    })}
-                    placeholder="Postal/Zip Code"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-notes">Notes</Label>
-                <Input
-                  id="edit-notes"
-                  value={selectedMember.notes}
-                  onChange={(e) => setSelectedMember({
-                    ...selectedMember,
-                    notes: e.target.value
-                  })}
-                />
-              </div>
+              <Tabs defaultValue="info">
+                <TabsList>
+                  <TabsTrigger value="info">Person Info</TabsTrigger>
+                  <TabsTrigger value="attendance">Attendance History</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="info">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-firstName">First Name *</Label>
+                      <Input
+                        id="edit-firstName"
+                        value={selectedMember.firstName}
+                        onChange={(e) => setSelectedMember({
+                          ...selectedMember,
+                          firstName: e.target.value
+                        })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-lastName">Last Name *</Label>
+                      <Input
+                        id="edit-lastName"
+                        value={selectedMember.lastName}
+                        onChange={(e) => setSelectedMember({
+                          ...selectedMember,
+                          lastName: e.target.value
+                        })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-email">Email</Label>
+                      <Input
+                        id="edit-email"
+                        type="email"
+                        value={selectedMember.email}
+                        onChange={(e) => setSelectedMember({
+                          ...selectedMember,
+                          email: e.target.value
+                        })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-phone">Phone</Label>
+                      <Input
+                        id="edit-phone"
+                        type="tel"
+                        value={selectedMember.phone}
+                        onChange={(e) => setSelectedMember({
+                          ...selectedMember,
+                          phone: e.target.value
+                        })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-status">Status</Label>
+                      <select
+                        id="edit-status"
+                        className="w-full rounded-md border border-input bg-background px-3 py-2"
+                        value={selectedMember.status}
+                        onChange={(e) => setSelectedMember({
+                          ...selectedMember,
+                          status: e.target.value
+                        })}
+                      >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="visitor">Visitor</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-joinDate">Join Date</Label>
+                      <Input
+                        id="edit-joinDate"
+                        type="date"
+                        value={selectedMember.joinDate ? new Date(selectedMember.joinDate).toISOString().split('T')[0] : ''}
+                        onChange={(e) => setSelectedMember({
+                          ...selectedMember,
+                          joinDate: e.target.value
+                        })}
+                      />
+                    </div>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="attendance">
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-lg font-semibold">Attendance History</h3>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => loadMemberAttendance(selectedMember.id)}
+                        disabled={isAttendanceLoading[selectedMember.id]}
+                      >
+                        <RefreshCw className={`h-4 w-4 mr-2 ${isAttendanceLoading[selectedMember.id] ? 'animate-spin' : ''}`} />
+                        Refresh
+                      </Button>
+                    </div>
+                    
+                    {isAttendanceLoading[selectedMember.id] ? (
+                      <div className="text-center py-4">
+                        <p className="text-muted-foreground">Loading attendance history...</p>
+                      </div>
+                    ) : memberAttendance[selectedMember.id]?.length > 0 ? (
+                      <div className="space-y-2">
+                        {memberAttendance[selectedMember.id].map((record) => {
+                          const eventDate = new Date(record.events.start_date);
+                          const isPastEvent = eventDate < new Date();
+                          const status = isPastEvent ? 'attended' : record.status;
+                          
+                          return (
+                            <Card key={record.id}>
+                              <CardContent className="p-4">
+                                <div className="flex items-center justify-between">
+                                  <div className="space-y-1">
+                                    <p className="font-medium">{record.events.title}</p>
+                                    <div className="flex items-center text-sm text-muted-foreground">
+                                      <Calendar className="h-4 w-4 mr-2" />
+                                      {format(new Date(record.events.start_date), 'MMM d, yyyy • h:mm a')}
+                                    </div>
+                                    {record.events.location && (
+                                      <div className="flex items-center text-sm text-muted-foreground">
+                                        <MapPin className="h-4 w-4 mr-2" />
+                                        {record.events.location}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <Badge variant={isPastEvent ? "default" : "outline"} className="ml-2">
+                                    {status}
+                                  </Badge>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-4">
+                        <p className="text-muted-foreground">No attendance records found.</p>
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+              </Tabs>
             </div>
           )}
           <DialogFooter>
@@ -995,9 +1039,9 @@ export function People() {
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Delete Member</DialogTitle>
+            <DialogTitle>Delete Person</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this member? This action cannot be undone.
+              Are you sure you want to delete this person? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

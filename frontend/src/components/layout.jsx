@@ -32,12 +32,12 @@ export function Layout() {
   
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
-    { name: 'People', href: '/people', icon: Users },
     { name: 'Events', href: '/events', icon: Calendar },
+    { name: 'Church Check-In', href: '/worship-check-in', icon: Church },
+    { name: 'People', href: '/members', icon: Users },
     { name: 'Donations', href: '/donations', icon: DollarSign },
     { name: 'Groups', href: '/groups', icon: UserPlus },
     { name: 'Tasks', href: '/tasks', icon: ClipboardList },
-    { name: 'Church Check-In', href: '/worship-check-in', icon: Church },
     { name: 'Reports', href: '/reports', icon: BarChart2 },
     { name: 'Bulletin', href: '/bulletin', icon: FileText },
     { name: 'Settings', href: '/settings', icon: SettingsIcon },

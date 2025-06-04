@@ -5,13 +5,34 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const EventForm = ({ initialData, onSave, onCancel }) => {
-  const [eventData, setEventData] = useState(initialData);
+  const [eventData, setEventData] = useState({
+    ...initialData,
+    title: initialData.title || '',
+    description: initialData.description || '',
+    startDate: initialData.startDate ? new Date(initialData.startDate).toISOString().slice(0, 16) : '',
+    endDate: initialData.endDate ? new Date(initialData.endDate).toISOString().slice(0, 16) : '',
+    location: initialData.location || '',
+    url: initialData.url || '',
+    is_recurring: initialData.is_recurring || false,
+    recurrence_pattern: initialData.recurrence_pattern || ''
+  });
   const { toast } = useToast();
 
   useEffect(() => {
-    setEventData(initialData);
+    setEventData({
+      ...initialData,
+      title: initialData.title || '',
+      description: initialData.description || '',
+      startDate: initialData.startDate ? new Date(initialData.startDate).toISOString().slice(0, 16) : '',
+      endDate: initialData.endDate ? new Date(initialData.endDate).toISOString().slice(0, 16) : '',
+      location: initialData.location || '',
+      url: initialData.url || '',
+      is_recurring: initialData.is_recurring || false,
+      recurrence_pattern: initialData.recurrence_pattern || ''
+    });
   }, [initialData]);
 
   const handleFormChange = (e) => {
@@ -26,19 +47,45 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
     setEventData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleRecurringChange = (checked) => {
+    setEventData(prev => ({
+      ...prev,
+      is_recurring: checked,
+      recurrence_pattern: checked ? prev.recurrence_pattern || 'weekly' : null
+    }));
+  };
+
+  const handleRecurrencePatternChange = (value) => {
+    setEventData(prev => ({
+      ...prev,
+      recurrence_pattern: value
+    }));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!eventData.title || !eventData.startDate || !eventData.endDate) {
       toast({ title: "Missing Information", description: "Please fill in all required fields.", variant: "destructive" });
       return;
     }
+
+    // Convert local datetime to ISO string
     const startDate = new Date(eventData.startDate);
     const endDate = new Date(eventData.endDate);
+
     if (isAfter(startDate, endDate)) {
       toast({ title: "Invalid Dates", description: "End date must be after start date.", variant: "destructive" });
       return;
     }
-    onSave({ ...eventData, attendees: parseInt(eventData.attendees) || 0 });
+
+    // Format dates for submission
+    const formattedData = {
+      ...eventData,
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString()
+    };
+
+    onSave(formattedData);
   };
 
   return (
@@ -54,48 +101,39 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="startDate">Start Date & Time *</Label>
-          <Input id="startDate" name="startDate" type="datetime-local" value={eventData.startDate} onChange={handleFormChange} required />
+          <Input 
+            id="startDate" 
+            name="startDate" 
+            type="datetime-local" 
+            value={eventData.startDate} 
+            onChange={handleFormChange} 
+            required 
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="endDate">End Date & Time *</Label>
-          <Input id="endDate" name="endDate" type="datetime-local" value={eventData.endDate} onChange={handleFormChange} required />
+          <Input 
+            id="endDate" 
+            name="endDate" 
+            type="datetime-local" 
+            value={eventData.endDate} 
+            onChange={handleFormChange} 
+            required 
+          />
         </div>
       </div>
       <div className="space-y-2">
         <Label htmlFor="location">Location</Label>
         <Input id="location" name="location" value={eventData.location} onChange={handleFormChange} />
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="organizer">Organizer</Label>
-          <Input id="organizer" name="organizer" value={eventData.organizer} onChange={handleFormChange} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="attendees">Expected Attendees</Label>
-          <Input id="attendees" name="attendees" type="number" min="0" value={eventData.attendees} onChange={handleFormChange} />
-        </div>
+      <div className="space-y-2">
+        <Label htmlFor="url">URL</Label>
+        <Input id="url" name="url" type="url" value={eventData.url} onChange={handleFormChange} />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="type">Event Type</Label>
-          <Select value={eventData.type} onValueChange={(value) => handleSelectChange('type', value)}>
-            <SelectTrigger id="type"><SelectValue placeholder="Select type" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="worship">Worship</SelectItem>
-              <SelectItem value="study">Bible Study</SelectItem>
-              <SelectItem value="youth">Youth</SelectItem>
-              <SelectItem value="fellowship">Fellowship</SelectItem>
-              <SelectItem value="prayer">Prayer</SelectItem>
-              <SelectItem value="music">Music</SelectItem>
-              <SelectItem value="outreach">Outreach</SelectItem>
-              <SelectItem value="training">Training</SelectItem>
-              <SelectItem value="general">General</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
           <Label htmlFor="recurring">Recurring Event</Label>
-          <Select value={eventData.recurring ? "yes" : "no"} onValueChange={(value) => handleSelectChange('recurring', value === "yes")}>
+          <Select value={eventData.is_recurring ? "yes" : "no"} onValueChange={(value) => handleRecurringChange(value === "yes")}>
             <SelectTrigger id="recurring"><SelectValue placeholder="Is this recurring?" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="no">No</SelectItem>
@@ -104,10 +142,10 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
           </Select>
         </div>
       </div>
-      {eventData.recurring && (
+      {eventData.is_recurring && (
         <div className="space-y-2">
           <Label htmlFor="recurrencePattern">Recurrence Pattern</Label>
-          <Select value={eventData.recurrencePattern || ""} onValueChange={(value) => handleSelectChange('recurrencePattern', value)}>
+          <Select value={eventData.recurrence_pattern || ""} onValueChange={(value) => handleRecurrencePatternChange(value)}>
             <SelectTrigger id="recurrencePattern"><SelectValue placeholder="Select pattern" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="daily">Daily</SelectItem>

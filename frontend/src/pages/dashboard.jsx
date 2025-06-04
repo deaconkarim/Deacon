@@ -247,8 +247,9 @@ export function Dashboard() {
       // Calculate monthly donations
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
       const monthlyDonations = donations
-        ?.filter(donation => new Date(donation.date) >= startOfMonth)
+        ?.filter(donation => new Date(donation.date) >= startOfMonth && new Date(donation.date) <= endOfMonth)
         .reduce((sum, donation) => sum + parseFloat(donation.amount), 0) || 0;
 
       // Fetch upcoming events
@@ -260,13 +261,19 @@ export function Dashboard() {
 
       if (eventsError) throw eventsError;
 
+      // Filter events for current month
+      const currentMonthEvents = events?.filter(event => {
+        const eventDate = new Date(event.start_date);
+        return eventDate >= startOfMonth && eventDate <= endOfMonth;
+      }) || [];
+
       // Update state with fetched data
       setStats({
         totalPeople,
         totalGroups,
         totalDonations,
         monthlyDonations,
-        upcomingEvents: events?.length || 0
+        upcomingEvents: currentMonthEvents.length
       });
       setRecentPeople(recentPeople);
       setUpcomingEvents(events || []);

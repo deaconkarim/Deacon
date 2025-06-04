@@ -8,7 +8,12 @@ import {
   CheckCircle2,
   XCircle,
   HelpCircle,
-  UserPlus
+  UserPlus,
+  Plus,
+  Pencil,
+  Trash2,
+  MapPin,
+  ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +37,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from '@/lib/authContext';
+import EventForm from '@/components/events/EventForm';
+import { addEvent, updateEvent, deleteEvent } from '@/lib/data';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -46,6 +53,77 @@ const itemVariants = {
   }
 };
 
+const EventCard = ({ event, onEdit, onDelete, onRSVP }) => {
+  console.log('Rendering event:', event); // Add debug log
+  const startDate = new Date(event.start_date);
+  const endDate = new Date(event.end_date);
+  const isRecurring = event.is_recurring;
+  const isInstance = event.is_instance;
+
+  return (
+    <Card key={event.id} className="mb-4">
+      <CardHeader>
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="text-xl font-bold">
+              {event.title}
+              {isRecurring && (
+                <Badge variant="secondary" className="ml-2">
+                  {event.recurrence_pattern}
+                </Badge>
+              )}
+              {isInstance && (
+                <Badge variant="outline" className="ml-2">
+                  Next Instance
+                </Badge>
+              )}
+            </CardTitle>
+            <CardDescription>
+              {format(startDate, 'EEEE, MMMM d, yyyy')}
+              <br />
+              {format(startDate, 'h:mm a')} - {format(endDate, 'h:mm a')}
+            </CardDescription>
+          </div>
+          <div className="flex space-x-2">
+            {!isInstance && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onEdit(event)}
+              >
+                Edit
+              </Button>
+            )}
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {event.description && (
+            <p className="text-sm text-gray-600">{event.description}</p>
+          )}
+          {event.location && (
+            <div className="flex items-center gap-2">
+              <Badge variant="outline">
+                <MapPin className="mr-1 h-3 w-3" />
+                {event.location}
+              </Badge>
+            </div>
+          )}
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              {event.attendance || 0} {event.attendance === 1 ? 'person' : 'people'} attending
+            </div>
+            <div className="flex gap-2">
+              {onRSVP(event.id)}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 export function Events() {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -54,7 +132,6 @@ export function Events() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDate, setSelectedDate] = useState(null);
-  const [selectedStatus, setSelectedStatus] = useState('all');
   const [attendance, setAttendance] = useState({});
   const [members, setMembers] = useState([]);
   const [isMemberDialogOpen, setIsMemberDialogOpen] = useState(false);
@@ -71,11 +148,17 @@ export function Events() {
     phone: '',
     status: 'active'
   });
+  const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
+  const [isEditEventOpen, setIsEditEventOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState(null);
 
   const fetchEvents = useCallback(async () => {
     setIsLoading(true);
     try {
-      const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      console.log('Fetching events from:', today.toISOString()); // Debug log
       
       const { data, error } = await supabase
         .from('events')
@@ -87,28 +170,116 @@ export function Events() {
             status
           )
         `)
-        .gte('start_date', today) // Only get events from today onwards
+        .gte('start_date', today.toISOString())
         .order('start_date', { ascending: true });
 
       if (error) throw error;
 
-      // Process events to include attendance count
-      const processedEvents = data.map(event => ({
-        ...event,
-        attendance: event.event_attendance?.filter(a => a.status === 'attending').length || 0
-      }));
+      console.log('Fetched events:', data); // Debug log
 
-      setEvents(processedEvents);
-      setFilteredEvents(processedEvents);
+      // Process events to include attendance count and handle recurring events
+      const processedEvents = data.reduce((acc, event) => {
+        // Skip if it's a duplicate instance (events with double timestamps in ID)
+        if (event.id.includes('--')) {
+          return acc;
+        }
+
+        // If it's a recurring event instance
+        if (event.parent_event_id) {
+          // Skip if we already have an instance of this recurring event
+          const hasInstance = acc.some(e => 
+            e.parent_event_id === event.parent_event_id || 
+            (e.title.toLowerCase().includes('sunday') && 
+             e.start_date === event.start_date)
+          );
+          if (hasInstance) return acc;
+
+          // Only add this instance if it's the next one
+          const otherInstances = data.filter(e => 
+            e.parent_event_id === event.parent_event_id && 
+            new Date(e.start_date) >= today
+          ).sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+
+          if (otherInstances[0]?.id === event.id) {
+            acc.push({
+              ...event,
+              attendance: event.event_attendance?.filter(a => a.status === 'attending').length || 0,
+              is_instance: true
+            });
+          }
+          return acc;
+        }
+
+        // If it's a recurring event (parent)
+        if (event.is_recurring) {
+          // Skip if we already have an instance of this recurring event
+          const hasInstance = acc.some(e => 
+            e.parent_event_id === event.id || 
+            (e.title.toLowerCase().includes('sunday') && 
+             e.is_recurring)
+          );
+          if (hasInstance) return acc;
+
+          // Find all instances of this recurring event
+          const instances = data.filter(e => 
+            e.parent_event_id === event.id && 
+            new Date(e.start_date) >= today
+          ).sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+
+          // If we have instances, add only the next one
+          if (instances.length > 0) {
+            const nextInstance = instances[0];
+            acc.push({
+              ...nextInstance,
+              attendance: nextInstance.event_attendance?.filter(a => a.status === 'attending').length || 0,
+              is_instance: true
+            });
+          } else {
+            // If no instances exist yet, add the recurring event itself
+            acc.push({
+              ...event,
+              attendance: event.event_attendance?.filter(a => a.status === 'attending').length || 0,
+              is_instance: false
+            });
+          }
+          return acc;
+        }
+
+        // For non-recurring events, add them as non-instances
+        acc.push({
+          ...event,
+          attendance: event.event_attendance?.filter(a => a.status === 'attending').length || 0,
+          is_instance: false
+        });
+        return acc;
+      }, []);
+
+      // Remove any events that are not on their correct day of the week
+      const filteredEvents = processedEvents.filter(event => {
+        if (event.title.toLowerCase().includes('sunday')) {
+          const eventDate = new Date(event.start_date);
+          return eventDate.getDay() === 0; // 0 is Sunday
+        }
+        return true;
+      });
+
+      console.log('Processed events:', filteredEvents); // Debug log
+
+      // Sort events by start date
+      filteredEvents.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+
+      setEvents(filteredEvents);
+      setFilteredEvents(filteredEvents);
 
       // Set attendance map for filtering
       const attendanceMap = {};
-      processedEvents.forEach(event => {
+      filteredEvents.forEach(event => {
         attendanceMap[event.id] = event.attendance;
       });
       setAttendance(attendanceMap);
 
     } catch (error) {
+      console.error('Error fetching events:', error); // Debug log
       toast({
         title: "Error",
         description: "Failed to load events",
@@ -118,6 +289,83 @@ export function Events() {
       setIsLoading(false);
     }
   }, [toast]);
+
+  // Update the filtering effect
+  useEffect(() => {
+    let filtered = [...events];
+
+    // Apply search filter
+    if (searchQuery) {
+      filtered = filtered.filter(event =>
+        event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        event.location?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Apply date filter
+    if (selectedDate) {
+      const filterDate = new Date(selectedDate);
+      filterDate.setHours(0, 0, 0, 0);
+      const nextDay = new Date(filterDate);
+      nextDay.setDate(nextDay.getDate() + 1);
+
+      filtered = filtered.filter(event => {
+        const eventDate = new Date(event.start_date);
+        eventDate.setHours(0, 0, 0, 0);
+        return eventDate >= filterDate && eventDate < nextDay;
+      });
+    }
+
+    console.log('Filtered events:', filtered);
+    setFilteredEvents(filtered);
+  }, [events, searchQuery, selectedDate]);
+
+  // Helper function to generate recurring events
+  const generateRecurringEvents = (event) => {
+    const occurrences = [];
+    const startDate = new Date(event.start_date);
+    const endDate = new Date(event.end_date);
+    const duration = endDate.getTime() - startDate.getTime();
+    
+    // Generate events for the next 3 months
+    const maxDate = new Date();
+    maxDate.setMonth(maxDate.getMonth() + 3);
+    
+    let currentDate = new Date(startDate);
+    
+    while (currentDate <= maxDate) {
+      const occurrenceEndDate = new Date(currentDate.getTime() + duration);
+      const instanceId = `${event.id}-${currentDate.toISOString()}`;
+      
+      occurrences.push({
+        ...event,
+        id: instanceId,
+        start_date: currentDate.toISOString(),
+        end_date: occurrenceEndDate.toISOString(),
+        attendance: event.event_attendance?.filter(a => a.status === 'attending').length || 0
+      });
+      
+      // Increment based on recurrence pattern
+      switch (event.recurrence_pattern) {
+        case 'daily':
+          currentDate.setDate(currentDate.getDate() + 1);
+          break;
+        case 'weekly':
+          currentDate.setDate(currentDate.getDate() + 7);
+          break;
+        case 'biweekly':
+          currentDate.setDate(currentDate.getDate() + 14);
+          break;
+        case 'monthly':
+          currentDate.setMonth(currentDate.getMonth() + 1);
+          break;
+        default:
+          currentDate.setDate(currentDate.getDate() + 7); // Default to weekly
+      }
+    }
+    
+    return occurrences;
+  };
 
   const fetchEventsFromWebsite = async () => {
     try {
@@ -154,32 +402,10 @@ export function Events() {
     fetchEvents();
   }, [fetchEvents]);
 
+  // Add this debug log
   useEffect(() => {
-    let filtered = [...events];
-
-    // Apply search filter
-    if (searchQuery) {
-      filtered = filtered.filter(event =>
-        event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        event.location?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    // Apply date filter
-    if (selectedDate) {
-      filtered = filtered.filter(event => {
-        const eventDate = new Date(event.start_date);
-        return eventDate.toDateString() === selectedDate.toDateString();
-      });
-    }
-
-    // Apply status filter
-    if (selectedStatus !== 'all') {
-      filtered = filtered.filter(event => attendance[event.id] === selectedStatus);
-    }
-
-    setFilteredEvents(filtered);
-  }, [events, searchQuery, selectedDate, selectedStatus, attendance]);
+    console.log('Current events:', events);
+  }, [events]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -529,6 +755,157 @@ export function Events() {
     }
   };
 
+  const handleCreateEvent = async (eventData) => {
+    try {
+      await addEvent(eventData);
+      setIsCreateEventOpen(false);
+      fetchEvents();
+      toast({
+        title: "Success",
+        description: "Event created successfully."
+      });
+    } catch (error) {
+      console.error('Error creating event:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create event. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleEditEvent = async (eventData) => {
+    try {
+      // For recurring events, we need to handle the original event ID
+      const eventId = eventData.id;
+      
+      const updates = {
+        ...eventData,
+        startDate: new Date(eventData.startDate).toISOString(),
+        endDate: new Date(eventData.endDate).toISOString()
+      };
+
+      await updateEvent(eventId, updates);
+      setIsEditEventOpen(false);
+      setEditingEvent(null);
+      fetchEvents();
+      toast({
+        title: "Success",
+        description: "Event updated successfully."
+      });
+    } catch (error) {
+      console.error('Error updating event:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update event. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteEvent = async (eventId) => {
+    if (!confirm('Are you sure you want to delete this event?')) return;
+    
+    try {
+      await deleteEvent(eventId);
+      fetchEvents();
+      toast({
+        title: "Success",
+        description: "Event deleted successfully."
+      });
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete event. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleEditClick = (event) => {
+    setEditingEvent(event);
+    setIsEditEventOpen(true);
+  };
+
+  const renderEventCard = (event) => {
+    console.log('Rendering event card:', event); // Debug log
+    const startDate = new Date(event.start_date);
+    const endDate = new Date(event.end_date);
+    const isRecurring = event.is_recurring;
+    const isInstance = event.is_instance;
+
+    return (
+      <Card key={event.id} className="mb-4">
+        <CardHeader>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="text-xl font-bold">
+                {event.title}
+                {isRecurring && (
+                  <Badge variant="secondary" className="ml-2">
+                    {event.recurrence_pattern}
+                  </Badge>
+                )}
+                {isInstance && (
+                  <Badge variant="outline" className="ml-2">
+                    Next Instance
+                  </Badge>
+                )}
+              </CardTitle>
+              <CardDescription>
+                {format(startDate, 'EEEE, MMMM d, yyyy')}
+                <br />
+                {format(startDate, 'h:mm a')} - {format(endDate, 'h:mm a')}
+              </CardDescription>
+            </div>
+            <div className="flex space-x-2">
+              {!isInstance && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleEditClick(event)}
+                >
+                  Edit
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {event.description && (
+            <p className="text-sm text-gray-600 mb-2">{event.description}</p>
+          )}
+          {event.location && (
+            <p className="text-sm text-gray-600">
+              <MapPin className="inline-block mr-1 h-4 w-4" />
+              {event.location}
+            </p>
+          )}
+          {event.url && (
+            <a
+              href={event.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-blue-600 hover:underline mt-2 inline-block"
+            >
+              <ExternalLink className="inline-block mr-1 h-4 w-4" />
+              Event Link
+            </a>
+          )}
+          <div className="flex items-center justify-between mt-4">
+            <div className="text-sm text-muted-foreground">
+              {event.attendance || 0} {event.attendance === 1 ? 'person' : 'people'} attending
+            </div>
+            <div className="flex gap-2">
+              {getRSVPButton(event.id)}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -537,13 +914,9 @@ export function Events() {
           <p className="text-muted-foreground">View upcoming church events and activities.</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => fetchEventsFromWebsite()} disabled={isLoading} variant="outline">
-            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            {isLoading ? 'Refreshing...' : 'Fetch from Website'}
-          </Button>
-          <Button onClick={() => fetchEvents()} disabled={isLoading} variant="outline">
-            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            {isLoading ? 'Refreshing...' : 'Refresh Events'}
+          <Button onClick={() => setIsCreateEventOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Event
           </Button>
         </div>
       </div>
@@ -574,101 +947,17 @@ export function Events() {
             />
           </PopoverContent>
         </Popover>
-        <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-          <SelectTrigger className="w-full md:w-[200px]">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="attending">Attending</SelectItem>
-            <SelectItem value="declined">Declined</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
       
-      <Tabs defaultValue="upcoming" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-          <TabsTrigger value="all">All Events</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="upcoming">
-          <div className="space-y-4">
-            {filteredEvents.length > 0 ? (
-              filteredEvents.map(event => (
-                <Card key={event.id}>
-                  <CardHeader>
-                    <CardTitle>{event.title}</CardTitle>
-                    <CardDescription>
-                      {format(new Date(event.start_date), "EEEE, MMMM d, yyyy • h:mm a")}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {event.location && (
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">{event.location}</Badge>
-                        </div>
-                      )}
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm text-muted-foreground">
-                          {event.attendance} {event.attendance === 1 ? 'person' : 'people'} attending
-                        </div>
-                        <div className="flex gap-2">
-                          {getRSVPButton(event.id)}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">No upcoming events found.</p>
-              </div>
-            )}
+      <div className="space-y-4">
+        {filteredEvents && filteredEvents.length > 0 ? (
+          filteredEvents.map(event => renderEventCard(event))
+        ) : (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">No events found.</p>
           </div>
-        </TabsContent>
-        
-        <TabsContent value="all">
-          <div className="space-y-4">
-            {filteredEvents.length > 0 ? (
-              filteredEvents.map(event => (
-                <Card key={event.id}>
-                  <CardHeader>
-                    <CardTitle>{event.title}</CardTitle>
-                    <CardDescription>
-                      {format(new Date(event.start_date), "EEEE, MMMM d, yyyy • h:mm a")}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {event.location && (
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">{event.location}</Badge>
-                        </div>
-                      )}
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm text-muted-foreground">
-                          {event.attendance} {event.attendance === 1 ? 'person' : 'people'} attending
-                        </div>
-                        <div className="flex gap-2">
-                          {getRSVPButton(event.id)}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">No events found.</p>
-              </div>
-            )}
-          </div>
-        </TabsContent>
-      </Tabs>
+        )}
+      </div>
 
       {/* Member Selection Dialog */}
       <Dialog open={isMemberDialogOpen} onOpenChange={setIsMemberDialogOpen}>
@@ -849,6 +1138,75 @@ export function Events() {
               Create & RSVP
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Event Dialog */}
+      <Dialog open={isCreateEventOpen} onOpenChange={setIsCreateEventOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Create New Event</DialogTitle>
+            <DialogDescription>
+              Add a new event to the calendar.
+            </DialogDescription>
+          </DialogHeader>
+          <EventForm
+            initialData={{
+              title: '',
+              description: '',
+              startDate: '',
+              endDate: '',
+              location: '',
+              url: '',
+              is_recurring: false,
+              recurrence_pattern: ''
+            }}
+            onSave={handleCreateEvent}
+            onCancel={() => setIsCreateEventOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Event Dialog */}
+      <Dialog open={isEditEventOpen} onOpenChange={setIsEditEventOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Event</DialogTitle>
+            <DialogDescription>
+              Update event details.
+            </DialogDescription>
+          </DialogHeader>
+          {editingEvent && (
+            <>
+              <EventForm
+                initialData={{
+                  ...editingEvent,
+                  startDate: new Date(editingEvent.start_date).toISOString().slice(0, 16),
+                  endDate: new Date(editingEvent.end_date).toISOString().slice(0, 16)
+                }}
+                onSave={handleEditEvent}
+                onCancel={() => {
+                  setIsEditEventOpen(false);
+                  setEditingEvent(null);
+                }}
+              />
+              <div className="flex justify-end mt-4">
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    if (confirm('Are you sure you want to delete this event?')) {
+                      handleDeleteEvent(editingEvent.id);
+                      setIsEditEventOpen(false);
+                      setEditingEvent(null);
+                    }
+                  }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Event
+                </Button>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>
