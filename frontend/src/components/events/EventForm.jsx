@@ -19,7 +19,8 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
     is_recurring: initialData.is_recurring || false,
     recurrence_pattern: initialData.recurrence_pattern || '',
     monthly_week: initialData.monthly_week || '',
-    monthly_weekday: initialData.monthly_weekday || ''
+    monthly_weekday: initialData.monthly_weekday || '',
+    allow_rsvp: initialData.allow_rsvp !== undefined ? initialData.allow_rsvp : true
   });
   const { toast } = useToast();
 
@@ -35,7 +36,8 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
       is_recurring: initialData.is_recurring || false,
       recurrence_pattern: initialData.recurrence_pattern || '',
       monthly_week: initialData.monthly_week || '',
-      monthly_weekday: initialData.monthly_weekday || ''
+      monthly_weekday: initialData.monthly_weekday || '',
+      allow_rsvp: initialData.allow_rsvp !== undefined ? initialData.allow_rsvp : true
     });
   }, [initialData]);
 
@@ -135,6 +137,16 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
         <Input id="url" name="url" type="url" value={eventData.url} onChange={handleFormChange} />
       </div>
       <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="allow_rsvp">Allow RSVP</Label>
+          <Select value={eventData.allow_rsvp ? "yes" : "no"} onValueChange={(value) => setEventData(prev => ({ ...prev, allow_rsvp: value === "yes" }))}>
+            <SelectTrigger id="allow_rsvp"><SelectValue placeholder="Allow people to RSVP?" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="yes">Yes - Allow RSVPs</SelectItem>
+              <SelectItem value="no">No - Announcement Only</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <div className="space-y-2">
           <Label htmlFor="recurring">Recurring Event</Label>
           <Select value={eventData.is_recurring ? "yes" : "no"} onValueChange={(value) => handleRecurringChange(value === "yes")}>

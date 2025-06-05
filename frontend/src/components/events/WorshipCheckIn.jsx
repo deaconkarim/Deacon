@@ -7,7 +7,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabaseClient';
 import { getMembers } from '@/lib/data';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
@@ -145,7 +145,8 @@ export function WorshipCheckIn() {
               members (
                 id,
                 firstname,
-                lastname
+                lastname,
+                image_url
               )
             `)
             .eq('event_id', nextInstance.id)
@@ -302,7 +303,9 @@ export function WorshipCheckIn() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Sunday Worship Check-In</h1>
-          <p className="text-muted-foreground">Check in members for today's worship service.</p>
+          <p className="text-muted-foreground">
+            Check in members for {currentEvent ? format(new Date(currentEvent.start_date), 'EEEE, MMMM d, yyyy') : 'today\'s'} worship service.
+          </p>
         </div>
         <div className="flex gap-2 w-full md:w-auto">
           <Button 
@@ -341,6 +344,7 @@ export function WorshipCheckIn() {
                   >
                     <div className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
+                        <AvatarImage src={member.image_url} />
                         <AvatarFallback>{getInitials(member.firstname, member.lastname)}</AvatarFallback>
                       </Avatar>
                       <span>{member.firstname} {member.lastname}</span>
@@ -392,6 +396,7 @@ export function WorshipCheckIn() {
               >
                 <div className="flex items-center gap-2">
                   <Avatar className="h-8 w-8">
+                    <AvatarImage src={member.image_url} />
                     <AvatarFallback>{getInitials(member.firstname, member.lastname)}</AvatarFallback>
                   </Avatar>
                   <span>{member.firstname} {member.lastname}</span>

@@ -101,6 +101,24 @@ export const addMember = async (member) => {
 
 export const updateMember = async (id, updates) => {
   try {
+    // Check if email is being changed and if it already exists (only for non-null, non-empty emails)
+    if (updates.email && updates.email.trim() && updates.email.trim() !== '') {
+      const { data: existingMember, error: checkError } = await supabase
+        .from('members')
+        .select('email, id')
+        .eq('email', updates.email.trim())
+        .neq('id', id)
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('Error checking for duplicate email:', checkError);
+      }
+
+      if (existingMember) {
+        throw new Error('A member with this email already exists');
+      }
+    }
+
     // Transform camelCase back to database column names
     const memberData = {
       ...updates,
@@ -110,6 +128,11 @@ export const updateMember = async (id, updates) => {
       created_at: updates.createdAt,
       updated_at: updates.updatedAt
     };
+
+    // Handle empty email - convert to null to avoid unique constraint issues
+    if (memberData.email === '' || memberData.email === undefined) {
+      memberData.email = null;
+    }
 
     // Remove the camelCase properties to avoid confusion
     delete memberData.firstName;
@@ -125,7 +148,13 @@ export const updateMember = async (id, updates) => {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      // Handle duplicate email constraint specifically
+      if (error.code === '23505' && error.message.includes('members_email_key')) {
+        throw new Error('A member with this email already exists');
+      }
+      throw error;
+    }
 
     // Transform back to camelCase for the frontend
     return {
@@ -245,6 +274,9 @@ export const addEvent = async (event) => {
       url: event.url,
       is_recurring: event.is_recurring || false,
       recurrence_pattern: event.is_recurring ? event.recurrence_pattern : null,
+      monthly_week: event.recurrence_pattern === 'monthly_weekday' ? event.monthly_week : null,
+      monthly_weekday: event.recurrence_pattern === 'monthly_weekday' ? event.monthly_weekday : null,
+      allow_rsvp: event.allow_rsvp !== undefined ? event.allow_rsvp : true,
       parent_event_id: null // Will be set for instances
     };
 
@@ -269,7 +301,9 @@ export const addEvent = async (event) => {
       // Generate instances with parent_event_id pointing to master event
       const instances = generateRecurringInstances({
         ...eventData,
-        parent_event_id: masterData.id
+        parent_event_id: masterData.id,
+        monthly_week: event.monthly_week,
+        monthly_weekday: event.monthly_weekday
       });
       
       // Insert all instances
@@ -314,7 +348,10 @@ export const updateEvent = async (id, updates) => {
       location: updates.location,
       url: updates.url,
       is_recurring: updates.is_recurring || false,
-      recurrence_pattern: updates.is_recurring ? updates.recurrence_pattern : null
+      recurrence_pattern: updates.is_recurring ? updates.recurrence_pattern : null,
+      monthly_week: updates.recurrence_pattern === 'monthly_weekday' ? updates.monthly_week : null,
+      monthly_weekday: updates.recurrence_pattern === 'monthly_weekday' ? updates.monthly_weekday : null,
+      allow_rsvp: updates.allow_rsvp !== undefined ? updates.allow_rsvp : true
     };
 
     // If it's a recurring event, update master and all instances
@@ -447,6 +484,35 @@ const generateRecurringInstances = (event) => {
         break;
       case 'monthly':
         currentDate.setMonth(currentDate.getMonth() + 1);
+        break;
+      case 'monthly_weekday':
+        // Get the next month
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        // Set to first day of the month
+        currentDate.setDate(1);
+        
+        // Get the target weekday (0-6, where 0 is Sunday)
+        const targetWeekday = parseInt(event.monthly_weekday);
+        // Get the target week (1-5, where 5 means last week)
+        const targetWeek = parseInt(event.monthly_week);
+        
+        // Find the target date
+        if (targetWeek === 5) {
+          // For last week, start from the end of the month
+          currentDate.setMonth(currentDate.getMonth() + 1);
+          currentDate.setDate(0); // Last day of the month
+          // Go backwards to find the target weekday
+          while (currentDate.getDay() !== targetWeekday) {
+            currentDate.setDate(currentDate.getDate() - 1);
+          }
+        } else {
+          // For other weeks, find the first occurrence of the target weekday
+          while (currentDate.getDay() !== targetWeekday) {
+            currentDate.setDate(currentDate.getDate() + 1);
+          }
+          // Add weeks to get to the target week
+          currentDate.setDate(currentDate.getDate() + (targetWeek - 1) * 7);
+        }
         break;
       default:
         currentDate.setDate(currentDate.getDate() + 7); // Default to weekly

@@ -22,7 +22,7 @@ import {
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabaseClient';
@@ -569,6 +569,7 @@ export function Dashboard() {
                   onClick={() => handlePersonClick(person)}
                 >
                   <Avatar className="h-8 w-8">
+                    <AvatarImage src={person.image_url} />
                     <AvatarFallback>{getInitials(person.firstName, person.lastName)}</AvatarFallback>
                   </Avatar>
                   <span>{formatName(person.firstName, person.lastName)}</span>
@@ -592,6 +593,7 @@ export function Dashboard() {
                     className="flex items-center space-x-2 p-2 bg-muted/50 rounded-lg"
                   >
                     <Avatar className="h-8 w-8">
+                      <AvatarImage src={person.image_url} />
                       <AvatarFallback>{getInitials(person.firstName, person.lastName)}</AvatarFallback>
                     </Avatar>
                     <span>{formatName(person.firstName, person.lastName)}</span>

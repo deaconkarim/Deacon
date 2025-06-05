@@ -230,7 +230,9 @@ export function People() {
       console.error('Error updating person:', error);
       toast({
         title: "Error",
-        description: "Failed to update person",
+        description: error.message === 'A member with this email already exists' 
+          ? "A person with this email already exists. Please use a different email."
+          : "Failed to update person",
         variant: "destructive",
       });
     }

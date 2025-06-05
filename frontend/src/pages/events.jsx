@@ -30,7 +30,7 @@ import { getMembers } from '../lib/data';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -196,10 +196,18 @@ export function Events() {
           ).sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
 
           if (otherInstances[0]?.id === event.id) {
+            // Find the master event for editing purposes
+            const masterEvent = data.find(e => e.id === event.parent_event_id);
             acc.push({
               ...event,
+              // Use master event data for editing
+              id: event.parent_event_id, // Use master ID for editing
+              title: masterEvent?.title || event.title,
+              description: masterEvent?.description || event.description,
+              is_master: false,
+              master_id: event.parent_event_id,
               attendance: event.event_attendance?.filter(a => a.status === 'attending').length || 0,
-              is_instance: true
+              is_instance: false // Allow editing by not marking as instance
             });
           }
           return acc;
@@ -221,13 +229,17 @@ export function Events() {
             new Date(e.start_date) >= today
           ).sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
 
-          // If we have instances, add only the next one
+          // If we have instances, add only the next one but mark it as the master for editing
           if (instances.length > 0) {
             const nextInstance = instances[0];
             acc.push({
               ...nextInstance,
+              // Use the master event's data for editing purposes
+              id: event.id, // Use master ID for editing
+              is_master: true,
+              master_id: event.id,
               attendance: nextInstance.event_attendance?.filter(a => a.status === 'attending').length || 0,
-              is_instance: true
+              is_instance: false // Allow editing by not marking as instance
             });
           } else {
             // If no instances exist yet, add the recurring event itself
@@ -250,7 +262,13 @@ export function Events() {
       }, []);
 
       // Remove any events that are not on their correct day of the week
+      // Also exclude Sunday Morning Worship events (handled by worship check-in)
       const filteredEvents = processedEvents.filter(event => {
+        // Hide Sunday Morning Worship events
+        if (event.title && event.title.toLowerCase().includes('sunday morning worship')) {
+          return false;
+        }
+        
         if (event.title.toLowerCase().includes('sunday')) {
           const eventDate = new Date(event.start_date);
           return eventDate.getDay() === 0; // 0 is Sunday
@@ -771,8 +789,8 @@ export function Events() {
 
   const handleEditEvent = async (eventData) => {
     try {
-      // For recurring events, we need to handle the original event ID
-      const eventId = eventData.id;
+      // For recurring events, we need to handle the master event ID
+      const eventId = editingEvent.master_id || editingEvent.id;
       
       const updates = {
         ...eventData,
@@ -824,7 +842,6 @@ export function Events() {
   };
 
   const renderEventCard = (event) => {
-    console.log('Rendering event card:', event); // Debug log
     const startDate = new Date(event.start_date);
     const endDate = new Date(event.end_date);
     const isRecurring = event.is_recurring;
@@ -849,16 +866,8 @@ export function Events() {
                 {format(startDate, 'h:mm a')} - {format(endDate, 'h:mm a')}
               </CardDescription>
             </div>
+            {/* Edit and Delete buttons hidden */}
             <div className="flex space-x-2">
-              {!isInstance && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleEditClick(event)}
-                >
-                  Edit
-                </Button>
-              )}
             </div>
           </div>
         </CardHeader>
@@ -885,10 +894,17 @@ export function Events() {
           )}
           <div className="flex items-center justify-between mt-4">
             <div className="text-sm text-muted-foreground">
-              {event.attendance || 0} {event.attendance === 1 ? 'person' : 'people'} attending
+              {event.allow_rsvp ? (
+                `${event.attendance || 0} ${event.attendance === 1 ? 'person' : 'people'} attending`
+              ) : (
+                <span className="flex items-center gap-1">
+                  <HelpCircle className="h-3 w-3" />
+                  Announcement only
+                </span>
+              )}
             </div>
             <div className="flex gap-2">
-              {getRSVPButton(event.id)}
+              {event.allow_rsvp && getRSVPButton(event.id)}
             </div>
           </div>
         </CardContent>
@@ -1070,6 +1086,7 @@ export function Events() {
                         onClick={() => handleMemberClick(member)}
                       >
                         <Avatar className="h-8 w-8">
+                          <AvatarImage src={member.image_url} />
                           <AvatarFallback>
                             {member.firstname?.charAt(0)}{member.lastname?.charAt(0)}
                           </AvatarFallback>
@@ -1098,6 +1115,7 @@ export function Events() {
                         className="flex items-center space-x-2 p-2 bg-muted/50 rounded-lg"
                       >
                         <Avatar className="h-8 w-8">
+                          <AvatarImage src={member.image_url} />
                           <AvatarFallback>
                             {member.firstname?.charAt(0)}{member.lastname?.charAt(0)}
                           </AvatarFallback>
@@ -1230,7 +1248,8 @@ export function Events() {
               location: '',
               url: '',
               is_recurring: false,
-              recurrence_pattern: ''
+              recurrence_pattern: '',
+              allow_rsvp: true
             }}
             onSave={handleCreateEvent}
             onCancel={() => setIsCreateEventOpen(false)}
@@ -1242,9 +1261,14 @@ export function Events() {
       <Dialog open={isEditEventOpen} onOpenChange={setIsEditEventOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Edit Event</DialogTitle>
+            <DialogTitle>
+              Edit {editingEvent?.is_recurring ? 'Recurring Event Series' : 'Event'}
+            </DialogTitle>
             <DialogDescription>
-              Update event details.
+              {editingEvent?.is_recurring 
+                ? `Update event details. Changes will apply to "${editingEvent.title}" and all future instances.`
+                : 'Update event details.'
+              }
             </DialogDescription>
           </DialogHeader>
           {editingEvent && (
@@ -1253,7 +1277,8 @@ export function Events() {
                 initialData={{
                   ...editingEvent,
                   startDate: new Date(editingEvent.start_date).toISOString().slice(0, 16),
-                  endDate: new Date(editingEvent.end_date).toISOString().slice(0, 16)
+                  endDate: new Date(editingEvent.end_date).toISOString().slice(0, 16),
+                  allow_rsvp: editingEvent.allow_rsvp !== undefined ? editingEvent.allow_rsvp : true
                 }}
                 onSave={handleEditEvent}
                 onCancel={() => {
@@ -1265,15 +1290,21 @@ export function Events() {
                 <Button
                   variant="destructive"
                   onClick={() => {
-                    if (confirm('Are you sure you want to delete this event?')) {
-                      handleDeleteEvent(editingEvent.id);
-                      setIsEditEventOpen(false);
-                      setEditingEvent(null);
-                    }
+                    const eventType = editingEvent.is_recurring ? 'recurring event series' : 'event';
+                    const message = editingEvent.is_recurring 
+                      ? `Are you sure you want to delete "${editingEvent.title}" and all its recurring instances? This cannot be undone.`
+                      : `Are you sure you want to delete "${editingEvent.title}"? This cannot be undone.`;
+                    
+                                         if (confirm(message)) {
+                        const deleteId = editingEvent.master_id || editingEvent.id;
+                        handleDeleteEvent(deleteId);
+                        setIsEditEventOpen(false);
+                        setEditingEvent(null);
+                      }
                   }}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Event
+                  Delete {editingEvent?.is_recurring ? 'Series' : 'Event'}
                 </Button>
               </div>
             </>
