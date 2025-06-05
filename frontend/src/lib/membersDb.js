@@ -6,8 +6,8 @@ export async function getMembers() {
     const { data, error } = await supabase
       .from('members')
       .select('*')
-      .order('firstname', { ascending: true })
-      .order('lastname', { ascending: true });
+      .order('first_name', { ascending: true })
+      .order('last_name', { ascending: true });
 
     if (error) throw error;
     return data || [];

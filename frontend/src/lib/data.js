@@ -19,7 +19,7 @@ export async function getMembers() {
           ...member,
           firstName: member.firstname || '',
           lastName: member.lastname || '',
-          joinDate: member.joindate,
+          joinDate: member.join_date,
           createdAt: member.created_at,
           updatedAt: member.updated_at
         };
@@ -64,21 +64,15 @@ export async function getMembers() {
           address: null
         };
       } catch (error) {
-        return {
-          ...member,
-          firstName: member.firstname || '',
-          lastName: member.lastname || '',
-          joinDate: member.joindate,
-          createdAt: member.created_at,
-          updatedAt: member.updated_at,
-          address: null
-        };
+        console.error('Error parsing member data:', error);
+        return member;
       }
     });
 
     return parsedData;
   } catch (error) {
-    return [];
+    console.error('Error fetching members:', error);
+    throw error;
   }
 }
 
@@ -106,27 +100,46 @@ export const addMember = async (member) => {
 };
 
 export const updateMember = async (id, updates) => {
-  // Ensure address is properly formatted as JSONB
-  const memberData = {
-    ...updates,
-    // Don't modify the address object at all, let Supabase handle it
-    joinDate: updates.joinDate ? new Date(updates.joinDate).toISOString() : undefined
-  };
+  try {
+    // Transform camelCase back to database column names
+    const memberData = {
+      ...updates,
+      firstname: updates.firstName,
+      lastname: updates.lastName,
+      join_date: updates.joinDate,
+      created_at: updates.createdAt,
+      updated_at: updates.updatedAt
+    };
 
-  const { data, error } = await supabase
-    .from('members')
-    .update(memberData)
-    .eq('id', id)
-    .select()
-    .single();
+    // Remove the camelCase properties to avoid confusion
+    delete memberData.firstName;
+    delete memberData.lastName;
+    delete memberData.joinDate;
+    delete memberData.createdAt;
+    delete memberData.updatedAt;
 
-  if (error) throw error;
+    const { data, error } = await supabase
+      .from('members')
+      .update(memberData)
+      .eq('id', id)
+      .select()
+      .single();
 
-  // Parse the address before returning
-  return {
-    ...data,
-    address: data.address ? JSON.parse(data.address) : null
-  };
+    if (error) throw error;
+
+    // Transform back to camelCase for the frontend
+    return {
+      ...data,
+      firstName: data.firstname,
+      lastName: data.lastname,
+      joinDate: data.join_date,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
+  } catch (error) {
+    console.error('Error updating member:', error);
+    throw error;
+  }
 };
 
 export const deleteMember = async (id) => {

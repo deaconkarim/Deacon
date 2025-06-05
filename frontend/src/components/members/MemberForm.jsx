@@ -9,7 +9,23 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Upload, X } from 'lucide-react';
 import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+
+function centerAspectCrop(mediaWidth, mediaHeight, aspect) {
+  return centerCrop(
+    makeAspectCrop(
+      {
+        unit: '%',
+        width: 90,
+      },
+      aspect,
+      mediaWidth,
+      mediaHeight,
+    ),
+    mediaWidth,
+    mediaHeight,
+  );
+}
 
 const MemberForm = ({ initialData, onSave, onCancel }) => {
   const [memberData, setMemberData] = useState({
@@ -49,23 +65,10 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
 
   const onImageLoad = (e) => {
     const { width, height } = e.currentTarget;
-    const crop = centerCrop(
-      makeAspectCrop(
-        {
-          unit: '%',
-          width: 90,
-        },
-        1,
-        width,
-        height
-      ),
-      width,
-      height
-    );
-    setCrop(crop);
+    setCrop(centerAspectCrop(width, height, 1));
   };
 
-  const getCroppedImg = (src, pixelCrop) => {
+  async function getCroppedImg(src, pixelCrop) {
     const image = new Image();
     image.src = src;
 
@@ -94,16 +97,27 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
         // Convert canvas to blob
         canvas.toBlob((blob) => {
           resolve(blob);
-        }, 'image/jpeg');
+        }, 'image/jpeg', 0.95);
       };
     });
-  };
+  }
 
   const handleCropComplete = async () => {
     if (!imgRef.current || !crop) return;
 
     try {
-      const croppedImageBlob = await getCroppedImg(imgRef.current.src, crop);
+      const image = imgRef.current;
+      const scaleX = image.naturalWidth / image.width;
+      const scaleY = image.naturalHeight / image.height;
+
+      const pixelCrop = {
+        x: Math.round(crop.x * scaleX),
+        y: Math.round(crop.y * scaleY),
+        width: Math.round(crop.width * scaleX),
+        height: Math.round(crop.height * scaleY)
+      };
+
+      const croppedImageBlob = await getCroppedImg(imgRef.current.src, pixelCrop);
       if (!croppedImageBlob) return;
 
       setIsUploading(true);
@@ -250,59 +264,50 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
             <SelectContent>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="inactive">Inactive</SelectItem>
-              <SelectItem value="visitor">Visitor</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        <div className="flex justify-end space-x-2 pt-4">
-          <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
-          <Button type="submit">Save Member</Button>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button type="submit">Save</Button>
         </div>
       </form>
 
       <Dialog open={showCropDialog} onOpenChange={setShowCropDialog}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Crop Image</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="relative max-h-[400px] overflow-auto">
-              <ReactCrop
-                crop={crop}
-                onChange={(c) => setCrop(c)}
-                aspect={1}
+          <div className="relative max-h-[60vh] overflow-auto">
+            <ReactCrop
+              crop={crop}
+              onChange={(c) => setCrop(c)}
+              aspect={1}
+              className="max-w-full"
+              minWidth={100}
+              minHeight={100}
+              keepRatio={true}
+            >
+              <img
+                ref={imgRef}
+                src={imgSrc}
+                onLoad={onImageLoad}
+                alt="Crop preview"
                 className="max-w-full"
-              >
-                <img
-                  ref={imgRef}
-                  src={imgSrc}
-                  onLoad={onImageLoad}
-                  alt="Crop me"
-                  className="max-w-full"
-                />
-              </ReactCrop>
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setShowCropDialog(false);
-                  setImgSrc('');
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                onClick={handleCropComplete}
-                disabled={isUploading}
-              >
-                {isUploading ? 'Uploading...' : 'Crop & Upload'}
-              </Button>
-            </div>
+              />
+            </ReactCrop>
           </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setShowCropDialog(false)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleCropComplete} disabled={isUploading}>
+              {isUploading ? 'Uploading...' : 'Apply Crop'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

@@ -381,7 +381,7 @@ export function Dashboard() {
             </CardContent>
             <CardFooter className="bg-gray-50 py-2 px-6 border-t">
               <Button variant="ghost" size="sm" className="ml-auto" asChild>
-                <a href="/people">
+                <a href="/members">
                   View all <ChevronRight className="ml-1 h-4 w-4" />
                 </a>
               </Button>
@@ -490,7 +490,7 @@ export function Dashboard() {
             </CardContent>
             <CardFooter>
               <Button variant="outline" className="w-full" asChild>
-                <a href="/people">View All People</a>
+                <a href="/members">View All People</a>
               </Button>
             </CardFooter>
           </Card>

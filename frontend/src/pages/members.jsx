@@ -32,7 +32,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/components/ui/use-toast';
 import { getMembers, addMember, updateMember, deleteMember, getMemberAttendance } from '../lib/data';
@@ -418,10 +418,11 @@ export function People() {
                     >
                       <CardHeader className="pb-2">
                         <div className="flex justify-between items-start">
-                          <div className="flex items-center">
-                            <Avatar className="h-12 w-12 mr-3">
-                              <AvatarFallback className="bg-primary text-primary-foreground">
-                                {getInitials(member.firstName, member.lastName)}
+                          <div className="flex items-center space-x-4">
+                            <Avatar className="h-12 w-12">
+                              <AvatarImage src={member.image_url} />
+                              <AvatarFallback>
+                                {member.firstName.charAt(0)}{member.lastName.charAt(0)}
                               </AvatarFallback>
                             </Avatar>
                             <div>
@@ -612,11 +613,12 @@ export function People() {
                                 />
                                 <div className="flex items-center">
                                   <Avatar className="h-8 w-8 mr-2">
+                                    <AvatarImage src={member.image_url} />
                                     <AvatarFallback className="text-xs">
-                                      {getInitials(member.firstName, member.lastName)}
+                                      {member.firstName.charAt(0)}{member.lastName.charAt(0)}
                                     </AvatarFallback>
                                   </Avatar>
-                                  <span>{formatName(member.firstName, member.lastName)}</span>
+                                  <span>{member.firstName} {member.lastName}</span>
                                 </div>
                               </div>
                             </td>
