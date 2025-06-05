@@ -16,6 +16,12 @@ module.exports = {
 			},
 		},
 		extend: {
+			screens: {
+				'tablet': '768px',
+				'tablet-lg': '1024px',
+				'tablet-portrait': { 'raw': '(min-width: 768px) and (max-width: 1024px) and (orientation: portrait)' },
+				'tablet-landscape': { 'raw': '(min-width: 768px) and (max-width: 1024px) and (orientation: landscape)' },
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',

@@ -103,18 +103,18 @@ export const updateMember = async (id, updates) => {
   try {
     // Check if email is being changed and if it already exists (only for non-null, non-empty emails)
     if (updates.email && updates.email.trim() && updates.email.trim() !== '') {
-      const { data: existingMember, error: checkError } = await supabase
+      const { data: existingMembers, error: checkError } = await supabase
         .from('members')
         .select('email, id')
         .eq('email', updates.email.trim())
-        .neq('id', id)
-        .single();
+        .neq('id', id);
 
-      if (checkError && checkError.code !== 'PGRST116') {
+      if (checkError) {
         console.error('Error checking for duplicate email:', checkError);
+        throw checkError;
       }
 
-      if (existingMember) {
+      if (existingMembers && existingMembers.length > 0) {
         throw new Error('A member with this email already exists');
       }
     }

@@ -43,24 +43,24 @@ export function Layout() {
     { name: 'Settings', href: '/settings', icon: SettingsIcon },
   ];
 
-  const mainNavItems = navigation.slice(0, 4);
-  const moreNavItems = navigation.slice(4);
+  const mainNavItems = navigation.slice(0, 5); // Show 5 main items on tablet
+  const moreNavItems = navigation.slice(5);
   
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <div className="flex-1 pb-20 lg:pb-0">
-        <main className="p-4 sm:p-6 pb-24 lg:pb-6">
+      <div className="flex-1 pb-20 tablet:pb-16 lg:pb-0">
+        <main className="p-4 sm:p-6 tablet:p-8 pb-24 tablet:pb-20 lg:pb-6">
           <Outlet />
         </main>
       </div>
 
       {/* Mobile Navigation (phones only) */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg lg:hidden z-50">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg tablet:hidden z-50">
         <div className="max-w-screen-xl mx-auto px-2">
           <div className="flex justify-around items-center h-14">
-            {mainNavItems.map((item) => {
+            {mainNavItems.slice(0, 4).map((item) => {
               const isActive = location.pathname === item.href;
               return (
                 <NavLink
@@ -86,7 +86,7 @@ export function Layout() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                {moreNavItems.map((item) => (
+                {navigation.slice(4).map((item) => (
                   <DropdownMenuItem key={item.name} asChild>
                     <NavLink
                       to={item.href}
@@ -96,6 +96,56 @@ export function Layout() {
                       )}
                     >
                       <item.icon className="h-4 w-4" />
+                      <span>{item.name}</span>
+                    </NavLink>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </nav>
+
+      {/* Tablet Navigation */}
+      <nav className="hidden tablet:block lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50">
+        <div className="max-w-screen-xl mx-auto px-4">
+          <div className="flex justify-around items-center h-16">
+            {mainNavItems.map((item) => {
+              const isActive = location.pathname === item.href;
+              return (
+                <NavLink
+                  key={item.name}
+                  to={item.href}
+                  className={({ isActive }) => cn(
+                    "flex flex-col items-center justify-center px-3 py-2 text-xs font-medium rounded-md transition-all min-h-[44px] min-w-[44px]",
+                    isActive
+                      ? "text-primary bg-primary/10"
+                      : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+                  )}
+                >
+                  <item.icon className={cn("h-5 w-5 mb-1", isActive ? "text-primary" : "text-gray-500")} />
+                  <span className="text-[10px] leading-tight">{item.name}</span>
+                </NavLink>
+              );
+            })}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="flex flex-col items-center justify-center px-3 py-2 min-h-[44px] min-w-[44px] h-auto">
+                  <MoreHorizontal className="h-5 w-5 mb-1 text-gray-500" />
+                  <span className="text-[10px] font-medium">More</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {moreNavItems.map((item) => (
+                  <DropdownMenuItem key={item.name} asChild>
+                    <NavLink
+                      to={item.href}
+                      className={cn(
+                        "flex items-center gap-3 px-4 py-3 text-sm",
+                        location.pathname === item.href ? "text-primary bg-primary/10" : ""
+                      )}
+                    >
+                      <item.icon className="h-5 w-5" />
                       <span>{item.name}</span>
                     </NavLink>
                   </DropdownMenuItem>
@@ -133,7 +183,7 @@ export function Layout() {
       </nav>
 
       {/* Footer */}
-      <footer className="py-4 px-6 border-t mt-16 lg:mt-0">
+      <footer className="py-4 px-6 border-t mt-16 tablet:mt-20 lg:mt-0">
         <div className="flex flex-col sm:flex-row justify-between items-center">
           <p className="text-sm text-gray-500">© 2025 Brentwood Lighthouse Baptist Church</p>
         </div>

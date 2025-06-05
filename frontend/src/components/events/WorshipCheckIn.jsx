@@ -307,18 +307,18 @@ export function WorshipCheckIn() {
             Check in members for {currentEvent ? format(new Date(currentEvent.start_date), 'EEEE, MMMM d, yyyy') : 'today\'s'} worship service.
           </p>
         </div>
-        <div className="flex gap-2 w-full md:w-auto">
+        <div className="flex gap-2 w-full md:w-auto tablet-spacing">
           <Button 
             onClick={() => setIsNewMemberDialogOpen(true)}
             variant="outline"
-            className="w-full md:w-auto"
+            className="w-full md:w-auto btn-tablet"
           >
             <Plus className="mr-2 h-4 w-4" />
             New Person
           </Button>
           <Button 
             onClick={() => setIsCheckInDialogOpen(true)}
-            className="w-full md:w-auto bg-primary hover:bg-primary/90"
+            className="w-full md:w-auto bg-primary hover:bg-primary/90 btn-tablet"
           >
             <UserPlus className="mr-2 h-4 w-4" />
             Check In Member
@@ -326,7 +326,7 @@ export function WorshipCheckIn() {
         </div>
       </div>
 
-      <Card>
+      <Card className="tablet-card">
         <CardHeader>
           <CardTitle>Checked In Members</CardTitle>
           <CardDescription>
@@ -336,24 +336,24 @@ export function WorshipCheckIn() {
         <CardContent>
           <div className="grid gap-4">
             {checkedInMembers.length > 0 ? (
-              <div className="grid gap-2">
+              <div className="grid gap-3 tablet:gap-4">
                 {checkedInMembers.map((member) => (
                   <div
                     key={member.id}
-                    className="flex items-center justify-between p-2 bg-muted/50 rounded-lg"
+                    className="flex items-center justify-between p-3 tablet:p-4 bg-muted/50 rounded-lg"
                   >
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-8 w-8">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-8 w-8 tablet:h-10 tablet:w-10">
                         <AvatarImage src={member.image_url} />
                         <AvatarFallback>{getInitials(member.firstname, member.lastname)}</AvatarFallback>
                       </Avatar>
-                      <span>{member.firstname} {member.lastname}</span>
+                      <span className="tablet:text-base">{member.firstname} {member.lastname}</span>
                     </div>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleRemoveCheckIn(member.id)}
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50 touch-target tablet:min-h-[44px]"
                     >
                       <XCircle className="h-4 w-4" />
                     </Button>
@@ -371,7 +371,7 @@ export function WorshipCheckIn() {
 
       {/* Check In Dialog */}
       <Dialog open={isCheckInDialogOpen} onOpenChange={setIsCheckInDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] tablet:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Check In Member</DialogTitle>
             <DialogDescription>
@@ -384,22 +384,22 @@ export function WorshipCheckIn() {
               placeholder="Search members..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8"
+              className="pl-8 tablet-form-input"
             />
           </div>
-          <div className="max-h-[300px] overflow-y-auto space-y-2">
+          <div className="max-h-[300px] tablet:max-h-[400px] overflow-y-auto space-y-2 touch-scroll">
             {filteredMembers.map((member) => (
               <div
                 key={member.id}
-                className="flex items-center justify-between p-2 hover:bg-muted/50 rounded-lg cursor-pointer"
+                className="flex items-center justify-between p-3 tablet:p-4 hover:bg-muted/50 rounded-lg cursor-pointer touch-target"
                 onClick={() => handleCheckIn(member)}
               >
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-8 w-8">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-8 w-8 tablet:h-10 tablet:w-10">
                     <AvatarImage src={member.image_url} />
                     <AvatarFallback>{getInitials(member.firstname, member.lastname)}</AvatarFallback>
                   </Avatar>
-                  <span>{member.firstname} {member.lastname}</span>
+                  <span className="tablet:text-base">{member.firstname} {member.lastname}</span>
                 </div>
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
               </div>
@@ -411,7 +411,7 @@ export function WorshipCheckIn() {
             )}
           </div>
           <DialogFooter>
-            <Button onClick={() => setIsCheckInDialogOpen(false)}>
+            <Button onClick={() => setIsCheckInDialogOpen(false)} className="btn-tablet">
               Done
             </Button>
           </DialogFooter>

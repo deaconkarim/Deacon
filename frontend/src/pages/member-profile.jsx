@@ -11,16 +11,19 @@ import {
   Users,
   Clock,
   Church,
-  User
+  User,
+  Trash2
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
-import { getMembers, getMemberAttendance, getMemberGroups } from '../lib/data';
-import { formatName, getInitials } from '@/lib/utils/formatters';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { getMembers, getMemberAttendance, getMemberGroups, updateMember, deleteMember } from '../lib/data';
+import MemberForm from '@/components/members/MemberForm';
+import { formatName, getInitials, formatPhoneNumber } from '@/lib/utils/formatters';
 
 export function MemberProfile() {
   const { id } = useParams();
@@ -32,6 +35,8 @@ export function MemberProfile() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAttendanceLoading, setIsAttendanceLoading] = useState(true);
   const [isGroupsLoading, setIsGroupsLoading] = useState(true);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     loadMemberData();
@@ -99,6 +104,51 @@ export function MemberProfile() {
     }
   };
 
+  const handleEditMember = async (memberData) => {
+    try {
+      const updatedMember = await updateMember(member.id, {
+        firstName: memberData.firstname,
+        lastName: memberData.lastname,
+        email: memberData.email,
+        phone: memberData.phone,
+        status: memberData.status,
+        image_url: memberData.image_url
+      });
+      setMember(updatedMember);
+      setIsEditDialogOpen(false);
+      toast({
+        title: "Success",
+        description: "Member updated successfully"
+      });
+    } catch (error) {
+      console.error('Error updating member:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update member",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteMember = async () => {
+    try {
+      await deleteMember(member.id);
+      setIsDeleteDialogOpen(false);
+      toast({
+        title: "Success",
+        description: "Member deleted successfully"
+      });
+      navigate('/members');
+    } catch (error) {
+      console.error('Error deleting member:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete member",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -113,19 +163,38 @@ export function MemberProfile() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate('/members')}
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Person Profile</h1>
-          <p className="text-muted-foreground">
-            View and manage person information
-          </p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/members')}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Person Profile</h1>
+            <p className="text-muted-foreground">
+              View and manage person information
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsEditDialogOpen(true)}
+          >
+            <Edit className="h-4 w-4 mr-2" />
+            Edit
+          </Button>
+          <Button
+            variant="outline"
+            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+            onClick={() => setIsDeleteDialogOpen(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete
+          </Button>
         </div>
       </div>
 
@@ -135,6 +204,7 @@ export function MemberProfile() {
             <CardHeader>
               <div className="flex flex-col items-center text-center">
                 <Avatar className="h-24 w-24 mb-4">
+                  <AvatarImage src={member.image_url} />
                   <AvatarFallback className="text-2xl">
                     {getInitials(member.firstName, member.lastName)}
                   </AvatarFallback>
@@ -158,7 +228,7 @@ export function MemberProfile() {
                 {member.phone && (
                   <div className="flex items-center text-sm">
                     <Phone className="mr-2 h-4 w-4 text-muted-foreground" />
-                    <span>{member.phone}</span>
+                    <span>{formatPhoneNumber(member.phone)}</span>
                   </div>
                 )}
                 {member.address && (
@@ -314,6 +384,50 @@ export function MemberProfile() {
           </Tabs>
         </div>
       </div>
+
+      {/* Edit Member Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Member</DialogTitle>
+            <DialogDescription>
+              Update the member's information below.
+            </DialogDescription>
+          </DialogHeader>
+          <MemberForm
+            initialData={{
+              firstname: member.firstName,
+              lastname: member.lastName,
+              email: member.email,
+              phone: member.phone,
+              status: member.status,
+              image_url: member.image_url
+            }}
+            onSave={handleEditMember}
+            onCancel={() => setIsEditDialogOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Delete Person</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this person? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteMember}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 

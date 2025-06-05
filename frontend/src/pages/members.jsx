@@ -40,7 +40,7 @@ import { Badge } from '@/components/ui/badge';
 import { AddressInput } from '@/components/ui/address-input';
 import { useAuth } from '@/lib/authContext';
 import { Textarea } from '@/components/ui/textarea';
-import { formatName, getInitials } from '@/lib/utils/formatters';
+import { formatName, getInitials, formatPhoneNumber } from '@/lib/utils/formatters';
 import { useNavigate } from 'react-router-dom';
 import MemberForm from '@/components/members/MemberForm';
 
@@ -419,58 +419,30 @@ export function People() {
                       onClick={() => handleMemberClick(member.id)}
                     >
                       <CardHeader className="pb-2">
-                        <div className="flex justify-between items-start">
-                          <div className="flex items-center space-x-4">
-                            <Avatar className="h-12 w-12">
-                              <AvatarImage src={member.image_url} />
-                              <AvatarFallback>
-                                {member.firstName.charAt(0)}{member.lastName.charAt(0)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <CardTitle className="text-xl">{formatName(member.firstName, member.lastName)}</CardTitle>
-                              <CardDescription>
-                                {member.status === 'active' ? (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                                    Active
-                                  </span>
-                                ) : member.status === 'visitor' ? (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                    Visitor
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                                    Inactive
-                                  </span>
-                                )}
-                              </CardDescription>
-                            </div>
-                          </div>
-                          <div className="flex space-x-1">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedMember(member);
-                                setIsEditDialogOpen(true);
-                              }}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedMember(member);
-                                setIsDeleteDialogOpen(true);
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                        <div className="flex items-center space-x-4">
+                          <Avatar className="h-12 w-12">
+                            <AvatarImage src={member.image_url} />
+                            <AvatarFallback>
+                              {member.firstName.charAt(0)}{member.lastName.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <CardTitle className="text-xl">{formatName(member.firstName, member.lastName)}</CardTitle>
+                            <CardDescription>
+                              {member.status === 'active' ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                  Active
+                                </span>
+                              ) : member.status === 'visitor' ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                  Visitor
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                  Inactive
+                                </span>
+                              )}
+                            </CardDescription>
                           </div>
                         </div>
                       </CardHeader>
@@ -525,20 +497,21 @@ export function People() {
           <TabsContent value="list">
             <Card>
               <CardContent className="p-0">
-                <div className="relative w-full overflow-auto">
-                  <table className="w-full caption-bottom text-sm">
+                <div className="relative w-full overflow-auto touch-scroll">
+                  <table className="w-full caption-bottom text-sm tablet-table">
                     <thead className="[&_tr]:border-b">
                       <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                        <th className="h-12 px-4 text-left align-middle font-medium">
+                        <th className="h-12 tablet:h-14 px-3 tablet:px-4 text-left align-middle font-medium">
                           <div className="flex items-center space-x-2">
                             <Checkbox 
                               id="select-all" 
                               onCheckedChange={handleSelectAll}
                               checked={selectedMembers.length === filteredMembers.length && filteredMembers.length > 0}
+                              className="touch-target"
                             />
                             <Button 
                               variant="ghost" 
-                              className="flex items-center gap-1"
+                              className="flex items-center gap-1 touch-target"
                               onClick={() => handleSort('lastName')}
                             >
                               Name
@@ -548,10 +521,10 @@ export function People() {
                             </Button>
                           </div>
                         </th>
-                        <th className="h-12 px-4 text-left align-middle font-medium">
+                        <th className="h-12 tablet:h-14 px-3 tablet:px-4 text-left align-middle font-medium hidden sm:table-cell">
                           <Button 
                             variant="ghost" 
-                            className="flex items-center gap-1"
+                            className="flex items-center gap-1 touch-target"
                             onClick={() => handleSort('email')}
                           >
                             Email
@@ -560,10 +533,10 @@ export function People() {
                             )}
                           </Button>
                         </th>
-                        <th className="h-12 px-4 text-left align-middle font-medium">
+                        <th className="h-12 tablet:h-14 px-3 tablet:px-4 text-left align-middle font-medium hidden tablet:table-cell">
                           <Button 
                             variant="ghost" 
-                            className="flex items-center gap-1"
+                            className="flex items-center gap-1 touch-target"
                             onClick={() => handleSort('phone')}
                           >
                             Phone
@@ -572,10 +545,10 @@ export function People() {
                             )}
                           </Button>
                         </th>
-                        <th className="h-12 px-4 text-left align-middle font-medium">
+                        <th className="h-12 tablet:h-14 px-3 tablet:px-4 text-left align-middle font-medium hidden lg:table-cell">
                           <Button 
                             variant="ghost" 
-                            className="flex items-center gap-1"
+                            className="flex items-center gap-1 touch-target"
                             onClick={() => handleSort('joinDate')}
                           >
                             Join Date
@@ -584,10 +557,10 @@ export function People() {
                             )}
                           </Button>
                         </th>
-                        <th className="h-12 px-4 text-left align-middle font-medium">
+                        <th className="h-12 tablet:h-14 px-3 tablet:px-4 text-left align-middle font-medium">
                           <Button 
                             variant="ghost" 
-                            className="flex items-center gap-1"
+                            className="flex items-center gap-1 touch-target"
                             onClick={() => handleSort('status')}
                           >
                             Status
@@ -596,7 +569,7 @@ export function People() {
                             )}
                           </Button>
                         </th>
-                        <th className="h-12 px-4 text-right align-middle font-medium">Actions</th>
+
                       </tr>
                     </thead>
                     <tbody className="[&_tr:last-child]:border-0">
@@ -606,75 +579,52 @@ export function People() {
                             key={member.id} 
                             className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
                           >
-                            <td className="p-4 align-middle">
+                            <td className="p-3 tablet:p-4 align-middle">
                               <div className="flex items-center space-x-2">
                                 <Checkbox 
                                   id={`select-${member.id}`} 
                                   checked={selectedMembers.includes(member.id)}
                                   onCheckedChange={() => handleSelectMember(member.id)}
+                                  className="touch-target"
                                 />
                                 <div className="flex items-center">
-                                  <Avatar className="h-8 w-8 mr-2">
+                                  <Avatar className="h-8 w-8 tablet:h-10 tablet:w-10 mr-2">
                                     <AvatarImage src={member.image_url} />
-                                    <AvatarFallback className="text-xs">
+                                    <AvatarFallback className="text-xs tablet:text-sm">
                                       {member.firstName.charAt(0)}{member.lastName.charAt(0)}
                                     </AvatarFallback>
                                   </Avatar>
-                                  <span>{member.firstName} {member.lastName}</span>
+                                  <div className="min-w-0">
+                                    <span className="tablet:text-base">{member.firstName} {member.lastName}</span>
+                                    <div className="sm:hidden text-xs text-gray-500 truncate">{member.email}</div>
+                                  </div>
                                 </div>
                               </div>
                             </td>
-                            <td className="p-4 align-middle">{member.email}</td>
-                            <td className="p-4 align-middle">{member.phone}</td>
-                            <td className="p-4 align-middle">{formatDate(member.joinDate || member.created_at)}</td>
-                            <td className="p-4 align-middle">
+                            <td className="p-3 tablet:p-4 align-middle hidden sm:table-cell tablet:text-base">{member.email}</td>
+                            <td className="p-3 tablet:p-4 align-middle hidden tablet:table-cell tablet:text-base">{formatPhoneNumber(member.phone)}</td>
+                            <td className="p-3 tablet:p-4 align-middle hidden lg:table-cell tablet:text-base">{formatDate(member.joinDate || member.created_at)}</td>
+                            <td className="p-3 tablet:p-4 align-middle">
                               {member.status === 'active' ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs tablet:text-sm font-medium bg-green-100 text-green-800">
                                   Active
                                 </span>
                               ) : member.status === 'visitor' ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs tablet:text-sm font-medium bg-blue-100 text-blue-800">
                                   Visitor
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs tablet:text-sm font-medium bg-gray-100 text-gray-800">
                                   Inactive
                                 </span>
                               )}
                             </td>
-                            <td className="p-4 align-middle text-right">
-                              <div className="flex justify-end space-x-1">
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-8 w-8"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedMember(member);
-                                    setIsEditDialogOpen(true);
-                                  }}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedMember(member);
-                                    setIsDeleteDialogOpen(true);
-                                  }}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </td>
+
                           </tr>
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={6} className="p-4 text-center text-muted-foreground">
+                          <td colSpan={5} className="p-4 text-center text-muted-foreground">
                             No people found matching your criteria.
                           </td>
                         </tr>

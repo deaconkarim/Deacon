@@ -246,10 +246,16 @@ export function Dashboard() {
 
       // Calculate monthly donations
       const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1; // getMonth() returns 0-11, we need 1-12
+      
       const monthlyDonations = donations
-        ?.filter(donation => new Date(donation.date) >= startOfMonth && new Date(donation.date) <= endOfMonth)
+        ?.filter(donation => {
+          // Parse date as YYYY-MM-DD string to avoid timezone issues
+          const donationDate = donation.date; // Should be in format YYYY-MM-DD
+          const [year, month] = donationDate.split('-').map(Number);
+          return year === currentYear && month === currentMonth;
+        })
         .reduce((sum, donation) => sum + parseFloat(donation.amount), 0) || 0;
 
       // Fetch upcoming events
@@ -263,8 +269,10 @@ export function Dashboard() {
 
       // Filter events for current month
       const currentMonthEvents = events?.filter(event => {
-        const eventDate = new Date(event.start_date);
-        return eventDate >= startOfMonth && eventDate <= endOfMonth;
+        // Parse event start_date to avoid timezone issues
+        const eventDate = event.start_date; // Should be in format YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss
+        const [year, month] = eventDate.split('-').map(Number);
+        return year === currentYear && month === currentMonth;
       }) || [];
 
       // Update state with fetched data
@@ -366,7 +374,7 @@ export function Dashboard() {
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 tablet-portrait:grid-cols-2 tablet-landscape:grid-cols-4 md:grid-cols-2 lg:grid-cols-4">
         <motion.div variants={itemVariants}>
           <Card className="overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
@@ -456,7 +464,7 @@ export function Dashboard() {
         </motion.div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 tablet:grid-cols-2 md:grid-cols-2">
         <motion.div variants={itemVariants}>
           <Card>
             <CardHeader>
@@ -470,6 +478,7 @@ export function Dashboard() {
                     <div key={person.id} className="flex items-center justify-between border-b pb-3">
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
+                          <AvatarImage src={person.image_url} />
                           <AvatarFallback>{getInitials(person.firstName, person.lastName)}</AvatarFallback>
                         </Avatar>
                         <div>{formatName(person.firstName, person.lastName)}</div>
@@ -477,7 +486,7 @@ export function Dashboard() {
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => navigate(`/people/${person.id}`)}
+                        onClick={() => navigate(`/members/${person.id}`)}
                       >
                         View
                       </Button>
@@ -509,7 +518,7 @@ export function Dashboard() {
                     <div>
                       <p className="font-medium">${parseFloat(donation.amount).toFixed(2)}</p>
                       <p className="text-sm text-muted-foreground">
-                        {format(new Date(donation.date), 'MMM d, yyyy')}
+                        {format(new Date(donation.date + 'T12:00:00'), 'MMM d, yyyy')}
                         {donation.attendance && ` • ${donation.attendance} people`}
                       </p>
                     </div>
