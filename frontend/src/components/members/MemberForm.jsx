@@ -124,24 +124,47 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
       
       // Create a unique file name
       const fileName = `${Math.random().toString(36).substring(2)}.jpg`;
-      const filePath = `member-images/${fileName}`;
+      
+      // Convert blob to File object
+      const imageFile = new File([croppedImageBlob], fileName, { type: 'image/jpeg' });
+
+      console.log('Attempting to upload to bucket: members');
+      console.log('File name:', fileName);
+      console.log('File type:', imageFile.type);
+      console.log('File size:', imageFile.size);
 
       // Upload image to Supabase Storage
-      const { error: uploadError } = await supabase.storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from('members')
-        .upload(filePath, croppedImageBlob);
+        .upload(fileName, imageFile, {
+          contentType: 'image/jpeg',
+          upsert: true,
+          cacheControl: '3600'
+        });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Detailed upload error:', uploadError);
+        throw uploadError;
+      }
+
+      console.log('Upload successful:', uploadData);
 
       // Get public URL
-      const { data: { publicUrl } } = supabase.storage
+      const { data: urlData, error: urlError } = await supabase.storage
         .from('members')
-        .getPublicUrl(filePath);
+        .getPublicUrl(fileName);
+
+      if (urlError) {
+        console.error('Error getting public URL:', urlError);
+        throw urlError;
+      }
+
+      console.log('Got public URL:', urlData);
 
       // Update member data with new image URL
       setMemberData(prev => ({
         ...prev,
-        image_url: publicUrl
+        image_url: urlData.publicUrl
       }));
 
       toast({
@@ -264,6 +287,7 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
             <SelectContent>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="inactive">Inactive</SelectItem>
+              <SelectItem value="visitor">Visitor</SelectItem>
             </SelectContent>
           </Select>
         </div>

@@ -14,6 +14,8 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
     description: initialData.description || '',
     startDate: initialData.startDate ? new Date(initialData.startDate).toISOString().slice(0, 16) : '',
     endDate: initialData.endDate ? new Date(initialData.endDate).toISOString().slice(0, 16) : '',
+    startTime: initialData.startDate ? new Date(initialData.startDate).toISOString().slice(11, 16) : '09:00',
+    endTime: initialData.endDate ? new Date(initialData.endDate).toISOString().slice(11, 16) : '10:00',
     location: initialData.location || '',
     url: initialData.url || '',
     is_recurring: initialData.is_recurring || false,
@@ -31,6 +33,8 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
       description: initialData.description || '',
       startDate: initialData.startDate ? new Date(initialData.startDate).toISOString().slice(0, 16) : '',
       endDate: initialData.endDate ? new Date(initialData.endDate).toISOString().slice(0, 16) : '',
+      startTime: initialData.startDate ? new Date(initialData.startDate).toISOString().slice(11, 16) : '09:00',
+      endTime: initialData.endDate ? new Date(initialData.endDate).toISOString().slice(11, 16) : '10:00',
       location: initialData.location || '',
       url: initialData.url || '',
       is_recurring: initialData.is_recurring || false,
@@ -43,10 +47,20 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
 
   const handleFormChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setEventData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
+    
+    if (name === 'startDate' && value) {
+      // Always set end date to match start date when start date changes
+      setEventData(prev => ({
+        ...prev,
+        [name]: value,
+        endDate: value
+      }));
+    } else {
+      setEventData(prev => ({
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value
+      }));
+    }
   };
 
   const handleSelectChange = (name, value) => {
@@ -107,25 +121,95 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="startDate">Start Date & Time *</Label>
-          <Input 
-            id="startDate" 
-            name="startDate" 
-            type="datetime-local" 
-            value={eventData.startDate} 
-            onChange={handleFormChange} 
-            required 
-          />
+          <div className="grid grid-cols-2 gap-2">
+            <Input 
+              id="startDate" 
+              name="startDate" 
+              type="date" 
+              value={eventData.startDate ? eventData.startDate.split('T')[0] : ''} 
+              onChange={(e) => {
+                const date = e.target.value;
+                const time = eventData.startTime || '09:00';
+                const dateTime = `${date}T${time}`;
+                handleFormChange({ target: { name: 'startDate', value: dateTime } });
+              }}
+              required 
+            />
+            <Select 
+              value={eventData.startTime || '09:00'} 
+              onValueChange={(time) => {
+                const date = eventData.startDate ? eventData.startDate.split('T')[0] : '';
+                const dateTime = date ? `${date}T${time}` : '';
+                setEventData(prev => ({ ...prev, startTime: time }));
+                if (dateTime) {
+                  handleFormChange({ target: { name: 'startDate', value: dateTime } });
+                }
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Time" />
+              </SelectTrigger>
+              <SelectContent className="max-h-60">
+                {Array.from({ length: 48 }, (_, i) => {
+                  const hour = Math.floor(i / 2);
+                  const minute = (i % 2) * 30;
+                  const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                  const displayTime = new Date(`2000-01-01T${time}`).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+                  return (
+                    <SelectItem key={time} value={time}>
+                      {displayTime}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         <div className="space-y-2">
           <Label htmlFor="endDate">End Date & Time *</Label>
-          <Input 
-            id="endDate" 
-            name="endDate" 
-            type="datetime-local" 
-            value={eventData.endDate} 
-            onChange={handleFormChange} 
-            required 
-          />
+          <div className="grid grid-cols-2 gap-2">
+            <Input 
+              id="endDate" 
+              name="endDate" 
+              type="date" 
+              value={eventData.endDate ? eventData.endDate.split('T')[0] : ''} 
+              onChange={(e) => {
+                const date = e.target.value;
+                const time = eventData.endTime || '10:00';
+                const dateTime = `${date}T${time}`;
+                handleFormChange({ target: { name: 'endDate', value: dateTime } });
+              }}
+              required 
+            />
+            <Select 
+              value={eventData.endTime || '10:00'} 
+              onValueChange={(time) => {
+                const date = eventData.endDate ? eventData.endDate.split('T')[0] : '';
+                const dateTime = date ? `${date}T${time}` : '';
+                setEventData(prev => ({ ...prev, endTime: time }));
+                if (dateTime) {
+                  handleFormChange({ target: { name: 'endDate', value: dateTime } });
+                }
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Time" />
+              </SelectTrigger>
+              <SelectContent className="max-h-60">
+                {Array.from({ length: 48 }, (_, i) => {
+                  const hour = Math.floor(i / 2);
+                  const minute = (i % 2) * 30;
+                  const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                  const displayTime = new Date(`2000-01-01T${time}`).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+                  return (
+                    <SelectItem key={time} value={time}>
+                      {displayTime}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
       <div className="space-y-2">

@@ -161,7 +161,7 @@ export function Events() {
           *,
           event_attendance (
             id,
-            memberid,
+            member_id,
             status
           )
         `)
@@ -171,112 +171,65 @@ export function Events() {
       if (error) throw error;
 
       console.log('Fetched events:', data); // Debug log
+      console.log('Number of fetched events:', data?.length); // Debug log
 
-      // Process events to include attendance count and handle recurring events
-      const processedEvents = data.reduce((acc, event) => {
-        // Skip if it's a duplicate instance (events with double timestamps in ID)
-        if (event.id.includes('--')) {
-          return acc;
-        }
+      // Get the current or upcoming Sunday date (same logic as check-in page)
+      const targetSunday = new Date(today);
+      const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      
+      if (dayOfWeek === 0) {
+        // Today is Sunday - use today
+        targetSunday.setHours(0, 0, 0, 0);
+      } else {
+        // Find the upcoming Sunday (go forward to next Sunday)
+        targetSunday.setDate(today.getDate() + (7 - dayOfWeek));
+        targetSunday.setHours(0, 0, 0, 0);
+      }
 
-        // If it's a recurring event instance
-        if (event.parent_event_id) {
-          // Skip if we already have an instance of this recurring event
-          const hasInstance = acc.some(e => 
-            e.parent_event_id === event.parent_event_id || 
-            (e.title.toLowerCase().includes('sunday') && 
-             e.start_date === event.start_date)
-          );
-          if (hasInstance) return acc;
+      const targetSundayEnd = new Date(targetSunday);
+      targetSundayEnd.setHours(23, 59, 59, 999);
 
-          // Only add this instance if it's the next one
-          const otherInstances = data.filter(e => 
-            e.parent_event_id === event.parent_event_id && 
-            new Date(e.start_date) >= today
-          ).sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
-
-          if (otherInstances[0]?.id === event.id) {
-            // Find the master event for editing purposes
-            const masterEvent = data.find(e => e.id === event.parent_event_id);
-            acc.push({
-              ...event,
-              // Use master event data for editing
-              id: event.parent_event_id, // Use master ID for editing
-              title: masterEvent?.title || event.title,
-              description: masterEvent?.description || event.description,
-              is_master: false,
-              master_id: event.parent_event_id,
-              attendance: event.event_attendance?.filter(a => a.status === 'attending').length || 0,
-              is_instance: false // Allow editing by not marking as instance
+      // Filter to only future events and only the target Sunday for worship events
+      const filteredEvents = data
+        .filter(event => {
+          const eventDate = new Date(event.start_date);
+          
+          // For Sunday worship events, only show the target Sunday
+          if (event.title.toLowerCase().includes('sunday') && 
+              event.title.toLowerCase().includes('worship')) {
+            // Only keep the event with attendees, or if none have attendees, keep the first one
+            const isSundayEvent = eventDate >= targetSunday && eventDate <= targetSundayEnd;
+            if (!isSundayEvent) return false;
+            
+            // Find all Sunday events for this date
+            const sundayEvents = data.filter(e => {
+              const eDate = new Date(e.start_date);
+              return e.title.toLowerCase().includes('sunday') && 
+                     e.title.toLowerCase().includes('worship') &&
+                     eDate >= targetSunday && eDate <= targetSundayEnd;
             });
+            
+            // Find the event with most attendees
+            const eventWithMostAttendees = sundayEvents.reduce((prev, curr) => {
+              const prevCount = prev.event_attendance?.filter(a => a.status === 'attending').length || 0;
+              const currCount = curr.event_attendance?.filter(a => a.status === 'attending').length || 0;
+              return currCount > prevCount ? curr : prev;
+            }, sundayEvents[0]);
+            
+            // Only keep the event with most attendees
+            return event.id === eventWithMostAttendees.id;
           }
-          return acc;
-        }
-
-        // If it's a recurring event (parent)
-        if (event.is_recurring) {
-          // Skip if we already have an instance of this recurring event
-          const hasInstance = acc.some(e => 
-            e.parent_event_id === event.id || 
-            (e.title.toLowerCase().includes('sunday') && 
-             e.is_recurring)
-          );
-          if (hasInstance) return acc;
-
-          // Find all instances of this recurring event
-          const instances = data.filter(e => 
-            e.parent_event_id === event.id && 
-            new Date(e.start_date) >= today
-          ).sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
-
-          // If we have instances, add only the next one but mark it as the master for editing
-          if (instances.length > 0) {
-            const nextInstance = instances[0];
-            acc.push({
-              ...nextInstance,
-              // Use the master event's data for editing purposes
-              id: event.id, // Use master ID for editing
-              is_master: true,
-              master_id: event.id,
-              attendance: nextInstance.event_attendance?.filter(a => a.status === 'attending').length || 0,
-              is_instance: false // Allow editing by not marking as instance
-            });
-          } else {
-            // If no instances exist yet, add the recurring event itself
-            acc.push({
-              ...event,
-              attendance: event.event_attendance?.filter(a => a.status === 'attending').length || 0,
-              is_instance: false
-            });
-          }
-          return acc;
-        }
-
-        // For non-recurring events, add them as non-instances
-        acc.push({
+          
+          // For other events, show all future events
+          return eventDate >= today;
+        })
+        .map(event => ({
           ...event,
           attendance: event.event_attendance?.filter(a => a.status === 'attending').length || 0,
-          is_instance: false
-        });
-        return acc;
-      }, []);
+          is_instance: !!event.parent_event_id
+        }));
 
-      // Remove any events that are not on their correct day of the week
-      // Also exclude Sunday Morning Worship events (handled by worship check-in)
-      const filteredEvents = processedEvents.filter(event => {
-        // Hide Sunday Morning Worship events
-        if (event.title && event.title.toLowerCase().includes('sunday morning worship')) {
-          return false;
-        }
-        
-        if (event.title.toLowerCase().includes('sunday')) {
-          const eventDate = new Date(event.start_date);
-          return eventDate.getDay() === 0; // 0 is Sunday
-        }
-        return true;
-      });
-
-      console.log('Processed events:', filteredEvents); // Debug log
+      console.log('Filtered events after Sunday filter:', filteredEvents); // Debug log
 
       // Sort events by start date
       filteredEvents.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
@@ -340,25 +293,14 @@ export function Events() {
     const endDate = new Date(event.end_date);
     const duration = endDate.getTime() - startDate.getTime();
     
-    // Generate events for the next 3 months
-    const maxDate = new Date();
-    maxDate.setMonth(maxDate.getMonth() + 3);
+    // Only generate the next occurrence
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     
     let currentDate = new Date(startDate);
     
-    while (currentDate <= maxDate) {
-      const occurrenceEndDate = new Date(currentDate.getTime() + duration);
-      const instanceId = `${event.id}-${currentDate.toISOString()}`;
-      
-      occurrences.push({
-        ...event,
-        id: instanceId,
-        start_date: currentDate.toISOString(),
-        end_date: occurrenceEndDate.toISOString(),
-        attendance: event.event_attendance?.filter(a => a.status === 'attending').length || 0
-      });
-      
-      // Increment based on recurrence pattern
+    // Find the next occurrence from today
+    while (currentDate < today) {
       switch (event.recurrence_pattern) {
         case 'daily':
           currentDate.setDate(currentDate.getDate() + 1);
@@ -376,6 +318,20 @@ export function Events() {
           currentDate.setDate(currentDate.getDate() + 7); // Default to weekly
       }
     }
+    
+    // Only add the next occurrence
+    const occurrenceEndDate = new Date(currentDate.getTime() + duration);
+    const instanceId = `${event.id}-${currentDate.toISOString()}`;
+    
+    occurrences.push({
+      ...event,
+      id: instanceId,
+      start_date: currentDate.toISOString(),
+      end_date: occurrenceEndDate.toISOString(),
+      attendance: event.event_attendance?.filter(a => a.status === 'attending').length || 0,
+      is_instance: true,
+      parent_event_id: event.id
+    });
     
     return occurrences;
   };
@@ -454,7 +410,7 @@ export function Events() {
       const { data, error } = await supabase
         .from('event_attendance')
         .select(`
-          memberid,
+          member_id,
           status,
           events!inner (
             start_date
@@ -466,11 +422,11 @@ export function Events() {
 
       if (error) throw error;
 
-      // Create a map of memberid to their attendance status
+      // Create a map of member_id to their attendance status
       const attendanceMap = {};
       if (data && data.length > 0) {
         data.forEach(record => {
-          attendanceMap[record.memberid] = record.status;
+          attendanceMap[record.member_id] = record.status;
         });
       }
       setLastEventAttendance(attendanceMap);
@@ -499,8 +455,8 @@ export function Events() {
 
       // Set selected members based on existing records
       if (existingRecords && existingRecords.length > 0) {
-        const memberIds = existingRecords.map(record => record.memberid);
-        setSelectedMembers(memberIds);
+              const memberIds = existingRecords.map(record => record.member_id);
+      setSelectedMembers(memberIds);
       }
 
       // Fetch last event attendance
@@ -521,7 +477,7 @@ export function Events() {
         .from('event_attendance')
         .upsert({
           event_id: selectedEvent.id,
-          memberid: member.id,
+          member_id: member.id,
           status: 'attending'
         });
 
@@ -543,7 +499,7 @@ export function Events() {
         .eq('event_id', selectedEvent.id);
 
       if (!fetchError && existingRecords) {
-        setSelectedMembers(existingRecords.map(record => record.memberid));
+        setSelectedMembers(existingRecords.map(record => record.member_id));
       }
 
       // Refresh the events list to update attendance count
@@ -564,7 +520,7 @@ export function Events() {
         .from('event_attendance')
         .delete()
         .eq('event_id', selectedEvent.id)
-        .eq('memberid', memberId);
+        .eq('member_id', memberId);
 
       if (error) throw error;
 
@@ -583,7 +539,7 @@ export function Events() {
         .eq('event_id', selectedEvent.id);
 
       if (!fetchError && existingRecords) {
-        setSelectedMembers(existingRecords.map(record => record.memberid));
+        setSelectedMembers(existingRecords.map(record => record.member_id));
       }
 
       // Refresh the events list to update attendance count
@@ -649,7 +605,7 @@ export function Events() {
       const { data, error } = await supabase
         .from('event_attendance')
         .select(`
-          memberid,
+          member_id,
           members (
             id,
             firstname,
@@ -904,7 +860,12 @@ export function Events() {
               )}
             </div>
             <div className="flex gap-2">
-              {event.allow_rsvp && getRSVPButton(event.id)}
+              {event.allow_rsvp && !event.title.toLowerCase().includes('sunday') && !event.title.toLowerCase().includes('worship') && getRSVPButton(event.id)}
+              {(event.title.toLowerCase().includes('sunday') && event.title.toLowerCase().includes('worship')) && (
+                <Badge variant="outline" className="text-blue-600">
+                  Use Sunday Worship Check-In
+                </Badge>
+              )}
             </div>
           </div>
         </CardContent>

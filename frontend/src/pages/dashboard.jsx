@@ -28,7 +28,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import { Input } from '@/components/ui/input';
-import { getMembers, getGroups } from '../lib/data';
+import { getMembers, getGroups, getEvents } from '../lib/data';
 import {
   Dialog,
   DialogContent,
@@ -258,14 +258,18 @@ export function Dashboard() {
         })
         .reduce((sum, donation) => sum + parseFloat(donation.amount), 0) || 0;
 
-      // Fetch upcoming events
-      const { data: events, error: eventsError } = await supabase
-        .from('events')
-        .select('*')
-        .gte('start_date', new Date().toISOString())
-        .order('start_date', { ascending: true });
+      // Fetch upcoming events (next 30 days only)
+      const today = new Date();
+      const thirtyDaysFromNow = addDays(today, 30);
+      
+      // Use getEvents() to get deduplicated events, then filter for next 30 days
+      const allEvents = await getEvents();
+      const events = allEvents.filter(event => {
+        const eventDate = new Date(event.start_date);
+        return eventDate >= today && eventDate <= thirtyDaysFromNow;
+      });
 
-      if (eventsError) throw eventsError;
+
 
       // Filter events for current month
       const currentMonthEvents = events?.filter(event => {
@@ -281,7 +285,7 @@ export function Dashboard() {
         totalGroups,
         totalDonations,
         monthlyDonations,
-        upcomingEvents: currentMonthEvents.length
+        upcomingEvents: events?.length || 0
       });
       setRecentPeople(recentPeople);
       setUpcomingEvents(events || []);

@@ -50,94 +50,71 @@ export function WorshipCheckIn() {
     loadMembers();
   }, [toast]);
 
-  // Find or create today's worship event
+  // Find or create this week's Sunday worship event
   useEffect(() => {
     const setupWorshipEvent = async () => {
       try {
         const today = new Date();
-        const startOfDay = new Date(today);
-        startOfDay.setHours(0, 0, 0, 0);
-
-        // First, find the recurring Sunday Morning Worship event
-        const { data: recurringEvents, error: recurringError } = await supabase
-          .from('events')
-          .select('*')
-          .eq('title', 'Sunday Morning Worship')
-          .eq('is_recurring', true)
-          .order('start_date', { ascending: false })
-          .limit(1);
-
-        if (recurringError) {
-          throw recurringError;
+        
+        // Get the current or upcoming Sunday
+        const targetSunday = new Date(today);
+        const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        
+        if (dayOfWeek === 0) {
+          // Today is Sunday - use today
+          targetSunday.setHours(11, 0, 0, 0);
+        } else {
+          // Find the upcoming Sunday (go forward to next Sunday)
+          targetSunday.setDate(today.getDate() + (7 - dayOfWeek));
+          targetSunday.setHours(11, 0, 0, 0);
         }
 
-        const recurringEvent = recurringEvents?.[0];
+        const sundayStartOfDay = new Date(targetSunday);
+        sundayStartOfDay.setHours(0, 0, 0, 0);
+        const sundayEndOfDay = new Date(targetSunday);
+        sundayEndOfDay.setHours(23, 59, 59, 999);
 
-        if (!recurringEvent) {
-          // If no recurring event exists, create it
-          const { data: newRecurringEvent, error: createError } = await supabase
+        // Look for existing Sunday Morning Worship event for this week's Sunday
+        const { data: existingEvents, error: searchError } = await supabase
+          .from('events')
+          .select('*')
+          .ilike('title', '%Sunday%Worship%')
+          .gte('start_date', sundayStartOfDay.toISOString())
+          .lte('start_date', sundayEndOfDay.toISOString())
+          .order('start_date', { ascending: true })
+          .limit(1);
+
+        if (searchError) {
+          throw searchError;
+        }
+
+        let targetEvent = existingEvents?.[0];
+
+        if (!targetEvent) {
+          // No event found for the target Sunday, create one
+          const { data: newEvent, error: createError } = await supabase
             .from('events')
             .insert([{
-              id: `sunday-morning-worship-recurring-${Date.now()}`,
+              id: `sunday-morning-worship-${format(targetSunday, 'yyyy-MM-dd')}-${Date.now()}`,
               title: 'Sunday Morning Worship',
               description: 'Weekly Sunday Morning Worship Service',
-              start_date: new Date(today.setHours(11, 0, 0, 0)).toISOString(),
-              end_date: new Date(today.setHours(12, 0, 0, 0)).toISOString(),
+              start_date: targetSunday.toISOString(),
+              end_date: new Date(targetSunday.getTime() + (60 * 60 * 1000)).toISOString(), // 1 hour later
               location: 'Main Sanctuary',
-              is_recurring: true,
-              recurrence_pattern: 'weekly'
+              is_recurring: false,
+              allow_rsvp: true
             }])
             .select()
             .single();
 
           if (createError) throw createError;
-          recurringEvent = newRecurringEvent;
+          targetEvent = newEvent;
         }
 
-        // Find the next instance of the recurring event
-        const { data: instances, error: instanceError } = await supabase
-          .from('events')
-          .select('*')
-          .eq('parent_event_id', recurringEvent.id)
-          .gte('start_date', startOfDay.toISOString())
-          .order('start_date', { ascending: true })
-          .limit(1);
-
-        if (instanceError) {
-          throw instanceError;
-        }
-
-        let nextInstance = instances?.[0];
-
-        if (!nextInstance) {
-          // If no next instance exists, create one
-          const nextSunday = new Date(today);
-          nextSunday.setDate(today.getDate() + (7 - today.getDay())); // Get next Sunday
-          nextSunday.setHours(11, 0, 0, 0);
-
-          const { data: newInstance, error: createInstanceError } = await supabase
-            .from('events')
-            .insert([{
-              id: `sunday-morning-worship-${format(nextSunday, 'yyyy-MM-dd')}-${Date.now()}`,
-              title: 'Sunday Morning Worship',
-              description: 'Weekly Sunday Morning Worship Service',
-              start_date: nextSunday.toISOString(),
-              end_date: new Date(nextSunday.setHours(12, 0, 0, 0)).toISOString(),
-              location: 'Main Sanctuary',
-              parent_event_id: recurringEvent.id,
-              is_recurring: false
-            }])
-            .select()
-            .single();
-
-          if (createInstanceError) throw createInstanceError;
-          nextInstance = newInstance;
-        }
-
-        setCurrentEvent(nextInstance);
+        setCurrentEvent(targetEvent);
 
         // Load checked-in members
-        if (nextInstance) {
+        if (targetEvent) {
           const { data: attendance, error: attendanceError } = await supabase
             .from('event_attendance')
             .select(`
@@ -149,7 +126,7 @@ export function WorshipCheckIn() {
                 image_url
               )
             `)
-            .eq('event_id', nextInstance.id)
+            .eq('event_id', targetEvent.id)
             .eq('status', 'attending');
 
           if (attendanceError) throw attendanceError;
@@ -177,7 +154,7 @@ export function WorshipCheckIn() {
         .from('event_attendance')
         .upsert({
           event_id: currentEvent.id,
-          memberid: member.id,
+          member_id: member.id,
           status: 'attending'
         });
 
@@ -208,7 +185,7 @@ export function WorshipCheckIn() {
         .from('event_attendance')
         .delete()
         .eq('event_id', currentEvent.id)
-        .eq('memberid', memberId);
+        .eq('member_id', memberId);
 
       if (error) throw error;
 

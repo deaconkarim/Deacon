@@ -1,5 +1,14 @@
 import { supabase } from './supabaseClient';
 
+// Helper function to safely parse integers from form inputs
+const safeParseInt = (value) => {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+  const parsed = parseInt(value);
+  return isNaN(parsed) ? null : parsed;
+};
+
 // Members
 export async function getMembers() {
   try {
@@ -274,8 +283,8 @@ export const addEvent = async (event) => {
       url: event.url,
       is_recurring: event.is_recurring || false,
       recurrence_pattern: event.is_recurring ? event.recurrence_pattern : null,
-      monthly_week: event.recurrence_pattern === 'monthly_weekday' ? event.monthly_week : null,
-      monthly_weekday: event.recurrence_pattern === 'monthly_weekday' ? event.monthly_weekday : null,
+      monthly_week: event.recurrence_pattern === 'monthly_weekday' ? safeParseInt(event.monthly_week) : null,
+      monthly_weekday: event.recurrence_pattern === 'monthly_weekday' ? safeParseInt(event.monthly_weekday) : null,
       allow_rsvp: event.allow_rsvp !== undefined ? event.allow_rsvp : true,
       parent_event_id: null // Will be set for instances
     };
@@ -301,9 +310,7 @@ export const addEvent = async (event) => {
       // Generate instances with parent_event_id pointing to master event
       const instances = generateRecurringInstances({
         ...eventData,
-        parent_event_id: masterData.id,
-        monthly_week: event.monthly_week,
-        monthly_weekday: event.monthly_weekday
+        parent_event_id: masterData.id
       });
       
       // Insert all instances
@@ -349,8 +356,8 @@ export const updateEvent = async (id, updates) => {
       url: updates.url,
       is_recurring: updates.is_recurring || false,
       recurrence_pattern: updates.is_recurring ? updates.recurrence_pattern : null,
-      monthly_week: updates.recurrence_pattern === 'monthly_weekday' ? updates.monthly_week : null,
-      monthly_weekday: updates.recurrence_pattern === 'monthly_weekday' ? updates.monthly_weekday : null,
+      monthly_week: updates.recurrence_pattern === 'monthly_weekday' ? safeParseInt(updates.monthly_week) : null,
+      monthly_weekday: updates.recurrence_pattern === 'monthly_weekday' ? safeParseInt(updates.monthly_weekday) : null,
       allow_rsvp: updates.allow_rsvp !== undefined ? updates.allow_rsvp : true
     };
 
@@ -560,6 +567,27 @@ export async function addDonation(donation) {
   }
 }
 
+export async function addMultipleDonations(donations) {
+  try {
+    const donationsData = donations.map(donation => ({
+      amount: parseFloat(donation.amount),
+      date: new Date(donation.date).toISOString(),
+      attendance: donation.attendance ? parseInt(donation.attendance) : null,
+      type: donation.type || 'weekly'
+    }));
+
+    const { data, error } = await supabase
+      .from('donations')
+      .insert(donationsData)
+      .select();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    throw error;
+  }
+}
+
 export async function updateDonation(id, updates) {
   try {
     const { data, error } = await supabase
@@ -619,7 +647,7 @@ export const getMemberAttendance = async (memberId) => {
           location
         )
       `)
-      .eq('memberid', memberId)
+      .eq('member_id', memberId)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -637,7 +665,7 @@ export const getMemberGroups = async (memberId) => {
         *,
         groups (
           id,
-          name,
+          name,  
           description,
           leader:members!leader_id (
             id,
@@ -646,8 +674,7 @@ export const getMemberGroups = async (memberId) => {
           )
         )
       `)
-      .eq('memberid', memberId)
-      .order('created_at', { ascending: false });
+      .eq('member_id', memberId);
 
     if (error) throw error;
     
