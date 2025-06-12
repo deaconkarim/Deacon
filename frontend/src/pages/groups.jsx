@@ -160,12 +160,17 @@ export function Groups() {
         .select(`
           *,
           group_members(
-            memberid,
+            member_id,
             members(
               id,
               firstname,
               lastname
             )
+          ),
+          leader:members!leader_id(
+            id,
+            firstname,
+            lastname
           )
         `)
         .eq('id', group.id)
@@ -176,8 +181,13 @@ export function Groups() {
       // Transform the members data for display
       const transformedGroup = {
         ...completeGroup,
+        leader: completeGroup.leader ? {
+          ...completeGroup.leader,
+          firstName: completeGroup.leader.firstname,
+          lastName: completeGroup.leader.lastname
+        } : null,
         members: completeGroup.group_members.map(gm => ({
-          id: gm.memberid,
+          id: gm.member_id,
           firstName: gm.members.firstname,
           lastName: gm.members.lastname,
           fullName: `${gm.members.firstname} ${gm.members.lastname}`
@@ -202,9 +212,9 @@ export function Groups() {
       // First check if the member is already in the group
       const { data: existingMembers, error: checkError } = await supabase
         .from('group_members')
-        .select('memberid')
+        .select('member_id')
         .eq('group_id', selectedGroup.id)
-        .eq('memberid', memberId);
+        .eq('member_id', memberId);
 
       if (checkError) throw checkError;
 
@@ -221,7 +231,7 @@ export function Groups() {
         .from('group_members')
         .insert([{
           group_id: selectedGroup.id,
-          memberid: memberId
+          member_id: memberId
         }]);
 
       if (error) throw error;
@@ -232,7 +242,7 @@ export function Groups() {
         .select(`
           *,
           group_members(
-            memberid,
+            member_id,
             members(
               id,
               firstname,
@@ -249,7 +259,7 @@ export function Groups() {
       const transformedGroup = {
         ...updatedGroup,
         members: updatedGroup.group_members.map(gm => ({
-          id: gm.memberid,
+          id: gm.member_id,
           firstName: gm.members.firstname,
           lastName: gm.members.lastname,
           fullName: `${gm.members.firstname} ${gm.members.lastname}`
@@ -279,7 +289,7 @@ export function Groups() {
         .from('group_members')
         .delete()
         .eq('group_id', selectedGroup.id)
-        .eq('memberid', memberId);
+        .eq('member_id', memberId);
 
       if (error) throw error;
 
@@ -289,7 +299,7 @@ export function Groups() {
         .select(`
           *,
           group_members(
-            memberid,
+            member_id,
             members(
               id,
               firstname,
@@ -306,7 +316,7 @@ export function Groups() {
       const transformedGroup = {
         ...updatedGroup,
         members: updatedGroup.group_members.map(gm => ({
-          id: gm.memberid,
+          id: gm.member_id,
           firstName: gm.members.firstname,
           lastName: gm.members.lastname,
           fullName: `${gm.members.firstname} ${gm.members.lastname}`

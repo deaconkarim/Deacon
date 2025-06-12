@@ -264,20 +264,17 @@ export function Dashboard() {
       
       // Use getEvents() to get deduplicated events, then filter for next 30 days
       const allEvents = await getEvents();
+      console.log('All events:', allEvents);
+      
       const events = allEvents.filter(event => {
         const eventDate = new Date(event.start_date);
-        return eventDate >= today && eventDate <= thirtyDaysFromNow;
+        const isInRange = eventDate >= today && eventDate <= thirtyDaysFromNow;
+        console.log(`Event: ${event.title}, Date: ${eventDate.toISOString()}, In Range: ${isInRange}`);
+        return isInRange;
       });
-
-
-
-      // Filter events for current month
-      const currentMonthEvents = events?.filter(event => {
-        // Parse event start_date to avoid timezone issues
-        const eventDate = event.start_date; // Should be in format YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss
-        const [year, month] = eventDate.split('-').map(Number);
-        return year === currentYear && month === currentMonth;
-      }) || [];
+      
+      console.log('Filtered events:', events);
+      console.log('Total events in next 30 days:', events.length);
 
       // Update state with fetched data
       setStats({
@@ -285,10 +282,10 @@ export function Dashboard() {
         totalGroups,
         totalDonations,
         monthlyDonations,
-        upcomingEvents: events?.length || 0
+        upcomingEvents: events.length
       });
       setRecentPeople(recentPeople);
-      setUpcomingEvents(events || []);
+      setUpcomingEvents(events);
       setDonations(donations || []);
       setRecentGroups(groups?.slice(0, 5) || []);
 

@@ -234,28 +234,54 @@ export const getEvents = async () => {
     
     if (error) throw error;
 
-    // Process recurring events to show only one instance
-    const processedEvents = data.reduce((acc, event) => {
-      // If it's not a recurring event, add it as is
-      if (!event.is_recurring) {
-        acc.push(event);
-        return acc;
+    // First, group events by their title and recurrence pattern
+    const eventGroups = data.reduce((groups, event) => {
+      const key = `${event.title}-${event.recurrence_pattern || 'non-recurring'}`;
+      if (!groups[key]) {
+        groups[key] = [];
+      }
+      groups[key].push(event);
+      return groups;
+    }, {});
+
+    // Process each group to get the next instance
+    const processedEvents = Object.values(eventGroups).map(group => {
+      // If it's not a recurring event, return it as is
+      if (!group[0].is_recurring) {
+        return group[0];
       }
 
-      // For recurring events, check if we already have an instance
-      const existingInstance = acc.find(e => 
-        e.title === event.title && 
-        e.is_recurring && 
-        e.recurrence_pattern === event.recurrence_pattern
-      );
-
-      // If no instance exists, add this one
-      if (!existingInstance) {
-        acc.push(event);
+      // For recurring events, find the next occurrence
+      const today = new Date();
+      let nextDate = new Date(group[0].start_date);
+      
+      // Keep adding intervals until we find a future date
+      while (nextDate < today) {
+        switch (group[0].recurrence_pattern) {
+          case 'daily':
+            nextDate.setDate(nextDate.getDate() + 1);
+            break;
+          case 'weekly':
+            nextDate.setDate(nextDate.getDate() + 7);
+            break;
+          case 'biweekly':
+            nextDate.setDate(nextDate.getDate() + 14);
+            break;
+          case 'monthly':
+            nextDate.setMonth(nextDate.getMonth() + 1);
+            break;
+          default:
+            nextDate.setDate(nextDate.getDate() + 7); // Default to weekly
+        }
       }
 
-      return acc;
-    }, []);
+      // Create a new event instance with the next occurrence date
+      return {
+        ...group[0],
+        start_date: nextDate.toISOString(),
+        end_date: new Date(nextDate.getTime() + (new Date(group[0].end_date) - new Date(group[0].start_date))).toISOString()
+      };
+    });
 
     return processedEvents || [];
   } catch (error) {
@@ -651,7 +677,13 @@ export const getMemberAttendance = async (memberId) => {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data;
+
+    // Transform the data to show 'attended' for past events
+    const now = new Date();
+    return data.map(record => ({
+      ...record,
+      status: new Date(record.events.start_date) < now ? 'attended' : record.status
+    }));
   } catch (error) {
     throw error;
   }

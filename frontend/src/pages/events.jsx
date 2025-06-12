@@ -148,14 +148,9 @@ export function Events() {
   const [editingEvent, setEditingEvent] = useState(null);
 
   const fetchEvents = useCallback(async () => {
-    setIsLoading(true);
     try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      console.log('Fetching events from:', today.toISOString()); // Debug log
-      
-      const { data, error } = await supabase
+      setIsLoading(true);
+      const { data: events, error } = await supabase
         .from('events')
         .select(`
           *,
@@ -165,74 +160,38 @@ export function Events() {
             status
           )
         `)
-        .gte('start_date', today.toISOString())
+        .gte('start_date', new Date().toISOString())
         .order('start_date', { ascending: true });
 
       if (error) throw error;
 
-      console.log('Fetched events:', data); // Debug log
-      console.log('Number of fetched events:', data?.length); // Debug log
+      // Group events by their parent event ID
+      const eventGroups = events.reduce((groups, event) => {
+        const key = event.parent_event_id || event.id;
+        if (!groups[key]) {
+          groups[key] = [];
+        }
+        groups[key].push(event);
+        return groups;
+      }, {});
 
-      // Get the current or upcoming Sunday date (same logic as check-in page)
-      const targetSunday = new Date(today);
-      const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
-      
-      if (dayOfWeek === 0) {
-        // Today is Sunday - use today
-        targetSunday.setHours(0, 0, 0, 0);
-      } else {
-        // Find the upcoming Sunday (go forward to next Sunday)
-        targetSunday.setDate(today.getDate() + (7 - dayOfWeek));
-        targetSunday.setHours(0, 0, 0, 0);
-      }
-
-      const targetSundayEnd = new Date(targetSunday);
-      targetSundayEnd.setHours(23, 59, 59, 999);
-
-      // Filter to only future events and only the target Sunday for worship events
-      const filteredEvents = data
-        .filter(event => {
-          const eventDate = new Date(event.start_date);
-          
-          // For Sunday worship events, only show the target Sunday
-          if (event.title.toLowerCase().includes('sunday') && 
-              event.title.toLowerCase().includes('worship')) {
-            // Only keep the event with attendees, or if none have attendees, keep the first one
-            const isSundayEvent = eventDate >= targetSunday && eventDate <= targetSundayEnd;
-            if (!isSundayEvent) return false;
-            
-            // Find all Sunday events for this date
-            const sundayEvents = data.filter(e => {
-              const eDate = new Date(e.start_date);
-              return e.title.toLowerCase().includes('sunday') && 
-                     e.title.toLowerCase().includes('worship') &&
-                     eDate >= targetSunday && eDate <= targetSundayEnd;
-            });
-            
-            // Find the event with most attendees
-            const eventWithMostAttendees = sundayEvents.reduce((prev, curr) => {
-              const prevCount = prev.event_attendance?.filter(a => a.status === 'attending').length || 0;
-              const currCount = curr.event_attendance?.filter(a => a.status === 'attending').length || 0;
-              return currCount > prevCount ? curr : prev;
-            }, sundayEvents[0]);
-            
-            // Only keep the event with most attendees
-            return event.id === eventWithMostAttendees.id;
-          }
-          
-          // For other events, show all future events
-          return eventDate >= today;
-        })
-        .map(event => ({
-          ...event,
-          attendance: event.event_attendance?.filter(a => a.status === 'attending').length || 0,
-          is_instance: !!event.parent_event_id
-        }));
-
-      console.log('Filtered events after Sunday filter:', filteredEvents); // Debug log
-
-      // Sort events by start date
-      filteredEvents.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+      // For each group, only keep the next upcoming instance
+      const filteredEvents = Object.values(eventGroups).map(group => {
+        if (group.length === 1) {
+          // Non-recurring event
+          const event = group[0];
+          return {
+            ...event,
+            attendance: event.event_attendance?.filter(a => a.status === 'attending').length || 0
+          };
+        }
+        // For recurring events, return the next upcoming instance
+        const nextEvent = group.sort((a, b) => new Date(a.start_date) - new Date(b.start_date))[0];
+        return {
+          ...nextEvent,
+          attendance: nextEvent.event_attendance?.filter(a => a.status === 'attending').length || 0
+        };
+      });
 
       setEvents(filteredEvents);
       setFilteredEvents(filteredEvents);
@@ -245,10 +204,10 @@ export function Events() {
       setAttendance(attendanceMap);
 
     } catch (error) {
-      console.error('Error fetching events:', error); // Debug log
+      console.error('Error fetching events:', error);
       toast({
         title: "Error",
-        description: "Failed to load events",
+        description: "Failed to fetch events",
         variant: "destructive",
       });
     } finally {
@@ -861,7 +820,7 @@ export function Events() {
             </div>
             <div className="flex gap-2">
               {event.allow_rsvp && !event.title.toLowerCase().includes('sunday') && !event.title.toLowerCase().includes('worship') && getRSVPButton(event.id)}
-              {(event.title.toLowerCase().includes('sunday') && event.title.toLowerCase().includes('worship')) && (
+              {(event.title.toLowerCase().includes('sunday') && event.title.includes('worship')) && (
                 <Badge variant="outline" className="text-blue-600">
                   Use Sunday Worship Check-In
                 </Badge>

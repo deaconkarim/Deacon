@@ -11,6 +11,8 @@ import { WorshipCheckIn } from './components/events/WorshipCheckIn';
 import { Reports } from './pages/reports';
 import { Bulletin } from './pages/bulletin';
 import { Settings } from './pages/settings';
+import ChildrenCheckin from './pages/children-checkin';
+import AddChild from './pages/add-child';
 
 function App() {
   return (
@@ -25,6 +27,8 @@ function App() {
         <Route path="/groups" element={<Groups />} />
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/worship-check-in" element={<WorshipCheckIn />} />
+        <Route path="/children-check-in" element={<ChildrenCheckin />} />
+        <Route path="/children-check-in/add" element={<AddChild />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/bulletin" element={<Bulletin />} />
         <Route path="/settings" element={<Settings />} />

@@ -123,12 +123,12 @@ export function Tasks() {
 
       const { data: deaconsMembers, error: membersError } = await supabase
         .from('group_members')
-        .select('memberid')
+        .select('member_id')
         .eq('group_id', deaconsGroup.id);
 
       if (membersError) throw membersError;
 
-      const deaconIds = deaconsMembers.map(m => m.memberid);
+      const deaconIds = deaconsMembers.map(m => m.member_id);
       setStaffMembers(allMembers.filter(m => deaconIds.includes(m.id)));
     } catch (error) {
       toast({
