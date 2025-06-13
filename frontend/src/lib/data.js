@@ -85,97 +85,47 @@ export async function getMembers() {
   }
 }
 
-export const addMember = async (member) => {
-  // Ensure address is properly formatted as JSONB
-  const memberData = {
-    ...member,
-    // Don't modify the address object at all, let Supabase handle it
-    joinDate: member.joinDate ? new Date(member.joinDate).toISOString() : new Date().toISOString()
-  };
-
-  const { data, error } = await supabase
-    .from('members')
-    .insert([memberData])
-    .select()
-    .single();
-
-  if (error) throw error;
-
-  // Parse the address before returning
-  return {
-    ...data,
-    address: data.address ? JSON.parse(data.address) : null
-  };
-};
-
-export const updateMember = async (id, updates) => {
+export const addMember = async (memberData) => {
   try {
-    // Check if email is being changed and if it already exists (only for non-null, non-empty emails)
-    if (updates.email && updates.email.trim() && updates.email.trim() !== '') {
-      const { data: existingMembers, error: checkError } = await supabase
-        .from('members')
-        .select('email, id')
-        .eq('email', updates.email.trim())
-        .neq('id', id);
-
-      if (checkError) {
-        console.error('Error checking for duplicate email:', checkError);
-        throw checkError;
-      }
-
-      if (existingMembers && existingMembers.length > 0) {
-        throw new Error('A member with this email already exists');
-      }
-    }
-
-    // Transform camelCase back to database column names
-    const memberData = {
-      ...updates,
-      firstname: updates.firstName,
-      lastname: updates.lastName,
-      join_date: updates.joinDate,
-      created_at: updates.createdAt,
-      updated_at: updates.updatedAt
-    };
-
-    // Handle empty email - convert to null to avoid unique constraint issues
-    if (memberData.email === '' || memberData.email === undefined) {
-      memberData.email = null;
-    }
-
-    // Remove the camelCase properties to avoid confusion
-    delete memberData.firstName;
-    delete memberData.lastName;
-    delete memberData.joinDate;
-    delete memberData.createdAt;
-    delete memberData.updatedAt;
-
     const { data, error } = await supabase
       .from('members')
-      .update(memberData)
+      .insert([{
+        firstname: memberData.firstname,
+        lastname: memberData.lastname,
+        email: memberData.email,
+        phone: memberData.phone,
+        status: memberData.status || 'active',
+        image_url: memberData.image_url
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const updateMember = async (id, memberData) => {
+  try {
+    const { data, error } = await supabase
+      .from('members')
+      .update({
+        firstname: memberData.firstname,
+        lastname: memberData.lastname,
+        email: memberData.email,
+        phone: memberData.phone,
+        status: memberData.status,
+        image_url: memberData.image_url
+      })
       .eq('id', id)
       .select()
       .single();
 
-    if (error) {
-      // Handle duplicate email constraint specifically
-      if (error.code === '23505' && error.message.includes('members_email_key')) {
-        throw new Error('A member with this email already exists');
-      }
-      throw error;
-    }
-
-    // Transform back to camelCase for the frontend
-    return {
-      ...data,
-      firstName: data.firstname,
-      lastName: data.lastname,
-      joinDate: data.join_date,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at
-    };
+    if (error) throw error;
+    return data;
   } catch (error) {
-    console.error('Error updating member:', error);
     throw error;
   }
 };

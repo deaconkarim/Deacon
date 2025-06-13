@@ -107,8 +107,8 @@ export function MemberProfile() {
   const handleEditMember = async (memberData) => {
     try {
       const updatedMember = await updateMember(member.id, {
-        firstName: memberData.firstname,
-        lastName: memberData.lastname,
+        firstname: memberData.firstname,
+        lastname: memberData.lastname,
         email: memberData.email,
         phone: memberData.phone,
         status: memberData.status,
@@ -206,10 +206,10 @@ export function MemberProfile() {
                 <Avatar className="h-24 w-24 mb-4">
                   <AvatarImage src={member.image_url} />
                   <AvatarFallback className="text-2xl">
-                    {getInitials(member.firstName, member.lastName)}
+                    {getInitials(member.firstname, member.lastname)}
                   </AvatarFallback>
                 </Avatar>
-                <CardTitle className="text-2xl">{formatName(member.firstName, member.lastName)}</CardTitle>
+                <CardTitle className="text-2xl">{formatName(member.firstname, member.lastname)}</CardTitle>
                 <div className="mt-2">
                   <Badge variant={member.status === 'active' ? 'default' : 'secondary'}>
                     {member.status}
@@ -343,7 +343,7 @@ export function MemberProfile() {
                                 <div className="flex items-center text-sm text-muted-foreground">
                                   <User className="h-4 w-4 mr-2" />
                                   {item.group.leader ? 
-                                    `${item.group.leader.firstName} ${item.group.leader.lastName}` : 
+                                    `${item.group.leader.firstname} ${item.group.leader.lastname}` : 
                                     'No leader assigned'}
                                 </div>
                                 {item.group.description && (
@@ -396,8 +396,8 @@ export function MemberProfile() {
           </DialogHeader>
           <MemberForm
             initialData={{
-              firstname: member.firstName,
-              lastname: member.lastName,
+              firstname: member.firstname,
+              lastname: member.lastname,
               email: member.email,
               phone: member.phone,
               status: member.status,

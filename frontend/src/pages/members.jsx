@@ -56,8 +56,8 @@ export function People() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
   const [newMember, setNewMember] = useState({
-    firstName: '',
-    lastName: '',
+    firstname: '',
+    lastname: '',
     email: '',
     phone: '',
     address: {
@@ -167,6 +167,10 @@ export function People() {
       const hasAddress = newMember.address.street || newMember.address.city || newMember.address.state || newMember.address.zip;
       const memberData = {
         ...newMember,
+        firstname: newMember.firstname.trim(),
+        lastname: newMember.lastname.trim(),
+        email: newMember.email.trim() || null,
+        phone: newMember.phone.trim() || null,
         address: hasAddress ? {
           street: newMember.address.street || '',
           city: newMember.address.city || '',
@@ -180,8 +184,8 @@ export function People() {
       setMembers(prev => [addedMember, ...prev]);
       setIsAddDialogOpen(false);
       setNewMember({
-        firstName: '',
-        lastName: '',
+        firstname: '',
+        lastname: '',
         email: '',
         phone: '',
         address: {
@@ -679,8 +683,8 @@ export function People() {
             onSave={async (memberData) => {
               try {
                 const addedMember = await addMember({
-                  firstName: memberData.firstname,
-                  lastName: memberData.lastname,
+                  firstname: memberData.firstname,
+                  lastname: memberData.lastname,
                   email: memberData.email,
                   phone: memberData.phone,
                   status: memberData.status,
