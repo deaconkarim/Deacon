@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { format } from 'date-fns';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export default function ChildrenCheckin() {
   const [children, setChildren] = useState([]);
@@ -166,6 +167,10 @@ export default function ChildrenCheckin() {
     }
   };
 
+  const getInitials = (firstname, lastname) => {
+    return `${firstname[0]}${lastname[0]}`.toUpperCase();
+  };
+
   if (loading) return <div className="p-4">Loading...</div>;
   if (error) return <div className="p-4 text-red-500">Error: {error}</div>;
 
@@ -217,7 +222,13 @@ export default function ChildrenCheckin() {
 
                 return (
                   <div key={child.id} className="border p-4 rounded">
-                    <h3 className="font-medium">{child.firstname} {child.lastname}</h3>
+                    <div className="flex items-center gap-3 mb-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={child.image_url} />
+                        <AvatarFallback>{getInitials(child.firstname, child.lastname)}</AvatarFallback>
+                      </Avatar>
+                      <h3 className="font-medium">{child.firstname} {child.lastname}</h3>
+                    </div>
                     {!isCheckedIn ? (
                       <div className="mt-2">
                         <label className="block text-sm text-gray-600 mb-1">
@@ -257,9 +268,15 @@ export default function ChildrenCheckin() {
 
                   return (
                     <div key={log.id} className="border p-4 rounded">
-                      <h3 className="font-medium">
-                        {log.child.firstname} {log.child.lastname}
-                      </h3>
+                      <div className="flex items-center gap-3 mb-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={log.child.image_url} />
+                          <AvatarFallback>{getInitials(log.child.firstname, log.child.lastname)}</AvatarFallback>
+                        </Avatar>
+                        <h3 className="font-medium">
+                          {log.child.firstname} {log.child.lastname}
+                        </h3>
+                      </div>
                       <p className="text-sm text-gray-600">
                         Checked in by: {log.checked_in_by.firstname} {log.checked_in_by.lastname}
                       </p>
@@ -313,7 +330,13 @@ export default function ChildrenCheckin() {
                   {checkinLogs.map(log => (
                     <tr key={log.id}>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {log.child.firstname} {log.child.lastname}
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={log.child.image_url} />
+                            <AvatarFallback>{getInitials(log.child.firstname, log.child.lastname)}</AvatarFallback>
+                          </Avatar>
+                          <span>{log.child.firstname} {log.child.lastname}</span>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {format(new Date(log.check_in_time), 'MMM d, h:mm a')}
