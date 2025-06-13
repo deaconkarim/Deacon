@@ -59,7 +59,7 @@ export function Layout() {
       </div>
 
       {/* Mobile Navigation (phones only) */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg tablet:hidden z-50">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg md:hidden z-50">
         <div className="max-w-screen-xl mx-auto px-2">
           <div className="flex justify-around items-center h-14">
             {mainNavItems.slice(0, 4).map((item) => {
@@ -109,7 +109,7 @@ export function Layout() {
       </nav>
 
       {/* Tablet Navigation */}
-      <nav className="hidden tablet:block lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50">
+      <nav className="hidden md:block lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50">
         <div className="max-w-screen-xl mx-auto px-4">
           <div className="flex justify-around items-center h-16">
             {mainNavItems.map((item) => {
