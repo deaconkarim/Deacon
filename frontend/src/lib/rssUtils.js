@@ -245,7 +245,7 @@ export async function fetchEventsFromWebsite() {
                 description,
                 startDate: startDate.toISOString(),
                 endDate: endDate ? endDate.toISOString() : null,
-                location: 'Brentwood Landmark Baptist Church',
+                location: 'Brentwood Lighthouse Baptist Church',
                 organizer: 'BLBC',
                 type,
                 url: currentElement.querySelector('a')?.href || '',
