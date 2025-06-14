@@ -196,7 +196,14 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
       return;
     }
 
-    onSave(memberData);
+    // Convert empty strings to null for email and phone
+    const dataToSave = {
+      ...memberData,
+      email: memberData.email?.trim() || null,
+      phone: memberData.phone?.trim() || null
+    };
+
+    onSave(dataToSave);
   };
 
   return (

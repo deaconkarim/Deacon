@@ -22,7 +22,8 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
     recurrence_pattern: initialData.recurrence_pattern || '',
     monthly_week: initialData.monthly_week || '',
     monthly_weekday: initialData.monthly_weekday || '',
-    allow_rsvp: initialData.allow_rsvp !== undefined ? initialData.allow_rsvp : true
+    allow_rsvp: initialData.allow_rsvp !== undefined ? initialData.allow_rsvp : true,
+    attendance_type: initialData.attendance_type || 'rsvp'
   });
   const { toast } = useToast();
 
@@ -41,7 +42,8 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
       recurrence_pattern: initialData.recurrence_pattern || '',
       monthly_week: initialData.monthly_week || '',
       monthly_weekday: initialData.monthly_weekday || '',
-      allow_rsvp: initialData.allow_rsvp !== undefined ? initialData.allow_rsvp : true
+      allow_rsvp: initialData.allow_rsvp !== undefined ? initialData.allow_rsvp : true,
+      attendance_type: initialData.attendance_type || 'rsvp'
     });
   }, [initialData]);
 
@@ -220,27 +222,42 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
         <Label htmlFor="url">URL</Label>
         <Input id="url" name="url" type="url" value={eventData.url} onChange={handleFormChange} />
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
+      <div className="space-y-2">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="allow_rsvp"
+            checked={eventData.allow_rsvp}
+            onCheckedChange={handleRecurringChange}
+          />
           <Label htmlFor="allow_rsvp">Allow RSVP</Label>
-          <Select value={eventData.allow_rsvp ? "yes" : "no"} onValueChange={(value) => setEventData(prev => ({ ...prev, allow_rsvp: value === "yes" }))}>
-            <SelectTrigger id="allow_rsvp"><SelectValue placeholder="Allow people to RSVP?" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="yes">Yes - Allow RSVPs</SelectItem>
-              <SelectItem value="no">No - Announcement Only</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="recurring">Recurring Event</Label>
-          <Select value={eventData.is_recurring ? "yes" : "no"} onValueChange={(value) => handleRecurringChange(value === "yes")}>
-            <SelectTrigger id="recurring"><SelectValue placeholder="Is this recurring?" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="no">No</SelectItem>
-              <SelectItem value="yes">Yes</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {eventData.allow_rsvp && (
+          <div className="space-y-2">
+            <Label htmlFor="attendance_type">Attendance Type</Label>
+            <Select
+              value={eventData.attendance_type}
+              onValueChange={(value) => handleSelectChange('attendance_type', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select attendance type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="rsvp">RSVP</SelectItem>
+                <SelectItem value="check-in">Check-in</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="recurring">Recurring Event</Label>
+        <Select value={eventData.is_recurring ? "yes" : "no"} onValueChange={(value) => handleRecurringChange(value === "yes")}>
+          <SelectTrigger id="recurring"><SelectValue placeholder="Is this recurring?" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="no">No</SelectItem>
+            <SelectItem value="yes">Yes</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       {eventData.is_recurring && (
         <div className="space-y-2">
@@ -265,6 +282,7 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
               <SelectItem value="biweekly">Biweekly</SelectItem>
               <SelectItem value="monthly">Monthly</SelectItem>
               <SelectItem value="monthly_weekday">Monthly (Specific Weekday)</SelectItem>
+              <SelectItem value="fifth_sunday">Fifth Sunday Potluck</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -315,6 +333,14 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
               </SelectContent>
             </Select>
           </div>
+        </div>
+      )}
+      {eventData.recurrence_pattern === 'fifth_sunday' && (
+        <div className="space-y-2">
+          <Label>Event will occur on the fifth Sunday of each month</Label>
+          <p className="text-sm text-muted-foreground">
+            This event will automatically be marked as a potluck event where members can RSVP and specify what dish they'll bring.
+          </p>
         </div>
       )}
       <div className="flex justify-end space-x-2 pt-4">

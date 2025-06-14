@@ -281,7 +281,7 @@ export function WorshipCheckIn() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Sunday Worship Check-In</h1>
           <p className="text-muted-foreground">
-            Check in members for {currentEvent ? format(new Date(currentEvent.start_date), 'EEEE, MMMM d, yyyy') : 'today\'s'} worship service.
+            Check In People for {currentEvent ? format(new Date(currentEvent.start_date), 'EEEE, MMMM d, yyyy') : 'today\'s'} worship service.
           </p>
         </div>
         <div className="flex gap-2 w-full md:w-auto tablet-spacing">
@@ -305,7 +305,7 @@ export function WorshipCheckIn() {
 
       <Card className="tablet-card">
         <CardHeader>
-          <CardTitle>Checked In Members</CardTitle>
+          <CardTitle>Checked In People</CardTitle>
           <CardDescription>
             {checkedInMembers.length} members checked in for today's service
           </CardDescription>

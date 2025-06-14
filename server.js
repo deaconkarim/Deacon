@@ -67,22 +67,51 @@ function getNextOccurrence(schedule) {
     return { start_date: nextDate, end_date: nextDate };
   }
   if (schedule.includes('Fifth Sunday')) {
+    // Start from the first day of the current month
     nextDate.setDate(1);
-    nextDate.setMonth(today.getMonth());
+    
+    // Function to check if a month has a fifth Sunday
+    const hasFifthSunday = (date) => {
+      const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+      const lastDayOfWeek = lastDay.getDay();
+      const lastDayOfMonth = lastDay.getDate();
+      
+      // If the last day of the month is a Sunday, or if the last Sunday is the 29th or later,
+      // then the month has a fifth Sunday
+      return lastDayOfWeek === 0 || (lastDayOfMonth - lastDayOfWeek) >= 29;
+    };
+
+    // If current month doesn't have a fifth Sunday, move to next month
+    if (!hasFifthSunday(nextDate)) {
+      nextDate.setMonth(nextDate.getMonth() + 1);
+      nextDate.setDate(1);
+    }
+
+    // Find the fifth Sunday
     let sundayCount = 0;
     while (sundayCount < 5) {
       if (nextDate.getDay() === 0) sundayCount++;
       if (sundayCount < 5) nextDate.setDate(nextDate.getDate() + 1);
     }
+
+    // If the found date is in the past, move to the next month that has a fifth Sunday
     if (nextDate < today) {
       nextDate.setMonth(nextDate.getMonth() + 1);
       nextDate.setDate(1);
+      
+      // Keep moving forward until we find a month with a fifth Sunday
+      while (!hasFifthSunday(nextDate)) {
+        nextDate.setMonth(nextDate.getMonth() + 1);
+      }
+      
+      // Find the fifth Sunday in this month
       sundayCount = 0;
       while (sundayCount < 5) {
         if (nextDate.getDay() === 0) sundayCount++;
         if (sundayCount < 5) nextDate.setDate(nextDate.getDate() + 1);
       }
     }
+
     return { start_date: nextDate, end_date: nextDate };
   }
   

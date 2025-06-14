@@ -177,9 +177,11 @@ export const deleteMember = async (id) => {
 // Events
 export const getEvents = async () => {
   try {
+    const now = new Date();
     const { data, error } = await supabase
       .from('events')
       .select('*')
+      .gte('start_date', now.toISOString())
       .order('start_date', { ascending: true });
     
     if (error) throw error;
@@ -243,18 +245,19 @@ export const getEvents = async () => {
 export const addEvent = async (event) => {
   try {
     // Generate a unique ID for the event
-    const eventId = `${event.title}-${new Date(event.startDate).toISOString()}`
+    const eventId = `${event.title}-${new Date(event.startDate).getTime()}`
       .toLowerCase()
       .replace(/[^a-z0-9]/g, '-')
       .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '');
+      .replace(/^-|-$/g, '')
+      .substring(0, 255); // Ensure we don't exceed the column length
 
     const eventData = {
       id: eventId,
       title: event.title,
       description: event.description,
-      start_date: event.startDate,
-      end_date: event.endDate,
+      start_date: new Date(event.startDate).toISOString(),
+      end_date: new Date(event.endDate).toISOString(),
       location: event.location,
       url: event.url,
       is_recurring: event.is_recurring || false,
@@ -262,6 +265,7 @@ export const addEvent = async (event) => {
       monthly_week: event.recurrence_pattern === 'monthly_weekday' ? safeParseInt(event.monthly_week) : null,
       monthly_weekday: event.recurrence_pattern === 'monthly_weekday' ? safeParseInt(event.monthly_weekday) : null,
       allow_rsvp: event.allow_rsvp !== undefined ? event.allow_rsvp : true,
+      attendance_type: event.attendance_type || 'rsvp',
       parent_event_id: null // Will be set for instances
     };
 
@@ -334,7 +338,8 @@ export const updateEvent = async (id, updates) => {
       recurrence_pattern: updates.is_recurring ? updates.recurrence_pattern : null,
       monthly_week: updates.recurrence_pattern === 'monthly_weekday' ? safeParseInt(updates.monthly_week) : null,
       monthly_weekday: updates.recurrence_pattern === 'monthly_weekday' ? safeParseInt(updates.monthly_weekday) : null,
-      allow_rsvp: updates.allow_rsvp !== undefined ? updates.allow_rsvp : true
+      allow_rsvp: updates.allow_rsvp !== undefined ? updates.allow_rsvp : true,
+      attendance_type: updates.attendance_type || 'rsvp'
     };
 
     // If it's a recurring event, update master and all instances
@@ -431,9 +436,9 @@ const generateRecurringInstances = (event) => {
   const endDate = new Date(event.end_date);
   const duration = endDate.getTime() - startDate.getTime();
   
-  // Generate events for the next 3 months
+  // Generate events for the next year
   const maxDate = new Date();
-  maxDate.setMonth(maxDate.getMonth() + 3);
+  maxDate.setFullYear(maxDate.getFullYear() + 1);
   
   let currentDate = new Date(startDate);
   

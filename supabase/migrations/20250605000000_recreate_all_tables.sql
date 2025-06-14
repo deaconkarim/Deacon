@@ -19,7 +19,7 @@ CREATE TABLE public.members (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     firstname TEXT NOT NULL,
     lastname TEXT NOT NULL,
-    email TEXT UNIQUE,
+    email TEXT,
     phone TEXT,
     address JSONB,
     status TEXT NOT NULL DEFAULT 'active',
@@ -29,6 +29,9 @@ CREATE TABLE public.members (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
+
+-- Create a partial unique index for email that allows multiple NULL values
+CREATE UNIQUE INDEX members_email_unique_idx ON public.members (email) WHERE email IS NOT NULL;
 
 -- Create events table
 CREATE TABLE public.events (
@@ -44,6 +47,7 @@ CREATE TABLE public.events (
     monthly_week INTEGER,
     monthly_weekday INTEGER,
     allow_rsvp BOOLEAN DEFAULT true,
+    attendance_type VARCHAR(50) DEFAULT 'rsvp' CHECK (attendance_type IN ('rsvp', 'check-in')),
     parent_event_id VARCHAR(255),
     is_master BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
@@ -86,7 +90,7 @@ CREATE TABLE public.event_attendance (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     event_id VARCHAR(255) REFERENCES public.events(id) ON DELETE CASCADE,
     member_id UUID REFERENCES public.members(id) ON DELETE CASCADE,
-    status VARCHAR(50) DEFAULT 'attending',
+    status VARCHAR(50) DEFAULT 'attending' CHECK (status IN ('attending', 'checked-in', 'declined')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     UNIQUE(event_id, member_id)
 );

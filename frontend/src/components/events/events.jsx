@@ -426,8 +426,7 @@ export function Events() {
     // Filter out past events
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
-    filtered = events.filter(event => {
+    filtered = filtered.filter(event => {
       const eventDate = new Date(event.start_date);
       eventDate.setHours(0, 0, 0, 0);
       return eventDate >= today;
@@ -435,10 +434,9 @@ export function Events() {
 
     // Apply search filter
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(event => 
-        event.title.toLowerCase().includes(query) ||
-        (event.location && event.location.toLowerCase().includes(query))
+      filtered = filtered.filter(event =>
+        event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        event.location?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
@@ -448,15 +446,13 @@ export function Events() {
         if (attendanceFilter === 'attending') {
           return event.attendance > 0;
         } else if (attendanceFilter === 'not_attending') {
-          return event.attendance === 0;
+          return !event.attendance || event.attendance === 0;
         }
         return true;
       });
     }
 
-    // Sort events by date
-    filtered.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
-
+    console.log('Filtered events:', filtered);
     setFilteredEvents(filtered);
   }, [events, searchQuery, attendanceFilter]);
 
