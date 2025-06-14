@@ -1259,31 +1259,13 @@ export function Events() {
     <div className="container mx-auto p-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-4xl font-bold">Events</h1>
-        <div className="flex gap-4">
-          <Select
-            value={selectedMonth}
-            onValueChange={setSelectedMonth}
-            className="w-[200px]"
-          >
-            <SelectTrigger className="h-14 text-lg">
-              <SelectValue placeholder="Select month" />
-            </SelectTrigger>
-            <SelectContent>
-              {months.map((month) => (
-                <SelectItem key={month.value} value={month.value} className="text-lg">
-                  {month.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            onClick={() => setIsCreateEventOpen(true)}
-            className="h-14 text-lg px-8"
-          >
-            <Plus className="mr-2 h-6 w-6" />
-            Create Event
-          </Button>
-        </div>
+        <Button
+          onClick={() => setIsCreateEventOpen(true)}
+          className="h-14 text-lg px-8"
+        >
+          <Plus className="mr-2 h-6 w-6" />
+          Create Event
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 gap-8">
