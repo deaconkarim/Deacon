@@ -728,7 +728,12 @@ export function Events() {
       }
 
       // Refresh the events list to update attendance count
-      fetchEvents();
+      await fetchEvents();
+
+      // Close the dialog if all members have been added
+      if (selectedEvent?.attendance_type === 'check-in') {
+        setIsMemberDialogOpen(false);
+      }
     } catch (error) {
       toast({
         variant: "destructive",
@@ -1274,123 +1279,157 @@ export function Events() {
 
       {/* Member Selection Dialog */}
       <Dialog open={isMemberDialogOpen} onOpenChange={setIsMemberDialogOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedEvent?.attendance_type === 'check-in' ? 'Check In People' : 'RSVP Members'}
-            </DialogTitle>
-            <DialogDescription>
-              {selectedEvent?.attendance_type === 'check-in'
-                ? 'Check In People for the event'
-                : `Select members to RSVP for ${selectedEvent?.title}`}
-            </DialogDescription>
+        <DialogContent className="max-w-full h-screen sm:max-w-full sm:h-screen p-0">
+          <DialogHeader className="p-8 border-b">
+            <div className="flex justify-between items-start">
+              <div>
+                <DialogTitle className="text-3xl">
+                  {selectedEvent?.attendance_type === 'check-in' ? 'Check In People' : 'RSVP Members'} - {selectedEvent?.title}
+                </DialogTitle>
+                <DialogDescription className="text-lg mt-2">
+                  {selectedEvent?.attendance_type === 'check-in'
+                    ? 'Check In People for the event'
+                    : `Select members to RSVP for ${selectedEvent?.title}`}
+                </DialogDescription>
+              </div>
+              {selectedEvent?.attendance_type === 'check-in' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-sm h-9"
+                  onClick={() => setIsCreateMemberOpen(true)}
+                >
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Create New Person
+                </Button>
+              )}
+            </div>
           </DialogHeader>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <h3 className="font-semibold mb-2">Available People</h3>
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                {members.map((member) => (
-                  <div
-                    key={member.id}
-                    className="flex items-center space-x-2 p-2 rounded-md cursor-pointer hover:bg-gray-100"
-                    onClick={async () => {
-                      try {
-                        // Add member to event attendance
-                        const { error } = await supabase
-                          .from('event_attendance')
-                          .insert({
-                            event_id: selectedEvent.id,
-                            member_id: member.id,
-                            status: 'attending'
-                          });
+          <div className="p-8">
+            <Tabs defaultValue="available" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 h-14">
+                <TabsTrigger value="available" className="text-lg">Available People</TabsTrigger>
+                <TabsTrigger value="checked-in" className="text-lg">
+                  {selectedEvent?.attendance_type === 'check-in' ? 'Checked In' : 'RSVP\'d'}
+                </TabsTrigger>
+              </TabsList>
 
-                        if (error) throw error;
-
-                        // Move member to Already RSVP'd list
-                        setAlreadyRSVPMembers(prev => [...prev, member]);
-                        
-                        // Remove member from Available People list
-                        setMembers(prev => prev.filter(m => m.id !== member.id));
-
-                        toast({
-                          title: "Success",
-                          description: selectedEvent?.attendance_type === 'check-in'
-                            ? `${member.firstname} ${member.lastname} has been checked in`
-                            : `${member.firstname} ${member.lastname} has been added`
-                        });
-                      } catch (error) {
-                        console.error('Error adding member:', error);
-                        toast({
-                          variant: "destructive",
-                          title: "Error",
-                          description: selectedEvent?.attendance_type === 'check-in'
-                            ? "Failed to check in member. Please try again."
-                            : "Failed to add member. Please try again."
-                        });
-                      }
-                    }}
-                  >
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={member.image_url} />
-                      <AvatarFallback>
-                        {member.firstname?.charAt(0)}{member.lastname?.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm font-medium">
-                      {member.firstname} {member.lastname}
-                    </span>
+              <TabsContent value="available" className="mt-8">
+                <div className="space-y-6">
+                  <div className="mb-6">
+                    <Input
+                      placeholder="Search people..."
+                      value={memberSearchQuery}
+                      onChange={(e) => setMemberSearchQuery(e.target.value)}
+                      className="w-full h-14 text-lg"
+                    />
                   </div>
-                ))}
-              </div>
-            </div>
+                  <div className="space-y-4 max-h-[calc(100vh-400px)] overflow-y-auto">
+                    {members
+                      .filter(member => 
+                        member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                        member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase())
+                      )
+                      .map((member) => (
+                        <div
+                          key={member.id}
+                          className="flex items-center space-x-4 p-4 rounded-lg cursor-pointer hover:bg-gray-100 text-lg"
+                          onClick={async () => {
+                            try {
+                              // Add member to event attendance
+                              const { error } = await supabase
+                                .from('event_attendance')
+                                .insert({
+                                  event_id: selectedEvent.id,
+                                  member_id: member.id,
+                                  status: 'attending'
+                                });
 
-            <div>
-              <h3 className="font-semibold mb-2">
-                {selectedEvent?.attendance_type === 'check-in' ? 'Checked In People' : "Already RSVP'd"}
-              </h3>
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                {alreadyRSVPMembers.map((member) => (
-                  <div
-                    key={member.id}
-                    className="flex items-center space-x-2 p-2 bg-gray-50 rounded"
-                  >
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={member.image_url} />
-                      <AvatarFallback>
-                        {member.firstname?.charAt(0)}{member.lastname?.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm flex-1">
-                      {member.firstname} {member.lastname}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-50"
-                      onClick={() => handleRemoveMember(member.id)}
+                              if (error) throw error;
+
+                              // Move member to Already RSVP'd list
+                              setAlreadyRSVPMembers(prev => [...prev, member]);
+                              
+                              // Remove member from Available People list
+                              setMembers(prev => prev.filter(m => m.id !== member.id));
+
+                              toast({
+                                title: "Success",
+                                description: selectedEvent?.attendance_type === 'check-in'
+                                  ? `${member.firstname} ${member.lastname} has been checked in`
+                                  : `${member.firstname} ${member.lastname} has been added`
+                              });
+                            } catch (error) {
+                              console.error('Error adding member:', error);
+                              toast({
+                                variant: "destructive",
+                                title: "Error",
+                                description: selectedEvent?.attendance_type === 'check-in'
+                                  ? "Failed to check in member. Please try again."
+                                  : "Failed to add member. Please try again."
+                              });
+                            }
+                          }}
+                        >
+                          <Avatar className="h-12 w-12">
+                            <AvatarImage src={member.image_url} />
+                            <AvatarFallback>
+                              {member.firstname?.charAt(0)}{member.lastname?.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="flex-1">
+                            {member.firstname} {member.lastname}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="checked-in" className="mt-8">
+                <div className="space-y-4 max-h-[calc(100vh-400px)] overflow-y-auto">
+                  {alreadyRSVPMembers.map((member) => (
+                    <div
+                      key={member.id}
+                      className="flex items-center space-x-4 p-4 rounded-lg bg-gray-50 text-lg"
                     >
-                      <XCircle className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-                {alreadyRSVPMembers.length === 0 && (
-                  <p className="text-sm text-gray-500 italic">
-                    {selectedEvent?.attendance_type === 'check-in'
-                      ? 'No members have checked in yet'
-                      : "No members have RSVP'd yet"}
-                  </p>
-                )}
-              </div>
-            </div>
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage src={member.image_url} />
+                        <AvatarFallback>
+                          {member.firstname?.charAt(0)}{member.lastname?.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="flex-1">
+                        {member.firstname} {member.lastname}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-10 w-10 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => handleRemoveMember(member.id)}
+                      >
+                        <XCircle className="h-6 w-6" />
+                      </Button>
+                    </div>
+                  ))}
+                  {alreadyRSVPMembers.length === 0 && (
+                    <p className="text-lg text-gray-500 italic">
+                      {selectedEvent?.attendance_type === 'check-in'
+                        ? 'No members have checked in yet'
+                        : "No members have RSVP'd yet"}
+                    </p>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="p-8 border-t">
             <Button
               variant={selectedEvent?.attendance_type === 'check-in' ? 'default' : 'outline'}
               onClick={handleCloseDialog}
-              className={selectedEvent?.attendance_type === 'check-in' ? 'bg-green-600 hover:bg-green-700' : ''}
+              className={`text-lg h-14 ${selectedEvent?.attendance_type === 'check-in' ? 'bg-green-600 hover:bg-green-700' : ''}`}
             >
               Close
             </Button>

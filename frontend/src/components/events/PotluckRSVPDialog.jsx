@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -9,6 +9,8 @@ import { supabase } from '@/lib/supabaseClient';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getInitials } from '@/lib/utils/formatters';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { UserPlus } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 
 export function PotluckRSVPDialog({ isOpen, onClose, event, onRSVP }) {
   const [dishType, setDishType] = useState('');
@@ -18,6 +20,14 @@ export function PotluckRSVPDialog({ isOpen, onClose, event, onRSVP }) {
   const [existingRSVP, setExistingRSVP] = useState(null);
   const [currentRSVPs, setCurrentRSVPs] = useState([]);
   const { toast } = useToast();
+  const [isCreateMemberOpen, setIsCreateMemberOpen] = useState(false);
+  const [newMember, setNewMember] = useState({
+    firstname: '',
+    lastname: '',
+    email: '',
+    phone: '',
+    status: 'active'
+  });
 
   useEffect(() => {
     const fetchMembers = async () => {
@@ -166,12 +176,60 @@ export function PotluckRSVPDialog({ isOpen, onClose, event, onRSVP }) {
           : 'Thank you for signing up for the potluck!',
       });
 
+      // Call onRSVP to refresh the parent component's event data
       onRSVP();
       onClose();
     } catch (error) {
       toast({
         title: 'Error',
         description: 'Failed to submit RSVP. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleCreateMember = async () => {
+    if (!newMember.firstname || !newMember.lastname) {
+      toast({
+        title: 'Error',
+        description: 'First name and last name are required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('members')
+        .insert([newMember])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Add the new member to the members list
+      setMembers(prev => [...prev, data]);
+
+      // Reset the form
+      setNewMember({
+        firstname: '',
+        lastname: '',
+        email: '',
+        phone: '',
+        status: 'active'
+      });
+
+      setIsCreateMemberOpen(false);
+
+      toast({
+        title: 'Success',
+        description: 'New person created successfully',
+      });
+    } catch (error) {
+      console.error('Error creating member:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create new person',
         variant: 'destructive',
       });
     }
@@ -207,145 +265,130 @@ export function PotluckRSVPDialog({ isOpen, onClose, event, onRSVP }) {
     );
   };
 
-  const handleMemberClick = async (member) => {
-    try {
-      // First create the event_attendance record
-      const { error: attendanceError } = await supabase
-        .from('event_attendance')
-        .insert({
-          event_id: event.id,
-          member_id: member.id,
-          status: 'attending'
-        });
-
-      if (attendanceError) throw attendanceError;
-
-      // Then create the potluck_rsvp record
-      const { error: rsvpError } = await supabase
-        .from('potluck_rsvps')
-        .insert({
-          event_id: event.id,
-          member_id: member.id,
-          category: selectedCategory,
-          description: description
-        });
-
-      if (rsvpError) throw rsvpError;
-
-      // Move member to Already RSVP'd list
-      setAlreadyRSVPMembers(prev => [...prev, member]);
-      
-      // Remove member from Available People list
-      setMembers(prev => prev.filter(m => m.id !== member.id));
-
-      toast({
-        title: "Success",
-        description: `${member.firstname} ${member.lastname} has been added to the potluck`
-      });
-
-      // Reset form
-      setSelectedCategory('');
-      setDescription('');
-    } catch (error) {
-      console.error('Error adding member:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to add member. Please try again."
-      });
-    }
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl w-[90vw]">
-        <DialogHeader>
-          <DialogTitle>
-            {existingRSVP ? 'Update Potluck RSVP' : 'Potluck RSVP'}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="grid grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="member">Who is bringing the dish?</Label>
-              <Select value={selectedMemberId} onValueChange={setSelectedMemberId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a member" />
-                </SelectTrigger>
-                <SelectContent>
-                  {members
-                    .filter(member => !currentRSVPs.some(rsvp => rsvp.member_id === member.id))
-                    .map((member) => (
-                      <SelectItem key={member.id} value={member.id}>
-                        <div className="flex items-center space-x-2">
-                          <Avatar className="h-6 w-6">
-                            <AvatarImage src={member.image_url} />
-                            <AvatarFallback>{getInitials(member.firstname, member.lastname)}</AvatarFallback>
-                          </Avatar>
-                          <span>{`${member.firstname} ${member.lastname}`}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+      <DialogContent className="max-w-full h-screen sm:max-w-full sm:h-screen p-0">
+        <DialogHeader className="p-8 border-b">
+          <div className="flex justify-between items-start">
+            <div>
+              <DialogTitle className="text-3xl">Potluck RSVP{event?.title ? ` - ${event.title}` : ''}</DialogTitle>
+              <DialogDescription className="text-lg mt-2">
+                {existingRSVP ? 'Update your potluck dish' : 'Sign up to bring a dish to the potluck'}
+              </DialogDescription>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="dishType">What type of dish will you bring?</Label>
-              <Select value={dishType} onValueChange={setDishType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select dish type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="main">Main Dish</SelectItem>
-                  <SelectItem value="side">Side Dish</SelectItem>
-                  <SelectItem value="dessert">Dessert</SelectItem>
-                  <SelectItem value="drink">Drink</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="dishDescription">Describe your dish (optional)</Label>
-              <Textarea
-                id="dishDescription"
-                placeholder="e.g., Homemade lasagna, Vegetarian option available"
-                value={dishDescription}
-                onChange={(e) => setDishDescription(e.target.value)}
-                className="h-20"
-              />
-            </div>
-            <Button 
-              onClick={handleSubmit}
-              className="w-full"
-              disabled={!selectedMemberId || !dishType}
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-sm h-9"
+              onClick={() => setIsCreateMemberOpen(true)}
             >
-              {existingRSVP ? 'Update RSVP' : 'Submit RSVP'}
+              <UserPlus className="mr-2 h-4 w-4" />
+              Create New Person
             </Button>
           </div>
+        </DialogHeader>
 
-          <div className="space-y-4">
-            <h3 className="font-semibold">Current RSVPs</h3>
-            <Tabs defaultValue="main" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="main">Main</TabsTrigger>
-                <TabsTrigger value="side">Sides</TabsTrigger>
-                <TabsTrigger value="dessert">Desserts</TabsTrigger>
-                <TabsTrigger value="drink">Drinks</TabsTrigger>
-              </TabsList>
-              <TabsContent value="main" className="mt-4">
-                {renderRSVPList('main')}
-              </TabsContent>
-              <TabsContent value="side" className="mt-4">
-                {renderRSVPList('side')}
-              </TabsContent>
-              <TabsContent value="dessert" className="mt-4">
-                {renderRSVPList('dessert')}
-              </TabsContent>
-              <TabsContent value="drink" className="mt-4">
-                {renderRSVPList('drink')}
-              </TabsContent>
-            </Tabs>
-          </div>
+        <div className="p-8">
+          <Tabs defaultValue="rsvp" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 h-14">
+              <TabsTrigger value="rsvp" className="text-lg">RSVP</TabsTrigger>
+              <TabsTrigger value="list" className="text-lg">Current RSVPs</TabsTrigger>
+            </TabsList>
+            <TabsContent value="rsvp" className="mt-8">
+              <div className="space-y-8">
+                <div>
+                  <Label htmlFor="member" className="text-xl mb-4 block">Who is bringing the dish?</Label>
+                  <Select
+                    value={selectedMemberId}
+                    onValueChange={setSelectedMemberId}
+                  >
+                    <SelectTrigger className="h-14 text-lg">
+                      <SelectValue placeholder="Select a member" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[50vh]">
+                      {members
+                        .filter(member => !currentRSVPs.some(rsvp => rsvp.member_id === member.id))
+                        .map((member) => (
+                          <SelectItem key={member.id} value={member.id} className="text-lg">
+                            <div className="flex items-center gap-4">
+                              <Avatar className="h-12 w-12">
+                                <AvatarImage src={member.image_url} />
+                                <AvatarFallback>
+                                  {getInitials(member.firstname, member.lastname)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span>{member.firstname} {member.lastname}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="dishType" className="text-xl mb-4 block">Dish Type</Label>
+                  <Select value={dishType} onValueChange={setDishType}>
+                    <SelectTrigger className="h-14 text-lg">
+                      <SelectValue placeholder="Select dish type" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[50vh]">
+                      <SelectItem value="main" className="text-lg">Main Dish</SelectItem>
+                      <SelectItem value="side" className="text-lg">Side Dish</SelectItem>
+                      <SelectItem value="dessert" className="text-lg">Dessert</SelectItem>
+                      <SelectItem value="drink" className="text-lg">Drink</SelectItem>
+                      <SelectItem value="other" className="text-lg">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="dishDescription" className="text-xl mb-4 block">Dish Description</Label>
+                  <Textarea
+                    id="dishDescription"
+                    placeholder="Describe what you're bringing..."
+                    value={dishDescription}
+                    onChange={(e) => setDishDescription(e.target.value)}
+                    className="h-32 text-lg"
+                  />
+                </div>
+              </div>
+            </TabsContent>
+            <TabsContent value="list" className="mt-8">
+              <div className="space-y-6 max-h-[calc(100vh-400px)] overflow-y-auto">
+                {currentRSVPs.length === 0 ? (
+                  <p className="text-xl text-muted-foreground">No RSVPs yet</p>
+                ) : (
+                  currentRSVPs.map((rsvp) => (
+                    <div key={rsvp.id} className="flex items-start gap-6 p-6 border rounded-lg">
+                      <Avatar className="h-16 w-16">
+                        <AvatarImage src={rsvp.members?.image_url} />
+                        <AvatarFallback>
+                          {getInitials(rsvp.members?.firstname, rsvp.members?.lastname)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <div className="text-xl font-medium">
+                          {rsvp.members?.firstname} {rsvp.members?.lastname}
+                        </div>
+                        <div className="text-lg text-muted-foreground">
+                          {rsvp.dish_type.charAt(0).toUpperCase() + rsvp.dish_type.slice(1)}
+                          {rsvp.dish_description && ` - ${rsvp.dish_description}`}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
+
+        <DialogFooter className="p-8 border-t">
+          <Button variant="outline" onClick={onClose} className="text-lg h-14">
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit} disabled={!selectedMemberId || !dishType} className="text-lg h-14">
+            {existingRSVP ? 'Update RSVP' : 'Submit RSVP'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
