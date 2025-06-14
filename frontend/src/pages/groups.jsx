@@ -21,9 +21,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabaseClient';
+import { getMembers } from '@/lib/data';
+import { getInitials } from '@/lib/utils/formatters';
 
 export function Groups() {
   const [groups, setGroups] = useState([]);
@@ -80,18 +82,8 @@ export function Groups() {
 
   const fetchMembers = async () => {
     try {
-      const { data, error } = await supabase
-        .from('members')
-        .select('id, firstname, lastname');
-      if (error) throw error;
-      // Transform the data to camelCase for the frontend
-      const transformedData = data.map(member => ({
-        ...member,
-        firstName: member.firstname,
-        lastName: member.lastname,
-        fullName: `${member.firstname} ${member.lastname}`
-      }));
-      setMembers(transformedData || []);
+      const data = await getMembers();
+      setMembers(data || []);
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to fetch members', variant: 'destructive' });
     }
@@ -116,11 +108,32 @@ export function Groups() {
       return;
     }
     try {
+      // Create the group without the members field
       const { data, error } = await supabase
         .from('groups')
-        .insert([{ ...newGroup }])
+        .insert([{
+          name: newGroup.name,
+          description: newGroup.description,
+          leader_id: newGroup.leader_id
+        }])
         .select();
+      
       if (error) throw error;
+
+      // If there are members to add, add them to the group_members table
+      if (newGroup.members && newGroup.members.length > 0) {
+        const memberInserts = newGroup.members.map(memberId => ({
+          group_id: data[0].id,
+          member_id: memberId
+        }));
+
+        const { error: memberError } = await supabase
+          .from('group_members')
+          .insert(memberInserts);
+
+        if (memberError) throw memberError;
+      }
+
       setGroups(prev => [data[0], ...prev]);
       setIsAddGroupOpen(false);
       setNewGroup({
@@ -164,13 +177,15 @@ export function Groups() {
             members(
               id,
               firstname,
-              lastname
+              lastname,
+              image_url
             )
           ),
           leader:members!leader_id(
             id,
             firstname,
-            lastname
+            lastname,
+            image_url
           )
         `)
         .eq('id', group.id)
@@ -184,13 +199,14 @@ export function Groups() {
         leader: completeGroup.leader ? {
           ...completeGroup.leader,
           firstName: completeGroup.leader.firstname,
-          lastName: completeGroup.leader.lastname
+          lastName: completeGroup.leader.lastname,
+          image_url: completeGroup.leader.image_url
         } : null,
         members: completeGroup.group_members.map(gm => ({
-          id: gm.member_id,
+          id: gm.members.id,
           firstName: gm.members.firstname,
           lastName: gm.members.lastname,
-          fullName: `${gm.members.firstname} ${gm.members.lastname}`
+          image_url: gm.members.image_url
         }))
       };
 
@@ -632,12 +648,34 @@ export function Groups() {
                 onValueChange={(value) => setNewGroup({...newGroup, leader_id: value})}
               >
                 <SelectTrigger id="leader">
-                  <SelectValue placeholder="Select leader" />
+                  <SelectValue placeholder="Select leader">
+                    {newGroup.leader_id && members.find(m => m.id === newGroup.leader_id) && (
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarFallback className="text-xs">
+                            {members.find(m => m.id === newGroup.leader_id)?.firstName?.[0]}
+                            {members.find(m => m.id === newGroup.leader_id)?.lastName?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span>
+                          {members.find(m => m.id === newGroup.leader_id)?.firstName}{' '}
+                          {members.find(m => m.id === newGroup.leader_id)?.lastName}
+                        </span>
+                      </div>
+                    )}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {members.map(member => (
                     <SelectItem key={member.id} value={`${member.id}`}>
-                      {member.firstName} {member.lastName}
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarFallback className="text-xs">
+                            {member.firstName?.[0]}{member.lastName?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span>{member.firstName} {member.lastName}</span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -698,7 +736,17 @@ export function Groups() {
                 <div className="space-y-4">
                   <div>
                     <h4 className="text-sm font-medium text-muted-foreground mb-1">Leader</h4>
-                    <p>{selectedGroup.leader ? `${selectedGroup.leader.firstName} ${selectedGroup.leader.lastName}` : 'Not assigned'}</p>
+                    {selectedGroup.leader ? (
+                      <div className="flex items-center space-x-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={selectedGroup.leader.image_url} />
+                          <AvatarFallback>{getInitials(selectedGroup.leader.firstName, selectedGroup.leader.lastName)}</AvatarFallback>
+                        </Avatar>
+                        <span>{`${selectedGroup.leader.firstName} ${selectedGroup.leader.lastName}`}</span>
+                      </div>
+                    ) : (
+                      <p>Not assigned</p>
+                    )}
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-2">
@@ -716,13 +764,12 @@ export function Groups() {
                       {selectedGroup.members.length > 0 ? (
                         selectedGroup.members.map((member) => (
                           <div key={member.id} className="flex items-center justify-between p-3">
-                            <div className="flex items-center">
-                              <Avatar className="h-8 w-8 mr-3">
-                                <AvatarFallback>
-                                  {`${member.firstName?.[0] || ''}${member.lastName?.[0] || ''}` || '?'}
-                                </AvatarFallback>
+                            <div className="flex items-center space-x-2">
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src={member.image_url} />
+                                <AvatarFallback>{getInitials(member.firstName, member.lastName)}</AvatarFallback>
                               </Avatar>
-                              <span>{member.fullName || 'Unknown Member'}</span>
+                              <span>{`${member.firstName} ${member.lastName}`}</span>
                             </div>
                             <Button 
                               variant="ghost" 
@@ -779,10 +826,10 @@ export function Groups() {
             {members
               .filter(member => !selectedGroup?.members.some(m => m.id === member.id))
               .filter(member => {
-                const fullName = member.fullName.toLowerCase();
+                const fullName = `${member.firstName} ${member.lastName}`.toLowerCase();
                 return fullName.includes(searchQuery.toLowerCase());
               })
-              .sort((a, b) => a.fullName.localeCompare(b.fullName))
+              .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`))
               .map((member) => (
                 <div 
                   key={member.id} 
@@ -790,11 +837,15 @@ export function Groups() {
                   onClick={() => handleAddMemberToGroup(member.id)}
                 >
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback>
-                      {`${member.firstName?.[0] || ''}${member.lastName?.[0] || ''}` || '?'}
-                    </AvatarFallback>
+                    <AvatarImage src={member.image_url} />
+                    <AvatarFallback>{getInitials(member.firstName, member.lastName)}</AvatarFallback>
                   </Avatar>
-                  <span>{member.fullName || 'Unknown Member'}</span>
+                  <div className="flex flex-col">
+                    <span className="font-medium">{`${member.firstName} ${member.lastName}`}</span>
+                    {member.email && (
+                      <span className="text-sm text-muted-foreground">{member.email}</span>
+                    )}
+                  </div>
                 </div>
               ))}
           </div>
@@ -841,12 +892,34 @@ export function Groups() {
                   onValueChange={(value) => setEditingGroup({...editingGroup, leader_id: value})}
                 >
                   <SelectTrigger id="edit-leader">
-                    <SelectValue placeholder="Select leader" />
+                    <SelectValue placeholder="Select leader">
+                      {editingGroup.leader_id && members.find(m => m.id === editingGroup.leader_id) && (
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarFallback className="text-xs">
+                              {members.find(m => m.id === editingGroup.leader_id)?.firstName?.[0]}
+                              {members.find(m => m.id === editingGroup.leader_id)?.lastName?.[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span>
+                            {members.find(m => m.id === editingGroup.leader_id)?.firstName}{' '}
+                            {members.find(m => m.id === editingGroup.leader_id)?.lastName}
+                          </span>
+                        </div>
+                      )}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {members.map(member => (
                       <SelectItem key={member.id} value={`${member.id}`}>
-                        {member.firstName} {member.lastName}
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarFallback className="text-xs">
+                              {member.firstName?.[0]}{member.lastName?.[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span>{member.firstName} {member.lastName}</span>
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>

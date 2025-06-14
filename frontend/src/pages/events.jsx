@@ -39,6 +39,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from '@/lib/authContext';
 import EventForm from '@/components/events/EventForm';
 import { addEvent, updateEvent, deleteEvent } from '@/lib/data';
+import { getInitials } from '@/lib/utils/formatters';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -50,6 +51,27 @@ const itemVariants = {
   visible: {
     y: 0,
     opacity: 1
+  }
+};
+
+const formatRecurrencePattern = (pattern, monthlyWeek, monthlyWeekday) => {
+  switch (pattern) {
+    case 'daily':
+      return 'Every day';
+    case 'weekly':
+      return 'Every week';
+    case 'biweekly':
+      return 'Every two weeks';
+    case 'monthly':
+      return 'Every month';
+    case 'monthly_weekday':
+      const weekNames = ['First', 'Second', 'Third', 'Fourth', 'Last'];
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const week = weekNames[parseInt(monthlyWeek) - 1] || '';
+      const day = dayNames[parseInt(monthlyWeekday)] || '';
+      return `${week} ${day} of every month`;
+    default:
+      return pattern;
   }
 };
 
@@ -69,7 +91,7 @@ const EventCard = ({ event, onEdit, onDelete, onRSVP }) => {
               {event.title}
               {isRecurring && (
                 <Badge variant="secondary" className="ml-2">
-                  {event.recurrence_pattern}
+                  {formatRecurrencePattern(event.recurrence_pattern, event.monthly_week, event.monthly_weekday)}
                 </Badge>
               )}
             </CardTitle>
@@ -771,7 +793,7 @@ export function Events() {
                 {event.title}
                 {isRecurring && (
                   <Badge variant="secondary" className="ml-2">
-                    {event.recurrence_pattern}
+                    {formatRecurrencePattern(event.recurrence_pattern, event.monthly_week, event.monthly_weekday)}
                   </Badge>
                 )}
               </CardTitle>
