@@ -1277,8 +1277,18 @@ export function Events() {
                   <CardTitle className="text-2xl mb-2">{event.title}</CardTitle>
                   <CardDescription className="text-lg">
                     {format(new Date(event.start_date), 'EEEE, MMMM d, yyyy')}
-                    {event.end_date && event.end_date !== event.start_date && (
-                      <> - {format(new Date(event.end_date), 'EEEE, MMMM d, yyyy')}</>
+                    {event.end_date && (
+                      (() => {
+                        const startDate = new Date(event.start_date);
+                        const endDate = new Date(event.end_date);
+                        const isSameDay = startDate.toDateString() === endDate.toDateString();
+                        
+                        return isSameDay ? (
+                          <> • {format(startDate, 'h:mm a')} - {format(endDate, 'h:mm a')}</>
+                        ) : (
+                          <> - {format(endDate, 'EEEE, MMMM d, yyyy')}</>
+                        );
+                      })()
                     )}
                   </CardDescription>
                 </div>
