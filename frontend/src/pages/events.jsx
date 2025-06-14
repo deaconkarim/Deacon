@@ -234,6 +234,21 @@ export function Events() {
   const [dialogErrorMessage, setDialogErrorMessage] = useState('');
   const [dialogSectionTitle, setDialogSectionTitle] = useState('');
   const [dialogSectionDescription, setDialogSectionDescription] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().split('T')[0]);
+  const [months, setMonths] = useState([
+    { value: '01', label: 'January' },
+    { value: '02', label: 'February' },
+    { value: '03', label: 'March' },
+    { value: '04', label: 'April' },
+    { value: '05', label: 'May' },
+    { value: '06', label: 'June' },
+    { value: '07', label: 'July' },
+    { value: '08', label: 'August' },
+    { value: '09', label: 'September' },
+    { value: '10', label: 'October' },
+    { value: '11', label: 'November' },
+    { value: '12', label: 'December' }
+  ]);
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -1241,40 +1256,137 @@ export function Events() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Events</h1>
-          <p className="text-muted-foreground">View upcoming church events and activities.</p>
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setIsCreateEventOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
+    <div className="container mx-auto p-8">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-4xl font-bold">Events</h1>
+        <div className="flex gap-4">
+          <Select
+            value={selectedMonth}
+            onValueChange={setSelectedMonth}
+            className="w-[200px]"
+          >
+            <SelectTrigger className="h-14 text-lg">
+              <SelectValue placeholder="Select month" />
+            </SelectTrigger>
+            <SelectContent>
+              {months.map((month) => (
+                <SelectItem key={month.value} value={month.value} className="text-lg">
+                  {month.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            onClick={() => setIsCreateEventOpen(true)}
+            className="h-14 text-lg px-8"
+          >
+            <Plus className="mr-2 h-6 w-6" />
             Create Event
           </Button>
         </div>
       </div>
-      
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search events..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8"
-          />
-        </div>
-      </div>
-      
-      <div className="space-y-4">
-        {filteredEvents && filteredEvents.length > 0 ? (
-          filteredEvents.map(event => renderEventCard(event))
-        ) : (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">No events found.</p>
-          </div>
-        )}
+
+      <div className="grid grid-cols-1 gap-8">
+        {filteredEvents.map((event) => (
+          <Card key={event.id} className="overflow-hidden">
+            <CardHeader className="p-6">
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle className="text-2xl mb-2">{event.title}</CardTitle>
+                  <CardDescription className="text-lg">
+                    {format(new Date(event.start_date), 'EEEE, MMMM d, yyyy')}
+                    {event.end_date && event.end_date !== event.start_date && (
+                      <> - {format(new Date(event.end_date), 'EEEE, MMMM d, yyyy')}</>
+                    )}
+                  </CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10"
+                    onClick={() => handleEditClick(event)}
+                  >
+                    <Pencil className="h-5 w-5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10 text-red-500 hover:text-red-700 hover:bg-red-50"
+                    onClick={() => handleDeleteEvent(event)}
+                  >
+                    <Trash2 className="h-5 w-5" />
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              {event.description && (
+                <p className="text-lg text-gray-600 mb-4">{event.description}</p>
+              )}
+              {event.location && (
+                <p className="text-lg text-gray-600 flex items-center gap-2 mb-4">
+                  <MapPin className="h-5 w-5" />
+                  {event.location}
+                </p>
+              )}
+              {event.url && (
+                <a
+                  href={event.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-lg text-blue-600 hover:underline flex items-center gap-2 mb-4"
+                >
+                  <ExternalLink className="h-5 w-5" />
+                  Event Link
+                </a>
+              )}
+              <div className="flex items-center justify-between mt-6">
+                <div className="text-lg text-muted-foreground">
+                  {event.allow_rsvp ? (
+                    `${event.attendance || 0} ${event.attendance === 1 ? 'person' : 'people'} ${event.attendance_type === 'check-in' ? 'checked in' : 'attending'}`
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <HelpCircle className="h-5 w-5" />
+                      Announcement only
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-4">
+                  {event.allow_rsvp && (
+                    <div className="flex items-center gap-2">
+                      {event.attendance_type === 'check-in' ? (
+                        <Button
+                          onClick={() => handleOpenDialog(event)}
+                          className="bg-green-600 hover:bg-green-700 h-14 text-lg px-8"
+                        >
+                          <CheckCircle className="mr-2 h-6 w-6" />
+                          Check In
+                        </Button>
+                      ) : event.title.toLowerCase().includes('potluck') ? (
+                        <Button
+                          onClick={() => handlePotluckRSVP(event)}
+                          className="bg-blue-600 hover:bg-blue-700 text-white h-14 text-lg px-8"
+                        >
+                          <Utensils className="mr-2 h-6 w-6" />
+                          Potluck RSVP
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={() => handleOpenDialog(event)}
+                          className="bg-blue-600 hover:bg-blue-700 text-white h-14 text-lg px-8"
+                        >
+                          <UserPlus className="mr-2 h-6 w-6" />
+                          RSVP
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Member Selection Dialog */}
