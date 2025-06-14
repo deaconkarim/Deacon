@@ -47,33 +47,43 @@ export default function ChildrenCheckin() {
 
   // Fetch events
   useEffect(() => {
-    async function fetchEvents() {
+    const fetchEvents = async () => {
       try {
-        const { data, error } = await supabase
+        // First, let's see what events we have
+        const { data: allEvents, error: allEventsError } = await supabase
           .from('events')
           .select('*')
-          .gte('start_date', new Date().toISOString())
           .order('start_date', { ascending: true });
 
-        if (error) throw error;
-        setEvents(data);
+        if (allEventsError) throw allEventsError;
+        
+        console.log('All events:', allEvents);
+        
+        // Filter for check-in events
+        const checkinEvents = allEvents.filter(event => 
+          event.attendance_type === 'checkin' || 
+          event.attendance_type === 'Check-in' ||
+          event.attendance_type === 'check-in'
+        );
+        
+        console.log('Filtered check-in events:', checkinEvents);
+        
+        setEvents(checkinEvents);
 
         // Find the next Sunday service event
-        const nextSundayService = data.find(event => {
+        const nextSundayService = checkinEvents.find(event => {
           const eventDate = new Date(event.start_date);
           // Check if it's a Sunday (0 is Sunday in getDay())
-          return eventDate.getDay() === 0 && 
-                 // Check if it's a service event (you might want to adjust this condition based on your event naming convention)
-                 event.title.toLowerCase().includes('service');
+          return eventDate.getDay() === 0 && eventDate >= new Date();
         });
 
         if (nextSundayService) {
           setSelectedEvent(nextSundayService);
         }
-      } catch (err) {
-        setError(err.message);
+      } catch (error) {
+        console.error('Error fetching events:', error);
       }
-    }
+    };
 
     fetchEvents();
   }, []);
@@ -106,20 +116,50 @@ export default function ChildrenCheckin() {
 
   // Handle check-in
   const handleCheckin = async (childId, guardianId) => {
-    try {
-      const { error } = await supabase
-        .from('child_checkin_logs')
-        .insert({
-          child_id: childId,
-          event_id: selectedEvent.id,
-          checked_in_by: guardianId,
-          check_in_time: new Date().toISOString()
-        });
+    if (!selectedEvent) return;
 
-      if (error) throw error;
+    try {
+      // Create check-in log
+      const { data: checkinLog, error: checkinError } = await supabase
+        .from('child_checkin_logs')
+        .insert([
+          {
+            child_id: childId,
+            event_id: selectedEvent.id,
+            checked_in_by: guardianId,
+            check_in_time: new Date().toISOString(),
+          },
+        ])
+        .select()
+        .single();
+
+      if (checkinError) throw checkinError;
+
+      // Create event attendance record
+      const { error: attendanceError } = await supabase
+        .from('event_attendance')
+        .insert([
+          {
+            event_id: selectedEvent.id,
+            member_id: childId,
+            status: 'checked-in'
+          },
+        ]);
+
+      if (attendanceError) throw attendanceError;
 
       // Refresh check-in logs
-      const { data, error: fetchError } = await supabase
+      fetchCheckinLogs();
+    } catch (error) {
+      console.error('Error checking in child:', error);
+    }
+  };
+
+  const fetchCheckinLogs = async () => {
+    if (!selectedEvent) return;
+
+    try {
+      const { data, error } = await supabase
         .from('child_checkin_logs')
         .select(`
           *,
@@ -129,10 +169,10 @@ export default function ChildrenCheckin() {
         `)
         .eq('event_id', selectedEvent.id);
 
-      if (fetchError) throw fetchError;
+      if (error) throw error;
       setCheckinLogs(data);
-    } catch (err) {
-      setError(err.message);
+    } catch (error) {
+      console.error('Error fetching check-in logs:', error);
     }
   };
 
@@ -175,24 +215,24 @@ export default function ChildrenCheckin() {
   if (error) return <div className="p-4 text-red-500">Error: {error}</div>;
 
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Children Check-in</h1>
+    <div className="w-full px-0 md:px-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 px-2 md:px-0">
+        <h1 className="text-3xl md:text-4xl font-bold">Children Check-in</h1>
         <a
           href="/children-check-in/add"
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          className="w-full md:w-auto bg-blue-600 text-white px-6 py-3 rounded-lg text-lg font-medium hover:bg-blue-700 h-14 flex items-center justify-center"
         >
           Add Child
         </a>
       </div>
 
       {/* Event Selection */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="mb-8 px-2 md:px-0">
+        <label className="block text-lg font-medium text-gray-700 mb-3">
           Select Event
         </label>
         <select
-          className="w-full p-2 border rounded"
+          className="w-full p-4 border rounded-lg text-lg h-14"
           value={selectedEvent?.id || ''}
           onChange={(e) => {
             const event = events.find(ev => ev.id === e.target.value);
@@ -209,11 +249,11 @@ export default function ChildrenCheckin() {
       </div>
 
       {selectedEvent && (
-        <div className="space-y-6">
+        <div className="space-y-8">
           {/* Check-in Section */}
-          <div className="bg-white p-4 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">Check-in Children</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="bg-white p-3 md:p-6 rounded-lg shadow">
+            <h2 className="text-2xl font-semibold mb-6 px-1 md:px-0">Check-in Children</h2>
+            <div className="grid grid-cols-1 gap-4">
               {children.map(child => {
                 const childGuardians = guardians.filter(g => g.child_id === child.id);
                 const isCheckedIn = checkinLogs.some(
@@ -221,21 +261,21 @@ export default function ChildrenCheckin() {
                 );
 
                 return (
-                  <div key={child.id} className="border p-4 rounded">
-                    <div className="flex items-center gap-3 mb-3">
-                      <Avatar className="h-10 w-10">
+                  <div key={child.id} className="border p-3 md:p-6 rounded-lg">
+                    <div className="flex items-center gap-4 mb-4">
+                      <Avatar className="h-16 w-16">
                         <AvatarImage src={child.image_url} />
-                        <AvatarFallback>{getInitials(child.firstname, child.lastname)}</AvatarFallback>
+                        <AvatarFallback className="text-2xl">{getInitials(child.firstname, child.lastname)}</AvatarFallback>
                       </Avatar>
-                      <h3 className="font-medium">{child.firstname} {child.lastname}</h3>
+                      <h3 className="text-xl font-medium">{child.firstname} {child.lastname}</h3>
                     </div>
                     {!isCheckedIn ? (
-                      <div className="mt-2">
-                        <label className="block text-sm text-gray-600 mb-1">
+                      <div className="mt-4">
+                        <label className="block text-lg text-gray-600 mb-2">
                           Check in with guardian:
                         </label>
                         <select
-                          className="w-full p-2 border rounded"
+                          className="w-full p-4 border rounded-lg text-lg h-14"
                           onChange={(e) => handleCheckin(child.id, e.target.value)}
                         >
                           <option value="">Select guardian</option>
@@ -247,7 +287,7 @@ export default function ChildrenCheckin() {
                         </select>
                       </div>
                     ) : (
-                      <div className="mt-2 text-green-600">
+                      <div className="mt-4 text-green-600 text-lg font-medium">
                         Checked in
                       </div>
                     )}
@@ -258,34 +298,36 @@ export default function ChildrenCheckin() {
           </div>
 
           {/* Check-out Section */}
-          <div className="bg-white p-4 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">Check-out Children</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="bg-white p-3 md:p-6 rounded-lg shadow">
+            <h2 className="text-2xl font-semibold mb-6 px-1 md:px-0">Check-out Children</h2>
+            <div className="grid grid-cols-1 gap-4">
               {checkinLogs
                 .filter(log => !log.check_out_time)
                 .map(log => {
                   const childGuardians = guardians.filter(g => g.child_id === log.child_id);
 
                   return (
-                    <div key={log.id} className="border p-4 rounded">
-                      <div className="flex items-center gap-3 mb-3">
-                        <Avatar className="h-10 w-10">
+                    <div key={log.id} className="border p-3 md:p-6 rounded-lg">
+                      <div className="flex items-center gap-4 mb-4">
+                        <Avatar className="h-16 w-16">
                           <AvatarImage src={log.child.image_url} />
-                          <AvatarFallback>{getInitials(log.child.firstname, log.child.lastname)}</AvatarFallback>
+                          <AvatarFallback className="text-2xl">{getInitials(log.child.firstname, log.child.lastname)}</AvatarFallback>
                         </Avatar>
-                        <h3 className="font-medium">
-                          {log.child.firstname} {log.child.lastname}
-                        </h3>
+                        <div>
+                          <h3 className="text-xl font-medium">
+                            {log.child.firstname} {log.child.lastname}
+                          </h3>
+                          <p className="text-lg text-gray-600">
+                            Checked in by: {log.checked_in_by.firstname} {log.checked_in_by.lastname}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-sm text-gray-600">
-                        Checked in by: {log.checked_in_by.firstname} {log.checked_in_by.lastname}
-                      </p>
-                      <div className="mt-2">
-                        <label className="block text-sm text-gray-600 mb-1">
+                      <div className="mt-4">
+                        <label className="block text-lg text-gray-600 mb-2">
                           Check out with guardian:
                         </label>
                         <select
-                          className="w-full p-2 border rounded"
+                          className="w-full p-4 border rounded-lg text-lg h-14"
                           onChange={(e) => handleCheckout(log.id, e.target.value)}
                         >
                           <option value="">Select guardian</option>
@@ -303,25 +345,25 @@ export default function ChildrenCheckin() {
           </div>
 
           {/* Check-in History */}
-          <div className="bg-white p-4 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">Check-in History</h2>
-            <div className="overflow-x-auto">
+          <div className="bg-white p-3 md:p-6 rounded-lg shadow">
+            <h2 className="text-2xl font-semibold mb-6 px-1 md:px-0">Check-in History</h2>
+            <div className="overflow-x-auto -mx-3 md:mx-0">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 md:px-6 py-4 text-left text-base font-medium text-gray-500 uppercase tracking-wider">
                       Child
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 md:px-6 py-4 text-left text-base font-medium text-gray-500 uppercase tracking-wider">
                       Check-in Time
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 md:px-6 py-4 text-left text-base font-medium text-gray-500 uppercase tracking-wider">
                       Check-in By
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 md:px-6 py-4 text-left text-base font-medium text-gray-500 uppercase tracking-wider">
                       Check-out Time
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 md:px-6 py-4 text-left text-base font-medium text-gray-500 uppercase tracking-wider">
                       Check-out By
                     </th>
                   </tr>
@@ -329,27 +371,27 @@ export default function ChildrenCheckin() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {checkinLogs.map(log => (
                     <tr key={log.id}>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 md:px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
+                          <Avatar className="h-12 w-12">
                             <AvatarImage src={log.child.image_url} />
-                            <AvatarFallback>{getInitials(log.child.firstname, log.child.lastname)}</AvatarFallback>
+                            <AvatarFallback className="text-lg">{getInitials(log.child.firstname, log.child.lastname)}</AvatarFallback>
                           </Avatar>
-                          <span>{log.child.firstname} {log.child.lastname}</span>
+                          <span className="text-lg">{log.child.firstname} {log.child.lastname}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 md:px-6 py-4 whitespace-nowrap text-lg">
                         {format(new Date(log.check_in_time), 'MMM d, h:mm a')}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 md:px-6 py-4 whitespace-nowrap text-lg">
                         {log.checked_in_by.firstname} {log.checked_in_by.lastname}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 md:px-6 py-4 whitespace-nowrap text-lg">
                         {log.check_out_time
                           ? format(new Date(log.check_out_time), 'MMM d, h:mm a')
                           : '-'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 md:px-6 py-4 whitespace-nowrap text-lg">
                         {log.checked_out_by
                           ? `${log.checked_out_by.firstname} ${log.checked_out_by.lastname}`
                           : '-'}

@@ -252,187 +252,39 @@ export function Events() {
 
   const fetchEvents = useCallback(async () => {
     try {
-      setIsLoading(true);
-      
-      const { data: events, error } = await supabase
+      const { data: eventsData, error: eventsError } = await supabase
         .from('events')
-        .select(`
-          *,
-          event_attendance (
-            id,
-            member_id,
-            status
-          ),
-          potluck_rsvps (
-            id,
-            member_id
-          )
-        `)
+        .select('*')
         .order('start_date', { ascending: true });
 
-      if (error) throw error;
+      if (eventsError) throw eventsError;
 
-      console.log('=== DEBUG: Event Processing ===');
-      console.log('1. Raw events from DB:', events.map(e => ({
-        id: e.id,
-        title: e.title,
-        date: e.start_date,
-        parent_id: e.parent_event_id
-      })));
+      // Get all event attendance records
+      const { data: attendanceData, error: attendanceError } = await supabase
+        .from('event_attendance')
+        .select('*');
 
-      // Group events by their parent event ID
-      const eventGroups = events.reduce((groups, event) => {
-        const key = event.parent_event_id || event.id;
-        if (!groups[key]) {
-          groups[key] = [];
-        }
-        groups[key].push(event);
-        return groups;
-      }, {});
+      if (attendanceError) throw attendanceError;
 
-      console.log('3. Event groups:', Object.entries(eventGroups).map(([key, events]) => ({
-        group_id: key,
-        title: events[0].title,
-        instance_count: events.length,
-        dates: events.map(e => e.start_date)
-      })));
+      // Process events and calculate attendance
+      const processedEvents = eventsData.map(event => {
+        // Count both 'attending' and 'checked-in' statuses
+        const attendance = attendanceData.filter(
+          record => record.event_id === event.id && 
+          (record.status === 'attending' || record.status === 'checked-in')
+        ).length;
 
-      // For each group, process all instances
-      const processedEvents = Object.values(eventGroups).map(group => {
-        // Sort all instances by date
-        const sortedInstances = group.sort((a, b) => a.start_date.localeCompare(b.start_date));
-        
-        console.log('4. Processing group:', {
-          title: group[0].title,
-          sorted_dates: sortedInstances.map(e => e.start_date)
-        });
-
-        // If it's not a recurring event, return it as is
-        if (!group[0].is_recurring) {
-          const isPotluck = group[0].title.toLowerCase().includes('potluck');
-          return {
-            ...group[0],
-            attendance: isPotluck 
-              ? group[0].potluck_rsvps?.length || 0
-              : group[0].event_attendance?.filter(a => a.status === 'attending').length || 0
-          };
-        }
-
-        // For recurring events, find the next occurrence
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        // Find the next occurrence that is today or in the future
-        const nextInstance = sortedInstances.find(instance => {
-          const instanceDate = new Date(instance.start_date);
-          instanceDate.setHours(0, 0, 0, 0);
-          return instanceDate >= today;
-        });
-
-        // If no future instance found, calculate the next one
-        if (!nextInstance) {
-          const lastInstance = sortedInstances[sortedInstances.length - 1];
-          const nextDate = new Date(lastInstance.start_date);
-          const duration = new Date(lastInstance.end_date) - nextDate;
-          
-          // Calculate next occurrence based on recurrence pattern
-          switch (lastInstance.recurrence_pattern) {
-            case 'daily':
-              nextDate.setDate(nextDate.getDate() + 1);
-              break;
-            case 'weekly':
-              nextDate.setDate(nextDate.getDate() + 7);
-              break;
-            case 'biweekly':
-              nextDate.setDate(nextDate.getDate() + 14);
-              break;
-            case 'monthly':
-              nextDate.setMonth(nextDate.getMonth() + 1);
-              break;
-            case 'monthly_weekday':
-              // Get the next month
-              nextDate.setMonth(nextDate.getMonth() + 1);
-              // Set to first day of the month
-              nextDate.setDate(1);
-              
-              // Get the target weekday (0-6, where 0 is Sunday)
-              const targetWeekday = parseInt(lastInstance.monthly_weekday);
-              // Get the target week (1-5, where 5 means last week)
-              const targetWeek = parseInt(lastInstance.monthly_week);
-              
-              // Find the target date
-              if (targetWeek === 5) {
-                // For last week, start from the end of the month
-                nextDate.setMonth(nextDate.getMonth() + 1);
-                nextDate.setDate(0); // Last day of the month
-                // Go backwards to find the target weekday
-                while (nextDate.getDay() !== targetWeekday) {
-                  nextDate.setDate(nextDate.getDate() - 1);
-                }
-              } else {
-                // For other weeks, find the first occurrence of the target weekday
-                while (nextDate.getDay() !== targetWeekday) {
-                  nextDate.setDate(nextDate.getDate() + 1);
-                }
-                // Add weeks to get to the target week
-                nextDate.setDate(nextDate.getDate() + (targetWeek - 1) * 7);
-              }
-              break;
-            default:
-              return null; // Skip unknown patterns
-          }
-
-          const nextEndDate = new Date(nextDate.getTime() + duration);
-          const isPotluck = lastInstance.title.toLowerCase().includes('potluck');
-          
-          return {
-            ...lastInstance,
-            id: `${lastInstance.id}-${nextDate.toISOString()}`,
-            start_date: nextDate.toISOString(),
-            end_date: nextEndDate.toISOString(),
-            attendance: isPotluck 
-              ? lastInstance.potluck_rsvps?.length || 0
-              : lastInstance.event_attendance?.filter(a => a.status === 'attending').length || 0
-          };
-        }
-
-        // Return the next instance
-        const isPotluck = nextInstance.title.toLowerCase().includes('potluck');
         return {
-          ...nextInstance,
-          attendance: isPotluck 
-            ? nextInstance.potluck_rsvps?.length || 0
-            : nextInstance.event_attendance?.filter(a => a.status === 'attending').length || 0
+          ...event,
+          attendance
         };
-      }).filter(Boolean); // Remove any null entries
-
-      console.log('8. Final processed events:', processedEvents.map(e => ({
-        title: e.title,
-        date: e.start_date,
-        attendance: e.attendance
-      })));
+      });
 
       setEvents(processedEvents);
-      setFilteredEvents(processedEvents);
-
-      // Set attendance map for filtering
-      const attendanceMap = {};
-      processedEvents.forEach(event => {
-        attendanceMap[event.id] = event.attendance;
-      });
-      setAttendance(attendanceMap);
-
     } catch (error) {
       console.error('Error fetching events:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch events",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
     }
-  }, [toast]);
+  }, []);
 
   // Update the filtering effect to only handle search and attendance filters
   useEffect(() => {
