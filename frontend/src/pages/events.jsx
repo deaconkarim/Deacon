@@ -252,6 +252,8 @@ export function Events() {
 
   const fetchEvents = useCallback(async () => {
     try {
+      setIsLoading(true);
+      
       const { data: eventsData, error: eventsError } = await supabase
         .from('events')
         .select('*')
@@ -266,25 +268,139 @@ export function Events() {
 
       if (attendanceError) throw attendanceError;
 
+      // Group events by their parent event ID
+      const eventGroups = eventsData.reduce((groups, event) => {
+        const key = event.parent_event_id || event.id;
+        if (!groups[key]) {
+          groups[key] = [];
+        }
+        groups[key].push(event);
+        return groups;
+      }, {});
+
       // Process events and calculate attendance
-      const processedEvents = eventsData.map(event => {
-        // Count both 'attending' and 'checked-in' statuses
+      const processedEvents = Object.values(eventGroups).map(group => {
+        // Sort all instances by date
+        const sortedInstances = group.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+        
+        // If it's not a recurring event, return it as is
+        if (!group[0].is_recurring) {
+          const attendance = attendanceData.filter(
+            record => record.event_id === group[0].id && 
+            (record.status === 'attending' || record.status === 'checked-in')
+          ).length;
+
+          return {
+            ...group[0],
+            attendance
+          };
+        }
+
+        // For recurring events, find the next occurrence
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // Find the next occurrence that is today or in the future
+        const nextInstance = sortedInstances.find(instance => {
+          const instanceDate = new Date(instance.start_date);
+          instanceDate.setHours(0, 0, 0, 0);
+          return instanceDate >= today;
+        });
+
+        // If no future instance found, calculate the next one
+        if (!nextInstance) {
+          const lastInstance = sortedInstances[sortedInstances.length - 1];
+          const nextDate = new Date(lastInstance.start_date);
+          const duration = new Date(lastInstance.end_date) - nextDate;
+          
+          // Calculate next occurrence based on recurrence pattern
+          switch (lastInstance.recurrence_pattern) {
+            case 'daily':
+              nextDate.setDate(nextDate.getDate() + 1);
+              break;
+            case 'weekly':
+              nextDate.setDate(nextDate.getDate() + 7);
+              break;
+            case 'biweekly':
+              nextDate.setDate(nextDate.getDate() + 14);
+              break;
+            case 'monthly':
+              nextDate.setMonth(nextDate.getMonth() + 1);
+              break;
+            case 'monthly_weekday':
+              // Get the next month
+              nextDate.setMonth(nextDate.getMonth() + 1);
+              // Set to first day of the month
+              nextDate.setDate(1);
+              
+              // Get the target weekday (0-6, where 0 is Sunday)
+              const targetWeekday = parseInt(lastInstance.monthly_weekday);
+              // Get the target week (1-5, where 5 means last week)
+              const targetWeek = parseInt(lastInstance.monthly_week);
+              
+              // Find the target date
+              if (targetWeek === 5) {
+                // For last week, start from the end of the month
+                nextDate.setMonth(nextDate.getMonth() + 1);
+                nextDate.setDate(0); // Last day of the month
+                // Go backwards to find the target weekday
+                while (nextDate.getDay() !== targetWeekday) {
+                  nextDate.setDate(nextDate.getDate() - 1);
+                }
+              } else {
+                // For other weeks, find the first occurrence of the target weekday
+                while (nextDate.getDay() !== targetWeekday) {
+                  nextDate.setDate(nextDate.getDate() + 1);
+                }
+                // Add weeks to get to the target week
+                nextDate.setDate(nextDate.getDate() + (targetWeek - 1) * 7);
+              }
+              break;
+            default:
+              return null; // Skip unknown patterns
+          }
+
+          const nextEndDate = new Date(nextDate.getTime() + duration);
+          
+          const attendance = attendanceData.filter(
+            record => record.event_id === lastInstance.id && 
+            (record.status === 'attending' || record.status === 'checked-in')
+          ).length;
+
+          return {
+            ...lastInstance,
+            id: `${lastInstance.id}-${nextDate.toISOString()}`,
+            start_date: nextDate.toISOString(),
+            end_date: nextEndDate.toISOString(),
+            attendance
+          };
+        }
+
+        // Return the next instance
         const attendance = attendanceData.filter(
-          record => record.event_id === event.id && 
+          record => record.event_id === nextInstance.id && 
           (record.status === 'attending' || record.status === 'checked-in')
         ).length;
 
         return {
-          ...event,
+          ...nextInstance,
           attendance
         };
-      });
+      }).filter(Boolean); // Remove any null entries
 
       setEvents(processedEvents);
+      setFilteredEvents(processedEvents);
     } catch (error) {
       console.error('Error fetching events:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch events",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   // Update the filtering effect to only handle search and attendance filters
   useEffect(() => {
