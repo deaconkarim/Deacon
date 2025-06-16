@@ -12,7 +12,9 @@ import {
   Clock,
   Church,
   User,
-  Trash2
+  Trash2,
+  Plus,
+  Calendar as CalendarIcon
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,6 +26,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { getMembers, getMemberAttendance, getMemberGroups, updateMember, deleteMember } from '../lib/data';
 import MemberForm from '@/components/members/MemberForm';
 import { formatName, getInitials, formatPhoneNumber } from '@/lib/utils/formatters';
+import { supabase } from '@/lib/supabase';
 
 export function MemberProfile() {
   const { id } = useParams();
@@ -37,6 +40,10 @@ export function MemberProfile() {
   const [isGroupsLoading, setIsGroupsLoading] = useState(true);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isRetroCheckInOpen, setIsRetroCheckInOpen] = useState(false);
+  const [pastEvents, setPastEvents] = useState([]);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [isEventsLoading, setIsEventsLoading] = useState(false);
 
   useEffect(() => {
     loadMemberData();
@@ -101,6 +108,72 @@ export function MemberProfile() {
       });
     } finally {
       setIsGroupsLoading(false);
+    }
+  };
+
+  const loadPastEvents = async () => {
+    setIsEventsLoading(true);
+    try {
+      const { data: events, error } = await supabase
+        .from('events')
+        .select('*')
+        .lt('start_date', new Date().toISOString())
+        .eq('attendance_type', 'check-in')
+        .order('start_date', { ascending: false });
+
+      if (error) throw error;
+
+      // Filter out events the member has already attended
+      const attendedEventIds = attendance.map(a => a.events.id);
+      const availableEvents = events.filter(event => !attendedEventIds.includes(event.id));
+      setPastEvents(availableEvents);
+    } catch (error) {
+      console.error('Error loading past events:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load past events",
+        variant: "destructive",
+      });
+    } finally {
+      setIsEventsLoading(false);
+    }
+  };
+
+  const handleRetroCheckIn = async () => {
+    if (!selectedEvent || !member) return;
+
+    try {
+      const { error } = await supabase
+        .from('event_attendance')
+        .insert({
+          event_id: selectedEvent.id,
+          member_id: member.id,
+          status: 'checked-in'
+        });
+
+      if (error) throw error;
+
+      // Refresh attendance data
+      await loadAttendance(member.id);
+      
+      // Remove the event from available past events
+      setPastEvents(prev => prev.filter(e => e.id !== selectedEvent.id));
+      
+      // Close dialog and reset selection
+      setIsRetroCheckInOpen(false);
+      setSelectedEvent(null);
+
+      toast({
+        title: "Success",
+        description: `Successfully checked in to ${selectedEvent.title}`
+      });
+    } catch (error) {
+      console.error('Error checking in:', error);
+      toast({
+        title: "Error",
+        description: "Failed to check in to event",
+        variant: "destructive",
+      });
     }
   };
 
@@ -272,11 +345,23 @@ export function MemberProfile() {
 
             <TabsContent value="attendance">
               <Card>
-                <CardHeader>
-                  <CardTitle>Attendance History</CardTitle>
-                  <CardDescription>
-                    View person's attendance records
-                  </CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>Attendance History</CardTitle>
+                    <CardDescription>
+                      View person's attendance records
+                    </CardDescription>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      loadPastEvents();
+                      setIsRetroCheckInOpen(true);
+                    }}
+                    variant="outline"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    Check In to Past Event
+                  </Button>
                 </CardHeader>
                 <CardContent>
                   {isAttendanceLoading ? (
@@ -424,6 +509,72 @@ export function MemberProfile() {
             </Button>
             <Button variant="destructive" onClick={handleDeleteMember}>
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Retroactive Check-in Dialog */}
+      <Dialog open={isRetroCheckInOpen} onOpenChange={setIsRetroCheckInOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Check In to Past Event</DialogTitle>
+            <DialogDescription>
+              Select a past event to check in {member?.firstname} {member?.lastname}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {isEventsLoading ? (
+            <div className="flex items-center justify-center py-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : pastEvents.length > 0 ? (
+            <div className="space-y-4 max-h-[400px] overflow-y-auto">
+              {pastEvents.map((event) => (
+                <div
+                  key={event.id}
+                  className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer hover:bg-muted/50 ${
+                    selectedEvent?.id === event.id ? 'border-primary bg-muted/50' : ''
+                  }`}
+                  onClick={() => setSelectedEvent(event)}
+                >
+                  <div className="space-y-1">
+                    <p className="font-medium">{event.title}</p>
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4 mr-2" />
+                      {format(new Date(event.start_date), 'MMM d, yyyy • h:mm a')}
+                    </div>
+                    {event.location && (
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <MapPin className="h-4 w-4 mr-2" />
+                        {event.location}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <p className="text-muted-foreground">No past events available for check-in.</p>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsRetroCheckInOpen(false);
+                setSelectedEvent(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRetroCheckIn}
+              disabled={!selectedEvent}
+            >
+              Check In
             </Button>
           </DialogFooter>
         </DialogContent>

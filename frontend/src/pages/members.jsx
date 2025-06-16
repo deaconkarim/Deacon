@@ -402,7 +402,7 @@ export function People() {
       {members.length === 0 ? (
         <EmptyState onAddMember={() => setIsAddDialogOpen(true)} />
       ) : (
-        <Tabs defaultValue="grid" className="w-full">
+        <Tabs defaultValue="list" className="w-full">
           <TabsList className="mb-4">
             <TabsTrigger value="grid">Grid View</TabsTrigger>
             <TabsTrigger value="list">List View</TabsTrigger>
@@ -427,11 +427,11 @@ export function People() {
                           <Avatar className="h-12 w-12">
                             <AvatarImage src={member.image_url} />
                             <AvatarFallback>
-                              {member.firstName.charAt(0)}{member.lastName.charAt(0)}
+                              {member.firstname.charAt(0)}{member.lastname.charAt(0)}
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <CardTitle className="text-xl">{formatName(member.firstName, member.lastName)}</CardTitle>
+                            <CardTitle className="text-xl">{formatName(member.firstname, member.lastname)}</CardTitle>
                             <CardDescription>
                               {member.status === 'active' ? (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
@@ -581,49 +581,57 @@ export function People() {
                         filteredMembers.map((member) => (
                           <tr 
                             key={member.id} 
-                            className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+                            className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted cursor-pointer"
+                            onClick={() => handleMemberClick(member.id)}
                           >
-                            <td className="p-3 tablet:p-4 align-middle">
+                            <td className="p-4 align-middle">
                               <div className="flex items-center space-x-2">
                                 <Checkbox 
                                   id={`select-${member.id}`} 
                                   checked={selectedMembers.includes(member.id)}
-                                  onCheckedChange={() => handleSelectMember(member.id)}
-                                  className="touch-target"
+                                  onCheckedChange={(e) => {
+                                    e.stopPropagation();
+                                    handleSelectMember(member.id);
+                                  }}
                                 />
                                 <div className="flex items-center">
                                   <Avatar className="h-8 w-8 tablet:h-10 tablet:w-10 mr-2">
                                     <AvatarImage src={member.image_url} />
                                     <AvatarFallback className="text-xs tablet:text-sm">
-                                      {member.firstName.charAt(0)}{member.lastName.charAt(0)}
+                                      {member.firstname.charAt(0)}{member.lastname.charAt(0)}
                                     </AvatarFallback>
                                   </Avatar>
                                   <div className="min-w-0">
-                                    <span className="tablet:text-base">{member.firstName} {member.lastName}</span>
+                                    <span className="tablet:text-base">{member.firstname} {member.lastname}</span>
                                     <div className="sm:hidden text-xs text-gray-500 truncate">{member.email}</div>
                                   </div>
                                 </div>
                               </div>
                             </td>
-                            <td className="p-3 tablet:p-4 align-middle hidden sm:table-cell tablet:text-base">{member.email}</td>
-                            <td className="p-3 tablet:p-4 align-middle hidden tablet:table-cell tablet:text-base">{formatPhoneNumber(member.phone)}</td>
-                            <td className="p-3 tablet:p-4 align-middle hidden lg:table-cell tablet:text-base">{formatDate(member.joinDate || member.created_at)}</td>
-                            <td className="p-3 tablet:p-4 align-middle">
-                              {member.status === 'active' ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs tablet:text-sm font-medium bg-green-100 text-green-800">
-                                  Active
-                                </span>
-                              ) : member.status === 'visitor' ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs tablet:text-sm font-medium bg-blue-100 text-blue-800">
-                                  Visitor
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs tablet:text-sm font-medium bg-gray-100 text-gray-800">
-                                  Inactive
-                                </span>
-                              )}
+                            <td className="p-4 align-middle">{member.email}</td>
+                            <td className="p-4 align-middle">{member.phone}</td>
+                            <td className="p-4 align-middle">{format(new Date(member.joinDate || member.created_at), 'MMM d, yyyy')}</td>
+                            <td className="p-4 align-middle">
+                              <Badge variant={member.status === 'active' ? 'default' : 'secondary'}>
+                                {member.status}
+                              </Badge>
                             </td>
-
+                            <td className="p-4 align-middle text-right">
+                              <div className="flex justify-end space-x-1">
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-8 w-8"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedMember(member);
+                                    setIsEditDialogOpen(true);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </td>
                           </tr>
                         ))
                       ) : (
@@ -678,7 +686,8 @@ export function People() {
               email: '',
               phone: '',
               status: 'active',
-              image_url: ''
+              image_url: '',
+              gender: 'male'
             }}
             onSave={async (memberData) => {
               try {
@@ -688,7 +697,8 @@ export function People() {
                   email: memberData.email,
                   phone: memberData.phone,
                   status: memberData.status,
-                  image_url: memberData.image_url
+                  image_url: memberData.image_url,
+                  gender: memberData.gender
                 });
                 setMembers(prev => [addedMember, ...prev]);
                 setIsAddDialogOpen(false);
@@ -727,7 +737,8 @@ export function People() {
                 email: selectedMember.email,
                 phone: selectedMember.phone,
                 status: selectedMember.status,
-                image_url: selectedMember.image_url
+                image_url: selectedMember.image_url,
+                gender: selectedMember.gender
               }}
               onSave={async (memberData) => {
                 try {
@@ -737,7 +748,8 @@ export function People() {
                     email: memberData.email,
                     phone: memberData.phone,
                     status: memberData.status,
-                    image_url: memberData.image_url
+                    image_url: memberData.image_url,
+                    gender: memberData.gender
                   });
                   setMembers(prev => prev.map(m => m.id === updatedMember.id ? updatedMember : m));
                   setIsEditDialogOpen(false);

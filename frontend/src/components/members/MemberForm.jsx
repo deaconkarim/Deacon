@@ -35,7 +35,8 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
     email: initialData.email || '',
     phone: initialData.phone || '',
     status: initialData.status || 'active',
-    image_url: initialData.image_url || ''
+    image_url: initialData.image_url || '',
+    gender: initialData.gender || 'male'
   });
   const [isUploading, setIsUploading] = useState(false);
   const [crop, setCrop] = useState();
@@ -257,6 +258,22 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
               required
             />
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="gender">Gender</Label>
+          <Select
+            value={memberData.gender}
+            onValueChange={(value) => setMemberData(prev => ({ ...prev, gender: value }))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select gender" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="male">Male</SelectItem>
+              <SelectItem value="female">Female</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="grid grid-cols-2 gap-4">

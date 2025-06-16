@@ -16,10 +16,14 @@ import {
   ExternalLink,
   CheckCircle,
   Utensils,
-  Users
+  Users,
+  Calendar,
+  Clock,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabaseClient';
@@ -34,7 +38,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Calendar } from "@/components/ui/calendar";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -118,9 +122,6 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete }) => {
             <Button variant="ghost" size="sm" onClick={() => onEdit(event)}>
               <Pencil className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => onDelete(event)}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
           </div>
         </div>
       </CardHeader>
@@ -193,9 +194,10 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete }) => {
   );
 };
 
-export function Events() {
+export default function Events() {
   const { toast } = useToast();
   const { user } = useAuth();
+
   const [events, setEvents] = useState([]);
   const [filteredEvents, setFilteredEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -249,153 +251,69 @@ export function Events() {
     { value: '11', label: 'November' },
     { value: '12', label: 'December' }
   ]);
+  const [newEvent, setNewEvent] = useState({
+    title: '',
+    description: '',
+    start_time: '',
+    end_time: '',
+    location: '',
+    attendance_type: 'rsvp'
+  });
 
   const fetchEvents = useCallback(async () => {
     try {
       setIsLoading(true);
-      
-      const { data: eventsData, error: eventsError } = await supabase
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const { data, error } = await supabase
         .from('events')
-        .select('*')
+        .select('*, event_attendance(*)')
+        .gte('start_date', today.toISOString())
         .order('start_date', { ascending: true });
 
-      if (eventsError) throw eventsError;
+      if (error) throw error;
 
-      // Get all event attendance records
-      const { data: attendanceData, error: attendanceError } = await supabase
-        .from('event_attendance')
-        .select('*');
-
-      if (attendanceError) throw attendanceError;
-
-      // Group events by their parent event ID
-      const eventGroups = eventsData.reduce((groups, event) => {
-        const key = event.parent_event_id || event.id;
-        if (!groups[key]) {
-          groups[key] = [];
-        }
-        groups[key].push(event);
-        return groups;
-      }, {});
-
-      // Process events and calculate attendance
-      const processedEvents = Object.values(eventGroups).map(group => {
-        // Sort all instances by date
-        const sortedInstances = group.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
-        
-        // If it's not a recurring event, return it as is
-        if (!group[0].is_recurring) {
-          const attendance = attendanceData.filter(
-            record => record.event_id === group[0].id && 
-            (record.status === 'attending' || record.status === 'checked-in')
-          ).length;
-
-          return {
-            ...group[0],
-            attendance
-          };
-        }
-
-        // For recurring events, find the next occurrence
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        // Find the next occurrence that is today or in the future
-        const nextInstance = sortedInstances.find(instance => {
-          const instanceDate = new Date(instance.start_date);
-          instanceDate.setHours(0, 0, 0, 0);
-          return instanceDate >= today;
-        });
-
-        // If no future instance found, calculate the next one
-        if (!nextInstance) {
-          const lastInstance = sortedInstances[sortedInstances.length - 1];
-          const nextDate = new Date(lastInstance.start_date);
-          const duration = new Date(lastInstance.end_date) - nextDate;
-          
-          // Calculate next occurrence based on recurrence pattern
-          switch (lastInstance.recurrence_pattern) {
-            case 'daily':
-              nextDate.setDate(nextDate.getDate() + 1);
-              break;
-            case 'weekly':
-              nextDate.setDate(nextDate.getDate() + 7);
-              break;
-            case 'biweekly':
-              nextDate.setDate(nextDate.getDate() + 14);
-              break;
-            case 'monthly':
-              nextDate.setMonth(nextDate.getMonth() + 1);
-              break;
-            case 'monthly_weekday':
-              // Get the next month
-              nextDate.setMonth(nextDate.getMonth() + 1);
-              // Set to first day of the month
-              nextDate.setDate(1);
-              
-              // Get the target weekday (0-6, where 0 is Sunday)
-              const targetWeekday = parseInt(lastInstance.monthly_weekday);
-              // Get the target week (1-5, where 5 means last week)
-              const targetWeek = parseInt(lastInstance.monthly_week);
-              
-              // Find the target date
-              if (targetWeek === 5) {
-                // For last week, start from the end of the month
-                nextDate.setMonth(nextDate.getMonth() + 1);
-                nextDate.setDate(0); // Last day of the month
-                // Go backwards to find the target weekday
-                while (nextDate.getDay() !== targetWeekday) {
-                  nextDate.setDate(nextDate.getDate() - 1);
-                }
-              } else {
-                // For other weeks, find the first occurrence of the target weekday
-                while (nextDate.getDay() !== targetWeekday) {
-                  nextDate.setDate(nextDate.getDate() + 1);
-                }
-                // Add weeks to get to the target week
-                nextDate.setDate(nextDate.getDate() + (targetWeek - 1) * 7);
-              }
-              break;
-            default:
-              return null; // Skip unknown patterns
-          }
-
-          const nextEndDate = new Date(nextDate.getTime() + duration);
-          
-          const attendance = attendanceData.filter(
-            record => record.event_id === lastInstance.id && 
-            (record.status === 'attending' || record.status === 'checked-in')
-          ).length;
-
-          return {
-            ...lastInstance,
-            id: `${lastInstance.id}-${nextDate.toISOString()}`,
-            start_date: nextDate.toISOString(),
-            end_date: nextEndDate.toISOString(),
-            attendance
-          };
-        }
-
-        // Return the next instance
-        const attendance = attendanceData.filter(
-          record => record.event_id === nextInstance.id && 
-          (record.status === 'attending' || record.status === 'checked-in')
-        ).length;
-
-        return {
-          ...nextInstance,
-          attendance
+      // Process events to only show next instance of recurring events and add attendance count
+      const processedEvents = data.reduce((acc, event) => {
+        // Add attendance count to the event
+        const eventWithAttendance = {
+          ...event,
+          attendance: event.event_attendance?.length || 0
         };
-      }).filter(Boolean); // Remove any null entries
+
+        // If it's not a recurring event, add it
+        if (!event.recurrence_pattern) {
+          acc.push(eventWithAttendance);
+          return acc;
+        }
+
+        // For recurring events, check if we already have an instance of this event
+        const existingEvent = acc.find(e => 
+          e.title === event.title && 
+          e.recurrence_pattern === event.recurrence_pattern
+        );
+
+        if (existingEvent) {
+          // If we already have an instance, only keep the earlier one
+          if (new Date(event.start_date) < new Date(existingEvent.start_date)) {
+            acc = acc.filter(e => e.id !== existingEvent.id);
+            acc.push(eventWithAttendance);
+          }
+        } else {
+          acc.push(eventWithAttendance);
+        }
+        return acc;
+      }, []);
 
       setEvents(processedEvents);
       setFilteredEvents(processedEvents);
     } catch (error) {
       console.error('Error fetching events:', error);
       toast({
-        title: "Error",
-        description: "Failed to fetch events",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to load events',
+        variant: 'destructive'
       });
     } finally {
       setIsLoading(false);
@@ -406,22 +324,11 @@ export function Events() {
   useEffect(() => {
     let filtered = [...events];
 
-    // Filter out past events
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    filtered = events.filter(event => {
-      const eventDate = new Date(event.start_date);
-      eventDate.setHours(0, 0, 0, 0);
-      return eventDate >= today;
-    });
-
     // Apply search filter
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(event => 
-        event.title.toLowerCase().includes(query) ||
-        (event.location && event.location.toLowerCase().includes(query))
+      filtered = filtered.filter(event =>
+        event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        event.location?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
@@ -431,17 +338,19 @@ export function Events() {
         if (attendanceFilter === 'attending') {
           return event.attendance > 0;
         } else if (attendanceFilter === 'not_attending') {
-          return event.attendance === 0;
+          return !event.attendance || event.attendance === 0;
         }
         return true;
       });
     }
 
-    // Sort events by date
-    filtered.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
-
     setFilteredEvents(filtered);
   }, [events, searchQuery, attendanceFilter]);
+
+  // Initial fetch
+  useEffect(() => {
+    fetchEvents();
+  }, [fetchEvents]);
 
   const generateNextInstance = (event) => {
     if (!event.is_recurring) return null;
@@ -990,40 +899,78 @@ export function Events() {
     }
   };
 
-  const handleEditEvent = async (eventData) => {
+  const handleEditEvent = async (event) => {
     try {
-      // For recurring events, we need to handle the master event ID
-      const eventId = editingEvent.master_id || editingEvent.id;
-      
-      const updates = {
-        ...eventData,
-        startDate: new Date(eventData.startDate).toISOString(),
-        endDate: new Date(eventData.endDate).toISOString()
-      };
-
-      await updateEvent(eventId, updates);
-      setIsEditEventOpen(false);
-      setEditingEvent(null);
-      fetchEvents();
-      toast({
-        title: "Success",
-        description: "Event updated successfully."
+      setEditingEvent(event);
+      setNewEvent({
+        title: event.title,
+        description: event.description || '',
+        start_time: event.start_date,
+        end_time: event.end_date,
+        location: event.location || '',
+        attendance_type: event.attendance_type || 'rsvp'
       });
+      setIsCreateEventOpen(true);
     } catch (error) {
       console.error('Error updating event:', error);
       toast({
+        variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to update event. Please try again.",
-        variant: "destructive"
+        description: "Failed to update event. Please try again."
       });
     }
   };
 
-  const handleDeleteEvent = async (event) => {
+  const handleViewAttendance = async (event) => {
+    try {
+      setSelectedEvent(event);
+      setIsMemberDialogOpen(true);
+      
+      // First get all members who have already RSVP'd/checked in
+      const { data: attendingMembers, error: attendanceError } = await supabase
+        .from('event_attendance')
+        .select(`
+          member_id,
+          members (
+            id,
+            firstname,
+            lastname,
+            email,
+            image_url
+          )
+        `)
+        .eq('event_id', event.id);
+
+      if (attendanceError) throw attendanceError;
+      
+      // Get the IDs of members who have already RSVP'd/checked in
+      const attendingMemberIds = attendingMembers?.map(a => a.member_id) || [];
+      
+      // Then get all members who haven't RSVP'd/checked in
+      const { data: availableMembers, error: membersError } = await supabase
+        .from('members')
+        .select('*')
+        .not('id', 'in', `(${attendingMemberIds.join(',')})`);
+
+      if (membersError) throw membersError;
+      
+      setMembers(availableMembers || []);
+      setAlreadyRSVPMembers(attendingMembers?.map(a => a.members) || []);
+    } catch (error) {
+      console.error('Error fetching attendance:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to fetch attendance data. Please try again."
+      });
+    }
+  };
+
+  const handleDeleteEvent = async (eventId) => {
     if (!confirm('Are you sure you want to delete this event?')) return;
     
     try {
-      await deleteEvent(event.id);
+      await deleteEvent(eventId);
       fetchEvents();
       toast({
         title: "Success",
@@ -1224,161 +1171,80 @@ export function Events() {
   };
 
   return (
-    <div className="container mx-auto p-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-4xl font-bold">Events</h1>
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-bold mb-2">Events</h1>
+          <p className="text-gray-600 text-lg">Manage and track event attendance</p>
+        </div>
         <Button
           onClick={() => setIsCreateEventOpen(true)}
-          className="h-14 text-lg px-8"
+          className="w-full md:w-auto h-14 text-lg"
         >
-          <Plus className="mr-2 h-6 w-6" />
-          Create Event
+          Create New Event
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-8">
-        {filteredEvents.map((event) => (
-          <Card key={event.id} className="overflow-hidden">
-            <CardHeader className="p-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="text-2xl mb-2">{event.title}</CardTitle>
-                  <CardDescription className="text-lg">
-                    {format(new Date(event.start_date), 'EEEE, MMMM d, yyyy')}
-                    {event.end_date && (
-                      (() => {
-                        const startDate = new Date(event.start_date);
-                        const endDate = new Date(event.end_date);
-                        const isSameDay = startDate.toDateString() === endDate.toDateString();
-                        
-                        return isSameDay ? (
-                          <> • {format(startDate, 'h:mm a')} - {format(endDate, 'h:mm a')}</>
-                        ) : (
-                          <> - {format(endDate, 'EEEE, MMMM d, yyyy')}</>
-                        );
-                      })()
-                    )}
-                  </CardDescription>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-10 w-10"
-                    onClick={() => handleEditClick(event)}
-                  >
-                    <Pencil className="h-5 w-5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-10 w-10 text-red-500 hover:text-red-700 hover:bg-red-50"
-                    onClick={() => handleDeleteEvent(event)}
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-6">
-              {event.description && (
-                <p className="text-lg text-gray-600 mb-4">{event.description}</p>
-              )}
-              {event.location && (
-                <p className="text-lg text-gray-600 flex items-center gap-2 mb-4">
-                  <MapPin className="h-5 w-5" />
-                  {event.location}
-                </p>
-              )}
-              {event.url && (
-                <a
-                  href={event.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-lg text-blue-600 hover:underline flex items-center gap-2 mb-4"
-                >
-                  <ExternalLink className="h-5 w-5" />
-                  Event Link
-                </a>
-              )}
-              <div className="flex items-center justify-between mt-6">
-                <div className="text-lg text-muted-foreground">
-                  {event.allow_rsvp ? (
-                    `${event.attendance || 0} ${event.attendance === 1 ? 'person' : 'people'} ${event.attendance_type === 'check-in' ? 'checked in' : 'attending'}`
-                  ) : (
-                    <span className="flex items-center gap-2">
-                      <HelpCircle className="h-5 w-5" />
-                      Announcement only
-                    </span>
-                  )}
-                </div>
-                <div className="flex gap-4">
-                  {event.allow_rsvp && (
-                    <div className="flex items-center gap-2">
-                      {event.attendance_type === 'check-in' ? (
-                        <Button
-                          onClick={() => handleOpenDialog(event)}
-                          className="bg-green-600 hover:bg-green-700 h-14 text-lg px-8"
-                        >
-                          <CheckCircle className="mr-2 h-6 w-6" />
-                          Check In
-                        </Button>
-                      ) : event.title.toLowerCase().includes('potluck') ? (
-                        <Button
-                          onClick={() => handlePotluckRSVP(event)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white h-14 text-lg px-8"
-                        >
-                          <Utensils className="mr-2 h-6 w-6" />
-                          Potluck RSVP
-                        </Button>
-                      ) : (
-                        <Button
-                          onClick={() => handleOpenDialog(event)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white h-14 text-lg px-8"
-                        >
-                          <UserPlus className="mr-2 h-6 w-6" />
-                          RSVP
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      {/* Event List */}
+      <div className="space-y-4">
+        {events.map((event) => (
+          <EventCard
+            key={event.id}
+            event={event}
+            onRSVP={handleOpenDialog}
+            onPotluckRSVP={handlePotluckRSVP}
+            onEdit={handleEditClick}
+            onDelete={handleDeleteEvent}
+          />
         ))}
       </div>
 
-      {/* Member Selection Dialog */}
-      <Dialog open={isMemberDialogOpen} onOpenChange={setIsMemberDialogOpen}>
-        <DialogContent className="max-w-full h-screen sm:max-w-full sm:h-screen p-0">
-          <DialogHeader className="p-8 border-b">
-            <div className="flex justify-between items-start">
-              <div>
-                <DialogTitle className="text-3xl">
-                  {selectedEvent?.attendance_type === 'check-in' ? 'Check In People' : 'RSVP Members'} - {selectedEvent?.title}
-                </DialogTitle>
-                <DialogDescription className="text-lg mt-2">
-                  {selectedEvent?.attendance_type === 'check-in'
-                    ? 'Check In People for the event'
-                    : `Select members to RSVP for ${selectedEvent?.title}`}
-                </DialogDescription>
-              </div>
-              {selectedEvent?.attendance_type === 'check-in' && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-sm h-9"
-                  onClick={() => setIsCreateMemberOpen(true)}
-                >
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Create New Person
-                </Button>
-              )}
-            </div>
+      {/* Create/Edit Event Dialog */}
+      <Dialog open={isCreateEventOpen} onOpenChange={setIsCreateEventOpen}>
+        <DialogContent className="w-full max-w-full h-full md:h-auto md:max-w-3xl p-0">
+          <DialogHeader className="p-3 md:p-6 border-b">
+            <DialogTitle className="text-2xl md:text-3xl">
+              {editingEvent ? 'Edit Event' : 'Create New Event'}
+            </DialogTitle>
           </DialogHeader>
 
-          <div className="p-8">
+          <div className="p-3 md:p-6">
+            <EventForm
+              initialData={{
+                title: '',
+                description: '',
+                startDate: '',
+                endDate: '',
+                location: '',
+                url: '',
+                is_recurring: false,
+                recurrence_pattern: '',
+                allow_rsvp: true,
+                attendance_type: 'rsvp',
+                event_type: 'Sunday Worship Service'
+              }}
+              onSave={handleCreateEvent}
+              onCancel={() => setIsCreateEventOpen(false)}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Member Selection Dialog */}
+      <Dialog open={isMemberDialogOpen} onOpenChange={setIsMemberDialogOpen}>
+        <DialogContent className="w-full max-w-full h-full md:h-auto md:max-w-3xl p-0">
+          <DialogHeader className="p-3 md:p-6 border-b">
+            <DialogTitle className="text-2xl md:text-3xl">
+              {selectedEvent?.attendance_type === 'check-in' ? 'Check In People' : 'RSVP Members'} - {selectedEvent?.title}
+            </DialogTitle>
+            <DialogDescription className="text-lg mt-2">
+              {selectedEvent?.attendance_type === 'check-in'
+                ? 'Check In People for the event'
+                : `Select members to RSVP for ${selectedEvent?.title}`}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="p-3 md:p-6">
             <Tabs defaultValue="available" className="w-full">
               <TabsList className="grid w-full grid-cols-2 h-14">
                 <TabsTrigger value="available" className="text-lg">Available People</TabsTrigger>
@@ -1387,9 +1253,9 @@ export function Events() {
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="available" className="mt-8">
-                <div className="space-y-6">
-                  <div className="mb-6">
+              <TabsContent value="available" className="mt-4 md:mt-8">
+                <div className="space-y-4 md:space-y-6">
+                  <div className="mb-4 md:mb-6">
                     <Input
                       placeholder="Search people..."
                       value={memberSearchQuery}
@@ -1397,96 +1263,68 @@ export function Events() {
                       className="w-full h-14 text-lg"
                     />
                   </div>
-                  <div className="space-y-4 max-h-[calc(100vh-400px)] overflow-y-auto">
-                    {members
-                      .filter(member => 
-                        member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
-                        member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase())
-                      )
-                      .map((member) => (
-                        <div
-                          key={member.id}
-                          className="flex items-center space-x-4 p-4 rounded-lg cursor-pointer hover:bg-gray-100 text-lg"
-                          onClick={async () => {
-                            try {
-                              // Add member to event attendance
-                              const { error } = await supabase
-                                .from('event_attendance')
-                                .insert({
-                                  event_id: selectedEvent.id,
-                                  member_id: member.id,
-                                  status: 'attending'
-                                });
-
-                              if (error) throw error;
-
-                              // Move member to Already RSVP'd list
-                              setAlreadyRSVPMembers(prev => [...prev, member]);
-                              
-                              // Remove member from Available People list
-                              setMembers(prev => prev.filter(m => m.id !== member.id));
-
-                              toast({
-                                title: "Success",
-                                description: selectedEvent?.attendance_type === 'check-in'
-                                  ? `${member.firstname} ${member.lastname} has been checked in`
-                                  : `${member.firstname} ${member.lastname} has been added`
-                              });
-                            } catch (error) {
-                              console.error('Error adding member:', error);
-                              toast({
-                                variant: "destructive",
-                                title: "Error",
-                                description: selectedEvent?.attendance_type === 'check-in'
-                                  ? "Failed to check in member. Please try again."
-                                  : "Failed to add member. Please try again."
-                              });
-                            }
-                          }}
-                        >
-                          <Avatar className="h-12 w-12">
-                            <AvatarImage src={member.image_url} />
-                            <AvatarFallback>
-                              {member.firstname?.charAt(0)}{member.lastname?.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="flex-1">
+                  <div className="space-y-2">
+                    {filteredMembers.map((member) => (
+                      <div
+                        key={member.id}
+                        className="flex items-center space-x-4 p-3 md:p-4 rounded-lg border cursor-pointer hover:bg-gray-50"
+                        onClick={() => handleMemberClick(member)}
+                      >
+                        <Avatar className="h-12 w-12 md:h-16 md:w-16">
+                          <AvatarImage src={member.image_url} />
+                          <AvatarFallback className="text-lg md:text-xl">
+                            {getInitials(member.firstname, member.lastname)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="text-lg md:text-xl font-medium">
                             {member.firstname} {member.lastname}
-                          </span>
+                          </p>
+                          {member.email && (
+                            <p className="text-base md:text-lg text-gray-600">{member.email}</p>
+                          )}
                         </div>
-                      ))}
+                      </div>
+                    ))}
                   </div>
                 </div>
               </TabsContent>
 
-              <TabsContent value="checked-in" className="mt-8">
-                <div className="space-y-4 max-h-[calc(100vh-400px)] overflow-y-auto">
+              <TabsContent value="checked-in" className="mt-4 md:mt-8">
+                <div className="space-y-2">
                   {alreadyRSVPMembers.map((member) => (
                     <div
                       key={member.id}
-                      className="flex items-center space-x-4 p-4 rounded-lg bg-gray-50 text-lg"
+                      className="flex items-center justify-between p-3 md:p-4 rounded-lg border"
                     >
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={member.image_url} />
-                        <AvatarFallback>
-                          {member.firstname?.charAt(0)}{member.lastname?.charAt(0)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="flex-1">
-                        {member.firstname} {member.lastname}
-                      </span>
+                      <div className="flex items-center space-x-4">
+                        <Avatar className="h-12 w-12 md:h-16 md:w-16">
+                          <AvatarImage src={member.image_url} />
+                          <AvatarFallback className="text-lg md:text-xl">
+                            {getInitials(member.firstname, member.lastname)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="text-lg md:text-xl font-medium">
+                            {member.firstname} {member.lastname}
+                          </p>
+                          {member.email && (
+                            <p className="text-base md:text-lg text-gray-600">{member.email}</p>
+                          )}
+                        </div>
+                      </div>
                       <Button
                         variant="ghost"
-                        size="icon"
-                        className="h-10 w-10 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        size="lg"
                         onClick={() => handleRemoveMember(member.id)}
+                        className="h-12 w-12 md:h-14 md:w-14 p-0"
                       >
-                        <XCircle className="h-6 w-6" />
+                        <X className="h-6 w-6" />
                       </Button>
                     </div>
                   ))}
                   {alreadyRSVPMembers.length === 0 && (
-                    <p className="text-lg text-gray-500 italic">
+                    <p className="text-base md:text-lg text-gray-500 italic p-4">
                       {selectedEvent?.attendance_type === 'check-in'
                         ? 'No members have checked in yet'
                         : "No members have RSVP'd yet"}
@@ -1497,11 +1335,13 @@ export function Events() {
             </Tabs>
           </div>
 
-          <DialogFooter className="p-8 border-t">
+          <DialogFooter className="p-3 md:p-6 border-t">
             <Button
               variant={selectedEvent?.attendance_type === 'check-in' ? 'default' : 'outline'}
               onClick={handleCloseDialog}
-              className={`text-lg h-14 ${selectedEvent?.attendance_type === 'check-in' ? 'bg-green-600 hover:bg-green-700' : ''}`}
+              className={`w-full md:w-auto text-lg h-14 ${
+                selectedEvent?.attendance_type === 'check-in' ? 'bg-green-600 hover:bg-green-700' : ''
+              }`}
             >
               Close
             </Button>
@@ -1511,106 +1351,83 @@ export function Events() {
 
       {/* Create New Member Dialog */}
       <Dialog open={isCreateMemberOpen} onOpenChange={setIsCreateMemberOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Create New Person</DialogTitle>
-            <DialogDescription>
-              Add a new person and automatically RSVP them to this event.
+        <DialogContent className="w-full max-w-full h-full md:h-auto md:max-w-3xl p-0">
+          <DialogHeader className="p-3 md:p-6 border-b">
+            <DialogTitle className="text-2xl md:text-3xl">Create New Person</DialogTitle>
+            <DialogDescription className="text-lg mt-2">
+              Add a new person and automatically {selectedEvent?.attendance_type === 'check-in' ? 'check them in' : 'RSVP them'} to this event.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="firstname">First Name *</Label>
-                <Input
-                  id="firstname"
-                  value={newMember.firstname}
-                  onChange={(e) => setNewMember({...newMember, firstname: e.target.value})}
-                  required
-                />
+
+          <div className="p-3 md:p-6">
+            <form onSubmit={handleCreateMember} className="space-y-4 md:space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="firstname" className="text-lg">First Name</Label>
+                  <Input
+                    id="firstname"
+                    name="firstname"
+                    value={newMember.firstname}
+                    onChange={(e) => setNewMember({...newMember, firstname: e.target.value})}
+                    className="h-14 text-lg"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastname" className="text-lg">Last Name</Label>
+                  <Input
+                    id="lastname"
+                    name="lastname"
+                    value={newMember.lastname}
+                    onChange={(e) => setNewMember({...newMember, lastname: e.target.value})}
+                    className="h-14 text-lg"
+                    required
+                  />
+                </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="lastname">Last Name *</Label>
-                <Input
-                  id="lastname"
-                  value={newMember.lastname}
-                  onChange={(e) => setNewMember({...newMember, lastname: e.target.value})}
-                  required
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-lg">Email</Label>
                 <Input
                   id="email"
+                  name="email"
                   type="email"
                   value={newMember.email}
                   onChange={(e) => setNewMember({...newMember, email: e.target.value})}
+                  className="h-14 text-lg"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
+                <Label htmlFor="phone" className="text-lg">Phone</Label>
                 <Input
                   id="phone"
-                  type="tel"
+                  name="phone"
                   value={newMember.phone}
                   onChange={(e) => setNewMember({...newMember, phone: e.target.value})}
+                  className="h-14 text-lg"
                 />
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select
-                value={newMember.status}
-                onValueChange={(value) => setNewMember({...newMember, status: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="visitor">Visitor</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="notes" className="text-lg">Notes</Label>
+                <Textarea
+                  id="notes"
+                  name="notes"
+                  value={newMember.notes}
+                  onChange={(e) => setNewMember({...newMember, notes: e.target.value})}
+                  className="h-32 text-lg"
+                />
+              </div>
+            </form>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateMemberOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateMember}>
-              Create & RSVP
+
+          <DialogFooter className="p-3 md:p-6 border-t">
+            <Button
+              type="submit"
+              onClick={handleCreateMember}
+              className="w-full md:w-auto text-lg h-14"
+            >
+              Create and {selectedEvent?.attendance_type === 'check-in' ? 'Check In' : 'RSVP'}
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Create Event Dialog */}
-      <Dialog open={isCreateEventOpen} onOpenChange={setIsCreateEventOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Create New Event</DialogTitle>
-            <DialogDescription>
-              Add a new event to the calendar.
-            </DialogDescription>
-          </DialogHeader>
-          <EventForm
-            initialData={{
-              title: '',
-              description: '',
-              startDate: '',
-              endDate: '',
-              location: '',
-              url: '',
-              is_recurring: false,
-              recurrence_pattern: '',
-              allow_rsvp: true
-            }}
-            onSave={handleCreateEvent}
-            onCancel={() => setIsCreateEventOpen(false)}
-          />
         </DialogContent>
       </Dialog>
 
@@ -1635,7 +1452,8 @@ export function Events() {
                   ...editingEvent,
                   startDate: new Date(editingEvent.start_date).toISOString().slice(0, 16),
                   endDate: new Date(editingEvent.end_date).toISOString().slice(0, 16),
-                  allow_rsvp: editingEvent.allow_rsvp !== undefined ? editingEvent.allow_rsvp : true
+                  allow_rsvp: editingEvent.allow_rsvp !== undefined ? editingEvent.allow_rsvp : true,
+                  event_type: 'Sunday Worship Service'
                 }}
                 onSave={handleEditEvent}
                 onCancel={() => {

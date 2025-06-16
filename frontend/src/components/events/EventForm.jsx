@@ -23,7 +23,8 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
     monthly_week: initialData.monthly_week || '',
     monthly_weekday: initialData.monthly_weekday || '',
     allow_rsvp: initialData.allow_rsvp !== undefined ? initialData.allow_rsvp : true,
-    attendance_type: initialData.attendance_type || 'rsvp'
+    attendance_type: initialData.attendance_type || 'rsvp',
+    event_type: initialData.event_type || 'Sunday Worship Service'
   });
   const { toast } = useToast();
 
@@ -43,7 +44,8 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
       monthly_week: initialData.monthly_week || '',
       monthly_weekday: initialData.monthly_weekday || '',
       allow_rsvp: initialData.allow_rsvp !== undefined ? initialData.allow_rsvp : true,
-      attendance_type: initialData.attendance_type || 'rsvp'
+      attendance_type: initialData.attendance_type || 'rsvp',
+      event_type: initialData.event_type || 'Sunday Worship Service'
     });
   }, [initialData]);
 
@@ -119,6 +121,23 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
       <div className="space-y-2">
         <Label htmlFor="description">Description</Label>
         <Input id="description" name="description" value={eventData.description} onChange={handleFormChange} />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="event_type">Event Type</Label>
+        <Select
+          value={eventData.event_type}
+          onValueChange={(value) => handleSelectChange('event_type', value)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select event type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Sunday Worship Service">Sunday Worship Service</SelectItem>
+            <SelectItem value="Bible Study">Bible Study</SelectItem>
+            <SelectItem value="Work Day">Work Day</SelectItem>
+            <SelectItem value="Fellowship Activity">Fellowship Activity</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">

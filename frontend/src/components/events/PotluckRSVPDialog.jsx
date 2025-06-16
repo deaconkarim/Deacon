@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getInitials } from '@/lib/utils/formatters';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
 export function PotluckRSVPDialog({ isOpen, onClose, event, onRSVP }) {
@@ -140,7 +140,8 @@ export function PotluckRSVPDialog({ isOpen, onClose, event, onRSVP }) {
     }
 
     try {
-      const { error } = await supabase
+      // Create or update the potluck RSVP
+      const { error: rsvpError } = await supabase
         .from('potluck_rsvps')
         .upsert({
           id: existingRSVP?.id,
@@ -150,7 +151,18 @@ export function PotluckRSVPDialog({ isOpen, onClose, event, onRSVP }) {
           dish_description: dishDescription
         });
 
-      if (error) throw error;
+      if (rsvpError) throw rsvpError;
+
+      // Create or update the event attendance
+      const { error: attendanceError } = await supabase
+        .from('event_attendance')
+        .upsert({
+          event_id: event.id,
+          member_id: selectedMemberId,
+          status: 'attending'
+        });
+
+      if (attendanceError) throw attendanceError;
 
       // Refresh the RSVPs list
       const { data: updatedRSVPs, error: fetchError } = await supabase
@@ -180,6 +192,7 @@ export function PotluckRSVPDialog({ isOpen, onClose, event, onRSVP }) {
       onRSVP();
       onClose();
     } catch (error) {
+      console.error('Error submitting RSVP:', error);
       toast({
         title: 'Error',
         description: 'Failed to submit RSVP. Please try again.',
@@ -230,6 +243,68 @@ export function PotluckRSVPDialog({ isOpen, onClose, event, onRSVP }) {
       toast({
         title: 'Error',
         description: 'Failed to create new person',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteRSVP = async (rsvpId) => {
+    try {
+      // Get the RSVP details first to get the member_id
+      const { data: rsvp, error: fetchError } = await supabase
+        .from('potluck_rsvps')
+        .select('member_id')
+        .eq('id', rsvpId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Delete the event attendance record
+      const { error: attendanceError } = await supabase
+        .from('event_attendance')
+        .delete()
+        .eq('event_id', event.id)
+        .eq('member_id', rsvp.member_id);
+
+      if (attendanceError) throw attendanceError;
+
+      // Delete the potluck RSVP
+      const { error: rsvpError } = await supabase
+        .from('potluck_rsvps')
+        .delete()
+        .eq('id', rsvpId);
+
+      if (rsvpError) throw rsvpError;
+
+      // Refresh the RSVPs list
+      const { data: updatedRSVPs, error: listError } = await supabase
+        .from('potluck_rsvps')
+        .select(`
+          *,
+          members (
+            id,
+            firstname,
+            lastname,
+            image_url
+          )
+        `)
+        .eq('event_id', event.id);
+
+      if (listError) throw listError;
+      setCurrentRSVPs(updatedRSVPs || []);
+
+      toast({
+        title: 'RSVP Deleted',
+        description: 'The potluck RSVP has been removed.',
+      });
+
+      // Call onRSVP to refresh the parent component's event data
+      onRSVP();
+    } catch (error) {
+      console.error('Error deleting RSVP:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete RSVP. Please try again.',
         variant: 'destructive',
       });
     }
@@ -334,8 +409,6 @@ export function PotluckRSVPDialog({ isOpen, onClose, event, onRSVP }) {
                       <SelectItem value="main" className="text-lg">Main Dish</SelectItem>
                       <SelectItem value="side" className="text-lg">Side Dish</SelectItem>
                       <SelectItem value="dessert" className="text-lg">Dessert</SelectItem>
-                      <SelectItem value="drink" className="text-lg">Drink</SelectItem>
-                      <SelectItem value="other" className="text-lg">Other</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -373,6 +446,14 @@ export function PotluckRSVPDialog({ isOpen, onClose, event, onRSVP }) {
                           {rsvp.dish_description && ` - ${rsvp.dish_description}`}
                         </div>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => handleDeleteRSVP(rsvp.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   ))
                 )}

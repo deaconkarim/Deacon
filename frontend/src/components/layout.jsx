@@ -34,7 +34,6 @@ export function Layout() {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Events', href: '/events', icon: Calendar },
-    { name: 'Church Check-In', href: '/worship-check-in', icon: Church },
     { name: 'Children Check-In', href: '/children-check-in', icon: Baby },
     { name: 'People', href: '/members', icon: Users },
     { name: 'Donations', href: '/donations', icon: DollarSign },

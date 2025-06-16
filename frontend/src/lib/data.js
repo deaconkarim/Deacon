@@ -117,7 +117,8 @@ export const updateMember = async (id, memberData) => {
         email: memberData.email,
         phone: memberData.phone,
         status: memberData.status,
-        image_url: memberData.image_url
+        image_url: memberData.image_url,
+        gender: memberData.gender
       })
       .eq('id', id)
       .select()
@@ -266,6 +267,7 @@ export const addEvent = async (event) => {
       monthly_weekday: event.recurrence_pattern === 'monthly_weekday' ? safeParseInt(event.monthly_weekday) : null,
       allow_rsvp: event.allow_rsvp !== undefined ? event.allow_rsvp : true,
       attendance_type: event.attendance_type || 'rsvp',
+      event_type: event.event_type || 'Sunday Worship Service',
       parent_event_id: null // Will be set for instances
     };
 
