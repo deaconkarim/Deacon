@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Outlet, NavLink, useLocation } from 'react-router-dom';
+import { Outlet, NavLink, useLocation, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   Home, 
@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/lib/authContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +31,7 @@ import {
 export function Layout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
+  const { user, currentOrganization, loading, isAdmin } = useAuth();
   
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
@@ -41,16 +43,56 @@ export function Layout() {
     { name: 'Tasks', href: '/tasks', icon: ClipboardList },
     { name: 'Reports', href: '/reports', icon: BarChart2 },
     { name: 'Bulletin', href: '/bulletin', icon: FileText },
-    { name: 'Settings', href: '/settings', icon: SettingsIcon },
+    { name: 'Settings', href: '/settings', icon: SettingsIcon, adminOnly: true },
   ];
 
-  const mainNavItems = navigation.slice(0, 5); // Show 5 main items on tablet
-  const moreNavItems = navigation.slice(5);
+  // Filter navigation based on user role
+  const filteredNavigation = navigation.filter(item => 
+    !item.adminOnly || isAdmin
+  );
+
+  const mainNavItems = filteredNavigation.slice(0, 5); // Show 5 main items on tablet
+  const moreNavItems = filteredNavigation.slice(5);
   
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect to login if not authenticated
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Show organization selection if no organization is selected
+  if (!currentOrganization) {
+    return <Navigate to="/login" replace />;
+  }
   
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Header with Organization Switcher */}
+      <header className="bg-white border-b shadow-sm sticky top-0 z-40">
+        <div className="max-w-screen-xl mx-auto px-4">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-4">
+              <h1 className="text-xl font-semibold text-gray-900">
+                {currentOrganization.name}
+              </h1>
+            </div>
+          </div>
+        </div>
+      </header>
+
       <div className="flex-1 pb-20 tablet:pb-16 lg:pb-0">
         <main className="p-4 sm:p-6 tablet:p-8 pb-24 tablet:pb-20 lg:pb-6">
           <Outlet />
@@ -87,7 +129,7 @@ export function Layout() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                {navigation.slice(4).map((item) => (
+                {filteredNavigation.slice(4).map((item) => (
                   <DropdownMenuItem key={item.name} asChild>
                     <NavLink
                       to={item.href}
@@ -161,7 +203,7 @@ export function Layout() {
       <nav className="hidden lg:block border-t">
         <div className="max-w-screen-xl mx-auto px-4">
           <div className="flex justify-around items-center h-16">
-            {navigation.map((item) => {
+            {filteredNavigation.map((item) => {
               const isActive = location.pathname === item.href;
               return (
                 <NavLink
@@ -186,7 +228,9 @@ export function Layout() {
       {/* Footer */}
       <footer className="py-4 px-6 border-t mt-16 tablet:mt-20 lg:mt-0">
         <div className="flex flex-col sm:flex-row justify-between items-center">
-          <p className="text-sm text-gray-500">© 2025 Brentwood Lighthouse Baptist Church</p>
+          <p className="text-sm text-gray-500">
+            © 2025 {currentOrganization.name}. All rights reserved.
+          </p>
         </div>
       </footer>
     </div>

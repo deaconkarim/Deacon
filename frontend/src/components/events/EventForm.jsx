@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
+import { X } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 
 const EventForm = ({ initialData, onSave, onCancel }) => {
   const [eventData, setEventData] = useState({
@@ -24,7 +27,9 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
     monthly_weekday: initialData.monthly_weekday || '',
     allow_rsvp: initialData.allow_rsvp !== undefined ? initialData.allow_rsvp : true,
     attendance_type: initialData.attendance_type || 'rsvp',
-    event_type: initialData.event_type || 'Sunday Worship Service'
+    event_type: initialData.event_type || 'Sunday Worship Service',
+    needs_volunteers: initialData.needs_volunteers || false,
+    volunteer_roles: initialData.volunteer_roles || []
   });
   const { toast } = useToast();
 
@@ -45,7 +50,9 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
       monthly_weekday: initialData.monthly_weekday || '',
       allow_rsvp: initialData.allow_rsvp !== undefined ? initialData.allow_rsvp : true,
       attendance_type: initialData.attendance_type || 'rsvp',
-      event_type: initialData.event_type || 'Sunday Worship Service'
+      event_type: initialData.event_type || 'Sunday Worship Service',
+      needs_volunteers: initialData.needs_volunteers || false,
+      volunteer_roles: initialData.volunteer_roles || []
     });
   }, [initialData]);
 
@@ -79,10 +86,48 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
     }));
   };
 
+  const handleAllowRSVPChange = (checked) => {
+    setEventData(prev => ({
+      ...prev,
+      allow_rsvp: checked
+    }));
+  };
+
   const handleRecurrencePatternChange = (value) => {
     setEventData(prev => ({
       ...prev,
       recurrence_pattern: value
+    }));
+  };
+
+  const handleNeedsVolunteersChange = (checked) => {
+    setEventData(prev => ({
+      ...prev,
+      needs_volunteers: checked,
+      volunteer_roles: checked ? prev.volunteer_roles : []
+    }));
+  };
+
+  const handleAddVolunteerRole = () => {
+    setEventData(prev => ({
+      ...prev,
+      volunteer_roles: [...prev.volunteer_roles, { role: '', description: '' }]
+    }));
+  };
+
+  const handleRemoveVolunteerRole = (index) => {
+    setEventData(prev => ({
+      ...prev,
+      volunteer_roles: prev.volunteer_roles.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleVolunteerRoleChange = (index, field, value) => {
+    setEventData(prev => ({
+      ...prev,
+      volunteer_roles: prev.volunteer_roles.map((role, i) => 
+        i === index ? { ...role, [field]: value } : role
+      )
     }));
   };
 
@@ -93,9 +138,15 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
       return;
     }
 
-    // Convert local datetime to ISO string
-    const startDate = new Date(eventData.startDate);
-    const endDate = new Date(eventData.endDate);
+    // Get the date and time parts
+    const startDateStr = eventData.startDate.split('T')[0];
+    const endDateStr = eventData.endDate.split('T')[0];
+    const startTime = eventData.startTime || '09:00';
+    const endTime = eventData.endTime || '10:00';
+
+    // Create Date objects with combined date and time
+    const startDate = new Date(`${startDateStr}T${startTime}`);
+    const endDate = new Date(`${endDateStr}T${endTime}`);
 
     if (isAfter(startDate, endDate)) {
       toast({ title: "Invalid Dates", description: "End date must be after start date.", variant: "destructive" });
@@ -105,15 +156,28 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
     // Format dates for submission
     const formattedData = {
       ...eventData,
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString()
+      start_date: startDate.toISOString(),
+      end_date: endDate.toISOString(),
+      title: eventData.title,
+      description: eventData.description,
+      location: eventData.location,
+      url: eventData.url,
+      is_recurring: eventData.is_recurring,
+      recurrence_pattern: eventData.recurrence_pattern,
+      monthly_week: eventData.monthly_week,
+      monthly_weekday: eventData.monthly_weekday,
+      allow_rsvp: eventData.allow_rsvp,
+      attendance_type: eventData.attendance_type,
+      event_type: eventData.event_type,
+      needs_volunteers: eventData.needs_volunteers,
+      volunteer_roles: eventData.volunteer_roles
     };
 
     onSave(formattedData);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+    <form onSubmit={handleSubmit} className="space-y-8">
       <div className="space-y-2">
         <Label htmlFor="title">Event Title *</Label>
         <Input id="title" name="title" value={eventData.title} onChange={handleFormChange} required />
@@ -241,28 +305,29 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
         <Label htmlFor="url">URL</Label>
         <Input id="url" name="url" type="url" value={eventData.url} onChange={handleFormChange} />
       </div>
-      <div className="space-y-2">
+      <div className="space-y-4">
         <div className="flex items-center space-x-2">
           <Checkbox
             id="allow_rsvp"
             checked={eventData.allow_rsvp}
-            onCheckedChange={handleRecurringChange}
+            onCheckedChange={handleAllowRSVPChange}
           />
-          <Label htmlFor="allow_rsvp">Allow RSVP</Label>
+          <Label htmlFor="allow_rsvp" className="text-lg">Allow RSVP</Label>
         </div>
+
         {eventData.allow_rsvp && (
-          <div className="space-y-2">
-            <Label htmlFor="attendance_type">Attendance Type</Label>
+          <div className="space-y-4">
+            <Label htmlFor="attendance_type" className="text-lg">Attendance Type</Label>
             <Select
               value={eventData.attendance_type}
-              onValueChange={(value) => handleSelectChange('attendance_type', value)}
+              onValueChange={(value) => setEventData(prev => ({ ...prev, attendance_type: value }))}
             >
-              <SelectTrigger>
+              <SelectTrigger className="h-14 text-lg">
                 <SelectValue placeholder="Select attendance type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="rsvp">RSVP</SelectItem>
-                <SelectItem value="check-in">Check-in</SelectItem>
+                <SelectItem value="rsvp" className="text-lg">RSVP</SelectItem>
+                <SelectItem value="check-in" className="text-lg">Check-in</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -362,6 +427,72 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
           </p>
         </div>
       )}
+      <div className="space-y-4">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="needs_volunteers"
+            checked={eventData.needs_volunteers}
+            onCheckedChange={handleNeedsVolunteersChange}
+          />
+          <Label htmlFor="needs_volunteers" className="text-lg">Needs Volunteers</Label>
+        </div>
+
+        {eventData.needs_volunteers && (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <Label className="text-lg">Volunteer Roles</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAddVolunteerRole}
+                className="text-sm h-9"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Role
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              {eventData.volunteer_roles.map((role, index) => (
+                <div key={index} className="flex gap-4 items-start">
+                  <div className="flex-1 space-y-4">
+                    <div>
+                      <Label htmlFor={`role-${index}`} className="text-base">Role Title</Label>
+                      <Input
+                        id={`role-${index}`}
+                        value={role.role}
+                        onChange={(e) => handleVolunteerRoleChange(index, 'role', e.target.value)}
+                        placeholder="e.g., Greeter, Usher, etc."
+                        className="h-12 text-lg"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`description-${index}`} className="text-base">Description</Label>
+                      <Textarea
+                        id={`description-${index}`}
+                        value={role.description}
+                        onChange={(e) => handleVolunteerRoleChange(index, 'description', e.target.value)}
+                        placeholder="Describe the responsibilities for this role..."
+                        className="h-24 text-lg"
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRemoveVolunteerRole(index)}
+                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
       <div className="flex justify-end space-x-2 pt-4">
         <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
         <Button type="submit">Save Event</Button>

@@ -16,7 +16,9 @@ import {
   ExternalLink,
   CheckCircle,
   Utensils,
-  Users
+  Users,
+  MoreVertical,
+  Edit
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,6 +46,7 @@ import EventForm from '@/components/events/EventForm';
 import { addEvent, updateEvent, deleteEvent } from '@/lib/data';
 import { getInitials } from '@/lib/utils/formatters';
 import { PotluckRSVPDialog } from '@/components/events/PotluckRSVPDialog';
+import { VolunteerDialog } from './VolunteerDialog';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -234,6 +237,7 @@ export function Events() {
   const [dialogErrorMessage, setDialogErrorMessage] = useState('');
   const [dialogSectionTitle, setDialogSectionTitle] = useState('');
   const [dialogSectionDescription, setDialogSectionDescription] = useState('');
+  const [isVolunteerDialogOpen, setIsVolunteerDialogOpen] = useState(false);
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -1231,6 +1235,16 @@ export function Events() {
     return processedEvents;
   };
 
+  const handleVolunteerClick = (event) => {
+    setSelectedEvent(event);
+    setIsVolunteerDialogOpen(true);
+  };
+
+  const handleVolunteerUpdate = async () => {
+    // Refresh the events list to show updated volunteer information
+    await fetchEvents();
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -1563,6 +1577,13 @@ export function Events() {
         }}
         event={selectedPotluckEvent}
         onRSVP={handlePotluckRSVPUpdate}
+      />
+
+      <VolunteerDialog
+        isOpen={isVolunteerDialogOpen}
+        onClose={() => setIsVolunteerDialogOpen(false)}
+        event={selectedEvent}
+        onVolunteerUpdate={handleVolunteerUpdate}
       />
     </div>
   );
