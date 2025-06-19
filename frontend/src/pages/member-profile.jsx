@@ -35,11 +35,9 @@ export function MemberProfile() {
   const [member, setMember] = useState(null);
   const [attendance, setAttendance] = useState([]);
   const [groups, setGroups] = useState([]);
-  const [volunteerHistory, setVolunteerHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAttendanceLoading, setIsAttendanceLoading] = useState(true);
   const [isGroupsLoading, setIsGroupsLoading] = useState(true);
-  const [isVolunteerHistoryLoading, setIsVolunteerHistoryLoading] = useState(true);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isRetroCheckInOpen, setIsRetroCheckInOpen] = useState(false);
@@ -57,11 +55,8 @@ export function MemberProfile() {
       const foundMember = members.find(m => m.id === id);
       if (foundMember) {
         setMember(foundMember);
-        await Promise.all([
-          loadAttendance(foundMember.id),
-          loadGroups(foundMember.id),
-          loadVolunteerHistory(foundMember.id)
-        ]);
+        loadAttendance(foundMember.id);
+        loadGroups(foundMember.id);
       } else {
         toast({
           title: "Error",
@@ -113,38 +108,6 @@ export function MemberProfile() {
       });
     } finally {
       setIsGroupsLoading(false);
-    }
-  };
-
-  const loadVolunteerHistory = async (memberId) => {
-    setIsVolunteerHistoryLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('event_volunteers')
-        .select(`
-          *,
-          events (
-            id,
-            title,
-            start_date,
-            end_date,
-            location
-          )
-        `)
-        .eq('member_id', memberId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setVolunteerHistory(data || []);
-    } catch (error) {
-      console.error('Error loading volunteer history:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load volunteer history",
-        variant: "destructive",
-      });
-    } finally {
-      setIsVolunteerHistoryLoading(false);
     }
   };
 
@@ -364,12 +327,20 @@ export function MemberProfile() {
         </div>
 
         <div className="md:col-span-2">
-          <Tabs defaultValue="attendance" className="w-full">
+          <Tabs defaultValue="attendance">
             <TabsList>
-              <TabsTrigger value="attendance">Attendance</TabsTrigger>
-              <TabsTrigger value="groups">Groups</TabsTrigger>
-              <TabsTrigger value="volunteer">Volunteer History</TabsTrigger>
-              <TabsTrigger value="notes">Notes</TabsTrigger>
+              <TabsTrigger value="attendance">
+                <Church className="h-4 w-4 mr-2" />
+                Attendance
+              </TabsTrigger>
+              <TabsTrigger value="groups">
+                <Users className="h-4 w-4 mr-2" />
+                Groups
+              </TabsTrigger>
+              <TabsTrigger value="notes">
+                <Clock className="h-4 w-4 mr-2" />
+                Notes
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="attendance">
@@ -474,60 +445,6 @@ export function MemberProfile() {
                   ) : (
                     <div className="text-center py-4">
                       <p className="text-muted-foreground">No group memberships found.</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="volunteer">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Volunteer History</CardTitle>
-                  <CardDescription>
-                    Past and upcoming volunteer roles
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {isVolunteerHistoryLoading ? (
-                    <div className="text-center py-4">
-                      <p className="text-muted-foreground">Loading volunteer history...</p>
-                    </div>
-                  ) : volunteerHistory.length > 0 ? (
-                    <div className="space-y-4">
-                      {volunteerHistory.map((volunteer) => (
-                        <Card key={volunteer.id}>
-                          <CardContent className="p-4">
-                            <div className="flex items-start justify-between">
-                              <div className="space-y-1">
-                                <p className="font-medium">{volunteer.role}</p>
-                                <div className="flex items-center text-sm text-muted-foreground">
-                                  <Calendar className="h-4 w-4 mr-2" />
-                                  {format(new Date(volunteer.events.start_date), 'MMM d, yyyy • h:mm a')}
-                                </div>
-                                <p className="text-sm text-muted-foreground">
-                                  {volunteer.events.title}
-                                </p>
-                                {volunteer.events.location && (
-                                  <div className="flex items-center text-sm text-muted-foreground">
-                                    <MapPin className="h-4 w-4 mr-2" />
-                                    {volunteer.events.location}
-                                  </div>
-                                )}
-                                {volunteer.notes && (
-                                  <p className="text-sm text-muted-foreground mt-2">
-                                    {volunteer.notes}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-4">
-                      <p className="text-muted-foreground">No volunteer history found.</p>
                     </div>
                   )}
                 </CardContent>

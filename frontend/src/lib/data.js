@@ -1,10 +1,5 @@
 import { supabase } from './supabaseClient';
 
-// Helper function to get current organization ID
-const getCurrentOrganizationId = () => {
-  return localStorage.getItem('currentOrganizationId');
-};
-
 // Helper function to safely parse integers from form inputs
 const safeParseInt = (value) => {
   if (value === null || value === undefined || value === '') {
@@ -17,11 +12,9 @@ const safeParseInt = (value) => {
 // Members
 export async function getMembers() {
   try {
-    const organizationId = getCurrentOrganizationId();
     const { data, error } = await supabase
       .from('members')
       .select('*')
-      .eq('organization_id', organizationId)
       .order('firstname', { ascending: true })
       .order('lastname', { ascending: true });
 
@@ -94,7 +87,6 @@ export async function getMembers() {
 
 export const addMember = async (memberData) => {
   try {
-    const organizationId = getCurrentOrganizationId();
     const { data, error } = await supabase
       .from('members')
       .insert([{
@@ -103,8 +95,7 @@ export const addMember = async (memberData) => {
         email: memberData.email,
         phone: memberData.phone,
         status: memberData.status || 'active',
-        image_url: memberData.image_url,
-        organization_id: organizationId
+        image_url: memberData.image_url
       }])
       .select()
       .single();
@@ -118,7 +109,6 @@ export const addMember = async (memberData) => {
 
 export const updateMember = async (id, memberData) => {
   try {
-    const organizationId = getCurrentOrganizationId();
     const { data, error } = await supabase
       .from('members')
       .update({
@@ -131,7 +121,6 @@ export const updateMember = async (id, memberData) => {
         gender: memberData.gender
       })
       .eq('id', id)
-      .eq('organization_id', organizationId)
       .select()
       .single();
 
@@ -144,15 +133,12 @@ export const updateMember = async (id, memberData) => {
 
 export const deleteMember = async (id) => {
   try {
-    const organizationId = getCurrentOrganizationId();
-    
     // First, try to delete from event_attendance
     try {
       const { error: eventAttendanceError } = await supabase
         .from('event_attendance')
         .delete()
-        .eq('member_id', id)
-        .eq('organization_id', organizationId);
+        .eq('member_id', id);
 
       if (eventAttendanceError && eventAttendanceError.code !== '42P01') { // Ignore "table doesn't exist" error
         throw eventAttendanceError;
@@ -166,8 +152,7 @@ export const deleteMember = async (id) => {
       const { error: memberEventAttendanceError } = await supabase
         .from('member_event_attendance')
         .delete()
-        .eq('member_id', id)
-        .eq('organization_id', organizationId);
+        .eq('member_id', id);
 
       if (memberEventAttendanceError && memberEventAttendanceError.code !== '42P01') { // Ignore "table doesn't exist" error
         throw memberEventAttendanceError;
@@ -180,8 +165,7 @@ export const deleteMember = async (id) => {
     const { error: memberError } = await supabase
       .from('members')
       .delete()
-      .eq('id', id)
-      .eq('organization_id', organizationId);
+      .eq('id', id);
 
     if (memberError) throw memberError;
 
@@ -194,12 +178,10 @@ export const deleteMember = async (id) => {
 // Events
 export const getEvents = async () => {
   try {
-    const organizationId = getCurrentOrganizationId();
     const now = new Date();
     const { data, error } = await supabase
       .from('events')
       .select('*')
-      .eq('organization_id', organizationId)
       .gte('start_date', now.toISOString())
       .order('start_date', { ascending: true });
     
@@ -263,8 +245,6 @@ export const getEvents = async () => {
 
 export const addEvent = async (event) => {
   try {
-    const organizationId = getCurrentOrganizationId();
-    
     // Generate a unique ID for the event
     const eventId = `${event.title}-${new Date(event.startDate).getTime()}`
       .toLowerCase()
@@ -288,10 +268,7 @@ export const addEvent = async (event) => {
       allow_rsvp: event.allow_rsvp !== undefined ? event.allow_rsvp : true,
       attendance_type: event.attendance_type || 'rsvp',
       event_type: event.event_type || 'Sunday Worship Service',
-      needs_volunteers: event.needs_volunteers || false,
-      volunteer_roles: event.volunteer_roles || [],
-      parent_event_id: null, // Will be set for instances
-      organization_id: organizationId
+      parent_event_id: null // Will be set for instances
     };
 
     // If it's a recurring event, first create the master event
@@ -343,14 +320,11 @@ export const addEvent = async (event) => {
 
 export const updateEvent = async (id, updates) => {
   try {
-    const organizationId = getCurrentOrganizationId();
-    
     // First, get the original event to check if it's recurring
     const { data: originalEvent, error: fetchError } = await supabase
       .from('events')
       .select('*')
       .eq('id', id)
-      .eq('organization_id', organizationId)
       .single();
 
     if (fetchError) throw fetchError;
@@ -358,8 +332,8 @@ export const updateEvent = async (id, updates) => {
     const eventData = {
       title: updates.title,
       description: updates.description,
-      start_date: updates.start_date,
-      end_date: updates.end_date,
+      start_date: updates.startDate,
+      end_date: updates.endDate,
       location: updates.location,
       url: updates.url,
       is_recurring: updates.is_recurring || false,
@@ -367,9 +341,7 @@ export const updateEvent = async (id, updates) => {
       monthly_week: updates.recurrence_pattern === 'monthly_weekday' ? safeParseInt(updates.monthly_week) : null,
       monthly_weekday: updates.recurrence_pattern === 'monthly_weekday' ? safeParseInt(updates.monthly_weekday) : null,
       allow_rsvp: updates.allow_rsvp !== undefined ? updates.allow_rsvp : true,
-      attendance_type: updates.attendance_type || 'rsvp',
-      needs_volunteers: updates.needs_volunteers || false,
-      volunteer_roles: updates.volunteer_roles || []
+      attendance_type: updates.attendance_type || 'rsvp'
     };
 
     // If it's a recurring event, update master and all instances
@@ -384,7 +356,6 @@ export const updateEvent = async (id, updates) => {
           is_master: true
         })
         .eq('id', masterId)
-        .eq('organization_id', organizationId)
         .select()
         .single();
 
@@ -395,7 +366,6 @@ export const updateEvent = async (id, updates) => {
         .from('events')
         .update(eventData)
         .eq('parent_event_id', masterId)
-        .eq('organization_id', organizationId)
         .select();
       
       if (instancesError) throw instancesError;
@@ -406,7 +376,6 @@ export const updateEvent = async (id, updates) => {
         .from('events')
         .update(eventData)
         .eq('id', id)
-        .eq('organization_id', organizationId)
         .select();
       
       if (error) throw error;
@@ -419,14 +388,11 @@ export const updateEvent = async (id, updates) => {
 
 export const deleteEvent = async (id) => {
   try {
-    const organizationId = getCurrentOrganizationId();
-    
     // First, get the original event to check if it's recurring
     const { data: originalEvent, error: fetchError } = await supabase
       .from('events')
       .select('*')
       .eq('id', id)
-      .eq('organization_id', organizationId)
       .single();
 
     if (fetchError) throw fetchError;
@@ -439,8 +405,7 @@ export const deleteEvent = async (id) => {
       const { error: instancesError } = await supabase
         .from('events')
         .delete()
-        .eq('parent_event_id', masterId)
-        .eq('organization_id', organizationId);
+        .eq('parent_event_id', masterId);
       
       if (instancesError) throw instancesError;
 
@@ -448,8 +413,7 @@ export const deleteEvent = async (id) => {
       const { error: masterError } = await supabase
         .from('events')
         .delete()
-        .eq('id', masterId)
-        .eq('organization_id', organizationId);
+        .eq('id', masterId);
       
       if (masterError) throw masterError;
     } else {
@@ -457,12 +421,10 @@ export const deleteEvent = async (id) => {
       const { error } = await supabase
         .from('events')
         .delete()
-        .eq('id', id)
-        .eq('organization_id', organizationId);
+        .eq('id', id);
       
       if (error) throw error;
     }
-
     return true;
   } catch (error) {
     throw error;
@@ -553,11 +515,9 @@ const generateRecurringInstances = (event) => {
 // Donations
 export async function getDonations() {
   try {
-    const organizationId = getCurrentOrganizationId();
     const { data, error } = await supabase
       .from('donations')
       .select('*')
-      .eq('organization_id', organizationId)
       .order('date', { ascending: false });
 
     if (error) throw error;
@@ -569,15 +529,12 @@ export async function getDonations() {
 
 export async function addDonation(donation) {
   try {
-    const organizationId = getCurrentOrganizationId();
-    
     // Ensure attendance is properly handled
     const donationData = {
       ...donation,
       amount: parseFloat(donation.amount),
       date: new Date(donation.date).toISOString(),
-      attendance: donation.attendance ? parseInt(donation.attendance) : null,
-      organization_id: organizationId
+      attendance: donation.attendance ? parseInt(donation.attendance) : null
     };
 
     const { data, error } = await supabase
@@ -595,14 +552,11 @@ export async function addDonation(donation) {
 
 export async function addMultipleDonations(donations) {
   try {
-    const organizationId = getCurrentOrganizationId();
-    
     const donationsData = donations.map(donation => ({
       amount: parseFloat(donation.amount),
       date: new Date(donation.date).toISOString(),
       attendance: donation.attendance ? parseInt(donation.attendance) : null,
-      type: donation.type || 'weekly',
-      organization_id: organizationId
+      type: donation.type || 'weekly'
     }));
 
     const { data, error } = await supabase
@@ -619,13 +573,10 @@ export async function addMultipleDonations(donations) {
 
 export async function updateDonation(id, updates) {
   try {
-    const organizationId = getCurrentOrganizationId();
-    
     const { data, error } = await supabase
       .from('donations')
       .update(updates)
       .eq('id', id)
-      .eq('organization_id', organizationId)
       .select()
       .single();
 
@@ -638,13 +589,10 @@ export async function updateDonation(id, updates) {
 
 export async function deleteDonation(id) {
   try {
-    const organizationId = getCurrentOrganizationId();
-    
     const { error } = await supabase
       .from('donations')
       .delete()
-      .eq('id', id)
-      .eq('organization_id', organizationId);
+      .eq('id', id);
 
     if (error) throw error;
     return true;
@@ -656,12 +604,9 @@ export async function deleteDonation(id) {
 // Groups
 export async function getGroups() {
   try {
-    const organizationId = getCurrentOrganizationId();
-    
     const { data, error } = await supabase
       .from('groups')
       .select('*')
-      .eq('organization_id', organizationId)
       .order('name', { ascending: true });
 
     if (error) throw error;
@@ -673,8 +618,6 @@ export async function getGroups() {
 
 export const getMemberAttendance = async (memberId) => {
   try {
-    const organizationId = getCurrentOrganizationId();
-    
     const { data, error } = await supabase
       .from('event_attendance')
       .select(`
@@ -688,7 +631,6 @@ export const getMemberAttendance = async (memberId) => {
         )
       `)
       .eq('member_id', memberId)
-      .eq('organization_id', organizationId)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -706,8 +648,6 @@ export const getMemberAttendance = async (memberId) => {
 
 export const getMemberGroups = async (memberId) => {
   try {
-    const organizationId = getCurrentOrganizationId();
-    
     const { data, error } = await supabase
       .from('group_members')
       .select(`
@@ -723,8 +663,7 @@ export const getMemberGroups = async (memberId) => {
           )
         )
       `)
-      .eq('member_id', memberId)
-      .eq('organization_id', organizationId);
+      .eq('member_id', memberId);
 
     if (error) throw error;
     

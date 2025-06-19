@@ -19,9 +19,7 @@ import {
   Users,
   Calendar,
   Clock,
-  X,
-  MoreVertical,
-  UserCheck
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,14 +41,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from '@/lib/authContext';
 import EventForm from '@/components/events/EventForm';
 import { addEvent, updateEvent, deleteEvent } from '@/lib/data';
 import { getInitials } from '@/lib/utils/formatters';
 import { PotluckRSVPDialog } from '@/components/events/PotluckRSVPDialog';
-import { VolunteerDialog } from '@/components/events/VolunteerDialog';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -88,7 +85,7 @@ const formatRecurrencePattern = (pattern, monthlyWeek, monthlyWeekday) => {
   }
 };
 
-const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onVolunteer }) => {
+const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete }) => {
   const startDate = new Date(event.start_date);
   const endDate = new Date(event.end_date);
   const isRecurring = event.is_recurring;
@@ -98,111 +95,99 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onVolunteer
   const isBibleStudy = event.title.toLowerCase().includes('bible study');
 
   return (
-    <Card key={event.id} className="mb-6 shadow-lg">
-      <CardHeader className="p-6">
+    <Card key={event.id} className="mb-4">
+      <CardHeader>
         <div className="flex justify-between items-start">
-          <div className="flex-1 min-w-0">
-            <CardTitle className="text-xl md:text-2xl font-bold mb-2 break-words">
+          <div>
+            <CardTitle className="text-xl font-bold">
               {event.title}
-            </CardTitle>
-            <div className="flex flex-wrap gap-2 mb-3">
               {isRecurring && (
-                <Badge variant="secondary" className="text-sm">
+                <Badge variant="secondary" className="ml-2">
                   {formatRecurrencePattern(event.recurrence_pattern, event.monthly_week, event.monthly_weekday)}
                 </Badge>
               )}
               {isPotluck && (
-                <Badge variant="outline" className="text-sm text-green-600 border-green-600">
+                <Badge variant="outline" className="ml-2 text-green-600 border-green-600">
                   Potluck Sunday
                 </Badge>
               )}
-            </div>
-            <CardDescription className="text-base">
-              <div className="flex items-center gap-2 mb-1">
-                <Calendar className="h-4 w-4" />
-                {format(startDate, 'EEEE, MMMM d, yyyy')}
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                {format(startDate, 'h:mm a')} - {format(endDate, 'h:mm a')}
-              </div>
+            </CardTitle>
+            <CardDescription>
+              {format(startDate, 'EEEE, MMMM d, yyyy')}
+              <br />
+              {format(startDate, 'h:mm a')} - {format(endDate, 'h:mm a')}
             </CardDescription>
           </div>
-          <div className="flex space-x-2 ml-4">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-10 w-10 p-0">
-                  <MoreVertical className="h-5 w-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onEdit(event)} className="text-base py-3">
-                  <Pencil className="mr-3 h-5 w-5" />
-                  Edit Event
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onDelete(event)} className="text-base py-3 text-red-600">
-                  <Trash2 className="mr-3 h-5 w-5" />
-                  Delete Event
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <div className="flex space-x-2">
+            <Button variant="ghost" size="sm" onClick={() => onEdit(event)}>
+              <Pencil className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="p-6 pt-0">
-        <div className="flex flex-col space-y-4">
-          {event.description && (
-            <p className="text-base text-muted-foreground leading-relaxed">{event.description}</p>
-          )}
-          {event.location && (
-            <div className="flex items-center text-base text-muted-foreground">
-              <MapPin className="h-5 w-5 mr-3 flex-shrink-0" />
-              <span className="break-words">{event.location}</span>
-            </div>
-          )}
-          {event.url && (
-            <div className="flex items-center text-base text-muted-foreground">
-              <ExternalLink className="h-5 w-5 mr-3 flex-shrink-0" />
-              <a href={event.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">
-                {event.url}
-              </a>
-            </div>
-          )}
-          {event.attendance > 0 && (
-            <div className="flex items-center text-base text-muted-foreground">
-              <Users className="h-5 w-5 mr-3 flex-shrink-0" />
-              {event.attendance} {event.attendance === 1 ? 'person' : 'people'} attending
-            </div>
-          )}
-        </div>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end mt-6 gap-3">
-          {event.allow_rsvp && !isPotluck && (
-            <Button
-              onClick={() => onRSVP(event)}
-              className="bg-blue-600 hover:bg-blue-700 text-white h-12 text-base font-medium"
-            >
-              <UserCheck className="mr-3 h-5 w-5" />
-              {isCheckIn ? 'Check In' : 'RSVP'}
-            </Button>
-          )}
-          {isPotluck && (
-            <Button
-              onClick={() => onPotluckRSVP(event)}
-              className="bg-blue-600 hover:bg-blue-700 text-white h-12 text-base font-medium"
-            >
-              <Utensils className="mr-3 h-5 w-5" />
-              Potluck RSVP
-            </Button>
-          )}
-          {event.needs_volunteers && (
-            <Button
-              onClick={() => onVolunteer(event)}
-              className="bg-green-600 hover:bg-green-700 text-white h-12 text-base font-medium"
-            >
-              <Users className="mr-3 h-5 w-5" />
-              Manage Volunteers
-            </Button>
-          )}
+      <CardContent>
+        {event.description && (
+          <p className="text-sm text-gray-600 mb-2">{event.description}</p>
+        )}
+        {event.location && (
+          <p className="text-sm text-gray-600">
+            <MapPin className="inline-block mr-1 h-4 w-4" />
+            {event.location}
+          </p>
+        )}
+        {event.url && (
+          <a
+            href={event.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-blue-600 hover:underline mt-2 inline-block"
+          >
+            <ExternalLink className="inline-block mr-1 h-4 w-4" />
+            Event Link
+          </a>
+        )}
+        <div className="flex items-center justify-between mt-4">
+          <div className="text-sm text-muted-foreground">
+            {event.allow_rsvp ? (
+              `${event.attendance || 0} ${event.attendance === 1 ? 'person' : 'people'} ${isCheckIn ? 'checked in' : 'attending'}`
+            ) : (
+              <span className="flex items-center gap-1">
+                <HelpCircle className="h-3 w-3" />
+                Announcement only
+              </span>
+            )}
+          </div>
+          <div className="flex gap-2">
+            {event.allow_rsvp && (
+              <div className="flex items-center gap-2">
+                {isCheckIn ? (
+                  <Button
+                    onClick={() => onRSVP(event)}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Check In
+                  </Button>
+                ) : isPotluck ? (
+                  <Button
+                    onClick={() => onPotluckRSVP(event)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <Utensils className="mr-2 h-4 w-4" />
+                    Potluck RSVP
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => onRSVP(event)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    RSVP
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -274,7 +259,6 @@ export default function Events() {
     location: '',
     attendance_type: 'rsvp'
   });
-  const [isVolunteerDialogOpen, setIsVolunteerDialogOpen] = useState(false);
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -284,36 +268,7 @@ export default function Events() {
 
       const { data, error } = await supabase
         .from('events')
-        .select(`
-          id,
-          title,
-          description,
-          start_date,
-          end_date,
-          location,
-          url,
-          is_recurring,
-          recurrence_pattern,
-          monthly_week,
-          monthly_weekday,
-          allow_rsvp,
-          attendance_type,
-          event_type,
-          needs_volunteers,
-          volunteer_roles,
-          event_attendance(*),
-          event_volunteers(
-            id,
-            role,
-            notes,
-            members (
-              id,
-              firstname,
-              lastname,
-              image_url
-            )
-          )
-        `)
+        .select('*, event_attendance(*)')
         .gte('start_date', today.toISOString())
         .order('start_date', { ascending: true });
 
@@ -324,8 +279,7 @@ export default function Events() {
         // Add attendance count to the event
         const eventWithAttendance = {
           ...event,
-          attendance: event.event_attendance?.length || 0,
-          volunteers: event.event_volunteers || []
+          attendance: event.event_attendance?.length || 0
         };
 
         // If it's not a recurring event, add it
@@ -358,8 +312,8 @@ export default function Events() {
       console.error('Error fetching events:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load events. Please try again.',
-        variant: 'destructive',
+        description: 'Failed to load events',
+        variant: 'destructive'
       });
     } finally {
       setIsLoading(false);
@@ -945,25 +899,24 @@ export default function Events() {
     }
   };
 
-  const handleEditEvent = async (eventData) => {
+  const handleEditEvent = async (event) => {
     try {
-      // For recurring events, we need to handle the master event ID
-      const eventId = editingEvent.master_id || editingEvent.id;
-      
-      await updateEvent(eventId, eventData);
-      setIsEditEventOpen(false);
-      setEditingEvent(null);
-      fetchEvents();
-      toast({
-        title: "Success",
-        description: "Event updated successfully."
+      setEditingEvent(event);
+      setNewEvent({
+        title: event.title,
+        description: event.description || '',
+        start_time: event.start_date,
+        end_time: event.end_date,
+        location: event.location || '',
+        attendance_type: event.attendance_type || 'rsvp'
       });
+      setIsCreateEventOpen(true);
     } catch (error) {
       console.error('Error updating event:', error);
       toast({
+        variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to update event. Please try again.",
-        variant: "destructive"
+        description: "Failed to update event. Please try again."
       });
     }
   };
@@ -1013,11 +966,10 @@ export default function Events() {
     }
   };
 
-  const handleDeleteEvent = async (eventOrId) => {
+  const handleDeleteEvent = async (eventId) => {
     if (!confirm('Are you sure you want to delete this event?')) return;
     
     try {
-      const eventId = typeof eventOrId === 'string' ? eventOrId : eventOrId.id;
       await deleteEvent(eventId);
       fetchEvents();
       toast({
@@ -1124,16 +1076,6 @@ export default function Events() {
     }
   }, [selectedPotluckEvent, handlePotluckRSVP]);
 
-  const handleVolunteerClick = useCallback((event) => {
-    setSelectedEvent(event);
-    setIsVolunteerDialogOpen(true);
-  }, []);
-
-  const handleVolunteerUpdate = useCallback(async () => {
-    // Refresh the events list to show updated volunteer information
-    await fetchEvents();
-  }, [fetchEvents]);
-
   const renderEventCard = useCallback((event) => {
     return (
       <EventCard
@@ -1143,10 +1085,9 @@ export default function Events() {
         onPotluckRSVP={handlePotluckRSVP}
         onEdit={handleEditClick}
         onDelete={handleDeleteEvent}
-        onVolunteer={handleVolunteerClick}
       />
     );
-  }, [handleRSVP, handlePotluckRSVP, handleEditClick, handleDeleteEvent, handleVolunteerClick]);
+  }, [handleOpenDialog, handlePotluckRSVP, handleEditClick, handleDeleteEvent]);
 
   const processRecurringEvents = (events) => {
     const processedEvents = [];
@@ -1230,7 +1171,7 @@ export default function Events() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 md:py-8">
+    <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold mb-2">Events</h1>
@@ -1238,46 +1179,24 @@ export default function Events() {
         </div>
         <Button
           onClick={() => setIsCreateEventOpen(true)}
-          className="w-full md:w-auto h-14 text-lg font-medium"
+          className="w-full md:w-auto h-14 text-lg"
         >
-          <Plus className="mr-2 h-5 w-5" />
           Create New Event
         </Button>
       </div>
 
-      {/* Search Bar */}
-      <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-          <Input
-            placeholder="Search events..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 h-12 text-base"
-          />
-        </div>
-      </div>
-
       {/* Event List */}
       <div className="space-y-4">
-        {events.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-muted-foreground text-lg mb-2">No events found</div>
-            <p className="text-muted-foreground">Create your first event to get started</p>
-          </div>
-        ) : (
-          events.map((event) => (
-            <EventCard
-              key={event.id}
-              event={event}
-              onRSVP={handleOpenDialog}
-              onPotluckRSVP={handlePotluckRSVP}
-              onEdit={handleEditClick}
-              onDelete={handleDeleteEvent}
-              onVolunteer={handleVolunteerClick}
-            />
-          ))
-        )}
+        {events.map((event) => (
+          <EventCard
+            key={event.id}
+            event={event}
+            onRSVP={handleOpenDialog}
+            onPotluckRSVP={handlePotluckRSVP}
+            onEdit={handleEditClick}
+            onDelete={handleDeleteEvent}
+          />
+        ))}
       </div>
 
       {/* Create/Edit Event Dialog */}
@@ -1577,13 +1496,6 @@ export default function Events() {
         }}
         event={selectedPotluckEvent}
         onRSVP={handlePotluckRSVPUpdate}
-      />
-
-      <VolunteerDialog
-        isOpen={isVolunteerDialogOpen}
-        onClose={() => setIsVolunteerDialogOpen(false)}
-        event={selectedEvent}
-        onVolunteerUpdate={handleVolunteerUpdate}
       />
     </div>
   );
