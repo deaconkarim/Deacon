@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { UserPlus, Users, Mail, Shield, Trash2, Edit, Search } from 'lucide-react';
+import { UserPlus, Users, Mail, Shield, Trash2, Edit, Search, Crown } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabaseClient';
 import { Badge } from '@/components/ui/badge';
+import { makeUserAdmin, removeUserAdmin, isUserAdmin } from '@/lib/data';
 
 const itemVariants = {
   hidden: { y: 20, opacity: 0 },
@@ -22,6 +23,7 @@ const UserManagementSettings = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentUserIsAdmin, setCurrentUserIsAdmin] = useState(false);
   const [inviteData, setInviteData] = useState({
     email: '',
     firstName: '',
@@ -31,8 +33,18 @@ const UserManagementSettings = () => {
   const { toast } = useToast();
 
   useEffect(() => {
+    checkAdminStatus();
     fetchUsers();
   }, []);
+
+  const checkAdminStatus = async () => {
+    try {
+      const adminStatus = await isUserAdmin();
+      setCurrentUserIsAdmin(adminStatus);
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+    }
+  };
 
   useEffect(() => {
     const filtered = users.filter(user => 
@@ -46,15 +58,69 @@ const UserManagementSettings = () => {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('members')
-        .select('*')
-        .order('created_at', { ascending: false });
+      console.log('Fetching users...');
+      
+      // Fetch organization users and members separately
+      const [orgUsersResult, membersResult] = await Promise.all([
+        supabase
+          .from('organization_users')
+          .select('user_id, role, approval_status')
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('members')
+          .select('id, firstname, lastname, email, status, created_at')
+          .order('created_at', { ascending: false })
+      ]);
 
-      if (error) throw error;
-      setUsers(data || []);
-      setFilteredUsers(data || []);
+      console.log('Organization users:', orgUsersResult.data);
+      console.log('Members:', membersResult.data);
+
+      if (orgUsersResult.error) throw orgUsersResult.error;
+      if (membersResult.error) throw membersResult.error;
+
+      // Create a map of user_id to member data
+      const membersMap = new Map();
+      membersResult.data.forEach(member => {
+        membersMap.set(member.id, member);
+      });
+
+      // Create a map of user_id to organization user data
+      const orgUsersMap = new Map();
+      orgUsersResult.data.forEach(orgUser => {
+        orgUsersMap.set(orgUser.user_id, orgUser);
+      });
+
+      console.log('Members map:', membersMap);
+      console.log('Org users map:', orgUsersMap);
+
+      // Only show users who have organization membership (accounts)
+      const transformedUsers = [];
+      
+      orgUsersResult.data.forEach(orgUser => {
+        const member = membersMap.get(orgUser.user_id);
+        if (member) {
+          transformedUsers.push({
+            id: member.id,
+            firstname: member.firstname,
+            lastname: member.lastname,
+            email: member.email,
+            status: member.status,
+            role: orgUser.role,
+            approval_status: orgUser.approval_status,
+            created_at: member.created_at
+          });
+        }
+      });
+
+      console.log('Transformed users:', transformedUsers);
+
+      // Sort by creation date (newest first)
+      transformedUsers.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+      setUsers(transformedUsers || []);
+      setFilteredUsers(transformedUsers || []);
     } catch (error) {
+      console.error('Error fetching users:', error);
       toast({
         title: "Error fetching users",
         description: error.message,
@@ -102,18 +168,31 @@ const UserManagementSettings = () => {
             firstname: inviteData.firstName,
             lastname: inviteData.lastName,
             email: inviteData.email,
-            status: 'active',
-            role: inviteData.role
+            status: 'active'
           });
 
         if (memberError) {
           console.error('Error creating member record:', memberError);
         }
+
+        // Create organization membership with the selected role
+        const { error: orgError } = await supabase
+          .from('organization_users')
+          .insert({
+            user_id: data.user.id,
+            role: inviteData.role,
+            status: 'active',
+            approval_status: 'approved' // Auto-approve invited users
+          });
+
+        if (orgError) {
+          console.error('Error creating organization membership:', orgError);
+        }
       }
 
       toast({
         title: "User invited successfully",
-        description: `Account created for ${inviteData.email}. Temporary password: ${tempPassword}`,
+        description: `Account created for ${inviteData.email} with role: ${inviteData.role}. Temporary password: ${tempPassword}`,
       });
 
       setIsInviteDialogOpen(false);
@@ -132,16 +211,15 @@ const UserManagementSettings = () => {
 
   const handleUpdateUserRole = async (userId, newRole) => {
     try {
-      const { error } = await supabase
-        .from('members')
-        .update({ role: newRole })
-        .eq('id', userId);
-
-      if (error) throw error;
+      if (newRole === 'admin') {
+        await makeUserAdmin(userId);
+      } else if (newRole === 'member') {
+        await removeUserAdmin(userId);
+      }
 
       toast({
         title: "Role updated",
-        description: "User role has been updated successfully.",
+        description: `User role has been updated to ${newRole}.`,
       });
 
       fetchUsers();
@@ -190,6 +268,13 @@ const UserManagementSettings = () => {
     }
   };
 
+  const getRoleIcon = (role) => {
+    switch (role) {
+      case 'admin': return <Crown className="h-4 w-4" />;
+      default: return <Users className="h-4 w-4" />;
+    }
+  };
+
   return (
     <motion.div 
       initial="hidden"
@@ -224,47 +309,80 @@ const UserManagementSettings = () => {
               </div>
 
               <div className="space-y-2">
-                {filteredUsers.map((user) => (
-                  <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                        <Users className="h-5 w-5 text-primary" />
+                {filteredUsers.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    {isLoading ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mr-2"></div>
+                        <span>Loading users...</span>
                       </div>
+                    ) : searchQuery ? (
                       <div>
-                        <p className="font-medium">
-                          {user.firstname} {user.lastname}
-                        </p>
-                        <p className="text-sm text-muted-foreground">{user.email}</p>
+                        <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p>No users found matching "{searchQuery}"</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p>No users found</p>
+                        <p className="text-sm">Users will appear here once they register or are invited.</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  filteredUsers.map((user) => (
+                    <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                          {getRoleIcon(user.role)}
+                        </div>
+                        <div>
+                          <p className="font-medium">
+                            {user.firstname} {user.lastname}
+                          </p>
+                          <p className="text-sm text-muted-foreground">{user.email}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge variant={getRoleBadgeVariant(user.role)}>
+                              {user.role}
+                            </Badge>
+                            {user.approval_status === 'pending' && (
+                              <Badge variant="outline" className="text-yellow-600 border-yellow-600">
+                                Pending Approval
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {currentUserIsAdmin && (
+                          <Select
+                            value={user.role}
+                            onValueChange={(value) => handleUpdateUserRole(user.id, value)}
+                          >
+                            <SelectTrigger className="w-32">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="member">Member</SelectItem>
+                              <SelectItem value="deacon">Deacon</SelectItem>
+                              <SelectItem value="admin">Admin</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                        {currentUserIsAdmin && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteUser(user.id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge variant={getRoleBadgeVariant(user.role)}>
-                        {user.role}
-                      </Badge>
-                      <Select
-                        value={user.role}
-                        onValueChange={(value) => handleUpdateUserRole(user.id, value)}
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="member">Member</SelectItem>
-                          <SelectItem value="deacon">Deacon</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteUser(user.id)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           </CardContent>

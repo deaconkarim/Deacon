@@ -148,7 +148,8 @@ export function Register() {
             organization_id: formData.organizationId,
             user_id: data.user.id,
             role: 'member',
-            status: 'active'
+            status: 'active',
+            approval_status: 'pending'
           });
 
         if (orgMemberError) {
@@ -159,7 +160,7 @@ export function Register() {
 
       toast({
         title: "Registration successful!",
-        description: "Please check your email to confirm your account before signing in.",
+        description: "Your account has been created and is pending approval. You will be notified once an administrator reviews your request.",
       });
 
       navigate('/login');

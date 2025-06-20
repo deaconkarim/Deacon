@@ -8,13 +8,13 @@ import { Donations } from './pages/donations';
 import { Groups } from './pages/groups';
 import { Tasks } from './pages/tasks';
 import { Reports } from './pages/reports';
-import { Bulletin } from './pages/bulletin';
 import { Settings } from './pages/settings';
 import ChildrenCheckin from './pages/children-checkin';
 import AddChild from './pages/add-child';
 import { Login } from './pages/login';
 import { Register } from './pages/register';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import ApprovalStatus from './components/ApprovalStatus';
 
 function App() {
   return (
@@ -22,6 +22,9 @@ function App() {
       {/* Public routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      
+      {/* Approval status route */}
+      <Route path="/approval-status" element={<ApprovalStatus />} />
       
       {/* Protected routes */}
       <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
@@ -36,7 +39,6 @@ function App() {
         <Route path="/children-check-in" element={<ChildrenCheckin />} />
         <Route path="/children-check-in/add" element={<AddChild />} />
         <Route path="/reports" element={<Reports />} />
-        <Route path="/bulletin" element={<Bulletin />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
     </Routes>

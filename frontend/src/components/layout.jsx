@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -13,7 +13,6 @@ import {
   ChevronDown,
   Church,
   BarChart2,
-  FileText,
   ClipboardList,
   MoreHorizontal,
   Baby,
@@ -32,9 +31,12 @@ import {
 import { useAuth } from '@/lib/authContext';
 import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/components/ui/use-toast';
+import { getApprovalNotifications, isUserAdmin } from '@/lib/data';
 
 export function Layout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [pendingApprovals, setPendingApprovals] = useState(0);
+  const [isAdmin, setIsAdmin] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -49,7 +51,6 @@ export function Layout() {
     { name: 'Groups', href: '/groups', icon: UserPlus },
     { name: 'Tasks', href: '/tasks', icon: ClipboardList },
     { name: 'Reports', href: '/reports', icon: BarChart2 },
-    { name: 'Bulletin', href: '/bulletin', icon: FileText },
     { name: 'Settings', href: '/settings', icon: SettingsIcon },
   ];
 
@@ -57,6 +58,24 @@ export function Layout() {
   const moreNavItems = navigation.slice(5);
   
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+  useEffect(() => {
+    const checkAdminAndNotifications = async () => {
+      try {
+        const adminStatus = await isUserAdmin();
+        setIsAdmin(adminStatus);
+        
+        if (adminStatus) {
+          const notifications = await getApprovalNotifications();
+          setPendingApprovals(notifications.length);
+        }
+      } catch (error) {
+        console.error('Error checking admin status or notifications:', error);
+      }
+    };
+
+    checkAdminAndNotifications();
+  }, []);
 
   const handleSignOut = async () => {
     try {
@@ -128,7 +147,7 @@ export function Layout() {
                   key={item.name}
                   to={item.href}
                   className={({ isActive }) => cn(
-                    "flex flex-col items-center justify-center px-2 py-1 text-[9px] font-medium rounded-md transition-all",
+                    "flex flex-col items-center justify-center px-2 py-1 text-[9px] font-medium rounded-md transition-all relative",
                     isActive
                       ? "text-primary"
                       : "text-gray-500 hover:text-gray-900"
@@ -136,6 +155,11 @@ export function Layout() {
                 >
                   <item.icon className={cn("h-4 w-4 mb-0.5", isActive ? "text-primary" : "text-gray-500")} />
                   <span>{item.name}</span>
+                  {item.name === 'Settings' && isAdmin && pendingApprovals > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {pendingApprovals}
+                    </span>
+                  )}
                 </NavLink>
               );
             })}
@@ -152,12 +176,17 @@ export function Layout() {
                     <NavLink
                       to={item.href}
                       className={cn(
-                        "flex items-center gap-2",
+                        "flex items-center gap-2 relative",
                         location.pathname === item.href ? "text-primary" : ""
                       )}
                     >
                       <item.icon className="h-4 w-4" />
                       <span>{item.name}</span>
+                      {item.name === 'Settings' && isAdmin && pendingApprovals > 0 && (
+                        <span className="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                          {pendingApprovals}
+                        </span>
+                      )}
                     </NavLink>
                   </DropdownMenuItem>
                 ))}
@@ -178,7 +207,7 @@ export function Layout() {
                   key={item.name}
                   to={item.href}
                   className={({ isActive }) => cn(
-                    "flex flex-col items-center justify-center px-3 py-2 text-xs font-medium rounded-md transition-all min-h-[44px] min-w-[44px]",
+                    "flex flex-col items-center justify-center px-3 py-2 text-xs font-medium rounded-md transition-all min-h-[44px] min-w-[44px] relative",
                     isActive
                       ? "text-primary bg-primary/10"
                       : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
@@ -186,6 +215,11 @@ export function Layout() {
                 >
                   <item.icon className={cn("h-5 w-5 mb-1", isActive ? "text-primary" : "text-gray-500")} />
                   <span className="text-[10px] leading-tight">{item.name}</span>
+                  {item.name === 'Settings' && isAdmin && pendingApprovals > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {pendingApprovals}
+                    </span>
+                  )}
                 </NavLink>
               );
             })}
@@ -202,12 +236,17 @@ export function Layout() {
                     <NavLink
                       to={item.href}
                       className={cn(
-                        "flex items-center gap-3 px-4 py-3 text-sm",
+                        "flex items-center gap-3 px-4 py-3 text-sm relative",
                         location.pathname === item.href ? "text-primary bg-primary/10" : ""
                       )}
                     >
                       <item.icon className="h-5 w-5" />
                       <span>{item.name}</span>
+                      {item.name === 'Settings' && isAdmin && pendingApprovals > 0 && (
+                        <span className="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                          {pendingApprovals}
+                        </span>
+                      )}
                     </NavLink>
                   </DropdownMenuItem>
                 ))}
@@ -228,7 +267,7 @@ export function Layout() {
                   key={item.name}
                   to={item.href}
                   className={({ isActive }) => cn(
-                    "flex flex-col items-center justify-center px-3 py-2 text-xs font-medium rounded-md transition-all",
+                    "flex flex-col items-center justify-center px-3 py-2 text-xs font-medium rounded-md transition-all relative",
                     isActive
                       ? "text-primary"
                       : "text-gray-500 hover:text-gray-900"
@@ -236,6 +275,11 @@ export function Layout() {
                 >
                   <item.icon className={cn("h-5 w-5 mb-1", isActive ? "text-primary" : "text-gray-500")} />
                   <span>{item.name}</span>
+                  {item.name === 'Settings' && isAdmin && pendingApprovals > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {pendingApprovals}
+                    </span>
+                  )}
                 </NavLink>
               );
             })}

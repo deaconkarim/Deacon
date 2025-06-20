@@ -6,8 +6,38 @@ import AccountSettings from '@/components/settings/AccountSettings';
 import NotificationSettings from '@/components/settings/NotificationSettings';
 import DataManagementSettings from '@/components/settings/DataManagementSettings';
 import UserManagementSettings from '@/components/settings/UserManagementSettings';
+import PendingApprovals from '@/components/settings/PendingApprovals';
+import { isUserAdmin } from '@/lib/data';
+import { useState, useEffect } from 'react';
 
 export function Settings() {
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      try {
+        const adminStatus = await isUserAdmin();
+        setIsAdmin(adminStatus);
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+        setIsAdmin(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAdminStatus();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col space-y-2">
@@ -33,6 +63,7 @@ export function Settings() {
         <TabsList className="mb-4">
           <TabsTrigger value="church">Church Information</TabsTrigger>
           <TabsTrigger value="users">User Management</TabsTrigger>
+          {isAdmin && <TabsTrigger value="approvals">Pending Approvals</TabsTrigger>}
           <TabsTrigger value="account">Account</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="data">Data Management</TabsTrigger>
@@ -45,6 +76,12 @@ export function Settings() {
         <TabsContent value="users">
           <UserManagementSettings />
         </TabsContent>
+        
+        {isAdmin && (
+          <TabsContent value="approvals">
+            <PendingApprovals />
+          </TabsContent>
+        )}
         
         <TabsContent value="account">
           <AccountSettings />

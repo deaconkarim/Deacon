@@ -11,6 +11,7 @@ const getCurrentUserOrganizationId = async () => {
       .select('organization_id')
       .eq('user_id', user.id)
       .eq('status', 'active')
+      .eq('approval_status', 'approved')
       .single();
 
     if (error) throw error;
@@ -18,6 +19,70 @@ const getCurrentUserOrganizationId = async () => {
   } catch (error) {
     console.error('Error getting user organization:', error);
     return null;
+  }
+};
+
+// Helper function to check if user is approved
+export const isUserApproved = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
+
+    const { data, error } = await supabase
+      .from('organization_users')
+      .select('approval_status')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .single();
+
+    if (error) return false;
+    return data?.approval_status === 'approved';
+  } catch (error) {
+    console.error('Error checking user approval status:', error);
+    return false;
+  }
+};
+
+// Helper function to get user's approval status
+export const getUserApprovalStatus = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const { data, error } = await supabase
+      .from('organization_users')
+      .select('approval_status, rejection_reason')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .single();
+
+    if (error) return null;
+    return data;
+  } catch (error) {
+    console.error('Error getting user approval status:', error);
+    return null;
+  }
+};
+
+// Helper function to check if user is admin
+export const isUserAdmin = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
+
+    const { data, error } = await supabase
+      .from('organization_users')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .eq('approval_status', 'approved')
+      .single();
+
+    if (error) return false;
+    return data?.role === 'admin';
+  } catch (error) {
+    console.error('Error checking user admin status:', error);
+    return false;
   }
 };
 
@@ -42,6 +107,12 @@ export async function getMembers() {
       .from('members')
       .select('*')
       .eq('organization_id', organizationId)
+      .neq('firstname', 'Unknown') // Filter out auth users created during fix
+      .neq('lastname', 'User') // Filter out auth users created during fix
+      .not('firstname', 'is', null) // Exclude members without first names
+      .not('lastname', 'is', null) // Exclude members without last names
+      .neq('firstname', '') // Exclude members with empty first names
+      .neq('lastname', '') // Exclude members with empty last names
       .order('firstname', { ascending: true })
       .order('lastname', { ascending: true });
 
@@ -785,6 +856,212 @@ export const getMemberGroups = async (memberId) => {
       }
     }));
   } catch (error) {
+    throw error;
+  }
+};
+
+// Approval Management Functions
+export const getPendingApprovals = async () => {
+  try {
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
+    const { data, error } = await supabase
+      .from('organization_users')
+      .select(`
+        id,
+        user_id,
+        role,
+        created_at,
+        members!inner(
+          firstname,
+          lastname,
+          email
+        )
+      `)
+      .eq('organization_id', organizationId)
+      .eq('approval_status', 'pending')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching pending approvals:', error);
+    throw error;
+  }
+};
+
+export const approveUser = async (userId, role = 'member') => {
+  try {
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    const { error } = await supabase
+      .from('organization_users')
+      .update({
+        approval_status: 'approved',
+        approved_at: new Date().toISOString(),
+        approved_by: user.id,
+        role: role
+      })
+      .eq('user_id', userId)
+      .eq('organization_id', organizationId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error approving user:', error);
+    throw error;
+  }
+};
+
+export const rejectUser = async (userId, rejectionReason) => {
+  try {
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    const { error } = await supabase
+      .from('organization_users')
+      .update({
+        approval_status: 'rejected',
+        approved_at: new Date().toISOString(),
+        approved_by: user.id,
+        rejection_reason: rejectionReason
+      })
+      .eq('user_id', userId)
+      .eq('organization_id', organizationId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error rejecting user:', error);
+    throw error;
+  }
+};
+
+export const getApprovalNotifications = async () => {
+  try {
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
+    const { data, error } = await supabase
+      .from('approval_notifications')
+      .select('*')
+      .eq('organization_id', organizationId)
+      .eq('status', 'unread')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching approval notifications:', error);
+    throw error;
+  }
+};
+
+export const markNotificationAsRead = async (notificationId) => {
+  try {
+    const { error } = await supabase
+      .from('approval_notifications')
+      .update({ status: 'read' })
+      .eq('id', notificationId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    throw error;
+  }
+};
+
+export const makeUserAdmin = async (userId) => {
+  try {
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Check if current user is admin
+    const isCurrentUserAdmin = await isUserAdmin();
+    if (!isCurrentUserAdmin) {
+      throw new Error('Only admins can make other users admin');
+    }
+
+    const { error } = await supabase
+      .from('organization_users')
+      .update({
+        role: 'admin'
+      })
+      .eq('user_id', userId)
+      .eq('organization_id', organizationId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error making user admin:', error);
+    throw error;
+  }
+};
+
+export const removeUserAdmin = async (userId) => {
+  try {
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Check if current user is admin
+    const isCurrentUserAdmin = await isUserAdmin();
+    if (!isCurrentUserAdmin) {
+      throw new Error('Only admins can remove admin privileges');
+    }
+
+    // Prevent removing admin from themselves
+    if (userId === user.id) {
+      throw new Error('Cannot remove admin privileges from yourself');
+    }
+
+    const { error } = await supabase
+      .from('organization_users')
+      .update({
+        role: 'member'
+      })
+      .eq('user_id', userId)
+      .eq('organization_id', organizationId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error removing user admin:', error);
     throw error;
   }
 };

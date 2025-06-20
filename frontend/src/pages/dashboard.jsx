@@ -28,7 +28,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import { Input } from '@/components/ui/input';
-import { getMembers, getGroups, getEvents } from '../lib/data';
+import { getMembers, getGroups, getEvents, addMember, updateMember, deleteMember, getMemberAttendance } from '../lib/data';
 import {
   Dialog,
   DialogContent,
@@ -85,23 +85,107 @@ export function Dashboard() {
   const [donations, setDonations] = useState([]);
   const [recentGroups, setRecentGroups] = useState([]);
 
-  // Load people when component mounts
-  useEffect(() => {
-    const loadPeople = async () => {
-      try {
-        const data = await getMembers();
-        setPeople(data);
-      } catch (error) {
-        console.error('Error loading people:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load people",
-          variant: "destructive",
-        });
-      }
-    };
-    loadPeople();
+  const loadDashboardData = useCallback(async () => {
+    try {
+      // Fetch people using the filtered getMembers function
+      const people = await getMembers();
+
+      // Transform snake_case to camelCase
+      const transformedPeople = people?.map(person => ({
+        ...person,
+        firstName: person.firstName || person.firstname || '',
+        lastName: person.lastName || person.lastname || '',
+        joinDate: person.joinDate || person.joindate,
+        createdAt: person.createdAt || person.created_at,
+        updatedAt: person.updatedAt || person.updated_at
+      })) || [];
+
+      // Calculate total active people
+      const totalPeople = transformedPeople.length;
+
+      // Get recent people (last 5 active members)
+      const recentPeople = transformedPeople
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 5);
+
+      // Fetch groups
+      const { data: groups, error: groupsError } = await supabase
+        .from('groups')
+        .select('*');
+
+      if (groupsError) throw groupsError;
+
+      // Calculate total active groups
+      const totalGroups = groups?.length || 0;
+
+      // Fetch donations
+      const { data: donations, error: donationsError } = await supabase
+        .from('donations')
+        .select('*')
+        .order('date', { ascending: false });
+
+      if (donationsError) throw donationsError;
+
+      // Calculate total donations
+      const totalDonations = donations?.reduce((sum, donation) => sum + parseFloat(donation.amount), 0) || 0;
+
+      // Calculate monthly donations
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1; // getMonth() returns 0-11, we need 1-12
+      
+      const monthlyDonations = donations?.filter(donation => {
+        const donationDate = new Date(donation.date);
+        return donationDate.getFullYear() === currentYear && 
+               (donationDate.getMonth() + 1) === currentMonth;
+      }).reduce((sum, donation) => sum + parseFloat(donation.amount), 0) || 0;
+
+      // Fetch upcoming events
+      const { data: events, error: eventsError } = await supabase
+        .from('events')
+        .select('*')
+        .gte('start_date', new Date().toISOString())
+        .order('start_date', { ascending: true })
+        .limit(5);
+
+      if (eventsError) throw eventsError;
+
+      // Calculate total upcoming events
+      const upcomingEvents = events?.length || 0;
+
+      // Get recent groups (last 3 groups)
+      const recentGroups = groups?.slice(0, 3) || [];
+
+      // Get weekly donations for chart
+      const weeklyDonations = donations?.slice(0, 7) || [];
+
+      setStats({
+        totalPeople,
+        totalGroups,
+        totalDonations,
+        monthlyDonations,
+        upcomingEvents
+      });
+      setRecentPeople(recentPeople);
+      setUpcomingEvents(events || []);
+      setWeeklyDonations(weeklyDonations);
+      setRecentGroups(recentGroups);
+      setDonations(donations || []);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard data",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }, [toast]);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
 
   const handleOpenRSVPModal = async (eventId) => {
     setSelectedEvent({ id: eventId });
@@ -194,117 +278,6 @@ export function Dashboard() {
     };
   };
 
-  const fetchDashboardData = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      // Fetch people
-      const { data: people, error: peopleError } = await supabase
-        .from('members')
-        .select('*')
-        .eq('status', 'active');
-
-      if (peopleError) throw peopleError;
-
-      // Transform snake_case to camelCase
-      const transformedPeople = people?.map(person => ({
-        ...person,
-        firstName: person.firstname || '',
-        lastName: person.lastname || '',
-        joinDate: person.joindate,
-        createdAt: person.created_at,
-        updatedAt: person.updated_at
-      })) || [];
-
-      // Calculate total active people
-      const totalPeople = transformedPeople.length;
-
-      // Get recent people (last 5 active members)
-      const recentPeople = transformedPeople
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-        .slice(0, 5);
-
-      // Fetch groups
-      const { data: groups, error: groupsError } = await supabase
-        .from('groups')
-        .select('*');
-
-      if (groupsError) throw groupsError;
-
-      // Calculate total active groups
-      const totalGroups = groups?.length || 0;
-
-      // Fetch donations
-      const { data: donations, error: donationsError } = await supabase
-        .from('donations')
-        .select('*')
-        .order('date', { ascending: false });
-
-      if (donationsError) throw donationsError;
-
-      // Calculate total donations
-      const totalDonations = donations?.reduce((sum, donation) => sum + parseFloat(donation.amount), 0) || 0;
-
-      // Calculate monthly donations
-      const now = new Date();
-      const currentYear = now.getFullYear();
-      const currentMonth = now.getMonth() + 1; // getMonth() returns 0-11, we need 1-12
-      
-      const monthlyDonations = donations
-        ?.filter(donation => {
-          // Parse date as YYYY-MM-DD string to avoid timezone issues
-          const donationDate = donation.date; // Should be in format YYYY-MM-DD
-          const [year, month] = donationDate.split('-').map(Number);
-          return year === currentYear && month === currentMonth;
-        })
-        .reduce((sum, donation) => sum + parseFloat(donation.amount), 0) || 0;
-
-      // Fetch upcoming events (next 30 days only)
-      const today = new Date();
-      const thirtyDaysFromNow = addDays(today, 30);
-      
-      // Use getEvents() to get deduplicated events, then filter for next 30 days
-      const allEvents = await getEvents();
-      console.log('All events:', allEvents);
-      
-      const events = allEvents.filter(event => {
-        const eventDate = new Date(event.start_date);
-        const isInRange = eventDate >= today && eventDate <= thirtyDaysFromNow;
-        console.log(`Event: ${event.title}, Date: ${eventDate.toISOString()}, In Range: ${isInRange}`);
-        return isInRange;
-      });
-      
-      console.log('Filtered events:', events);
-      console.log('Total events in next 30 days:', events.length);
-
-      // Update state with fetched data
-      setStats({
-        totalPeople,
-        totalGroups,
-        totalDonations,
-        monthlyDonations,
-        upcomingEvents: events.length
-      });
-      setRecentPeople(recentPeople);
-      setUpcomingEvents(events);
-      setDonations(donations || []);
-      setRecentGroups(groups?.slice(0, 5) || []);
-
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load dashboard data",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
-
-  useEffect(() => {
-    fetchDashboardData();
-  }, [fetchDashboardData]);
-
   const handleEditDonation = async (donation) => {
     setSelectedDonation(donation);
     setIsEditDonationOpen(true);
@@ -331,7 +304,7 @@ export function Dashboard() {
 
       setIsEditDonationOpen(false);
       setSelectedDonation(null);
-      fetchDashboardData(); // Refresh the data
+      loadDashboardData(); // Refresh the data
     } catch (error) {
       console.error('Error updating donation:', error);
       toast({
@@ -358,7 +331,7 @@ export function Dashboard() {
 
       setIsDeleteDonationOpen(false);
       setSelectedDonation(null);
-      fetchDashboardData(); // Refresh the data
+      loadDashboardData(); // Refresh the data
     } catch (error) {
       console.error('Error deleting donation:', error);
       toast({
