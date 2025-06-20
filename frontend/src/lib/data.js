@@ -1,5 +1,26 @@
 import { supabase } from './supabaseClient';
 
+// Helper function to get current user's organization ID
+const getCurrentUserOrganizationId = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const { data, error } = await supabase
+      .from('organization_users')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .single();
+
+    if (error) throw error;
+    return data?.organization_id;
+  } catch (error) {
+    console.error('Error getting user organization:', error);
+    return null;
+  }
+};
+
 // Helper function to safely parse integers from form inputs
 const safeParseInt = (value) => {
   if (value === null || value === undefined || value === '') {
@@ -12,9 +33,15 @@ const safeParseInt = (value) => {
 // Members
 export async function getMembers() {
   try {
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
     const { data, error } = await supabase
       .from('members')
       .select('*')
+      .eq('organization_id', organizationId)
       .order('firstname', { ascending: true })
       .order('lastname', { ascending: true });
 
@@ -87,6 +114,11 @@ export async function getMembers() {
 
 export const addMember = async (memberData) => {
   try {
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
     const { data, error } = await supabase
       .from('members')
       .insert([{
@@ -95,7 +127,8 @@ export const addMember = async (memberData) => {
         email: memberData.email,
         phone: memberData.phone,
         status: memberData.status || 'active',
-        image_url: memberData.image_url
+        image_url: memberData.image_url,
+        organization_id: organizationId
       }])
       .select()
       .single();
@@ -109,6 +142,11 @@ export const addMember = async (memberData) => {
 
 export const updateMember = async (id, memberData) => {
   try {
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
     const { data, error } = await supabase
       .from('members')
       .update({
@@ -121,6 +159,7 @@ export const updateMember = async (id, memberData) => {
         gender: memberData.gender
       })
       .eq('id', id)
+      .eq('organization_id', organizationId)
       .select()
       .single();
 
@@ -133,6 +172,11 @@ export const updateMember = async (id, memberData) => {
 
 export const deleteMember = async (id) => {
   try {
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
     // First, try to delete from event_attendance
     try {
       const { error: eventAttendanceError } = await supabase
@@ -161,11 +205,12 @@ export const deleteMember = async (id) => {
       // Continue execution even if this fails
     }
 
-    // Finally delete the member
+    // Finally delete the member (only if they belong to the same organization)
     const { error: memberError } = await supabase
       .from('members')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('organization_id', organizationId);
 
     if (memberError) throw memberError;
 
@@ -178,10 +223,16 @@ export const deleteMember = async (id) => {
 // Events
 export const getEvents = async () => {
   try {
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
     const now = new Date();
     const { data, error } = await supabase
       .from('events')
       .select('*')
+      .eq('organization_id', organizationId)
       .gte('start_date', now.toISOString())
       .order('start_date', { ascending: true });
     
@@ -245,6 +296,11 @@ export const getEvents = async () => {
 
 export const addEvent = async (event) => {
   try {
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
     // Generate a unique ID for the event
     const eventId = `${event.title}-${new Date(event.startDate).getTime()}`
       .toLowerCase()
@@ -268,7 +324,8 @@ export const addEvent = async (event) => {
       allow_rsvp: event.allow_rsvp !== undefined ? event.allow_rsvp : true,
       attendance_type: event.attendance_type || 'rsvp',
       event_type: event.event_type || 'Sunday Worship Service',
-      parent_event_id: null // Will be set for instances
+      parent_event_id: null, // Will be set for instances
+      organization_id: organizationId
     };
 
     // If it's a recurring event, first create the master event
@@ -320,11 +377,17 @@ export const addEvent = async (event) => {
 
 export const updateEvent = async (id, updates) => {
   try {
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
     // First, get the original event to check if it's recurring
     const { data: originalEvent, error: fetchError } = await supabase
       .from('events')
       .select('*')
       .eq('id', id)
+      .eq('organization_id', organizationId)
       .single();
 
     if (fetchError) throw fetchError;
@@ -356,6 +419,7 @@ export const updateEvent = async (id, updates) => {
           is_master: true
         })
         .eq('id', masterId)
+        .eq('organization_id', organizationId)
         .select()
         .single();
 
@@ -366,6 +430,7 @@ export const updateEvent = async (id, updates) => {
         .from('events')
         .update(eventData)
         .eq('parent_event_id', masterId)
+        .eq('organization_id', organizationId)
         .select();
       
       if (instancesError) throw instancesError;
@@ -376,6 +441,7 @@ export const updateEvent = async (id, updates) => {
         .from('events')
         .update(eventData)
         .eq('id', id)
+        .eq('organization_id', organizationId)
         .select();
       
       if (error) throw error;
@@ -388,24 +454,31 @@ export const updateEvent = async (id, updates) => {
 
 export const deleteEvent = async (id) => {
   try {
-    // First, get the original event to check if it's recurring
-    const { data: originalEvent, error: fetchError } = await supabase
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
+    // First, get the event to check if it's recurring
+    const { data: event, error: fetchError } = await supabase
       .from('events')
       .select('*')
       .eq('id', id)
+      .eq('organization_id', organizationId)
       .single();
 
     if (fetchError) throw fetchError;
 
     // If it's a recurring event, delete master and all instances
-    if (originalEvent.is_recurring) {
-      const masterId = originalEvent.is_master ? originalEvent.id : originalEvent.parent_event_id;
+    if (event.is_recurring) {
+      const masterId = event.is_master ? event.id : event.parent_event_id;
       
       // Delete all instances first
       const { error: instancesError } = await supabase
         .from('events')
         .delete()
-        .eq('parent_event_id', masterId);
+        .eq('parent_event_id', masterId)
+        .eq('organization_id', organizationId);
       
       if (instancesError) throw instancesError;
 
@@ -413,7 +486,8 @@ export const deleteEvent = async (id) => {
       const { error: masterError } = await supabase
         .from('events')
         .delete()
-        .eq('id', masterId);
+        .eq('id', masterId)
+        .eq('organization_id', organizationId);
       
       if (masterError) throw masterError;
     } else {
@@ -421,10 +495,12 @@ export const deleteEvent = async (id) => {
       const { error } = await supabase
         .from('events')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('organization_id', organizationId);
       
       if (error) throw error;
     }
+
     return true;
   } catch (error) {
     throw error;
@@ -515,31 +591,38 @@ const generateRecurringInstances = (event) => {
 // Donations
 export async function getDonations() {
   try {
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
     const { data, error } = await supabase
       .from('donations')
       .select('*')
+      .eq('organization_id', organizationId)
       .order('date', { ascending: false });
 
     if (error) throw error;
     return data || [];
   } catch (error) {
-    throw error;
+    console.error('Error fetching donations:', error);
+    return [];
   }
 }
 
 export async function addDonation(donation) {
   try {
-    // Ensure attendance is properly handled
-    const donationData = {
-      ...donation,
-      amount: parseFloat(donation.amount),
-      date: new Date(donation.date).toISOString(),
-      attendance: donation.attendance ? parseInt(donation.attendance) : null
-    };
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
 
     const { data, error } = await supabase
       .from('donations')
-      .insert([donationData])
+      .insert([{
+        ...donation,
+        organization_id: organizationId
+      }])
       .select()
       .single();
 
@@ -552,16 +635,19 @@ export async function addDonation(donation) {
 
 export async function addMultipleDonations(donations) {
   try {
-    const donationsData = donations.map(donation => ({
-      amount: parseFloat(donation.amount),
-      date: new Date(donation.date).toISOString(),
-      attendance: donation.attendance ? parseInt(donation.attendance) : null,
-      type: donation.type || 'weekly'
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
+    const donationsWithOrg = donations.map(donation => ({
+      ...donation,
+      organization_id: organizationId
     }));
 
     const { data, error } = await supabase
       .from('donations')
-      .insert(donationsData)
+      .insert(donationsWithOrg)
       .select();
 
     if (error) throw error;
@@ -573,10 +659,16 @@ export async function addMultipleDonations(donations) {
 
 export async function updateDonation(id, updates) {
   try {
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
     const { data, error } = await supabase
       .from('donations')
       .update(updates)
       .eq('id', id)
+      .eq('organization_id', organizationId)
       .select()
       .single();
 
@@ -589,10 +681,16 @@ export async function updateDonation(id, updates) {
 
 export async function deleteDonation(id) {
   try {
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
     const { error } = await supabase
       .from('donations')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('organization_id', organizationId);
 
     if (error) throw error;
     return true;
@@ -604,15 +702,22 @@ export async function deleteDonation(id) {
 // Groups
 export async function getGroups() {
   try {
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
     const { data, error } = await supabase
       .from('groups')
       .select('*')
+      .eq('organization_id', organizationId)
       .order('name', { ascending: true });
 
     if (error) throw error;
     return data || [];
   } catch (error) {
-    throw error;
+    console.error('Error fetching groups:', error);
+    return [];
   }
 }
 

@@ -5,6 +5,7 @@ import ChurchInfoSettings from '@/components/settings/ChurchInfoSettings';
 import AccountSettings from '@/components/settings/AccountSettings';
 import NotificationSettings from '@/components/settings/NotificationSettings';
 import DataManagementSettings from '@/components/settings/DataManagementSettings';
+import UserManagementSettings from '@/components/settings/UserManagementSettings';
 
 export function Settings() {
   return (
@@ -31,6 +32,7 @@ export function Settings() {
       <Tabs defaultValue="church" className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="church">Church Information</TabsTrigger>
+          <TabsTrigger value="users">User Management</TabsTrigger>
           <TabsTrigger value="account">Account</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="data">Data Management</TabsTrigger>
@@ -38,6 +40,10 @@ export function Settings() {
         
         <TabsContent value="church">
           <ChurchInfoSettings />
+        </TabsContent>
+        
+        <TabsContent value="users">
+          <UserManagementSettings />
         </TabsContent>
         
         <TabsContent value="account">

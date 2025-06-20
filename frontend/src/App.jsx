@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/layout';
 import { Dashboard } from './pages/dashboard';
 import { People } from './pages/members';
@@ -12,12 +12,20 @@ import { Bulletin } from './pages/bulletin';
 import { Settings } from './pages/settings';
 import ChildrenCheckin from './pages/children-checkin';
 import AddChild from './pages/add-child';
+import { Login } from './pages/login';
+import { Register } from './pages/register';
+import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
   return (
     <Routes>
-      <Route element={<Layout />}>
-        <Route path="/" element={<Dashboard />} />
+      {/* Public routes */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      
+      {/* Protected routes */}
+      <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/members" element={<People />} />
         <Route path="/members/:id" element={<MemberProfile />} />
