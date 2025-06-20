@@ -19,7 +19,8 @@ import {
   Users,
   Calendar,
   Clock,
-  X
+  X,
+  Handshake
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,9 +46,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from '@/lib/authContext';
 import EventForm from '@/components/events/EventForm';
-import { addEvent, updateEvent, deleteEvent } from '@/lib/data';
+import { addEvent, updateEvent, deleteEvent, getEventVolunteers, addEventVolunteer, updateEventVolunteer, removeEventVolunteer, parseVolunteerRoles } from '@/lib/data';
 import { getInitials } from '@/lib/utils/formatters';
 import { PotluckRSVPDialog } from '@/components/events/PotluckRSVPDialog';
+import { VolunteerList } from '@/components/events/VolunteerList';
+import { AddVolunteerForm } from '@/components/events/AddVolunteerForm';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -85,7 +88,7 @@ const formatRecurrencePattern = (pattern, monthlyWeek, monthlyWeekday) => {
   }
 };
 
-const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete }) => {
+const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVolunteers }) => {
   const startDate = new Date(event.start_date);
   const endDate = new Date(event.end_date);
   const isRecurring = event.is_recurring;
@@ -99,7 +102,7 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete }) => {
       <CardHeader>
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle className="text-xl font-bold">
+            <CardTitle className="text-xl font-bold flex items-center gap-2">
               {event.title}
               {isRecurring && (
                 <Badge variant="secondary" className="ml-2">
@@ -109,6 +112,12 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete }) => {
               {isPotluck && (
                 <Badge variant="outline" className="ml-2 text-green-600 border-green-600">
                   Potluck Sunday
+                </Badge>
+              )}
+              {event.needs_volunteers && (
+                <Badge variant="outline" className="ml-2 text-yellow-600 border-yellow-600 flex items-center gap-1">
+                  <Handshake className="h-3 w-3" />
+                  Volunteers Needed
                 </Badge>
               )}
             </CardTitle>
@@ -158,6 +167,12 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete }) => {
             )}
           </div>
           <div className="flex gap-2">
+            {event.needs_volunteers && (
+              <Button variant="outline" size="sm" onClick={() => onManageVolunteers(event)}>
+                <Handshake className="mr-2 h-4 w-4" />
+                Manage Volunteers
+              </Button>
+            )}
             {event.allow_rsvp && (
               <div className="flex items-center gap-2">
                 {isCheckIn ? (
@@ -259,6 +274,8 @@ export default function Events() {
     location: '',
     attendance_type: 'rsvp'
   });
+  const [isVolunteerDialogOpen, setIsVolunteerDialogOpen] = useState(false);
+  const [volunteerDialogEvent, setVolunteerDialogEvent] = useState(null);
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -899,18 +916,16 @@ export default function Events() {
     }
   };
 
-  const handleEditEvent = async (event) => {
+  const handleEditEvent = async (eventData) => {
     try {
-      setEditingEvent(event);
-      setNewEvent({
-        title: event.title,
-        description: event.description || '',
-        start_time: event.start_date,
-        end_time: event.end_date,
-        location: event.location || '',
-        attendance_type: event.attendance_type || 'rsvp'
+      await updateEvent(editingEvent.id, eventData);
+      setIsEditEventOpen(false);
+      setEditingEvent(null);
+      fetchEvents();
+      toast({
+        title: "Success",
+        description: "Event updated successfully."
       });
-      setIsCreateEventOpen(true);
     } catch (error) {
       console.error('Error updating event:', error);
       toast({
@@ -1076,6 +1091,11 @@ export default function Events() {
     }
   }, [selectedPotluckEvent, handlePotluckRSVP]);
 
+  const handleManageVolunteers = (event) => {
+    setVolunteerDialogEvent(event);
+    setIsVolunteerDialogOpen(true);
+  };
+
   const renderEventCard = useCallback((event) => {
     return (
       <EventCard
@@ -1085,9 +1105,10 @@ export default function Events() {
         onPotluckRSVP={handlePotluckRSVP}
         onEdit={handleEditClick}
         onDelete={handleDeleteEvent}
+        onManageVolunteers={handleManageVolunteers}
       />
     );
-  }, [handleOpenDialog, handlePotluckRSVP, handleEditClick, handleDeleteEvent]);
+  }, [handleOpenDialog, handlePotluckRSVP, handleEditClick, handleDeleteEvent, handleManageVolunteers]);
 
   const processRecurringEvents = (events) => {
     const processedEvents = [];
@@ -1187,7 +1208,7 @@ export default function Events() {
 
       {/* Event List */}
       <div className="space-y-4">
-        {events.map((event) => (
+        {filteredEvents.map((event) => (
           <EventCard
             key={event.id}
             event={event}
@@ -1195,6 +1216,7 @@ export default function Events() {
             onPotluckRSVP={handlePotluckRSVP}
             onEdit={handleEditClick}
             onDelete={handleDeleteEvent}
+            onManageVolunteers={handleManageVolunteers}
           />
         ))}
       </div>
@@ -1497,6 +1519,60 @@ export default function Events() {
         event={selectedPotluckEvent}
         onRSVP={handlePotluckRSVPUpdate}
       />
+
+      {/* Volunteer Management Dialog */}
+      <Dialog open={isVolunteerDialogOpen} onOpenChange={setIsVolunteerDialogOpen}>
+        <DialogContent className="w-full max-w-4xl h-[80vh] p-0">
+          <DialogHeader className="p-6 border-b">
+            <DialogTitle className="text-2xl">
+              Manage Volunteers - {volunteerDialogEvent?.title}
+            </DialogTitle>
+            <DialogDescription>
+              Assign and manage volunteers for this event. {volunteerDialogEvent?.volunteer_roles && 
+                `Available roles: ${parseVolunteerRoles(volunteerDialogEvent.volunteer_roles).map(r => r.role || r).join(', ')}`
+              }
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="p-6 flex-1 overflow-hidden">
+            <Tabs defaultValue="current" className="h-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="current">Current Volunteers</TabsTrigger>
+                <TabsTrigger value="add">Add Volunteer</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="current" className="mt-4 h-full overflow-y-auto">
+                <VolunteerList 
+                  eventId={volunteerDialogEvent?.id}
+                  availableRoles={parseVolunteerRoles(volunteerDialogEvent?.volunteer_roles)}
+                  onVolunteerUpdated={() => {
+                    // Refresh volunteer list
+                  }}
+                  onVolunteerRemoved={() => {
+                    // Refresh volunteer list
+                  }}
+                />
+              </TabsContent>
+
+              <TabsContent value="add" className="mt-4 h-full overflow-y-auto">
+                <AddVolunteerForm 
+                  eventId={volunteerDialogEvent?.id}
+                  availableRoles={parseVolunteerRoles(volunteerDialogEvent?.volunteer_roles)}
+                  onVolunteerAdded={() => {
+                    // Refresh volunteer list
+                  }}
+                />
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          <DialogFooter className="p-6 border-t">
+            <Button onClick={() => setIsVolunteerDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -3,45 +3,48 @@ import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   Home, 
-  Users, 
+  Users2, 
   Calendar, 
   DollarSign, 
-  UserPlus, 
-  Settings as SettingsIcon, 
-  Menu, 
-  X, 
-  ChevronDown,
-  Church,
-  BarChart2,
-  ClipboardList,
+  Settings, 
+  LogOut, 
+  User, 
+  ChevronDown, 
   MoreHorizontal,
+  Church,
+  FileText,
+  BarChart3,
+  Users,
+  CheckSquare,
+  MessageSquare,
   Baby,
-  LogOut,
-  User
+  UserPlus,
+  ClipboardList,
+  BarChart2
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/lib/authContext';
-import { supabase } from '@/lib/supabaseClient';
+import { isUserAdmin, getApprovalNotifications, getOrganizationName } from '@/lib/data';
+import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
-import { getApprovalNotifications, isUserAdmin } from '@/lib/data';
 
 export function Layout() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [pendingApprovals, setPendingApprovals] = useState(0);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { user, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
   const { toast } = useToast();
-  
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [pendingApprovals, setPendingApprovals] = useState(0);
+  const [organizationName, setOrganizationName] = useState('Church App');
+
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Events', href: '/events', icon: Calendar },
@@ -51,7 +54,7 @@ export function Layout() {
     { name: 'Groups', href: '/groups', icon: UserPlus },
     { name: 'Tasks', href: '/tasks', icon: ClipboardList },
     { name: 'Reports', href: '/reports', icon: BarChart2 },
-    { name: 'Settings', href: '/settings', icon: SettingsIcon },
+    { name: 'Settings', href: '/settings', icon: Settings },
   ];
 
   const mainNavItems = navigation.slice(0, 5); // Show 5 main items on tablet
@@ -70,11 +73,28 @@ export function Layout() {
           setPendingApprovals(notifications.length);
         }
       } catch (error) {
-        console.error('Error checking admin status or notifications:', error);
+        console.error('Error checking admin status:', error);
+      }
+    };
+
+    const fetchOrganizationName = async () => {
+      try {
+        console.log('Fetching organization name...');
+        const name = await getOrganizationName();
+        console.log('Organization name received:', name);
+        if (name) {
+          setOrganizationName(name);
+          console.log('Organization name set to:', name);
+        } else {
+          console.log('No organization name received, keeping default');
+        }
+      } catch (error) {
+        console.error('Error fetching organization name:', error);
       }
     };
 
     checkAdminAndNotifications();
+    fetchOrganizationName();
   }, []);
 
   const handleSignOut = async () => {
@@ -103,7 +123,7 @@ export function Layout() {
       <header className="bg-white border-b px-4 py-3 flex justify-between items-center">
         <div className="flex items-center gap-2">
           <Church className="h-6 w-6 text-primary" />
-          <span className="font-semibold text-lg">Church App</span>
+          <span className="font-semibold text-lg">{organizationName}</span>
         </div>
         
         {user && (
@@ -290,7 +310,7 @@ export function Layout() {
       {/* Footer */}
       <footer className="py-4 px-6 border-t mt-16 tablet:mt-20 lg:mt-0">
         <div className="flex flex-col sm:flex-row justify-between items-center">
-          <p className="text-sm text-gray-500">© 2025 Brentwood Lighthouse Baptist Church</p>
+          <p className="text-sm text-gray-500">© 2025 {organizationName}. All rights reserved.</p>
         </div>
       </footer>
     </div>

@@ -288,7 +288,7 @@ const UserManagementSettings = () => {
             <div className="flex justify-between items-center">
               <div>
                 <CardTitle>User Management</CardTitle>
-                <CardDescription>Manage users and their access to the church app.</CardDescription>
+                <CardDescription>Manage users and their access to the organization management system.</CardDescription>
               </div>
               <Button onClick={() => setIsInviteDialogOpen(true)}>
                 <UserPlus className="mr-2 h-4 w-4" />
@@ -395,7 +395,7 @@ const UserManagementSettings = () => {
           <DialogHeader>
             <DialogTitle>Invite New User</DialogTitle>
             <DialogDescription>
-              Create a new user account for your church app.
+              Create a new user account for your organization management system.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">

@@ -48,7 +48,7 @@ export function People() {
   const [members, setMembers] = useState([]);
   const [filteredMembers, setFilteredMembers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('active');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [viewMode, setViewMode] = useState('grid');
   const [sortField, setSortField] = useState('lastName');
   const [sortDirection, setSortDirection] = useState('asc');
@@ -122,8 +122,8 @@ export function People() {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(member => 
-        member.firstName.toLowerCase().includes(query) ||
-        member.lastName.toLowerCase().includes(query) ||
+        (member.firstname && member.firstname.toLowerCase().includes(query)) ||
+        (member.lastname && member.lastname.toLowerCase().includes(query)) ||
         (member.email && member.email.toLowerCase().includes(query)) ||
         (member.phone && member.phone.toLowerCase().includes(query))
       );

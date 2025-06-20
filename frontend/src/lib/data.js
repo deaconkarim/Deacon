@@ -95,6 +95,33 @@ const safeParseInt = (value) => {
   return isNaN(parsed) ? null : parsed;
 };
 
+// Helper function to safely parse volunteer roles
+export const parseVolunteerRoles = (volunteerRoles) => {
+  if (!volunteerRoles) return [];
+  
+  try {
+    // If it's already an array/object, return it
+    if (Array.isArray(volunteerRoles)) {
+      return volunteerRoles;
+    }
+    
+    // If it's a string, try to parse it as JSON
+    if (typeof volunteerRoles === 'string') {
+      return JSON.parse(volunteerRoles);
+    }
+    
+    // If it's an object, return it as an array
+    if (typeof volunteerRoles === 'object') {
+      return [volunteerRoles];
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('Error parsing volunteer roles:', error);
+    return [];
+  }
+};
+
 // Members
 export async function getMembers() {
   try {
@@ -365,6 +392,31 @@ export const getEvents = async () => {
   }
 };
 
+// Get all events for dashboard statistics (including past events)
+export const getAllEvents = async () => {
+  try {
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .eq('organization_id', organizationId)
+      .order('start_date', { ascending: true });
+    
+    if (error) throw error;
+
+    // For dashboard statistics, return all individual event instances
+    // Don't group recurring events - we want to count each instance
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching all events:', error);
+    return [];
+  }
+};
+
 export const addEvent = async (event) => {
   try {
     const organizationId = await getCurrentUserOrganizationId();
@@ -395,6 +447,8 @@ export const addEvent = async (event) => {
       allow_rsvp: event.allow_rsvp !== undefined ? event.allow_rsvp : true,
       attendance_type: event.attendance_type || 'rsvp',
       event_type: event.event_type || 'Sunday Worship Service',
+      needs_volunteers: event.needs_volunteers || false,
+      volunteer_roles: event.volunteer_roles ? JSON.stringify(event.volunteer_roles) : null,
       parent_event_id: null, // Will be set for instances
       organization_id: organizationId
     };
@@ -475,7 +529,9 @@ export const updateEvent = async (id, updates) => {
       monthly_week: updates.recurrence_pattern === 'monthly_weekday' ? safeParseInt(updates.monthly_week) : null,
       monthly_weekday: updates.recurrence_pattern === 'monthly_weekday' ? safeParseInt(updates.monthly_weekday) : null,
       allow_rsvp: updates.allow_rsvp !== undefined ? updates.allow_rsvp : true,
-      attendance_type: updates.attendance_type || 'rsvp'
+      attendance_type: updates.attendance_type || 'rsvp',
+      needs_volunteers: updates.needs_volunteers || false,
+      volunteer_roles: updates.volunteer_roles ? JSON.stringify(updates.volunteer_roles) : null
     };
 
     // If it's a recurring event, update master and all instances
@@ -663,7 +719,11 @@ const generateRecurringInstances = (event) => {
 export async function getDonations() {
   try {
     const organizationId = await getCurrentUserOrganizationId();
+    console.log('=== GETDONATIONS DEBUG ===');
+    console.log('Organization ID:', organizationId);
+    
     if (!organizationId) {
+      console.error('No organization ID found for user');
       throw new Error('User not associated with any organization');
     }
 
@@ -673,7 +733,16 @@ export async function getDonations() {
       .eq('organization_id', organizationId)
       .order('date', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error:', error);
+      throw error;
+    }
+    
+    console.log('Donations fetched:', data?.length || 0, 'records');
+    console.log('Sample donation:', data?.[0]);
+    console.log('All donations:', data);
+    console.log('=== END GETDONATIONS DEBUG ===');
+    
     return data || [];
   } catch (error) {
     console.error('Error fetching donations:', error);
@@ -818,6 +887,51 @@ export const getMemberAttendance = async (memberId) => {
       status: new Date(record.events.start_date) < now ? 'attended' : record.status
     }));
   } catch (error) {
+    throw error;
+  }
+};
+
+export const addEventAttendance = async (eventId, memberId, status = 'attending') => {
+  try {
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
+    const { data, error } = await supabase
+      .from('event_attendance')
+      .upsert({
+        event_id: eventId,
+        member_id: memberId,
+        status: status
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error adding event attendance:', error);
+    throw error;
+  }
+};
+
+export const getEventAttendance = async (eventId) => {
+  try {
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
+    const { data, error } = await supabase
+      .from('event_attendance')
+      .select('*')
+      .eq('event_id', eventId);
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching event attendance:', error);
     throw error;
   }
 };
@@ -1063,5 +1177,192 @@ export const removeUserAdmin = async (userId) => {
   } catch (error) {
     console.error('Error removing user admin:', error);
     throw error;
+  }
+};
+
+// Event Volunteers
+export const getEventVolunteers = async (eventId) => {
+  try {
+    const { data, error } = await supabase
+      .from('event_volunteers')
+      .select('*, member:members(*), event:events(*)')
+      .eq('event_id', eventId)
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching event volunteers:', error);
+    return [];
+  }
+};
+
+export const addEventVolunteer = async ({ eventId, memberId, role, notes }) => {
+  try {
+    const { data, error } = await supabase
+      .from('event_volunteers')
+      .insert([
+        {
+          event_id: eventId,
+          member_id: memberId,
+          role,
+          notes: notes || null
+        }
+      ])
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error adding event volunteer:', error);
+    throw error;
+  }
+};
+
+export const updateEventVolunteer = async (eventVolunteerId, { role, notes }) => {
+  try {
+    const { data, error } = await supabase
+      .from('event_volunteers')
+      .update({ role, notes })
+      .eq('id', eventVolunteerId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error updating event volunteer:', error);
+    throw error;
+  }
+};
+
+export const removeEventVolunteer = async (eventVolunteerId) => {
+  try {
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
+    const { error } = await supabase
+      .from('event_volunteers')
+      .delete()
+      .eq('id', eventVolunteerId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error removing event volunteer:', error);
+    throw error;
+  }
+};
+
+// Get volunteer statistics for dashboard
+export const getVolunteerStats = async () => {
+  try {
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
+    // Get all events that need volunteers
+    const { data: eventsNeedingVolunteers, error: eventsError } = await supabase
+      .from('events')
+      .select('id, title, start_date, needs_volunteers, volunteer_roles')
+      .eq('organization_id', organizationId)
+      .eq('needs_volunteers', true)
+      .gte('start_date', new Date().toISOString())
+      .order('start_date', { ascending: true });
+
+    if (eventsError) throw eventsError;
+
+    // Get all volunteer assignments
+    const { data: allVolunteers, error: volunteersError } = await supabase
+      .from('event_volunteers')
+      .select(`
+        id,
+        role,
+        notes,
+        created_at,
+        events!inner(id, title, start_date, organization_id),
+        members!inner(id, firstname, lastname, email, image_url)
+      `)
+      .eq('events.organization_id', organizationId);
+
+    if (volunteersError) throw volunteersError;
+
+    // Get upcoming volunteer assignments (next 30 days)
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+
+    const upcomingVolunteers = allVolunteers.filter(volunteer => {
+      const eventDate = new Date(volunteer.events.start_date);
+      return eventDate >= new Date() && eventDate <= thirtyDaysFromNow;
+    });
+
+    // Get unique volunteers (people who have volunteered)
+    const uniqueVolunteers = new Set(allVolunteers.map(v => v.members.id));
+    const totalUniqueVolunteers = uniqueVolunteers.size;
+
+    // Get recent volunteer assignments (last 7 days)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const recentVolunteers = allVolunteers.filter(volunteer => {
+      const assignmentDate = new Date(volunteer.created_at);
+      return assignmentDate >= sevenDaysAgo;
+    });
+
+    // Get events needing volunteers count
+    const eventsNeedingVolunteersCount = eventsNeedingVolunteers.length;
+
+    // Get upcoming events with volunteer needs
+    const upcomingEventsWithVolunteers = eventsNeedingVolunteers.slice(0, 5);
+
+    return {
+      totalVolunteers: totalUniqueVolunteers,
+      upcomingVolunteers: upcomingVolunteers.length,
+      recentVolunteers: recentVolunteers.length,
+      eventsNeedingVolunteers: eventsNeedingVolunteersCount,
+      upcomingEventsWithVolunteers,
+      allVolunteers: allVolunteers || []
+    };
+  } catch (error) {
+    console.error('Error fetching volunteer statistics:', error);
+    throw error;
+  }
+};
+
+// Get the current user's organization name
+export const getOrganizationName = async () => {
+  try {
+    console.log('getOrganizationName: Starting...');
+    const { data: { user } } = await supabase.auth.getUser();
+    console.log('getOrganizationName: User:', user?.id);
+    if (!user) return null;
+
+    // Get the user's organization ID
+    const { data: userOrg, error: userOrgError } = await supabase
+      .from('organization_users')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .single();
+
+    console.log('getOrganizationName: User org data:', userOrg, 'Error:', userOrgError);
+    if (userOrgError || !userOrg) return null;
+
+    // Get the organization name
+    const { data: org, error: orgError } = await supabase
+      .from('organizations')
+      .select('name')
+      .eq('id', userOrg.organization_id)
+      .single();
+
+    console.log('getOrganizationName: Organization data:', org, 'Error:', orgError);
+    if (orgError || !org) return null;
+
+    console.log('getOrganizationName: Returning name:', org.name);
+    return org.name;
+  } catch (error) {
+    console.error('Error getting organization name:', error);
+    return null;
   }
 };

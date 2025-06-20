@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
+import { parseVolunteerRoles } from '@/lib/data';
 
 const EventForm = ({ initialData, onSave, onCancel }) => {
   const [eventData, setEventData] = useState({
@@ -24,7 +25,9 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
     monthly_weekday: initialData.monthly_weekday || '',
     allow_rsvp: initialData.allow_rsvp !== undefined ? initialData.allow_rsvp : true,
     attendance_type: initialData.attendance_type || 'rsvp',
-    event_type: initialData.event_type || 'Sunday Worship Service'
+    event_type: initialData.event_type || 'Sunday Worship Service',
+    needs_volunteers: initialData.needs_volunteers || false,
+    volunteer_roles: parseVolunteerRoles(initialData.volunteer_roles)
   });
   const { toast } = useToast();
 
@@ -45,7 +48,9 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
       monthly_weekday: initialData.monthly_weekday || '',
       allow_rsvp: initialData.allow_rsvp !== undefined ? initialData.allow_rsvp : true,
       attendance_type: initialData.attendance_type || 'rsvp',
-      event_type: initialData.event_type || 'Sunday Worship Service'
+      event_type: initialData.event_type || 'Sunday Worship Service',
+      needs_volunteers: initialData.needs_volunteers || false,
+      volunteer_roles: parseVolunteerRoles(initialData.volunteer_roles)
     });
   }, [initialData]);
 
@@ -102,11 +107,20 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
       return;
     }
 
+    // Format volunteer roles as JSON array of objects
+    const formattedVolunteerRoles = Array.isArray(eventData.volunteer_roles) 
+      ? eventData.volunteer_roles.map(role => {
+          const roleName = typeof role === 'object' ? role.role : String(role);
+          return { role: roleName.trim(), description: '' };
+        })
+      : [];
+
     // Format dates for submission
     const formattedData = {
       ...eventData,
       startDate: startDate.toISOString(),
-      endDate: endDate.toISOString()
+      endDate: endDate.toISOString(),
+      volunteer_roles: formattedVolunteerRoles
     };
 
     onSave(formattedData);
@@ -359,6 +373,39 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
           <Label>Event will occur on the fifth Sunday of each month</Label>
           <p className="text-sm text-muted-foreground">
             This event will automatically be marked as a potluck event where members can RSVP and specify what dish they'll bring.
+          </p>
+        </div>
+      )}
+      <div className="space-y-2">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="needs_volunteers"
+            checked={eventData.needs_volunteers}
+            onCheckedChange={(checked) => setEventData(prev => ({ ...prev, needs_volunteers: checked }))}
+          />
+          <Label htmlFor="needs_volunteers">Needs Volunteers</Label>
+        </div>
+      </div>
+      {eventData.needs_volunteers && (
+        <div className="space-y-2">
+          <Label htmlFor="volunteer_roles">Volunteer Roles (one per line)</Label>
+          <textarea
+            id="volunteer_roles"
+            name="volunteer_roles"
+            value={Array.isArray(eventData.volunteer_roles) 
+              ? eventData.volunteer_roles.map(role => typeof role === 'object' ? role.role : role).join('\n')
+              : ''
+            }
+            onChange={(e) => {
+              const roles = e.target.value.split('\n').filter(role => role.trim() !== '');
+              setEventData(prev => ({ ...prev, volunteer_roles: roles }));
+            }}
+            placeholder="Enter volunteer roles, one per line (e.g., Usher, Greeter, Worship Team)"
+            rows="3"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          <p className="text-sm text-muted-foreground">
+            Enter each volunteer role on a separate line. These roles will be available when assigning volunteers to this event.
           </p>
         </div>
       )}

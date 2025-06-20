@@ -142,7 +142,7 @@ app.get('/api/events', async (req, res) => {
       console.log('Processing event:', title);
       
       // Skip non-event sections
-      if (title.includes('Download Our Church App') || title.includes('Watch and Listen')) {
+      if (title.includes('Download Our Organization App') || title.includes('Watch and Listen')) {
         return;
       }
       
