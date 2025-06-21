@@ -34,6 +34,7 @@ import { useAuth } from '@/lib/authContext';
 import { isUserAdmin, getApprovalNotifications, getOrganizationName } from '@/lib/data';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
+import { supabase } from '@/lib/supabaseClient';
 
 export function Layout() {
   const { user, signOut } = useAuth();
@@ -69,8 +70,13 @@ export function Layout() {
         setIsAdmin(adminStatus);
         
         if (adminStatus) {
-          const notifications = await getApprovalNotifications();
-          setPendingApprovals(notifications.length);
+          try {
+            const notifications = await getApprovalNotifications();
+            setPendingApprovals(notifications.length);
+          } catch (error) {
+            console.error('Error fetching approval notifications:', error);
+            setPendingApprovals(0);
+          }
         }
       } catch (error) {
         console.error('Error checking admin status:', error);
@@ -99,16 +105,22 @@ export function Layout() {
 
   const handleSignOut = async () => {
     try {
+      console.log('Sign out initiated...');
+      
+      // Clear any local storage or session data
+      localStorage.clear();
+      sessionStorage.clear();
+      
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
-      toast({
-        title: "Signed out successfully",
-        description: "You have been signed out of your account.",
-      });
+      console.log('Sign out successful, navigating to login...');
       
-      navigate('/login');
+      // Force a page reload to ensure clean state
+      window.location.href = '/login';
+      
     } catch (error) {
+      console.error('Sign out error:', error);
       toast({
         title: "Error signing out",
         description: error.message,
@@ -120,7 +132,7 @@ export function Layout() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header with User Menu */}
-      <header className="bg-white border-b px-4 py-3 flex justify-between items-center">
+      <header className="bg-white border-b px-4 py-3 flex justify-between items-center sticky top-0 z-40">
         <div className="flex items-center gap-2">
           <Church className="h-6 w-6 text-primary" />
           <span className="font-semibold text-lg">{organizationName}</span>

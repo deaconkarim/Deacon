@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { format, parse, isAfter, isBefore, addDays, startOfDay, endOfDay, parseISO, isValid, startOfWeek } from 'date-fns';
+import { format, parse, isAfter, isBefore, addDays, startOfDay, endOfDay, parseISO, isValid, startOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 import { 
   Users, 
   Calendar, 
@@ -18,7 +18,10 @@ import {
   Activity,
   Pencil,
   Trash2,
-  Handshake
+  Handshake,
+  BookOpen,
+  BarChart3,
+  Trophy
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,7 +32,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import { Input } from '@/components/ui/input';
-import { getMembers, getGroups, getEvents, getDonations, getAllEvents, addMember, updateMember, deleteMember, getMemberAttendance, updateDonation, deleteDonation, addEventAttendance, getEventAttendance, getVolunteerStats } from '../lib/data';
+import { getMembers, getEvents, getDonations, getAllEvents, addMember, updateMember, deleteMember, getMemberAttendance, updateDonation, deleteDonation, addEventAttendance, getEventAttendance, getVolunteerStats } from '../lib/data';
 import {
   Dialog,
   DialogContent,
@@ -41,6 +44,7 @@ import {
 import { useAuth } from '@/lib/authContext';
 import { Label } from '@/components/ui/label';
 import { formatName, getInitials } from '@/lib/utils/formatters';
+import { useAttendanceStats } from '../lib/data/attendanceStats';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -65,7 +69,6 @@ export function Dashboard() {
     activeMembers: 0,
     inactiveMembers: 0,
     visitors: 0,
-    totalGroups: 0,
     totalDonations: 0,
     monthlyDonations: 0,
     weeklyAverage: 0,
@@ -78,27 +81,55 @@ export function Dashboard() {
     totalVolunteers: 0,
     upcomingVolunteers: 0,
     recentVolunteers: 0,
-    eventsNeedingVolunteers: 0
+    eventsNeedingVolunteers: 0,
+    sundayServiceAttendance: 0,
+    sundayServiceEvents: 0,
+    bibleStudyAttendance: 0,
+    bibleStudyEvents: 0,
+    fellowshipAttendance: 0,
+    fellowshipEvents: 0,
+    eventsWithVolunteersEnabled: 0,
+    totalVolunteersSignedUp: 0,
+    eventsStillNeedingVolunteers: 0
   });
   const [recentPeople, setRecentPeople] = useState([]);
+  const [people, setPeople] = useState([]);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
-  const [allEvents, setAllEvents] = useState([]);
   const [weeklyDonations, setWeeklyDonations] = useState([]);
+  const [donations, setDonations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [rsvpLoading, setRsvpLoading] = useState({});
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
   const [selectedPeople, setSelectedPeople] = useState([]);
   const [personSearchQuery, setPersonSearchQuery] = useState('');
-  const [people, setPeople] = useState([]);
+  const [allEvents, setAllEvents] = useState([]);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isEditDonationOpen, setIsEditDonationOpen] = useState(false);
   const [selectedDonation, setSelectedDonation] = useState(null);
   const [isDeleteDonationOpen, setIsDeleteDonationOpen] = useState(false);
-  const [donations, setDonations] = useState([]);
-  const [recentGroups, setRecentGroups] = useState([]);
+  const [attendanceTimeRange, setAttendanceTimeRange] = useState('week'); // 'week' or 'month'
+
+  // Memoize the date objects to prevent infinite re-renders
+  const attendanceDateRange = useMemo(() => {
+    const now = new Date();
+    return {
+      startDate: startOfMonth(now),
+      endDate: endOfMonth(now)
+    };
+  }, []); // Empty dependency array - only calculate once
+
+  // Attendance stats for current month
+  const { isLoading: attendanceLoading, serviceBreakdown, memberStats, dailyData, eventDetails, error } = useAttendanceStats(
+    attendanceDateRange.startDate, 
+    attendanceDateRange.endDate
+  );
+
+  if (error) {
+    console.error('Attendance stats error:', error);
+  }
 
   const loadDashboardData = useCallback(async () => {
     try {
@@ -125,12 +156,6 @@ export function Dashboard() {
       const recentPeople = transformedPeople
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
         .slice(0, 5);
-
-      // Fetch groups using the filtered getGroups function
-      const groups = await getGroups();
-
-      // Calculate total active groups
-      const totalGroups = groups?.length || 0;
 
       // Fetch donations using the filtered getDonations function
       const donations = await getDonations();
@@ -260,14 +285,11 @@ export function Dashboard() {
       // Calculate total upcoming events
       const totalUpcomingEvents = upcomingEvents.length;
 
-      // Get recent groups (last 3 groups)
-      const recentGroups = groups?.slice(0, 3) || [];
-
       // Get weekly donations for chart
       const weeklyDonations = donations?.slice(0, 7) || [];
 
       // Calculate events statistics using all events
-      const currentDate = new Date();
+      const today = new Date();
       const weekFromNow = new Date();
       weekFromNow.setDate(weekFromNow.getDate() + 7);
       const monthFromNow = new Date();
@@ -275,12 +297,12 @@ export function Dashboard() {
 
       const eventsThisWeek = allEvents.filter(event => {
         const eventDate = new Date(event.start_date);
-        return eventDate >= currentDate && eventDate <= weekFromNow;
+        return eventDate >= today && eventDate <= weekFromNow;
       }).length;
 
       const eventsThisMonth = allEvents.filter(event => {
         const eventDate = new Date(event.start_date);
-        return eventDate >= currentDate && eventDate <= monthFromNow;
+        return eventDate >= today && eventDate <= monthFromNow;
       }).length;
 
       console.log('=== EVENTS DEBUG ===');
@@ -288,7 +310,7 @@ export function Dashboard() {
       console.log('Upcoming events:', upcomingEvents.length);
       console.log('Events this week:', eventsThisWeek);
       console.log('Events this month:', eventsThisMonth);
-      console.log('Current date:', currentDate.toISOString());
+      console.log('Current date:', today.toISOString());
       console.log('Week from now:', weekFromNow.toISOString());
       console.log('Month from now:', monthFromNow.toISOString());
       console.log('=== END EVENTS DEBUG ===');
@@ -304,7 +326,6 @@ export function Dashboard() {
         activeMembers: activeMembers.length,
         inactiveMembers: inactiveMembers.length,
         visitors: visitors.length,
-        totalGroups,
         totalDonations,
         monthlyDonations,
         weeklyAverage,
@@ -317,13 +338,33 @@ export function Dashboard() {
         totalVolunteers: volunteerStats.totalVolunteers,
         upcomingVolunteers: volunteerStats.upcomingVolunteers,
         recentVolunteers: volunteerStats.recentVolunteers,
-        eventsNeedingVolunteers: volunteerStats.eventsNeedingVolunteers
+        eventsNeedingVolunteers: volunteerStats.eventsNeedingVolunteers,
+        sundayServiceAttendance: 0,
+        sundayServiceEvents: 0,
+        bibleStudyAttendance: 0,
+        bibleStudyEvents: 0,
+        fellowshipAttendance: 0,
+        fellowshipEvents: 0,
+        eventsWithVolunteersEnabled: volunteerStats.eventsWithVolunteersEnabled,
+        totalVolunteersSignedUp: volunteerStats.totalVolunteersSignedUp,
+        eventsStillNeedingVolunteers: volunteerStats.eventsStillNeedingVolunteers
       });
       setRecentPeople(recentPeople);
+      setPeople(transformedPeople);
       setUpcomingEvents(upcomingEvents);
       setWeeklyDonations(weeklyDonations);
-      setRecentGroups(recentGroups);
       setDonations(donations || []);
+
+      // Debug: Check people data for images
+      console.log('People data debug:', {
+        totalPeople: transformedPeople.length,
+        peopleWithImages: transformedPeople.filter(p => p.image_url).length,
+        samplePeople: transformedPeople.slice(0, 3).map(p => ({
+          name: `${p.firstName} ${p.lastName}`,
+          image_url: p.image_url,
+          hasImage: !!p.image_url
+        }))
+      });
     } catch (error) {
       console.error('Error loading dashboard data:', error);
       toast({
@@ -473,7 +514,7 @@ export function Dashboard() {
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
       </div>
 
-      <div className="grid gap-4 tablet-portrait:grid-cols-2 tablet-landscape:grid-cols-3 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 tablet-portrait:grid-cols-2 tablet-landscape:grid-cols-2 md:grid-cols-2 lg:grid-cols-4">
         <motion.div variants={itemVariants}>
           <Card className="overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
@@ -590,44 +631,6 @@ export function Dashboard() {
 
         <motion.div variants={itemVariants}>
           <Card className="overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-amber-500 to-amber-600 text-white">
-              <CardTitle className="flex items-center text-xl">
-                <Users2 className="mr-2 h-5 w-5" />
-                Groups
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="text-3xl font-bold">{stats.totalGroups}</div>
-              <p className="text-sm text-muted-foreground mt-1">Active groups</p>
-              
-              {/* Groups breakdown */}
-              <div className="mt-4 space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-amber-600 font-medium">Total Groups</span>
-                  <span className="text-sm font-semibold">{stats.totalGroups}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-amber-600 font-medium">Active Groups</span>
-                  <span className="text-sm font-semibold">{recentGroups.length}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-amber-600 font-medium">Avg. Group Size</span>
-                  <span className="text-sm font-semibold">{stats.totalGroups > 0 ? Math.round(stats.activeMembers / stats.totalGroups) : 0}</span>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="bg-gray-50 py-2 px-6 border-t">
-              <Button variant="ghost" size="sm" className="ml-auto" asChild>
-                <a href="/groups">
-                  View all <ChevronRight className="ml-1 h-4 w-4" />
-                </a>
-              </Button>
-            </CardFooter>
-          </Card>
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
-          <Card className="overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-teal-500 to-teal-600 text-white">
               <CardTitle className="flex items-center text-xl">
                 <Handshake className="mr-2 h-5 w-5" />
@@ -635,22 +638,22 @@ export function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
-              <div className="text-3xl font-bold">{stats.totalVolunteers}</div>
-              <p className="text-sm text-muted-foreground mt-1">Active volunteers</p>
+              <div className="text-3xl font-bold">{stats.eventsWithVolunteersEnabled || 0}</div>
+              <p className="text-sm text-muted-foreground mt-1">Events with volunteers enabled (next 30 days)</p>
               
               {/* Volunteers breakdown */}
               <div className="mt-4 space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-teal-600 font-medium">Upcoming Assignments</span>
-                  <span className="text-sm font-semibold">{stats.upcomingVolunteers}</span>
+                  <span className="text-sm text-teal-600 font-medium">Total Volunteers Signed Up</span>
+                  <span className="text-sm font-semibold">{stats.totalVolunteersSignedUp || 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-teal-600 font-medium">Recent Activity</span>
-                  <span className="text-sm font-semibold">{stats.recentVolunteers}</span>
+                  <span className="text-sm text-teal-600 font-medium">Events Still Needing Help</span>
+                  <span className="text-sm font-semibold">{stats.eventsStillNeedingVolunteers || 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-teal-600 font-medium">Events Needing Help</span>
-                  <span className="text-sm font-semibold">{stats.eventsNeedingVolunteers}</span>
+                  <span className="text-sm text-teal-600 font-medium">Active Volunteers</span>
+                  <span className="text-sm font-semibold">{stats.totalVolunteers || 0}</span>
                 </div>
               </div>
             </CardContent>
@@ -665,15 +668,223 @@ export function Dashboard() {
         </motion.div>
       </div>
 
+      {/* Attendance Statistics Section */}
+      <motion.div variants={itemVariants}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center text-xl">
+              <Users className="mr-2 h-6 w-6" />
+              Attendance Statistics
+            </CardTitle>
+            <CardDescription className="text-base">Last 30 days overview</CardDescription>
+          </CardHeader>
+          
+          <CardContent>
+            {attendanceLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
+                  <span className="text-muted-foreground text-base">Loading attendance data...</span>
+                </div>
+              </div>
+            ) : error ? (
+              <div className="text-center py-6">
+                <div className="text-red-500 mb-2 text-2xl">⚠️</div>
+                <p className="text-base text-muted-foreground">Failed to load attendance data</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Service Breakdown and Event Attendance Side by Side */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Service Breakdown */}
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <BarChart3 className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <h4 className="font-semibold text-base text-gray-900">Service Breakdown</h4>
+                    </div>
+                    
+                    {serviceBreakdown.length === 0 ? (
+                      <div className="text-center py-4 bg-gray-50 rounded-lg">
+                        <div className="text-gray-400 mb-1 text-xl">📊</div>
+                        <p className="text-sm text-gray-600">No service data</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {serviceBreakdown.map((service, index) => (
+                          <div key={service.name} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                            <div className="flex items-center space-x-2">
+                              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-sm ${
+                                index === 0 ? 'bg-yellow-500' : 
+                                index === 1 ? 'bg-gray-400' : 
+                                index === 2 ? 'bg-amber-600' : 'bg-blue-500'
+                              }`}>
+                                {index + 1}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="font-medium text-gray-900 text-base truncate">{service.name}</div>
+                                <div className="text-sm text-gray-500">{service.value} attendees</div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-base font-bold text-blue-600">{service.value}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Event Attendance */}
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-6 h-6 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <TrendingUp className="w-4 h-4 text-purple-600" />
+                      </div>
+                      <h4 className="font-semibold text-base text-gray-900">Event Attendance</h4>
+                    </div>
+                    
+                    {eventDetails?.filter(event => event.attendees > 0).length === 0 ? (
+                      <div className="text-center py-4 bg-gray-50 rounded-lg">
+                        <div className="text-gray-400 mb-1 text-xl">📅</div>
+                        <p className="text-sm text-gray-600">No event data</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {eventDetails
+                          ?.filter(event => event.attendees > 0)
+                          .sort((a, b) => b.attendees - a.attendees)
+                          .slice(0, 3)
+                          .map(event => (
+                            <div key={event.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-gray-900 text-base truncate">{event.title}</div>
+                                <div className="text-sm text-gray-500 mt-0.5">
+                                  {format(parseISO(event.date), 'MMM d')} • {event.type}
+                                </div>
+                              </div>
+                              <div className="text-right ml-3">
+                                <div className="text-xl font-bold text-purple-600">{event.attendees}</div>
+                                <div className="text-sm text-gray-500">attendees</div>
+                              </div>
+                            </div>
+                          ))
+                        }
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Top Attendees */}
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center">
+                      <Trophy className="w-4 h-4 text-green-600" />
+                    </div>
+                    <h4 className="font-semibold text-base text-gray-900">Top Attendees</h4>
+                  </div>
+                  
+                  {memberStats.length === 0 ? (
+                    <div className="text-center py-4 bg-gray-50 rounded-lg">
+                      <div className="text-gray-400 mb-1 text-xl">🏆</div>
+                      <p className="text-sm text-gray-600">No attendance data</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {memberStats.slice(0, 6).map((member, index) => {
+                        // Find the member data to get their image - improved lookup
+                        const memberData = people.find(p => {
+                          const fullName = `${p.firstName} ${p.lastName}`.trim();
+                          const memberName = member.name.trim();
+                          
+                          // Try exact match first
+                          if (fullName.toLowerCase() === memberName.toLowerCase()) {
+                            return true;
+                          }
+                          
+                          // Try partial match (in case of middle names, etc.)
+                          const fullNameParts = fullName.toLowerCase().split(' ');
+                          const memberNameParts = memberName.toLowerCase().split(' ');
+                          
+                          // Check if first and last names match
+                          if (fullNameParts.length >= 2 && memberNameParts.length >= 2) {
+                            return fullNameParts[0] === memberNameParts[0] && 
+                                   fullNameParts[fullNameParts.length - 1] === memberNameParts[memberNameParts.length - 1];
+                          }
+                          
+                          return false;
+                        });
+
+                        // Debug: Log image data
+                        console.log('Member image debug:', {
+                          memberName: member.name,
+                          memberData: memberData ? {
+                            firstName: memberData.firstName,
+                            lastName: memberData.lastName,
+                            image_url: memberData.image_url,
+                            hasImage: !!memberData.image_url
+                          } : 'No member data found'
+                        });
+                        
+                        return (
+                          <div key={member.name} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                            <div className="flex items-center space-x-3">
+                              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-sm ${
+                                index === 0 ? 'bg-yellow-500' : 
+                                index === 1 ? 'bg-gray-400' : 
+                                index === 2 ? 'bg-amber-600' : 'bg-blue-500'
+                              }`}>
+                                {index + 1}
+                              </div>
+                              <Avatar className="h-8 w-8">
+                                {memberData?.image_url ? (
+                                  <AvatarImage 
+                                    src={memberData.image_url} 
+                                    alt={`${member.name}'s profile picture`}
+                                    onError={(e) => {
+                                      console.log('Image failed to load:', memberData.image_url);
+                                      e.target.style.display = 'none';
+                                    }}
+                                    onLoad={() => {
+                                      console.log('Image loaded successfully:', memberData.image_url);
+                                    }}
+                                  />
+                                ) : null}
+                                <AvatarFallback className="bg-gray-200 text-gray-700">
+                                  {memberData ? getInitials(memberData.firstName || '', memberData.lastName || '') : 
+                                   getInitials(member.name.split(' ')[0] || '', member.name.split(' ')[1] || '')}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="min-w-0">
+                                <div className="font-medium text-gray-900 text-base truncate">{member.name}</div>
+                                <div className="text-sm text-gray-500">{member.count} events</div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-base font-bold text-green-600">{member.count}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+
       {/* Member Statistics Section */}
       <motion.div variants={itemVariants}>
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <Users2 className="mr-2 h-5 w-5" />
+            <CardTitle className="flex items-center text-xl">
+              <Users2 className="mr-2 h-6 w-6" />
               Member Statistics
             </CardTitle>
-            <CardDescription>Detailed breakdown of your organization's membership</CardDescription>
+            <CardDescription className="text-base">Detailed breakdown of your organization's membership</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-3">
@@ -685,9 +896,9 @@ export function Dashboard() {
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-green-800">Active Members</p>
+                  <p className="text-base font-medium text-green-800">Active Members</p>
                   <p className="text-2xl font-bold text-green-900">{stats.activeMembers}</p>
-                  <p className="text-xs text-green-600">
+                  <p className="text-sm text-green-600">
                     {stats.totalPeople > 0 ? `${((stats.activeMembers / stats.totalPeople) * 100).toFixed(1)}%` : '0%'} of total
                   </p>
                 </div>
@@ -701,9 +912,9 @@ export function Dashboard() {
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-orange-800">Inactive Members</p>
+                  <p className="text-base font-medium text-orange-800">Inactive Members</p>
                   <p className="text-2xl font-bold text-orange-900">{stats.inactiveMembers}</p>
-                  <p className="text-xs text-orange-600">
+                  <p className="text-sm text-orange-600">
                     {stats.totalPeople > 0 ? `${((stats.inactiveMembers / stats.totalPeople) * 100).toFixed(1)}%` : '0%'} of total
                   </p>
                 </div>
@@ -717,9 +928,9 @@ export function Dashboard() {
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-blue-800">Visitors</p>
+                  <p className="text-base font-medium text-blue-800">Visitors</p>
                   <p className="text-2xl font-bold text-blue-900">{stats.visitors}</p>
-                  <p className="text-xs text-blue-600">
+                  <p className="text-sm text-blue-600">
                     {stats.totalPeople > 0 ? `${((stats.visitors / stats.totalPeople) * 100).toFixed(1)}%` : '0%'} of total
                   </p>
                 </div>
@@ -730,11 +941,11 @@ export function Dashboard() {
             <div className="mt-6 pt-6 border-t">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Total People</p>
+                  <p className="text-base text-gray-600">Total People</p>
                   <p className="text-3xl font-bold text-gray-900">{stats.totalPeople}</p>
                 </div>
                 <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Active Rate</p>
+                  <p className="text-base text-gray-600">Active Rate</p>
                   <p className="text-3xl font-bold text-green-600">
                     {stats.totalPeople > 0 ? `${((stats.activeMembers / stats.totalPeople) * 100).toFixed(1)}%` : '0%'}
                   </p>
@@ -754,11 +965,11 @@ export function Dashboard() {
       <motion.div variants={itemVariants}>
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <DollarSign className="mr-2 h-5 w-5" />
+            <CardTitle className="flex items-center text-xl">
+              <DollarSign className="mr-2 h-6 w-6" />
               Donation Statistics
             </CardTitle>
-            <CardDescription>Financial overview of your organization</CardDescription>
+            <CardDescription className="text-base">Financial overview of your organization</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-3">
@@ -770,9 +981,9 @@ export function Dashboard() {
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-green-800">This Month</p>
+                  <p className="text-base font-medium text-green-800">This Month</p>
                   <p className="text-2xl font-bold text-green-900">${(stats.monthlyDonations || 0).toFixed(2)}</p>
-                  <p className="text-xs text-green-600">
+                  <p className="text-sm text-green-600">
                     {stats.totalDonations > 0 ? `${(((stats.monthlyDonations || 0) / stats.totalDonations) * 100).toFixed(1)}%` : '0%'} of total
                   </p>
                 </div>
@@ -786,9 +997,9 @@ export function Dashboard() {
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-blue-800">Total Donations</p>
+                  <p className="text-base font-medium text-blue-800">Total Donations</p>
                   <p className="text-2xl font-bold text-blue-900">${stats.totalDonations.toFixed(2)}</p>
-                  <p className="text-xs text-blue-600">All time</p>
+                  <p className="text-sm text-blue-600">All time</p>
                 </div>
               </div>
 
@@ -800,9 +1011,9 @@ export function Dashboard() {
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-purple-800">Monthly Average</p>
+                  <p className="text-base font-medium text-purple-800">Monthly Average</p>
                   <p className="text-2xl font-bold text-purple-900">${(stats.monthlyAverage || 0).toFixed(2)}</p>
-                  <p className="text-xs text-purple-600">Per month</p>
+                  <p className="text-sm text-purple-600">Per month</p>
                 </div>
               </div>
             </div>
@@ -811,11 +1022,11 @@ export function Dashboard() {
             <div className="mt-6 pt-6 border-t">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Weekly Average</p>
+                  <p className="text-base text-gray-600">Weekly Average</p>
                   <p className="text-3xl font-bold text-gray-900">${(stats.weeklyAverage || 0).toFixed(2)}</p>
                 </div>
                 <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Growth Rate</p>
+                  <p className="text-base text-gray-600">Growth Rate</p>
                   <p className="text-3xl font-bold text-green-600">
                     {(stats.growthRate || 0) > 0 ? '+' : ''}{(stats.growthRate || 0).toFixed(1)}%
                   </p>
@@ -825,7 +1036,7 @@ export function Dashboard() {
           </CardContent>
           <CardFooter>
             <Button variant="outline" className="w-full" asChild>
-              <a href="/donations">View Donations</a>
+              <a href="/donations">View All Donations</a>
             </Button>
           </CardFooter>
         </Card>
@@ -835,11 +1046,11 @@ export function Dashboard() {
       <motion.div variants={itemVariants}>
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <Calendar className="mr-2 h-5 w-5" />
+            <CardTitle className="flex items-center text-xl">
+              <Calendar className="mr-2 h-6 w-6" />
               Event Statistics
             </CardTitle>
-            <CardDescription>Overview of your organization's events</CardDescription>
+            <CardDescription className="text-base">Overview of your organization's events</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-3">
@@ -851,9 +1062,9 @@ export function Dashboard() {
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-purple-800">Upcoming</p>
+                  <p className="text-base font-medium text-purple-800">Upcoming</p>
                   <p className="text-2xl font-bold text-purple-900">{stats.upcomingEvents}</p>
-                  <p className="text-xs text-purple-600">Future events</p>
+                  <p className="text-sm text-purple-600">Future events</p>
                 </div>
               </div>
 
@@ -865,9 +1076,9 @@ export function Dashboard() {
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-blue-800">This Week</p>
+                  <p className="text-base font-medium text-blue-800">This Week</p>
                   <p className="text-2xl font-bold text-blue-900">{stats.eventsThisWeek}</p>
-                  <p className="text-xs text-blue-600">Next 7 days</p>
+                  <p className="text-sm text-blue-600">Next 7 days</p>
                 </div>
               </div>
 
@@ -879,9 +1090,9 @@ export function Dashboard() {
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-green-800">This Month</p>
+                  <p className="text-base font-medium text-green-800">This Month</p>
                   <p className="text-2xl font-bold text-green-900">{stats.eventsThisMonth}</p>
-                  <p className="text-xs text-green-600">Next 30 days</p>
+                  <p className="text-sm text-green-600">Next 30 days</p>
                 </div>
               </div>
             </div>
@@ -890,11 +1101,11 @@ export function Dashboard() {
             <div className="mt-6 pt-6 border-t">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Total Events</p>
+                  <p className="text-base text-gray-600">Total Events</p>
                   <p className="text-3xl font-bold text-gray-900">{stats.totalEvents}</p>
                 </div>
                 <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Event Frequency</p>
+                  <p className="text-base text-gray-600">Event Frequency</p>
                   <p className="text-3xl font-bold text-purple-600">
                     {stats.totalEvents > 0 ? (stats.totalEvents / 12).toFixed(1) : '0'} per month
                   </p>
@@ -910,95 +1121,12 @@ export function Dashboard() {
         </Card>
       </motion.div>
 
-      {/* Group Statistics Section */}
-      <motion.div variants={itemVariants}>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Users2 className="mr-2 h-5 w-5" />
-              Group Statistics
-            </CardTitle>
-            <CardDescription>Overview of your organization's groups</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
-              {/* Total Groups */}
-              <div className="flex items-center space-x-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-amber-500 rounded-full flex items-center justify-center">
-                    <Users2 className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-amber-800">Total Groups</p>
-                  <p className="text-2xl font-bold text-amber-900">{stats.totalGroups}</p>
-                  <p className="text-xs text-amber-600">All groups</p>
-                </div>
-              </div>
-
-              {/* Active Groups */}
-              <div className="flex items-center space-x-4 p-4 bg-green-50 rounded-lg border border-green-200">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-                    <CheckCircle2 className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-green-800">Active Groups</p>
-                  <p className="text-2xl font-bold text-green-900">{recentGroups.length}</p>
-                  <p className="text-xs text-green-600">Currently active</p>
-                </div>
-              </div>
-
-              {/* Average Group Size */}
-              <div className="flex items-center space-x-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
-                    <Users className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-blue-800">Average Group Size</p>
-                  <p className="text-2xl font-bold text-blue-900">
-                    {stats.totalGroups > 0 ? Math.round(stats.activeMembers / stats.totalGroups) : 0}
-                  </p>
-                  <p className="text-xs text-blue-600">Members per group</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Summary Stats */}
-            <div className="mt-6 pt-6 border-t">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Average Group Size</p>
-                  <p className="text-3xl font-bold text-amber-600">
-                    {stats.totalGroups > 0 ? Math.round(stats.activeMembers / stats.totalGroups) : '0'}
-                  </p>
-                </div>
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Ungrouped Members</p>
-                  <p className="text-3xl font-bold text-amber-600">
-                    {Math.max(0, stats.activeMembers - (stats.totalGroups * 5))}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button variant="outline" className="w-full" asChild>
-              <a href="/groups">View Groups</a>
-            </Button>
-          </CardFooter>
-        </Card>
-      </motion.div>
-
       <div className="grid gap-6 tablet:grid-cols-2 md:grid-cols-2">
         <motion.div variants={itemVariants}>
           <Card>
             <CardHeader>
-              <CardTitle>Recent People</CardTitle>
-              <CardDescription>Latest active members</CardDescription>
+              <CardTitle className="text-xl">Recent People</CardTitle>
+              <CardDescription className="text-base">Latest active members</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -1006,11 +1134,11 @@ export function Dashboard() {
                   recentPeople.map(person => (
                     <div key={person.id} className="flex items-center justify-between border-b pb-3">
                       <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
+                        <Avatar className="h-10 w-10">
                           <AvatarImage src={person.image_url} />
                           <AvatarFallback>{getInitials(person.firstName, person.lastName)}</AvatarFallback>
                         </Avatar>
-                        <div>{formatName(person.firstName, person.lastName)}</div>
+                        <div className="text-base">{formatName(person.firstName, person.lastName)}</div>
                       </div>
                       <Button 
                         variant="outline" 
@@ -1022,7 +1150,7 @@ export function Dashboard() {
                     </div>
                   ))
                 ) : (
-                  <p className="text-muted-foreground">No recent people to display.</p>
+                  <p className="text-muted-foreground text-base">No recent people to display.</p>
                 )}
               </div>
             </CardContent>
@@ -1037,15 +1165,15 @@ export function Dashboard() {
         <motion.div variants={itemVariants}>
           <Card>
             <CardHeader>
-              <CardTitle>Recent Donations</CardTitle>
-              <CardDescription>Latest donations</CardDescription>
+              <CardTitle className="text-xl">Recent Donations</CardTitle>
+              <CardDescription className="text-base">Latest donations</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {donations.slice(0, 5).map(donation => (
                   <div key={donation.id} className="flex items-center justify-between border-b pb-3">
                     <div>
-                      <p className="font-medium">${parseFloat(donation.amount).toFixed(2)}</p>
+                      <p className="font-medium text-base">${parseFloat(donation.amount).toFixed(2)}</p>
                       <p className="text-sm text-muted-foreground">
                         {format(new Date(donation.date + 'T12:00:00'), 'MMM d, yyyy')}
                         {donation.attendance && ` • ${donation.attendance} people`}

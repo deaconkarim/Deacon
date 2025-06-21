@@ -128,10 +128,10 @@ export function Register() {
         const { error: memberError } = await supabase
           .from('members')
           .insert({
-            id: data.user.id, // Use the auth user's ID
             firstname: formData.firstName,
             lastname: formData.lastName,
             email: formData.email,
+            user_id: data.user.id,
             status: 'active',
             organization_id: formData.organizationId
           });

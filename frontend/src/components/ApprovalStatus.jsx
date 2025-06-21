@@ -55,6 +55,7 @@ const ApprovalStatus = () => {
         title: "Signed out",
         description: "You have been signed out successfully.",
       });
+      navigate('/login');
     } catch (error) {
       toast({
         title: "Error signing out",
