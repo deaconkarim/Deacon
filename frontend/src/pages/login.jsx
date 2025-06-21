@@ -13,7 +13,6 @@ import {
   Lock, 
   Users, 
   Calendar, 
-  DollarSign, 
   BarChart3, 
   CheckCircle, 
   Star,
@@ -24,7 +23,17 @@ import {
   Play,
   Sparkles,
   Target,
-  Globe
+  Globe,
+  ChevronRight,
+  Award,
+  Clock,
+  TrendingUp,
+  BookOpen,
+  Home,
+  Phone,
+  Command,
+  Monitor,
+  Settings
 } from 'lucide-react';
 
 export function Login() {
@@ -58,230 +67,265 @@ export function Login() {
     }
   };
 
-  const stats = [
-    { number: "500+", label: "Churches Trust Deacon" },
-    { number: "50K+", label: "Members Managed" },
-    { number: "99.9%", label: "Uptime" },
-    { number: "24/7", label: "Support" }
+  const quickActions = [
+    { icon: Users, label: "Members", color: "bg-emerald-100 text-emerald-600" },
+    { icon: Calendar, label: "Events", color: "bg-blue-100 text-blue-600" },
+    { icon: BarChart3, label: "Reports", color: "bg-purple-100 text-purple-600" },
+    { icon: Monitor, label: "Kiosk", color: "bg-orange-100 text-orange-600" }
   ];
 
-  const features = [
-    {
-      icon: Users,
-      title: "Member Hub",
-      description: "Complete member profiles, attendance tracking, and family connections in one place."
-    },
-    {
-      icon: Calendar,
-      title: "Event Master",
-      description: "Plan and coordinate everything from Sunday services to potlucks with ease."
-    },
-    {
-      icon: DollarSign,
-      title: "Financial Stewardship",
-      description: "Track tithes, offerings, and special donations with detailed reporting."
-    },
-    {
-      icon: BarChart3,
-      title: "Ministry Insights",
-      description: "Data-driven insights to help your church grow and serve better."
-    }
+  const benefits = [
+    "Built by a deacon who understands your ministry needs",
+    "Complete command center for all church operations",
+    "Kiosk system for check-ins and information display",
+    "Real-time attendance tracking and insights",
+    "Mobile-optimized for ministry on the go",
+    "Dedicated support from someone who's been there"
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 text-gray-900">
-      {/* Animated Background */}
-      <div className="fixed inset-0 bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%239C92AC%22%20fill-opacity%3D%220.05%22%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2230%22%20r%3D%222%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20"></div>
-      </div>
-
-      {/* Header */}
-      <header className="relative z-10 px-6 py-6">
+    <div className="min-h-screen bg-white">
+      {/* Top Navigation */}
+      <nav className="px-6 py-4 border-b border-gray-100">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl blur-lg opacity-75"></div>
-              <div className="relative p-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl">
-                <Church className="h-8 w-8 text-white" />
-              </div>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-lg flex items-center justify-center">
+              <Church className="h-5 w-5 text-white" />
             </div>
-            <span className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-              Deacon
-            </span>
+            <span className="text-xl font-bold text-gray-900">Deacon</span>
           </div>
-          <div className="flex items-center gap-4">
-            <Button 
-              variant="ghost" 
-              className="text-gray-700 hover:bg-gray-100"
-              onClick={() => navigate('/register')}
-            >
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/register')}>
               Sign Up
             </Button>
-            <Button 
-              className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white"
-              onClick={() => navigate('/register')}
-            >
+            <Button size="sm" onClick={() => navigate('/register')}>
               Get Started
             </Button>
           </div>
         </div>
-      </header>
+      </nav>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6">
+      <div className="max-w-7xl mx-auto px-6">
         {/* Hero Section */}
-        <div className="pt-20 pb-32 text-center">
-          <div className="max-w-4xl mx-auto space-y-8">
-            <div className="inline-flex items-center gap-2 px-6 py-3 bg-white/80 backdrop-blur-sm rounded-full text-sm font-medium border border-gray-200 shadow-sm">
-              <Sparkles className="h-4 w-4 text-blue-500" />
-              The Future of Church Management
-            </div>
-            
-            <h1 className="text-6xl lg:text-8xl font-black tracking-tight leading-none">
-              <span className="bg-gradient-to-r from-blue-600 via-cyan-600 to-blue-600 bg-clip-text text-transparent">
-                Deacon
-              </span>
-            </h1>
-            
-            <p className="text-2xl lg:text-3xl text-gray-700 leading-relaxed max-w-3xl mx-auto">
-              The complete church management platform that helps you focus on what matters most: 
-              <span className="text-blue-600 font-semibold"> your ministry</span>
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center pt-8">
-              <Button 
-                size="lg" 
-                className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white text-lg px-8 py-6 h-auto"
-                onClick={() => navigate('/register')}
-              >
-                Start Your Free Account
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-              <Button 
-                variant="outline" 
-                size="lg"
-                className="border-gray-300 text-gray-700 hover:bg-gray-50 text-lg px-8 py-6 h-auto"
-                onClick={() => navigate('/login')}
-              >
-                <LogIn className="mr-2 h-5 w-5" />
-                Sign In
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Stats Section */}
-        <div className="py-20">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center space-y-2">
-                <div className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
-                  {stat.number}
+        <div className="pt-12 pb-16">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            {/* Left Content */}
+            <div className="space-y-8">
+              <div className="space-y-4">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-full text-sm font-medium">
+                  <Sparkles className="h-4 w-4" />
+                  Built by a deacon, for deacons and pastors
                 </div>
-                <div className="text-gray-600 text-sm lg:text-base">{stat.label}</div>
+                <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
+                  Your Church
+                  <span className="block text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-blue-600">
+                    Command Center
+                  </span>
+                </h1>
+                <p className="text-xl text-gray-600 leading-relaxed">
+                  Deacon is the comprehensive church management system built by someone who's walked in your shoes. 
+                  From member tracking to kiosk functionality, everything you need to run your ministry efficiently.
+                </p>
               </div>
-            ))}
+
+              {/* Quick Actions */}
+              <div className="grid grid-cols-2 gap-4">
+                {quickActions.map((action, index) => (
+                  <div key={index} className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer">
+                    <div className={`p-2 rounded-lg ${action.color}`}>
+                      <action.icon className="h-5 w-5" />
+                    </div>
+                    <span className="font-medium text-gray-900">{action.label}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button 
+                  size="lg" 
+                  className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white"
+                  onClick={() => navigate('/register')}
+                >
+                  Start Your Free Account
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="lg" onClick={() => navigate('/login')}>
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Sign In
+                </Button>
+              </div>
+            </div>
+
+            {/* Right Content - Login Form */}
+            <div className="lg:pl-8">
+              <Card className="border border-gray-200 bg-white/80 backdrop-blur-sm">
+                <CardHeader className="text-center pb-8">
+                  <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                    <Church className="h-10 w-10 text-white" />
+                  </div>
+                  <CardTitle className="text-3xl font-bold text-gray-900">Welcome Back</CardTitle>
+                  <CardDescription className="text-lg text-gray-600 mt-2">
+                    Sign in to your Deacon command center
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-8 px-8 pb-8">
+                  <form onSubmit={handleLogin} className="space-y-6">
+                    <div className="space-y-3">
+                      <Label htmlFor="email" className="text-base font-medium text-gray-700">Email</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder="name@example.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="pl-12 py-4 text-base bg-white/50 border-gray-200 focus:border-green-500 focus:ring-green-500/20 focus:bg-white h-14 transition-all duration-200"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <Label htmlFor="password" className="text-base font-medium text-gray-700">Password</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
+                        <Input
+                          id="password"
+                          type="password"
+                          placeholder="Enter your password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className="pl-12 py-4 text-base bg-white/50 border-gray-200 focus:border-green-500 focus:ring-green-500/20 focus:bg-white h-14 transition-all duration-200"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      type="submit"
+                      className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 h-14 text-lg font-medium transition-all duration-200 hover:scale-[1.02]"
+                      disabled={loading}
+                    >
+                      <LogIn className="mr-3 h-5 w-5" />
+                      {loading ? 'Signing in...' : 'Sign in'}
+                    </Button>
+                  </form>
+                  
+                  <div className="text-center pt-4">
+                    <p className="text-base text-gray-600">
+                      Don't have an account?{' '}
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto font-normal text-green-600 hover:text-green-700 text-base transition-colors duration-200"
+                        onClick={() => navigate('/register')}
+                      >
+                        Sign up for free
+                      </Button>
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
 
-        {/* Main Content Grid */}
-        <div className="grid lg:grid-cols-2 gap-16 items-center py-20">
-          {/* Login Form */}
-          <div className="order-2 lg:order-1">
-            <Card className="bg-white/90 backdrop-blur-xl border-gray-200 shadow-2xl">
-              <CardHeader className="text-center space-y-1 pb-8">
-                <div className="flex justify-center mb-6">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl blur-lg opacity-75"></div>
-                    <div className="relative p-4 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl">
-                      <Church className="h-10 w-10 text-white" />
-                    </div>
-                  </div>
-                </div>
-                <CardTitle className="text-3xl font-bold text-gray-900">Welcome Back</CardTitle>
-                <CardDescription className="text-gray-600 text-lg">
-                  Sign in to your Deacon dashboard
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <form onSubmit={handleLogin} className="space-y-6">
-                  <div className="space-y-3">
-                    <Label htmlFor="email" className="text-sm font-medium text-gray-700">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-4 top-3 h-5 w-5 text-gray-400" />
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="name@example.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="pl-12 bg-white border-gray-300 text-gray-900 placeholder:text-gray-500 focus:border-blue-500"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <Label htmlFor="password" className="text-sm font-medium text-gray-700">Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-4 top-3 h-5 w-5 text-gray-400" />
-                      <Input
-                        id="password"
-                        type="password"
-                        placeholder="Enter your password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="pl-12 bg-white border-gray-300 text-gray-900 placeholder:text-gray-500 focus:border-blue-500"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <Button
-                    type="submit"
-                    className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-lg py-6"
-                    disabled={loading}
-                  >
-                    <LogIn className="mr-2 h-5 w-5" />
-                    {loading ? 'Signing in...' : 'Sign in'}
-                  </Button>
-                </form>
-                
-                <div className="text-center pt-4">
-                  <p className="text-gray-600">
-                    Don't have an account?{' '}
-                    <Button
-                      variant="link"
-                      className="p-0 h-auto font-normal text-blue-600 hover:text-blue-700"
-                      onClick={() => navigate('/register')}
-                    >
-                      Sign up for free
-                    </Button>
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+        {/* Features Section */}
+        <div className="py-20">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+              Everything you need to run your ministry
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Deacon combines all the essential tools for church management into one powerful command center. 
+              Built by someone who understands the unique challenges of ministry leadership.
+            </p>
           </div>
 
-          {/* Features Preview */}
-          <div className="order-1 lg:order-2 space-y-8">
-            <div className="space-y-4">
-              <h2 className="text-4xl lg:text-5xl font-bold text-gray-900">
-                Everything your church needs
-              </h2>
-              <p className="text-xl text-gray-700 leading-relaxed">
-                From member management to financial tracking, Deacon provides all the tools 
-                to help your ministry thrive in the digital age.
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="p-8 bg-gradient-to-br from-emerald-50 to-green-50 rounded-2xl border border-emerald-100">
+              <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center mb-6">
+                <Users className="h-6 w-6 text-emerald-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Member Management</h3>
+              <p className="text-gray-600 leading-relaxed">
+                Track your congregation with detailed profiles, attendance history, and family connections. 
+                Know your members better than ever before.
               </p>
             </div>
 
-            <div className="grid gap-6">
-              {features.map((feature, index) => (
-                <div key={index} className="flex items-start gap-4 p-6 bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200 hover:bg-white transition-colors shadow-sm">
-                  <div className="p-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex-shrink-0">
-                    <feature.icon className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">{feature.title}</h3>
-                    <p className="text-gray-600 leading-relaxed">{feature.description}</p>
-                  </div>
+            <div className="p-8 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-100">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-6">
+                <Calendar className="h-6 w-6 text-blue-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Event Coordination</h3>
+              <p className="text-gray-600 leading-relaxed">
+                Plan services, Bible studies, potlucks, and special events with volunteer coordination. 
+                Keep everyone informed and engaged.
+              </p>
+            </div>
+
+            <div className="p-8 bg-gradient-to-br from-purple-50 to-violet-50 rounded-2xl border border-purple-100">
+              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-6">
+                <Command className="h-6 w-6 text-purple-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Command Center</h3>
+              <p className="text-gray-600 leading-relaxed">
+                Your central hub for all church operations. Real-time insights, reporting, and 
+                everything you need to make informed ministry decisions.
+              </p>
+            </div>
+
+            <div className="p-8 bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl border border-orange-100">
+              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mb-6">
+                <Monitor className="h-6 w-6 text-orange-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Kiosk System</h3>
+              <p className="text-gray-600 leading-relaxed">
+                Self-service kiosks for check-ins, information display, and member engagement. 
+                Streamline your Sunday morning operations.
+              </p>
+            </div>
+
+            <div className="p-8 bg-gradient-to-br from-teal-50 to-cyan-50 rounded-2xl border border-teal-100">
+              <div className="w-12 h-12 bg-teal-100 rounded-xl flex items-center justify-center mb-6">
+                <BookOpen className="h-6 w-6 text-teal-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Small Groups</h3>
+              <p className="text-gray-600 leading-relaxed">
+                Manage Bible study groups, track participation, and organize study materials. 
+                Foster deeper connections within your congregation.
+              </p>
+            </div>
+
+            <div className="p-8 bg-gradient-to-br from-pink-50 to-rose-50 rounded-2xl border border-pink-100">
+              <div className="w-12 h-12 bg-pink-100 rounded-xl flex items-center justify-center mb-6">
+                <Zap className="h-6 w-6 text-pink-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Mobile Ready</h3>
+              <p className="text-gray-600 leading-relaxed">
+                Access your church command center anywhere with our mobile-optimized interface. 
+                Ministry doesn't stop when you leave the office.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Benefits Section */}
+        <div className="py-20 bg-gradient-to-br from-gray-50 to-white rounded-3xl">
+          <div className="max-w-4xl mx-auto px-6">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+                Built by a deacon, for deacons and pastors
+              </h2>
+              <p className="text-xl text-gray-600">
+                Join churches that have transformed their ministry operations with Deacon
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-8">
+              {benefits.map((benefit, index) => (
+                <div key={index} className="flex items-start gap-3">
+                  <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-700 text-lg">{benefit}</span>
                 </div>
               ))}
             </div>
@@ -291,15 +335,15 @@ export function Login() {
         {/* Bottom CTA */}
         <div className="text-center py-20">
           <div className="max-w-3xl mx-auto space-y-8">
-            <h2 className="text-4xl lg:text-5xl font-bold text-gray-900">
-              Ready to transform your church?
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900">
+              Ready to transform your church operations?
             </h2>
-            <p className="text-xl text-gray-700">
-              Join hundreds of churches already using Deacon to grow their ministry.
+            <p className="text-xl text-gray-600">
+              Join churches already using Deacon as their command center. Start managing your ministry more effectively today.
             </p>
             <Button 
               size="lg" 
-              className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white text-lg px-8 py-6 h-auto"
+              className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white text-lg px-8 py-6 h-auto"
               onClick={() => navigate('/register')}
             >
               <Target className="mr-2 h-5 w-5" />
