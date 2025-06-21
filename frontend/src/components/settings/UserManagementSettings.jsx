@@ -83,17 +83,19 @@ const UserManagementSettings = () => {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      console.log('Fetching users...');
+      console.log('Fetching users for organization:', organizationId);
       
-      // Fetch organization users and members separately
+      // Fetch organization users and members separately, filtered by organization
       const [orgUsersResult, membersResult] = await Promise.all([
         supabase
           .from('organization_users')
           .select('user_id, role, approval_status, created_at')
+          .eq('organization_id', organizationId)
           .order('created_at', { ascending: false }),
         supabase
           .from('members')
           .select('id, firstname, lastname, email, status, created_at, user_id')
+          .eq('organization_id', organizationId)
           .order('created_at', { ascending: false })
       ]);
 
@@ -312,22 +314,24 @@ const UserManagementSettings = () => {
 
   const fetchMembersWithoutAccounts = async () => {
     try {
-      console.log('Fetching members without accounts...');
+      console.log('Fetching members without accounts for organization:', organizationId);
       
-      // Fetch all members and organization users (same as fetchUsers)
+      // Fetch all members and organization users for this organization only
       const [membersResult, orgUsersResult] = await Promise.all([
         supabase
           .from('members')
           .select('id, firstname, lastname, email, status, created_at')
+          .eq('organization_id', organizationId)
           .order('created_at', { ascending: false }),
         supabase
           .from('organization_users')
           .select('user_id, role, approval_status')
+          .eq('organization_id', organizationId)
           .order('created_at', { ascending: false })
       ]);
 
-      console.log('All members:', membersResult.data);
-      console.log('All org users:', orgUsersResult.data);
+      console.log('Organization members:', membersResult.data);
+      console.log('Organization users:', orgUsersResult.data);
 
       if (membersResult.error) throw membersResult.error;
       if (orgUsersResult.error) throw orgUsersResult.error;

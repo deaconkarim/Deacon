@@ -73,6 +73,19 @@ export function Tasks() {
   // Fetch tasks
   const fetchTasks = async () => {
     try {
+      // Get the current user's organization ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const { data: orgData } = await supabase
+        .from('organization_users')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .single();
+
+      if (!orgData?.organization_id) throw new Error('User not associated with any organization');
+
       const { data, error } = await supabase
         .from('tasks')
         .select(`
@@ -80,6 +93,7 @@ export function Tasks() {
           requestor:requestor_id (id, firstname, lastname),
           assignee:assignee_id (id, firstname, lastname)
         `)
+        .eq('organization_id', orgData.organization_id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -150,10 +164,24 @@ export function Tasks() {
     }
 
     try {
+      // Get the current user's organization ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const { data: orgData } = await supabase
+        .from('organization_users')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .single();
+
+      if (!orgData?.organization_id) throw new Error('User not associated with any organization');
+
       const { data, error } = await supabase
         .from('tasks')
         .insert([{
           ...newTask,
+          organization_id: orgData.organization_id,
           created_at: new Date().toISOString()
         }])
         .select()

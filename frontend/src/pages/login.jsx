@@ -36,8 +36,11 @@ import {
   Command,
   Monitor,
   Settings,
-  X
+  X,
+  CheckSquare,
+  AlertCircle
 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export function Login() {
   const [email, setEmail] = useState('');
@@ -47,6 +50,17 @@ export function Login() {
   const [showLightbox, setShowLightbox] = useState(false);
   const [selectedImage, setSelectedImage] = useState('');
   const [selectedImageAlt, setSelectedImageAlt] = useState('');
+  const [showBetaSignup, setShowBetaSignup] = useState(false);
+  const [betaSignupData, setBetaSignupData] = useState({
+    churchName: '',
+    contactName: '',
+    email: '',
+    phone: '',
+    churchSize: '',
+    currentTools: '',
+    needs: ''
+  });
+  const [betaSignupLoading, setBetaSignupLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const screenshotsRef = useRef(null);
@@ -103,14 +117,14 @@ export function Login() {
       action: scrollToScreenshots
     },
     { 
-      icon: BarChart3, 
-      label: "Reports", 
+      icon: CheckSquare, 
+      label: "Tasks", 
       color: "bg-purple-500/10 text-purple-600 border-purple-200",
       action: scrollToScreenshots
     },
     { 
-      icon: Monitor, 
-      label: "Kiosk", 
+      icon: BarChart3, 
+      label: "Reports", 
       color: "bg-orange-500/10 text-orange-600 border-orange-200",
       action: scrollToScreenshots
     }
@@ -124,6 +138,55 @@ export function Login() {
     "Mobile-optimized for ministry on the go",
     "Dedicated support from someone who's been there"
   ];
+
+  const handleBetaSignup = async (e) => {
+    e.preventDefault();
+    setBetaSignupLoading(true);
+    
+    try {
+      // Save beta signup data to Supabase
+      const { data, error } = await supabase
+        .from('beta_signups')
+        .insert([{
+          church_name: betaSignupData.churchName,
+          contact_name: betaSignupData.contactName,
+          email: betaSignupData.email,
+          phone: betaSignupData.phone || null,
+          church_size: betaSignupData.churchSize,
+          current_tools: betaSignupData.currentTools || null,
+          needs: betaSignupData.needs
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      toast({
+        title: "Application Submitted!",
+        description: "Thank you for your interest in Deacon. We'll review your application and get back to you within 48 hours.",
+      });
+      
+      setShowBetaSignup(false);
+      setBetaSignupData({
+        churchName: '',
+        contactName: '',
+        email: '',
+        phone: '',
+        churchSize: '',
+        currentTools: '',
+        needs: ''
+      });
+    } catch (error) {
+      console.error('Error submitting beta signup:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit application. Please try again or contact us directly.",
+        variant: "destructive",
+      });
+    } finally {
+      setBetaSignupLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
@@ -151,9 +214,9 @@ export function Login() {
             <Button 
               size="sm" 
               className="hidden lg:block bg-gradient-to-r from-emerald-500 to-blue-600 hover:from-emerald-600 hover:to-blue-700 shadow-lg" 
-              onClick={() => navigate('/register')}
+              onClick={() => setShowBetaSignup(true)}
             >
-              Get Started
+              Apply for Beta
             </Button>
           </div>
         </div>
@@ -167,8 +230,8 @@ export function Login() {
             <div className="space-y-10">
               <div className="space-y-6">
                 <div className="inline-flex items-center gap-3 px-6 py-3 bg-emerald-500/10 text-emerald-700 rounded-full text-sm font-semibold border border-emerald-200/50">
-                  <Sparkles className="h-4 w-4" />
-                  Built by a deacon, for church leaders
+                  <AlertCircle className="h-4 w-4" />
+                  Now in Beta - Limited Availability
                 </div>
                 <h1 className="text-6xl lg:text-7xl font-bold text-gray-900 leading-tight">
                   Your Church
@@ -178,7 +241,7 @@ export function Login() {
                 </h1>
                 <p className="text-xl text-gray-600 leading-relaxed max-w-lg">
                   Deacon is the comprehensive church management system built by someone who's walked in your shoes. 
-                  From member tracking to kiosk functionality, everything you need to run your ministry efficiently.
+                  From member tracking to task management, everything you need to run your ministry efficiently.
                 </p>
               </div>
 
@@ -202,9 +265,9 @@ export function Login() {
                 <Button 
                   size="lg" 
                   className="bg-gradient-to-r from-emerald-500 to-blue-600 hover:from-emerald-600 hover:to-blue-700 text-white text-lg px-8 py-6 h-auto shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
-                  onClick={() => navigate('/register')}
+                  onClick={() => setShowBetaSignup(true)}
                 >
-                  Start Your Free Account
+                  Apply for Beta Access
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </div>
@@ -224,34 +287,36 @@ export function Login() {
                 </CardHeader>
                 <CardContent className="space-y-8 px-10 pb-10">
                   <form onSubmit={handleLogin} className="space-y-6">
-                    <div className="space-y-3">
-                      <Label htmlFor="email" className="text-base font-semibold text-gray-700">Email</Label>
-                      <div className="relative">
-                        <Mail className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
-                        <Input
-                          id="email"
-                          type="email"
-                          placeholder="name@example.com"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          className="pl-12 py-4 text-base bg-white/70 border-gray-200 focus:border-emerald-500 focus:ring-emerald-500/20 focus:bg-white h-14 transition-all duration-300 rounded-xl"
-                          required
-                        />
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                          <Input
+                            id="email"
+                            type="email"
+                            placeholder="Enter your email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="pl-10 h-12 text-lg"
+                            required
+                          />
+                        </div>
                       </div>
-                    </div>
-                    <div className="space-y-3">
-                      <Label htmlFor="password" className="text-base font-semibold text-gray-700">Password</Label>
-                      <div className="relative">
-                        <Lock className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
-                        <Input
-                          id="password"
-                          type="password"
-                          placeholder="Enter your password"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          className="pl-12 py-4 text-base bg-white/70 border-gray-200 focus:border-emerald-500 focus:ring-emerald-500/20 focus:bg-white h-14 transition-all duration-300 rounded-xl"
-                          required
-                        />
+                      <div className="space-y-2">
+                        <Label htmlFor="password">Password</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                          <Input
+                            id="password"
+                            type="password"
+                            placeholder="Enter your password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="pl-10 h-12 text-lg"
+                            required
+                          />
+                        </div>
                       </div>
                     </div>
                     <Button
@@ -263,19 +328,6 @@ export function Login() {
                       {loading ? 'Signing in...' : 'Sign in'}
                     </Button>
                   </form>
-                  
-                  <div className="text-center pt-6">
-                    <p className="text-base text-gray-600">
-                      Don't have an account?{' '}
-                      <Button
-                        variant="link"
-                        className="p-0 h-auto font-semibold text-emerald-600 hover:text-emerald-700 text-base transition-colors duration-300"
-                        onClick={() => navigate('/register')}
-                      >
-                        Sign up for free
-                      </Button>
-                    </p>
-                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -300,13 +352,24 @@ export function Login() {
             <h2 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent mb-6">
               Everything you need to run your ministry
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-normal pb-4">
               Deacon combines all the essential tools for church management into one powerful command center. 
-              Built by someone who understands the unique challenges of ministry leadership.
+              Built by someone who understands the unique challenges of ministry leadership. <strong>Now in beta with limited availability.</strong>
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="p-8 bg-white/60 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/80 hover:scale-105 transition-all duration-300 shadow-lg">
+              <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-2xl flex items-center justify-center mb-6 border border-emerald-200/50">
+                <Command className="h-7 w-7 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Command Center</h3>
+              <p className="text-gray-600 leading-relaxed text-lg">
+                Your central hub with real-time insights, attendance tracking, and key metrics at a glance. 
+                Everything you need to run your ministry efficiently.
+              </p>
+            </div>
+
             <div className="p-8 bg-white/60 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/80 hover:scale-105 transition-all duration-300 shadow-lg">
               <div className="w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-6 border border-emerald-200/50">
                 <Users className="h-7 w-7 text-emerald-600" />
@@ -330,17 +393,6 @@ export function Login() {
             </div>
 
             <div className="p-8 bg-white/60 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/80 hover:scale-105 transition-all duration-300 shadow-lg">
-              <div className="w-14 h-14 bg-purple-500/10 rounded-2xl flex items-center justify-center mb-6 border border-purple-200/50">
-                <Command className="h-7 w-7 text-purple-600" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Command Center</h3>
-              <p className="text-gray-600 leading-relaxed text-lg">
-                Your central hub for all church operations. Real-time insights, reporting, and 
-                everything you need to make informed ministry decisions.
-              </p>
-            </div>
-
-            <div className="p-8 bg-white/60 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/80 hover:scale-105 transition-all duration-300 shadow-lg">
               <div className="w-14 h-14 bg-orange-500/10 rounded-2xl flex items-center justify-center mb-6 border border-orange-200/50">
                 <Monitor className="h-7 w-7 text-orange-600" />
               </div>
@@ -352,13 +404,13 @@ export function Login() {
             </div>
 
             <div className="p-8 bg-white/60 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/80 hover:scale-105 transition-all duration-300 shadow-lg">
-              <div className="w-14 h-14 bg-teal-500/10 rounded-2xl flex items-center justify-center mb-6 border border-teal-200/50">
-                <BookOpen className="h-7 w-7 text-teal-600" />
+              <div className="w-14 h-14 bg-purple-500/10 rounded-2xl flex items-center justify-center mb-6 border border-purple-200/50">
+                <CheckSquare className="h-7 w-7 text-purple-600" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Small Groups</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Task Management</h3>
               <p className="text-gray-600 leading-relaxed text-lg">
-                Manage Bible study groups, track participation, and organize study materials. 
-                Foster deeper connections within your congregation.
+                Assign and track ministry tasks, manage volunteer responsibilities, and ensure nothing falls through the cracks. 
+                Keep your team organized and accountable.
               </p>
             </div>
 
@@ -431,7 +483,7 @@ export function Login() {
           </div>
 
           {/* Additional Screenshots Row */}
-          <div className="grid lg:grid-cols-3 gap-8 mt-16">
+          <div className="grid lg:grid-cols-2 gap-8 mt-16">
             {/* Events Screenshot */}
             <div className="space-y-4">
               <div 
@@ -467,6 +519,25 @@ export function Login() {
               <div className="text-center">
                 <h4 className="text-lg font-semibold text-gray-900">Kiosk System</h4>
                 <p className="text-gray-600 text-sm">Self-service check-ins and information display.</p>
+              </div>
+            </div>
+
+            {/* Task Management Screenshot */}
+            <div className="space-y-4">
+              <div 
+                className="bg-white/60 backdrop-blur-sm rounded-3xl border border-white/50 p-4 shadow-xl overflow-hidden cursor-pointer hover:shadow-2xl transition-all duration-300"
+                onClick={() => openLightbox('/screenshot-tasks.png', 'Deacon Task Management')}
+              >
+                <div className="flex items-center gap-2 mb-3 px-2">
+                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                </div>
+                <img src="/screenshot-tasks.png" alt="Deacon Task Management" className="rounded-b-2xl w-full" />
+              </div>
+              <div className="text-center">
+                <h4 className="text-lg font-semibold text-gray-900">Task Management</h4>
+                <p className="text-gray-600 text-sm">Assign and track ministry tasks and volunteer responsibilities.</p>
               </div>
             </div>
 
@@ -523,15 +594,15 @@ export function Login() {
               Ready to transform your church operations?
             </h2>
             <p className="text-xl text-gray-600">
-              Join churches already using Deacon as their command center. Start managing your ministry more effectively today.
+              Join churches already using Deacon as their command center. Apply for beta access to start managing your ministry more effectively.
             </p>
             <Button 
               size="lg" 
               className="bg-gradient-to-r from-emerald-500 to-blue-600 hover:from-emerald-600 hover:to-blue-700 text-white text-xl px-10 py-8 h-auto shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-105 rounded-2xl font-semibold"
-              onClick={() => navigate('/register')}
+              onClick={() => setShowBetaSignup(true)}
             >
               <Target className="mr-3 h-6 w-6" />
-              Start Your Free Account Today
+              Apply for Beta Access
             </Button>
           </div>
         </div>
@@ -542,7 +613,7 @@ export function Login() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader className="text-center">
             <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <Church className="h-10 w-10 text-white" />
+              <Church className="h-12 w-12 text-white" />
             </div>
             <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
               Welcome Back
@@ -592,22 +663,6 @@ export function Login() {
               {loading ? 'Signing in...' : 'Sign in'}
             </Button>
           </form>
-          
-          <div className="text-center pt-4">
-            <p className="text-sm text-gray-600">
-              Don't have an account?{' '}
-              <Button
-                variant="link"
-                className="p-0 h-auto font-semibold text-emerald-600 hover:text-emerald-700 text-sm transition-colors duration-300"
-                onClick={() => {
-                  setShowLoginModal(false);
-                  navigate('/register');
-                }}
-              >
-                Sign up for free
-              </Button>
-            </p>
-          </div>
         </DialogContent>
       </Dialog>
 
@@ -634,6 +689,135 @@ export function Login() {
               {selectedImageAlt}
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Beta Signup Modal */}
+      <Dialog open={showBetaSignup} onOpenChange={setShowBetaSignup}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-3xl font-bold text-center bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
+              Apply for Beta Access
+            </DialogTitle>
+            <div className="text-center space-y-4">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-700 rounded-full text-sm font-semibold border border-emerald-200/50">
+                <AlertCircle className="h-4 w-4" />
+                Limited Beta Availability
+              </div>
+              <p className="text-gray-600">
+                We're currently accepting a limited number of churches for our beta program. 
+                Tell us about your church and ministry needs, and we'll get back to you within 48 hours.
+              </p>
+            </div>
+          </DialogHeader>
+          
+          <form onSubmit={handleBetaSignup} className="space-y-6">
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="churchName">Church Name *</Label>
+                <Input
+                  id="churchName"
+                  value={betaSignupData.churchName}
+                  onChange={(e) => setBetaSignupData({...betaSignupData, churchName: e.target.value})}
+                  placeholder="Your Church Name"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="contactName">Contact Name *</Label>
+                <Input
+                  id="contactName"
+                  value={betaSignupData.contactName}
+                  onChange={(e) => setBetaSignupData({...betaSignupData, contactName: e.target.value})}
+                  placeholder="Your Name"
+                  required
+                />
+              </div>
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={betaSignupData.email}
+                  onChange={(e) => setBetaSignupData({...betaSignupData, email: e.target.value})}
+                  placeholder="your@email.com"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={betaSignupData.phone}
+                  onChange={(e) => setBetaSignupData({...betaSignupData, phone: e.target.value})}
+                  placeholder="(555) 123-4567"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="churchSize">Church Size *</Label>
+              <Select 
+                value={betaSignupData.churchSize} 
+                onValueChange={(value) => setBetaSignupData({...betaSignupData, churchSize: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select your church size" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="under-50">Under 50 members</SelectItem>
+                  <SelectItem value="50-100">50-100 members</SelectItem>
+                  <SelectItem value="100-200">100-200 members</SelectItem>
+                  <SelectItem value="200-500">200-500 members</SelectItem>
+                  <SelectItem value="500+">500+ members</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="currentTools">Current Tools/Systems</Label>
+              <Input
+                id="currentTools"
+                value={betaSignupData.currentTools}
+                onChange={(e) => setBetaSignupData({...betaSignupData, currentTools: e.target.value})}
+                placeholder="What tools do you currently use? (e.g., Planning Center, Excel, paper records)"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="needs">Primary Ministry Needs *</Label>
+              <textarea
+                id="needs"
+                value={betaSignupData.needs}
+                onChange={(e) => setBetaSignupData({...betaSignupData, needs: e.target.value})}
+                placeholder="What are your biggest challenges in church management? What would help you most?"
+                className="w-full min-h-[100px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                required
+              />
+            </div>
+            
+            <div className="flex gap-4 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowBetaSignup(false)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1 bg-gradient-to-r from-emerald-500 to-blue-600 hover:from-emerald-600 hover:to-blue-700"
+                disabled={betaSignupLoading}
+              >
+                {betaSignupLoading ? 'Submitting...' : 'Submit Application'}
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

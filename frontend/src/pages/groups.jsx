@@ -24,7 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabaseClient';
-import { getMembers } from '@/lib/data';
+import { getMembers, getGroups } from '@/lib/data';
 import { getInitials } from '@/lib/utils/formatters';
 
 export function Groups() {
@@ -55,27 +55,56 @@ export function Groups() {
 
   const fetchGroups = async () => {
     try {
-      const { data, error } = await supabase
-        .from('groups')
-        .select(`
-          *,
-          group_members(count),
-          leader:members!leader_id(firstname, lastname)
-        `)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      // Transform the data to camelCase for the frontend
-      const transformedData = data.map(group => ({
-        ...group,
-        leader: group.leader ? {
-          ...group.leader,
-          firstName: group.leader.firstname,
-          lastName: group.leader.lastname
-        } : null
-      }));
-      setGroups(transformedData || []);
-      setFilteredGroups(transformedData || []);
+      // Get groups with proper organization filtering
+      const groupsData = await getGroups();
+      
+      // Get the current user's organization ID for additional queries
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const { data: orgData } = await supabase
+        .from('organization_users')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .single();
+
+      if (!orgData?.organization_id) throw new Error('User not associated with any organization');
+
+      // Fetch additional data for each group with organization filtering
+      const enrichedGroups = await Promise.all(
+        groupsData.map(async (group) => {
+          // Get group members count
+          const { count: memberCount } = await supabase
+            .from('group_members')
+            .select('*', { count: 'exact', head: true })
+            .eq('group_id', group.id)
+            .eq('organization_id', orgData.organization_id);
+
+          // Get leader info
+          const { data: leader } = await supabase
+            .from('members')
+            .select('firstname, lastname')
+            .eq('id', group.leader_id)
+            .eq('organization_id', orgData.organization_id)
+            .single();
+
+          return {
+            ...group,
+            group_members: [{ count: memberCount || 0 }],
+            leader: leader ? {
+              ...leader,
+              firstName: leader.firstname,
+              lastName: leader.lastname
+            } : null
+          };
+        })
+      );
+
+      setGroups(enrichedGroups || []);
+      setFilteredGroups(enrichedGroups || []);
     } catch (error) {
+      console.error('Error fetching groups:', error);
       toast({ title: 'Error', description: 'Failed to fetch groups', variant: 'destructive' });
     }
   };
