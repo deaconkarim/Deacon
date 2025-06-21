@@ -1,10 +1,14 @@
 #!/usr/bin/env node
 
-const { execSync } = require('child_process');
-const path = require('path');
+import { execSync } from 'child_process';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Get the deployed URL from command line argument or use default
-const deployedUrl = process.argv[2] || 'https://your-app.vercel.app';
+const deployedUrl = process.argv[2] || 'https://getdeacon.com';
 
 console.log(`🚀 Running E2E tests against: ${deployedUrl}`);
 
