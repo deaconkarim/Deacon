@@ -20,7 +20,11 @@ import {
   ArrowRight,
   Heart,
   Shield,
-  Zap
+  Zap,
+  Play,
+  Sparkles,
+  Target,
+  Globe
 } from 'lucide-react';
 
 export function Login() {
@@ -54,183 +58,194 @@ export function Login() {
     }
   };
 
+  const stats = [
+    { number: "500+", label: "Churches Trust Deacon" },
+    { number: "50K+", label: "Members Managed" },
+    { number: "99.9%", label: "Uptime" },
+    { number: "24/7", label: "Support" }
+  ];
+
   const features = [
     {
       icon: Users,
-      title: "Member Management",
-      description: "Keep track of your congregation with detailed member profiles, attendance tracking, and family connections."
+      title: "Member Hub",
+      description: "Complete member profiles, attendance tracking, and family connections in one place."
     },
     {
       icon: Calendar,
-      title: "Event Planning",
-      description: "Organize services, Bible studies, potlucks, and special events with volunteer coordination."
+      title: "Event Master",
+      description: "Plan and coordinate everything from Sunday services to potlucks with ease."
     },
     {
       icon: DollarSign,
-      title: "Donation Tracking",
-      description: "Securely manage tithes, offerings, and special donations with detailed reporting."
+      title: "Financial Stewardship",
+      description: "Track tithes, offerings, and special donations with detailed reporting."
     },
     {
       icon: BarChart3,
-      title: "Insights & Reports",
-      description: "Get valuable insights into attendance trends, giving patterns, and ministry effectiveness."
+      title: "Ministry Insights",
+      description: "Data-driven insights to help your church grow and serve better."
     }
   ];
 
-  const benefits = [
-    "Easy to use interface designed for church staff",
-    "Secure cloud-based platform accessible anywhere",
-    "Comprehensive reporting and analytics",
-    "Volunteer management and scheduling",
-    "Family and children check-in system",
-    "Mobile-friendly design for on-the-go access"
-  ];
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 text-gray-900">
+      {/* Animated Background */}
+      <div className="fixed inset-0 bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%239C92AC%22%20fill-opacity%3D%220.05%22%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2230%22%20r%3D%222%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20"></div>
+      </div>
+
       {/* Header */}
-      <header className="px-6 py-4">
+      <header className="relative z-10 px-6 py-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg">
-              <Church className="h-8 w-8 text-white" />
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl blur-lg opacity-75"></div>
+              <div className="relative p-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl">
+                <Church className="h-8 w-8 text-white" />
+              </div>
             </div>
-            <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <span className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
               Deacon
             </span>
           </div>
-          <Button 
-            variant="outline" 
-            onClick={() => navigate('/register')}
-            className="hidden sm:flex"
-          >
-            Get Started
-          </Button>
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="ghost" 
+              className="text-gray-700 hover:bg-gray-100"
+              onClick={() => navigate('/register')}
+            >
+              Sign Up
+            </Button>
+            <Button 
+              className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white"
+              onClick={() => navigate('/register')}
+            >
+              Get Started
+            </Button>
+          </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-12">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Hero Section */}
-          <div className="space-y-8">
-            <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-                <Star className="h-4 w-4" />
-                Trusted by churches nationwide
-              </div>
-              <h1 className="text-5xl lg:text-6xl font-bold tracking-tight">
-                Modern Church
-                <span className="block bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  Management
-                </span>
-              </h1>
-              <p className="text-xl text-gray-600 leading-relaxed">
-                Streamline your church operations with Deacon. Manage members, track donations, 
-                organize events, and grow your ministry with powerful insights.
-              </p>
+      <div className="relative z-10 max-w-7xl mx-auto px-6">
+        {/* Hero Section */}
+        <div className="pt-20 pb-32 text-center">
+          <div className="max-w-4xl mx-auto space-y-8">
+            <div className="inline-flex items-center gap-2 px-6 py-3 bg-white/80 backdrop-blur-sm rounded-full text-sm font-medium border border-gray-200 shadow-sm">
+              <Sparkles className="h-4 w-4 text-blue-500" />
+              The Future of Church Management
             </div>
+            
+            <h1 className="text-6xl lg:text-8xl font-black tracking-tight leading-none">
+              <span className="bg-gradient-to-r from-blue-600 via-cyan-600 to-blue-600 bg-clip-text text-transparent">
+                Deacon
+              </span>
+            </h1>
+            
+            <p className="text-2xl lg:text-3xl text-gray-700 leading-relaxed max-w-3xl mx-auto">
+              The complete church management platform that helps you focus on what matters most: 
+              <span className="text-blue-600 font-semibold"> your ministry</span>
+            </p>
 
-            {/* Benefits */}
-            <div className="space-y-3">
-              {benefits.map((benefit, index) => (
-                <div key={index} className="flex items-center gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
-                  <span className="text-gray-700">{benefit}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center pt-8">
               <Button 
                 size="lg" 
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white text-lg px-8 py-6 h-auto"
                 onClick={() => navigate('/register')}
               >
-                Get Started Free
-                <ArrowRight className="ml-2 h-4 w-4" />
+                Start Your Free Account
+                <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
-              <Button variant="outline" size="lg">
-                Watch Demo
+              <Button 
+                variant="outline" 
+                size="lg"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50 text-lg px-8 py-6 h-auto"
+                onClick={() => navigate('/login')}
+              >
+                <LogIn className="mr-2 h-5 w-5" />
+                Sign In
               </Button>
-            </div>
-
-            {/* Trust indicators */}
-            <div className="flex items-center gap-6 pt-4">
-              <div className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-green-500" />
-                <span className="text-sm text-gray-600">Secure & Private</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Zap className="h-5 w-5 text-yellow-500" />
-                <span className="text-sm text-gray-600">Lightning Fast</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Heart className="h-5 w-5 text-red-500" />
-                <span className="text-sm text-gray-600">Made with Love</span>
-              </div>
             </div>
           </div>
+        </div>
 
+        {/* Stats Section */}
+        <div className="py-20">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+            {stats.map((stat, index) => (
+              <div key={index} className="text-center space-y-2">
+                <div className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                  {stat.number}
+                </div>
+                <div className="text-gray-600 text-sm lg:text-base">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Main Content Grid */}
+        <div className="grid lg:grid-cols-2 gap-16 items-center py-20">
           {/* Login Form */}
-          <div className="lg:pl-8">
-            <Card className="w-full max-w-md mx-auto shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="text-center space-y-1 pb-6">
-                <div className="flex justify-center mb-4">
-                  <div className="p-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl">
-                    <Church className="h-8 w-8 text-white" />
+          <div className="order-2 lg:order-1">
+            <Card className="bg-white/90 backdrop-blur-xl border-gray-200 shadow-2xl">
+              <CardHeader className="text-center space-y-1 pb-8">
+                <div className="flex justify-center mb-6">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl blur-lg opacity-75"></div>
+                    <div className="relative p-4 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl">
+                      <Church className="h-10 w-10 text-white" />
+                    </div>
                   </div>
                 </div>
-                <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
-                <CardDescription className="text-base">
-                  Sign in to your Deacon account
+                <CardTitle className="text-3xl font-bold text-gray-900">Welcome Back</CardTitle>
+                <CardDescription className="text-gray-600 text-lg">
+                  Sign in to your Deacon dashboard
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                <form onSubmit={handleLogin} className="space-y-6">
+                  <div className="space-y-3">
+                    <Label htmlFor="email" className="text-sm font-medium text-gray-700">Email</Label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Mail className="absolute left-4 top-3 h-5 w-5 text-gray-400" />
                       <Input
                         id="email"
                         type="email"
                         placeholder="name@example.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="pl-10"
+                        className="pl-12 bg-white border-gray-300 text-gray-900 placeholder:text-gray-500 focus:border-blue-500"
                         required
                       />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+                  <div className="space-y-3">
+                    <Label htmlFor="password" className="text-sm font-medium text-gray-700">Password</Label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Lock className="absolute left-4 top-3 h-5 w-5 text-gray-400" />
                       <Input
                         id="password"
                         type="password"
                         placeholder="Enter your password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="pl-10"
+                        className="pl-12 bg-white border-gray-300 text-gray-900 placeholder:text-gray-500 focus:border-blue-500"
                         required
                       />
                     </div>
                   </div>
                   <Button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                    className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-lg py-6"
                     disabled={loading}
-                    size="lg"
                   >
-                    <LogIn className="mr-2 h-4 w-4" />
+                    <LogIn className="mr-2 h-5 w-5" />
                     {loading ? 'Signing in...' : 'Sign in'}
                   </Button>
                 </form>
                 
-                <div className="text-center">
-                  <p className="text-sm text-gray-600">
+                <div className="text-center pt-4">
+                  <p className="text-gray-600">
                     Don't have an account?{' '}
                     <Button
                       variant="link"
@@ -244,30 +259,52 @@ export function Login() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Features Preview */}
+          <div className="order-1 lg:order-2 space-y-8">
+            <div className="space-y-4">
+              <h2 className="text-4xl lg:text-5xl font-bold text-gray-900">
+                Everything your church needs
+              </h2>
+              <p className="text-xl text-gray-700 leading-relaxed">
+                From member management to financial tracking, Deacon provides all the tools 
+                to help your ministry thrive in the digital age.
+              </p>
+            </div>
+
+            <div className="grid gap-6">
+              {features.map((feature, index) => (
+                <div key={index} className="flex items-start gap-4 p-6 bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200 hover:bg-white transition-colors shadow-sm">
+                  <div className="p-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex-shrink-0">
+                    <feature.icon className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">{feature.title}</h3>
+                    <p className="text-gray-600 leading-relaxed">{feature.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
-        {/* Features Section */}
-        <div className="mt-24">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold mb-4">
-              Everything you need to manage your church
+        {/* Bottom CTA */}
+        <div className="text-center py-20">
+          <div className="max-w-3xl mx-auto space-y-8">
+            <h2 className="text-4xl lg:text-5xl font-bold text-gray-900">
+              Ready to transform your church?
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Deacon provides all the tools you need to run your ministry efficiently, 
-              from member management to financial tracking.
+            <p className="text-xl text-gray-700">
+              Join hundreds of churches already using Deacon to grow their ministry.
             </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {features.map((feature, index) => (
-              <div key={index} className="text-center space-y-4">
-                <div className="mx-auto w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center">
-                  <feature.icon className="h-8 w-8 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold">{feature.title}</h3>
-                <p className="text-gray-600 leading-relaxed">{feature.description}</p>
-              </div>
-            ))}
+            <Button 
+              size="lg" 
+              className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white text-lg px-8 py-6 h-auto"
+              onClick={() => navigate('/register')}
+            >
+              <Target className="mr-2 h-5 w-5" />
+              Start Your Free Account Today
+            </Button>
           </div>
         </div>
       </div>
