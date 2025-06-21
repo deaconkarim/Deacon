@@ -135,7 +135,7 @@ export function Layout() {
       <header className="bg-white border-b px-4 py-3 flex justify-between items-center sticky top-0 z-40">
         <div className="flex items-center gap-2">
           <Church className="h-6 w-6 text-primary" />
-          <span className="font-semibold text-lg">{organizationName}</span>
+          <span className="font-semibold text-lg">Deacon - {organizationName}</span>
         </div>
         
         {user && (
