@@ -473,7 +473,7 @@ export function Login() {
           {/* Additional Screenshots Row */}
           <div className="grid lg:grid-cols-2 gap-8 mt-16">
             {/* Events Screenshot */}
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div 
                 className="bg-white/60 backdrop-blur-sm rounded-3xl border border-white/50 p-4 shadow-xl overflow-hidden cursor-pointer hover:shadow-2xl transition-all duration-300"
                 onClick={() => openLightbox('/screenshot-event.png', 'Deacon Event Planning')}
@@ -486,13 +486,13 @@ export function Login() {
                 <img src="/screenshot-event.png" alt="Deacon Event Planning" className="rounded-b-2xl w-full" />
               </div>
               <div className="text-center">
-                <h4 className="text-lg font-semibold text-gray-900">Event Planning</h4>
-                <p className="text-gray-600 text-sm">Organize services and coordinate volunteers seamlessly.</p>
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">Event Planning</h3>
+                <p className="text-gray-600 text-lg">Organize services and coordinate volunteers seamlessly.</p>
               </div>
             </div>
 
             {/* Kiosk Screenshot */}
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div 
                 className="bg-white/60 backdrop-blur-sm rounded-3xl border border-white/50 p-4 shadow-xl overflow-hidden cursor-pointer hover:shadow-2xl transition-all duration-300"
                 onClick={() => openLightbox('/screenshot-kiosk.png', 'Deacon Kiosk System')}
@@ -505,13 +505,13 @@ export function Login() {
                 <img src="/screenshot-kiosk.png" alt="Deacon Kiosk System" className="rounded-b-2xl w-full" />
               </div>
               <div className="text-center">
-                <h4 className="text-lg font-semibold text-gray-900">Kiosk System</h4>
-                <p className="text-gray-600 text-sm">Self-service check-ins and information display.</p>
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">Kiosk System</h3>
+                <p className="text-gray-600 text-lg">Self-service check-ins and information display.</p>
               </div>
             </div>
 
             {/* Task Management Screenshot */}
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div 
                 className="bg-white/60 backdrop-blur-sm rounded-3xl border border-white/50 p-4 shadow-xl overflow-hidden cursor-pointer hover:shadow-2xl transition-all duration-300"
                 onClick={() => openLightbox('/screenshot-tasks.png', 'Deacon Task Management')}
@@ -524,13 +524,13 @@ export function Login() {
                 <img src="/screenshot-tasks.png" alt="Deacon Task Management" className="rounded-b-2xl w-full" />
               </div>
               <div className="text-center">
-                <h4 className="text-lg font-semibold text-gray-900">Task Management</h4>
-                <p className="text-gray-600 text-sm">Assign and track ministry tasks and volunteer responsibilities.</p>
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">Task Management</h3>
+                <p className="text-gray-600 text-lg">Assign and track ministry tasks and volunteer responsibilities.</p>
               </div>
             </div>
 
             {/* Reports Screenshot */}
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div 
                 className="bg-white/60 backdrop-blur-sm rounded-3xl border border-white/50 p-4 shadow-xl overflow-hidden cursor-pointer hover:shadow-2xl transition-all duration-300"
                 onClick={() => openLightbox('/screenshot-reporting.png', 'Deacon Analytics & Reports')}
@@ -543,8 +543,8 @@ export function Login() {
                 <img src="/screenshot-reporting.png" alt="Deacon Analytics & Reports" className="rounded-b-2xl w-full" />
               </div>
               <div className="text-center">
-                <h4 className="text-lg font-semibold text-gray-900">Analytics & Reports</h4>
-                <p className="text-gray-600 text-sm">Data-driven insights to inform ministry decisions.</p>
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">Analytics & Reports</h3>
+                <p className="text-gray-600 text-lg">Data-driven insights to inform ministry decisions.</p>
               </div>
             </div>
           </div>

@@ -99,47 +99,47 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVol
 
   return (
     <Card key={event.id} className="mb-4">
-      <CardHeader>
-        <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="text-xl font-bold flex items-center gap-2">
+      <CardHeader className="p-3 md:p-6">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-3 md:gap-0">
+          <div className="flex-1">
+            <CardTitle className="text-xl md:text-2xl font-bold flex flex-wrap items-center gap-2 mb-2">
               {event.title}
               {isRecurring && (
-                <Badge variant="secondary" className="ml-2">
+                <Badge variant="secondary" className="ml-0 md:ml-2 text-xs md:text-sm">
                   {formatRecurrencePattern(event.recurrence_pattern, event.monthly_week, event.monthly_weekday)}
                 </Badge>
               )}
               {isPotluck && (
-                <Badge variant="outline" className="ml-2 text-green-600 border-green-600">
+                <Badge variant="outline" className="ml-0 md:ml-2 text-xs md:text-sm text-green-600 border-green-600">
                   Potluck Sunday
                 </Badge>
               )}
               {event.needs_volunteers && (
-                <Badge variant="outline" className="ml-2 text-yellow-600 border-yellow-600 flex items-center gap-1">
+                <Badge variant="outline" className="ml-0 md:ml-2 text-xs md:text-sm text-yellow-600 border-yellow-600 flex items-center gap-1">
                   <Handshake className="h-3 w-3" />
                   Volunteers Needed
                 </Badge>
               )}
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-base md:text-lg">
               {format(startDate, 'EEEE, MMMM d, yyyy')}
               <br />
               {format(startDate, 'h:mm a')} - {format(endDate, 'h:mm a')}
             </CardDescription>
           </div>
-          <div className="flex space-x-2">
-            <Button variant="ghost" size="sm" onClick={() => onEdit(event)}>
+          <div className="flex justify-end md:justify-start">
+            <Button variant="ghost" size="sm" onClick={() => onEdit(event)} className="h-10 w-10 md:h-8 md:w-8 p-0">
               <Pencil className="h-4 w-4" />
             </Button>
           </div>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-3 md:p-6 pt-0 md:pt-0">
         {event.description && (
-          <p className="text-sm text-gray-600 mb-2">{event.description}</p>
+          <p className="text-sm md:text-base text-gray-600 mb-3 md:mb-4">{event.description}</p>
         )}
         {event.location && (
-          <p className="text-sm text-gray-600">
+          <p className="text-sm md:text-base text-gray-600 mb-2">
             <MapPin className="inline-block mr-1 h-4 w-4" />
             {event.location}
           </p>
@@ -149,14 +149,14 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVol
             href={event.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm text-blue-600 hover:underline mt-2 inline-block"
+            className="text-sm md:text-base text-blue-600 hover:underline mt-2 inline-block"
           >
             <ExternalLink className="inline-block mr-1 h-4 w-4" />
             Event Link
           </a>
         )}
-        <div className="flex items-center justify-between mt-4">
-          <div className="text-sm text-muted-foreground">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-0 mt-4 md:mt-6">
+          <div className="text-sm md:text-base text-muted-foreground">
             {event.allow_rsvp ? (
               `${event.attendance || 0} ${event.attendance === 1 ? 'person' : 'people'} ${isCheckIn ? 'checked in' : 'attending'}`
             ) : (
@@ -166,19 +166,24 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVol
               </span>
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col md:flex-row gap-2">
             {event.needs_volunteers && (
-              <Button variant="outline" size="sm" onClick={() => onManageVolunteers(event)}>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => onManageVolunteers(event)}
+                className="h-12 md:h-9 text-base md:text-sm"
+              >
                 <Handshake className="mr-2 h-4 w-4" />
                 Manage Volunteers
               </Button>
             )}
             {event.allow_rsvp && (
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2">
                 {isCheckIn ? (
                   <Button
                     onClick={() => onRSVP(event)}
-                    className="bg-green-600 hover:bg-green-700"
+                    className="bg-green-600 hover:bg-green-700 h-12 md:h-9 text-base md:text-sm"
                   >
                     <CheckCircle className="mr-2 h-4 w-4" />
                     Check In
@@ -186,7 +191,7 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVol
                 ) : isPotluck ? (
                   <Button
                     onClick={() => onPotluckRSVP(event)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    className="bg-blue-600 hover:bg-blue-700 text-white h-12 md:h-9 text-base md:text-sm"
                   >
                     <Utensils className="mr-2 h-4 w-4" />
                     Potluck RSVP
@@ -194,7 +199,7 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVol
                 ) : (
                   <Button
                     onClick={() => onRSVP(event)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    className="bg-blue-600 hover:bg-blue-700 text-white h-12 md:h-9 text-base md:text-sm"
                   >
                     <UserPlus className="mr-2 h-4 w-4" />
                     RSVP
@@ -231,7 +236,7 @@ export default function Events() {
     lastname: '',
     email: '',
     phone: '',
-    status: 'active'
+    status: 'visitor'
   });
   const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
   const [isEditEventOpen, setIsEditEventOpen] = useState(false);
@@ -676,6 +681,9 @@ export default function Events() {
         setMembers(prev => [...prev, memberData]);
       }
 
+      // Refresh the events list to update attendance count
+      await fetchEvents();
+
       toast({
         title: "Success",
         description: "Member removed successfully"
@@ -719,6 +727,10 @@ export default function Events() {
       
       setSelectedMembers([]);
       setIsMemberDialogOpen(false);
+
+      // Refresh the events list to update attendance count
+      await fetchEvents();
+
       toast({
         title: "Success",
         description: "Members added successfully"
@@ -819,7 +831,7 @@ export default function Events() {
         lastname: newMember.lastname,
         email: newMember.email || null,
         phone: newMember.phone || null,
-        status: newMember.status
+        status: 'visitor' // Always set to visitor for new people added during check-in
       };
 
       const { data, error } = await supabase
@@ -849,13 +861,13 @@ export default function Events() {
         lastname: '',
         email: '',
         phone: '',
-        status: 'active'
+        status: 'visitor'
       });
       setIsCreateMemberOpen(false);
 
       toast({
         title: "Success",
-        description: "New person created and added to the event."
+        description: `New visitor created and ${selectedEvent?.attendance_type === 'check-in' ? 'checked in' : 'RSVP\'d'} to the event.`
       });
 
       // Refresh members list
@@ -1085,11 +1097,14 @@ export default function Events() {
     }
   }, []);
 
-  const handlePotluckRSVPUpdate = useCallback(() => {
+  const handlePotluckRSVPUpdate = useCallback(async () => {
+    // Refresh the events list to update attendance counts
+    await fetchEvents();
+    
     if (selectedPotluckEvent) {
       handlePotluckRSVP(selectedPotluckEvent);
     }
-  }, [selectedPotluckEvent, handlePotluckRSVP]);
+  }, [selectedPotluckEvent, handlePotluckRSVP, fetchEvents]);
 
   const handleManageVolunteers = (event) => {
     setVolunteerDialogEvent(event);
@@ -1192,8 +1207,8 @@ export default function Events() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+    <div className="w-full px-0 md:px-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 px-2 md:px-0">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold mb-2">Events</h1>
           <p className="text-gray-600 text-lg">Manage and track event attendance</p>
@@ -1207,7 +1222,7 @@ export default function Events() {
       </div>
 
       {/* Event List */}
-      <div className="space-y-4">
+      <div className="space-y-4 px-2 md:px-0">
         {filteredEvents.map((event) => (
           <EventCard
             key={event.id}
@@ -1277,13 +1292,22 @@ export default function Events() {
 
               <TabsContent value="available" className="mt-4 md:mt-8">
                 <div className="space-y-4 md:space-y-6">
-                  <div className="mb-4 md:mb-6">
-                    <Input
-                      placeholder="Search people..."
-                      value={memberSearchQuery}
-                      onChange={(e) => setMemberSearchQuery(e.target.value)}
-                      className="w-full h-14 text-lg"
-                    />
+                  <div className="flex flex-col md:flex-row gap-3">
+                    <div className="flex-1">
+                      <Input
+                        placeholder="Search people..."
+                        value={memberSearchQuery}
+                        onChange={(e) => setMemberSearchQuery(e.target.value)}
+                        className="w-full h-14 text-lg"
+                      />
+                    </div>
+                    <Button
+                      onClick={() => setIsCreateMemberOpen(true)}
+                      className="w-full md:w-auto h-14 text-lg bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add New Person
+                    </Button>
                   </div>
                   <div className="space-y-2">
                     {filteredMembers.map((member) => (
@@ -1302,9 +1326,6 @@ export default function Events() {
                           <p className="text-lg md:text-xl font-medium">
                             {member.firstname} {member.lastname}
                           </p>
-                          {member.email && (
-                            <p className="text-base md:text-lg text-gray-600">{member.email}</p>
-                          )}
                         </div>
                       </div>
                     ))}
@@ -1330,9 +1351,6 @@ export default function Events() {
                           <p className="text-lg md:text-xl font-medium">
                             {member.firstname} {member.lastname}
                           </p>
-                          {member.email && (
-                            <p className="text-base md:text-lg text-gray-600">{member.email}</p>
-                          )}
                         </div>
                       </div>
                       <Button
@@ -1358,15 +1376,24 @@ export default function Events() {
           </div>
 
           <DialogFooter className="p-3 md:p-6 border-t">
-            <Button
-              variant={selectedEvent?.attendance_type === 'check-in' ? 'default' : 'outline'}
-              onClick={handleCloseDialog}
-              className={`w-full md:w-auto text-lg h-14 ${
-                selectedEvent?.attendance_type === 'check-in' ? 'bg-green-600 hover:bg-green-700' : ''
-              }`}
-            >
-              Close
-            </Button>
+            <div className="flex flex-col md:flex-row gap-3 w-full">
+              <Button
+                onClick={() => setIsCreateMemberOpen(true)}
+                className="w-full md:w-auto text-lg h-14 bg-blue-600 hover:bg-blue-700"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Create New Person
+              </Button>
+              <Button
+                variant={selectedEvent?.attendance_type === 'check-in' ? 'default' : 'outline'}
+                onClick={handleCloseDialog}
+                className={`w-full md:w-auto text-lg h-14 ${
+                  selectedEvent?.attendance_type === 'check-in' ? 'bg-green-600 hover:bg-green-700' : ''
+                }`}
+              >
+                Close
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1455,12 +1482,12 @@ export default function Events() {
 
       {/* Edit Event Dialog */}
       <Dialog open={isEditEventOpen} onOpenChange={setIsEditEventOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>
+        <DialogContent className="w-full max-w-full h-full md:h-auto md:max-w-3xl p-0">
+          <DialogHeader className="p-3 md:p-6 border-b">
+            <DialogTitle className="text-2xl md:text-3xl">
               Edit {editingEvent?.is_recurring ? 'Recurring Event Series' : 'Event'}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-lg mt-2">
               {editingEvent?.is_recurring 
                 ? `Update event details. Changes will apply to "${editingEvent.title}" and all future instances.`
                 : 'Update event details.'
@@ -1469,21 +1496,23 @@ export default function Events() {
           </DialogHeader>
           {editingEvent && (
             <>
-              <EventForm
-                initialData={{
-                  ...editingEvent,
-                  startDate: new Date(editingEvent.start_date).toISOString().slice(0, 16),
-                  endDate: new Date(editingEvent.end_date).toISOString().slice(0, 16),
-                  allow_rsvp: editingEvent.allow_rsvp !== undefined ? editingEvent.allow_rsvp : true,
-                  event_type: 'Sunday Worship Service'
-                }}
-                onSave={handleEditEvent}
-                onCancel={() => {
-                  setIsEditEventOpen(false);
-                  setEditingEvent(null);
-                }}
-              />
-              <div className="flex justify-end mt-4">
+              <div className="p-3 md:p-6">
+                <EventForm
+                  initialData={{
+                    ...editingEvent,
+                    startDate: new Date(editingEvent.start_date).toISOString().slice(0, 16),
+                    endDate: new Date(editingEvent.end_date).toISOString().slice(0, 16),
+                    allow_rsvp: editingEvent.allow_rsvp !== undefined ? editingEvent.allow_rsvp : true,
+                    event_type: 'Sunday Worship Service'
+                  }}
+                  onSave={handleEditEvent}
+                  onCancel={() => {
+                    setIsEditEventOpen(false);
+                    setEditingEvent(null);
+                  }}
+                />
+              </div>
+              <div className="p-3 md:p-6 border-t">
                 <Button
                   variant="destructive"
                   onClick={() => {
@@ -1492,13 +1521,14 @@ export default function Events() {
                       ? `Are you sure you want to delete "${editingEvent.title}" and all its recurring instances? This cannot be undone.`
                       : `Are you sure you want to delete "${editingEvent.title}"? This cannot be undone.`;
                     
-                                         if (confirm(message)) {
-                        const deleteId = editingEvent.master_id || editingEvent.id;
-                        handleDeleteEvent(deleteId);
-                        setIsEditEventOpen(false);
-                        setEditingEvent(null);
-                      }
+                    if (confirm(message)) {
+                      const deleteId = editingEvent.master_id || editingEvent.id;
+                      handleDeleteEvent(deleteId);
+                      setIsEditEventOpen(false);
+                      setEditingEvent(null);
+                    }
                   }}
+                  className="w-full md:w-auto text-lg h-14"
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete {editingEvent?.is_recurring ? 'Series' : 'Event'}
@@ -1522,23 +1552,23 @@ export default function Events() {
 
       {/* Volunteer Management Dialog */}
       <Dialog open={isVolunteerDialogOpen} onOpenChange={setIsVolunteerDialogOpen}>
-        <DialogContent className="w-full max-w-4xl h-[80vh] p-0">
-          <DialogHeader className="p-6 border-b">
-            <DialogTitle className="text-2xl">
+        <DialogContent className="w-full max-w-full h-full md:h-auto md:max-w-4xl p-0">
+          <DialogHeader className="p-3 md:p-6 border-b">
+            <DialogTitle className="text-2xl md:text-3xl">
               Manage Volunteers - {volunteerDialogEvent?.title}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-lg mt-2">
               Assign and manage volunteers for this event. {volunteerDialogEvent?.volunteer_roles && 
                 `Available roles: ${parseVolunteerRoles(volunteerDialogEvent.volunteer_roles).map(r => r.role || r).join(', ')}`
               }
             </DialogDescription>
           </DialogHeader>
 
-          <div className="p-6 flex-1 overflow-hidden">
+          <div className="p-3 md:p-6 flex-1 overflow-hidden">
             <Tabs defaultValue="current" className="h-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="current">Current Volunteers</TabsTrigger>
-                <TabsTrigger value="add">Add Volunteer</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 h-14">
+                <TabsTrigger value="current" className="text-lg">Current Volunteers</TabsTrigger>
+                <TabsTrigger value="add" className="text-lg">Add Volunteer</TabsTrigger>
               </TabsList>
 
               <TabsContent value="current" className="mt-4 h-full overflow-y-auto">
@@ -1566,8 +1596,11 @@ export default function Events() {
             </Tabs>
           </div>
 
-          <DialogFooter className="p-6 border-t">
-            <Button onClick={() => setIsVolunteerDialogOpen(false)}>
+          <DialogFooter className="p-3 md:p-6 border-t">
+            <Button 
+              onClick={() => setIsVolunteerDialogOpen(false)}
+              className="w-full md:w-auto text-lg h-14"
+            >
               Close
             </Button>
           </DialogFooter>

@@ -1,0 +1,20 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "installCommand": "npm install",
+  "devCommand": "npm run dev",
+  "functions": {
+    "app/api/**/*.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "env": {
+    "PLAYWRIGHT_BASE_URL": "@playwright_base_url"
+  },
+  "build": {
+    "env": {
+      "PLAYWRIGHT_BASE_URL": "@playwright_base_url"
+    }
+  }
+} 

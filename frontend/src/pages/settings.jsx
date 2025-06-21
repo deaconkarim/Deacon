@@ -60,14 +60,16 @@ export function Settings() {
       </div>
       
       <Tabs defaultValue="church" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="church">Church Information</TabsTrigger>
-          <TabsTrigger value="users">User Management</TabsTrigger>
-          {isAdmin && <TabsTrigger value="approvals">Pending Approvals</TabsTrigger>}
-          <TabsTrigger value="account">Account</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="data">Data Management</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto">
+          <TabsList className="mb-4 w-max min-w-full">
+            <TabsTrigger value="church">Church Information</TabsTrigger>
+            <TabsTrigger value="users">User Management</TabsTrigger>
+            {isAdmin && <TabsTrigger value="approvals">Pending Approvals</TabsTrigger>}
+            <TabsTrigger value="account">Account</TabsTrigger>
+            <TabsTrigger value="notifications">Notifications</TabsTrigger>
+            <TabsTrigger value="data">Data Management</TabsTrigger>
+          </TabsList>
+        </div>
         
         <TabsContent value="church">
           <ChurchInfoSettings />

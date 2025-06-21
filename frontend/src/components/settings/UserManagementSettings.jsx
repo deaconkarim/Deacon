@@ -81,11 +81,15 @@ const UserManagementSettings = () => {
   }, [searchQuery, users]);
 
   const fetchUsers = async () => {
+    if (!organizationId) {
+      console.log('No organization ID available, skipping user fetch');
+      setUsers([]);
+      setFilteredUsers([]);
+      return;
+    }
+
     setIsLoading(true);
     try {
-      console.log('Fetching users for organization:', organizationId);
-      
-      // Fetch organization users and members separately, filtered by organization
       const [orgUsersResult, membersResult] = await Promise.all([
         supabase
           .from('organization_users')
@@ -313,6 +317,12 @@ const UserManagementSettings = () => {
   };
 
   const fetchMembersWithoutAccounts = async () => {
+    if (!organizationId) {
+      console.log('No organization ID available, skipping members without accounts fetch');
+      setMembersWithoutAccounts([]);
+      return;
+    }
+
     try {
       console.log('Fetching members without accounts for organization:', organizationId);
       
@@ -340,7 +350,7 @@ const UserManagementSettings = () => {
       const existingUserIds = new Set(orgUsersResult.data.map(ou => ou.user_id));
 
       // Filter out members who already have user accounts
-      const membersWithoutAccounts = membersResult.data.filter(member => !existingUserIds.has(member.id));
+      const membersWithoutAccounts = membersResult.data.filter(member => !member.user_id || !existingUserIds.has(member.user_id));
       
       console.log('Members without accounts:', membersWithoutAccounts);
       setMembersWithoutAccounts(membersWithoutAccounts);
@@ -383,6 +393,15 @@ const UserManagementSettings = () => {
       toast({
         title: "Password too short",
         description: "Password must be at least 6 characters long.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!organizationId) {
+      toast({
+        title: "Organization not found",
+        description: "Unable to create user account. Please try refreshing the page.",
         variant: "destructive"
       });
       return;
@@ -485,17 +504,17 @@ const UserManagementSettings = () => {
       <motion.div variants={itemVariants}>
         <Card>
           <CardHeader>
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
                 <CardTitle>User Management</CardTitle>
                 <CardDescription>Manage users and their access to the organization management system.</CardDescription>
               </div>
-              <div className="flex gap-2">
-                <Button onClick={() => setIsCreateAccountDialogOpen(true)} variant="outline">
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <Button onClick={() => setIsCreateAccountDialogOpen(true)} variant="outline" className="w-full sm:w-auto">
                   <UserPlus className="mr-2 h-4 w-4" />
                   Create Account
                 </Button>
-                <Button onClick={() => setIsInviteDialogOpen(true)}>
+                <Button onClick={() => setIsInviteDialogOpen(true)} className="w-full sm:w-auto">
                   <UserPlus className="mr-2 h-4 w-4" />
                   Invite User
                 </Button>
@@ -537,17 +556,17 @@ const UserManagementSettings = () => {
                   </div>
                 ) : (
                   filteredUsers.map((user) => (
-                    <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                    <div key={user.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 border rounded-lg gap-3">
+                      <div className="flex items-center space-x-3 flex-1 min-w-0">
+                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
                           {getRoleIcon(user.role)}
                         </div>
-                        <div>
-                          <p className="font-medium">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium truncate">
                             {user.firstname} {user.lastname}
                           </p>
-                          <p className="text-sm text-muted-foreground">{user.email}</p>
-                          <div className="flex items-center gap-2 mt-1">
+                          <p className="text-sm text-muted-foreground truncate">{user.email}</p>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
                             <Badge variant={getRoleBadgeVariant(user.role)}>
                               {user.role}
                             </Badge>
@@ -559,7 +578,7 @@ const UserManagementSettings = () => {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 flex-shrink-0">
                         {currentUserIsAdmin && (
                           <Select
                             value={user.role}
@@ -605,7 +624,7 @@ const UserManagementSettings = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="firstName">First Name</Label>
                 <Input
@@ -677,7 +696,14 @@ const UserManagementSettings = () => {
               <Label htmlFor="member-select">Select Member</Label>
               <Select
                 value={createAccountData.memberId}
-                onValueChange={(value) => setCreateAccountData(prev => ({ ...prev, memberId: value }))}
+                onValueChange={(value) => {
+                  const selectedMember = membersWithoutAccounts.find(m => m.id === value);
+                  setCreateAccountData(prev => ({ 
+                    ...prev, 
+                    memberId: value,
+                    email: selectedMember?.email || ''
+                  }));
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Choose a member..." />
