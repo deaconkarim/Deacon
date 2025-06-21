@@ -241,7 +241,7 @@ export function Login() {
                 </h1>
                 <p className="text-xl text-gray-600 leading-relaxed max-w-lg">
                   Deacon is the comprehensive church management system built by someone who's walked in your shoes. 
-                  From member tracking to task management, everything you need to run your ministry efficiently.
+                  From member tracking to kiosk check-ins and task management, everything you need to run your ministry efficiently.
                 </p>
               </div>
 
