@@ -213,7 +213,7 @@ export function Login() {
             {/* Get Started Button - Hidden on mobile/tablet, visible on desktop */}
             <Button 
               size="sm" 
-              className="hidden lg:block bg-gradient-to-r from-emerald-500 to-blue-600 hover:from-emerald-600 hover:to-blue-700 shadow-lg" 
+              className="hidden lg:block bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-lg" 
               onClick={() => setShowBetaSignup(true)}
             >
               Apply for Beta
@@ -264,7 +264,7 @@ export function Login() {
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button 
                   size="lg" 
-                  className="bg-gradient-to-r from-emerald-500 to-blue-600 hover:from-emerald-600 hover:to-blue-700 text-white text-lg px-8 py-6 h-auto shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-lg px-8 py-6 h-auto shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
                   onClick={() => setShowBetaSignup(true)}
                 >
                   Apply for Beta Access
@@ -321,7 +321,7 @@ export function Login() {
                     </div>
                     <Button
                       type="submit"
-                      className="w-full bg-gradient-to-r from-emerald-500 to-blue-600 hover:from-emerald-600 hover:to-blue-700 h-14 text-lg font-semibold transition-all duration-300 hover:scale-[1.02] shadow-lg hover:shadow-xl rounded-xl"
+                      className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 h-14 text-lg font-semibold transition-all duration-300 hover:scale-[1.02] shadow-lg hover:shadow-xl rounded-xl"
                       disabled={loading}
                     >
                       <LogIn className="mr-3 h-5 w-5" />
@@ -336,7 +336,7 @@ export function Login() {
             <div className="lg:hidden text-center pt-8">
               <Button 
                 size="lg" 
-                className="bg-gradient-to-r from-emerald-500 to-blue-600 hover:from-emerald-600 hover:to-blue-700 text-white text-lg px-8 py-6 h-auto shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
+                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-lg px-8 py-6 h-auto shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
                 onClick={() => setShowLoginModal(true)}
               >
                 <LogIn className="mr-3 h-5 w-5" />
@@ -598,7 +598,7 @@ export function Login() {
             </p>
             <Button 
               size="lg" 
-              className="bg-gradient-to-r from-emerald-500 to-blue-600 hover:from-emerald-600 hover:to-blue-700 text-white text-xl px-10 py-8 h-auto shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-105 rounded-2xl font-semibold"
+              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-xl px-10 py-8 h-auto shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-105 rounded-2xl font-semibold"
               onClick={() => setShowBetaSignup(true)}
             >
               <Target className="mr-3 h-6 w-6" />
@@ -656,10 +656,10 @@ export function Login() {
             </div>
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-emerald-500 to-blue-600 hover:from-emerald-600 hover:to-blue-700 h-12 text-base font-semibold transition-all duration-300 hover:scale-[1.02] shadow-lg hover:shadow-xl rounded-lg"
+              className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 h-14 text-lg font-semibold transition-all duration-300 hover:scale-[1.02] shadow-lg hover:shadow-xl rounded-xl"
               disabled={loading}
             >
-              <LogIn className="mr-2 h-4 w-4" />
+              <LogIn className="mr-3 h-5 w-5" />
               {loading ? 'Signing in...' : 'Sign in'}
             </Button>
           </form>
@@ -811,7 +811,7 @@ export function Login() {
               </Button>
               <Button
                 type="submit"
-                className="flex-1 bg-gradient-to-r from-emerald-500 to-blue-600 hover:from-emerald-600 hover:to-blue-700"
+                className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
                 disabled={betaSignupLoading}
               >
                 {betaSignupLoading ? 'Submitting...' : 'Submit Application'}
