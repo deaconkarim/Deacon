@@ -331,18 +331,6 @@ export function Login() {
                 </CardContent>
               </Card>
             </div>
-
-            {/* Mobile/Tablet Sign In Button */}
-            <div className="lg:hidden text-center pt-8">
-              <Button 
-                size="lg" 
-                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-lg px-8 py-6 h-auto shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
-                onClick={() => setShowLoginModal(true)}
-              >
-                <LogIn className="mr-3 h-5 w-5" />
-                Sign In to Your Account
-              </Button>
-            </div>
           </div>
         </div>
 
