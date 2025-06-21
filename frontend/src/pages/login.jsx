@@ -352,7 +352,7 @@ export function Login() {
             <h2 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent mb-6">
               Everything you need to run your ministry
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-normal pb-4">
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-loose pb-6">
               Deacon combines all the essential tools for church management into one powerful command center. 
               Built by someone who understands the unique challenges of ministry leadership. <strong>Now in beta with limited availability.</strong>
             </p>
