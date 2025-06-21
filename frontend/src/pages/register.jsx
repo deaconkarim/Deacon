@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
-import { Church, UserPlus, Mail, Lock, User, Building, Search } from 'lucide-react';
+import { Church, UserPlus, Mail, Lock, User, Building, MapPin, Phone } from 'lucide-react';
 
 export function Register() {
   const [formData, setFormData] = useState({
@@ -16,78 +16,40 @@ export function Register() {
     email: '',
     password: '',
     confirmPassword: '',
-    organizationId: ''
+    // Organization fields
+    organizationName: '',
+    organizationDescription: '',
+    organizationPhone: '',
+    organizationAddress: {
+      street: '',
+      city: '',
+      state: '',
+      zip: ''
+    }
   });
-  const [organizations, setOrganizations] = useState([]);
-  const [filteredOrganizations, setFilteredOrganizations] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isLoadingOrganizations, setIsLoadingOrganizations] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
-
-  // Fetch available organizations
-  useEffect(() => {
-    const fetchOrganizations = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('organizations')
-          .select('id, name, description, address')
-          .order('name');
-
-        if (error) throw error;
-        setOrganizations(data || []);
-        setFilteredOrganizations(data || []);
-      } catch (error) {
-        console.error('Error fetching organizations:', error);
-        toast({
-          title: "Error loading organizations",
-          description: "Please try refreshing the page.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoadingOrganizations(false);
-      }
-    };
-
-    fetchOrganizations();
-  }, [toast]);
-
-  // Filter organizations based on search query
-  useEffect(() => {
-    if (!searchQuery) {
-      setFilteredOrganizations(organizations);
-    } else {
-      const filtered = organizations.filter(org => 
-        org.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (org.description && org.description.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
-      setFilteredOrganizations(filtered);
-    }
-  }, [searchQuery, organizations]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleOrganizationSelect = (organizationId) => {
-    setFormData(prev => ({ ...prev, organizationId }));
+  const handleAddressChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      organizationAddress: {
+        ...prev.organizationAddress,
+        [field]: value
+      }
+    }));
   };
 
   const handleRegister = async (e) => {
     e.preventDefault();
     
     // Validation
-    if (!formData.organizationId) {
-      toast({
-        title: "Please select an organization",
-        description: "You must choose a church to join.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     if (formData.password !== formData.confirmPassword) {
       toast({
         title: "Passwords don't match",
@@ -106,11 +68,20 @@ export function Register() {
       return;
     }
 
+    if (!formData.organizationName.trim()) {
+      toast({
+        title: "Organization name required",
+        description: "Please enter your church name.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Create the user account
-      const { data, error } = await supabase.auth.signUp({
+      // Create the user account first
+      const { data: userData, error: userError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
@@ -121,46 +92,77 @@ export function Register() {
         }
       });
 
-      if (error) throw error;
+      if (userError) throw userError;
 
-      // Create a member record in the database
-      if (data.user) {
+      if (userData.user) {
+        // Generate a slug from the organization name
+        const generateSlug = (name) => {
+          return name
+            .toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+            .replace(/\s+/g, '-') // Replace spaces with hyphens
+            .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+            .trim('-') // Remove leading/trailing hyphens
+            + '-' + Date.now().toString().slice(-6); // Add timestamp to ensure uniqueness
+        };
+
+        const organizationSlug = generateSlug(formData.organizationName);
+
+        // Create the organization
+        const { data: orgData, error: orgError } = await supabase
+          .from('organizations')
+          .insert({
+            name: formData.organizationName,
+            slug: organizationSlug,
+            description: formData.organizationDescription || null,
+            phone: formData.organizationPhone || null,
+            address: formData.organizationAddress
+          })
+          .select()
+          .single();
+
+        if (orgError) {
+          console.error('Error creating organization:', orgError);
+          throw new Error('Failed to create organization');
+        }
+
+        // Create a member record in the database
         const { error: memberError } = await supabase
           .from('members')
           .insert({
             firstname: formData.firstName,
             lastname: formData.lastName,
             email: formData.email,
-            user_id: data.user.id,
+            user_id: userData.user.id,
             status: 'active',
-            organization_id: formData.organizationId
+            organization_id: orgData.id
           });
 
         if (memberError) {
           console.error('Error creating member record:', memberError);
-          // Don't throw here as the user account was created successfully
+          // Don't throw here as the user account and organization were created successfully
         }
 
-        // Create organization membership
+        // Create organization membership with admin role
         const { error: orgMemberError } = await supabase
           .from('organization_users')
           .insert({
-            organization_id: formData.organizationId,
-            user_id: data.user.id,
-            role: 'member',
+            organization_id: orgData.id,
+            user_id: userData.user.id,
+            role: 'admin',
             status: 'active',
-            approval_status: 'pending'
+            approval_status: 'approved'
           });
 
         if (orgMemberError) {
           console.error('Error creating organization membership:', orgMemberError);
-          // Don't throw here as the user account was created successfully
+          // Don't throw here as the user account and organization were created successfully
         }
       }
 
       toast({
         title: "Registration successful!",
-        description: "Your account has been created and is pending approval. You will be notified once an administrator reviews your request.",
+        description: "Your church and account have been created successfully. Please check your email for a confirmation link before signing in to access your Deacon command center.",
       });
 
       navigate('/login');
@@ -192,9 +194,9 @@ export function Register() {
           <div className="flex justify-center mb-4">
             <Church className="h-12 w-12 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Join a Church</CardTitle>
+          <CardTitle className="text-2xl">Create Your Church</CardTitle>
           <CardDescription>
-            Create an account and choose which church you'd like to join
+            Set up your church's Deacon command center and create your admin account
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -286,79 +288,88 @@ export function Register() {
               </div>
             </div>
 
-            {/* Organization Selection */}
+            {/* Organization Information */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Choose Your Church</h3>
-              
-              {isLoadingOrganizations ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                  <p className="text-sm text-muted-foreground mt-2">Loading churches...</p>
+              <h3 className="text-lg font-semibold">Church Information</h3>
+              <div className="space-y-2">
+                <Label htmlFor="organizationName">Church Name *</Label>
+                <div className="flex items-center">
+                  <Building className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="organizationName"
+                    name="organizationName"
+                    type="text"
+                    placeholder="Your Church Name"
+                    value={formData.organizationName}
+                    onChange={handleInputChange}
+                    required
+                  />
                 </div>
-              ) : (
-                <>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="organizationDescription">Description</Label>
+                <Textarea
+                  id="organizationDescription"
+                  name="organizationDescription"
+                  placeholder="Brief description of your church (optional)"
+                  value={formData.organizationDescription}
+                  onChange={handleInputChange}
+                  rows={3}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="organizationPhone">Phone Number</Label>
+                <div className="flex items-center">
+                  <Phone className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="organizationPhone"
+                    name="organizationPhone"
+                    type="tel"
+                    placeholder="(555) 123-4567"
+                    value={formData.organizationPhone}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <Label className="text-sm font-medium">Address (Optional)</Label>
+                <div className="space-y-2">
+                  <Input
+                    placeholder="Street Address"
+                    value={formData.organizationAddress.street}
+                    onChange={(e) => handleAddressChange('street', e.target.value)}
+                  />
+                  <div className="grid grid-cols-3 gap-2">
                     <Input
-                      placeholder="Search churches..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
+                      placeholder="City"
+                      value={formData.organizationAddress.city}
+                      onChange={(e) => handleAddressChange('city', e.target.value)}
+                    />
+                    <Input
+                      placeholder="State"
+                      value={formData.organizationAddress.state}
+                      onChange={(e) => handleAddressChange('state', e.target.value)}
+                    />
+                    <Input
+                      placeholder="ZIP"
+                      value={formData.organizationAddress.zip}
+                      onChange={(e) => handleAddressChange('zip', e.target.value)}
                     />
                   </div>
-
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {filteredOrganizations.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        {searchQuery ? 'No churches found matching your search.' : 'No churches available.'}
-                      </div>
-                    ) : (
-                      filteredOrganizations.map((org) => (
-                        <div
-                          key={org.id}
-                          className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                            formData.organizationId === org.id
-                              ? 'border-primary bg-primary/5'
-                              : 'border-border hover:border-primary/50'
-                          }`}
-                          onClick={() => handleOrganizationSelect(org.id)}
-                        >
-                          <div className="flex items-start space-x-3">
-                            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                              <Building className="h-5 w-5 text-primary" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-medium text-sm">{org.name}</h4>
-                              {org.description && (
-                                <p className="text-sm text-muted-foreground mt-1">{org.description}</p>
-                              )}
-                              {org.address && (
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  {getOrganizationAddress(org.address)}
-                                </p>
-                              )}
-                            </div>
-                            {formData.organizationId === org.id && (
-                              <div className="w-5 h-5 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
-                                <div className="w-2 h-2 bg-white rounded-full"></div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </>
-              )}
+                </div>
+              </div>
             </div>
             
             <Button
               type="submit"
               className="w-full"
-              disabled={loading || !formData.organizationId}
+              disabled={loading}
             >
               <UserPlus className="mr-2 h-4 w-4" />
-              {loading ? 'Creating Account...' : 'Create Account'}
+              {loading ? 'Creating Your Church...' : 'Create Church & Account'}
             </Button>
           </form>
           

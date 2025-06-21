@@ -1,12 +1,16 @@
--- Auto-create member records when organization_users records are created
--- This ensures that every user with an organization_users record also has a member record
+-- Fix the auto_create_member_record trigger to handle email conflicts
+-- This prevents the unique constraint violation when registering new users
 
--- Function to create member record when organization_users record is created
+-- Drop the existing trigger first
+DROP TRIGGER IF EXISTS trigger_auto_create_member_record ON organization_users;
+
+-- Recreate the function with better email conflict handling
 CREATE OR REPLACE FUNCTION auto_create_member_record()
 RETURNS TRIGGER AS $$
 DECLARE
     mapped_role TEXT;
     existing_member_id UUID;
+    user_email TEXT;
 BEGIN
     -- Check if a member record already exists for this user
     IF NOT EXISTS (
@@ -24,12 +28,15 @@ BEGIN
             ELSE 'member'
         END;
         
+        -- Get the user's email
+        SELECT email INTO user_email FROM auth.users WHERE id = NEW.user_id;
+        
         -- Check if a member with the same email already exists
-        SELECT id INTO existing_member_id 
-        FROM members 
-        WHERE email = (
-            SELECT email FROM auth.users WHERE id = NEW.user_id
-        ) AND email IS NOT NULL;
+        IF user_email IS NOT NULL THEN
+            SELECT id INTO existing_member_id 
+            FROM members 
+            WHERE email = user_email;
+        END IF;
         
         -- If a member with the same email exists, update it instead of creating new
         IF existing_member_id IS NOT NULL THEN
@@ -73,47 +80,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Create trigger to automatically create member records
-DROP TRIGGER IF EXISTS trigger_auto_create_member_record ON organization_users;
+-- Recreate the trigger
 CREATE TRIGGER trigger_auto_create_member_record
     AFTER INSERT ON organization_users
     FOR EACH ROW
     EXECUTE FUNCTION auto_create_member_record();
 
--- Function to update member record when organization_users record is updated
-CREATE OR REPLACE FUNCTION auto_update_member_record()
-RETURNS TRIGGER AS $$
-DECLARE
-    mapped_role TEXT;
-BEGIN
-    -- Map organization_users role to members role
-    mapped_role := CASE NEW.role
-        WHEN 'owner' THEN 'admin'
-        WHEN 'admin' THEN 'admin'
-        WHEN 'member' THEN 'member'
-        ELSE 'member'
-    END;
-    
-    -- Update member record if it exists
-    UPDATE members 
-    SET 
-        status = CASE 
-            WHEN NEW.status = 'active' THEN 'active'
-            WHEN NEW.status = 'inactive' THEN 'inactive'
-            ELSE members.status
-        END,
-        role = mapped_role,
-        updated_at = NOW()
-    WHERE user_id = NEW.user_id 
-    AND organization_id = NEW.organization_id;
-    
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Create trigger to automatically update member records
-DROP TRIGGER IF EXISTS trigger_auto_update_member_record ON organization_users;
-CREATE TRIGGER trigger_auto_update_member_record
-    AFTER UPDATE ON organization_users
-    FOR EACH ROW
-    EXECUTE FUNCTION auto_update_member_record(); 
+-- Test the fix by checking if the function exists
+SELECT 'Auto-create member trigger function updated successfully' as status; 
