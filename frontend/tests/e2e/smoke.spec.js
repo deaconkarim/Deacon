@@ -5,7 +5,7 @@ test.describe('Smoke Tests', () => {
     await page.goto('/');
     
     // Check if the page loads
-    await expect(page).toHaveTitle(/church|deacon/i);
+    await expect(page).toHaveTitle('Deacon');
     
     // Check for the main hero heading
     await expect(page.getByRole('heading', { name: 'Deacon' })).toBeVisible();
