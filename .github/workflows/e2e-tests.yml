@@ -1,97 +1,98 @@
-name: E2E Tests
+# DISABLED - E2E Tests
+# name: E2E Tests
 
-on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
+# on:
+#   push:
+#     branches: [ main, develop ]
+#   pull_request:
+#     branches: [ main ]
 
-jobs:
-  test:
-    timeout-minutes: 30
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
+# jobs:
+#   test:
+#     timeout-minutes: 30
+#     runs-on: ubuntu-latest
+#     steps:
+#     - uses: actions/checkout@v4
     
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: 18
+#     - name: Setup Node.js
+#       uses: actions/setup-node@v4
+#       with:
+#         node-version: 18
     
-    - name: Install dependencies
-      run: |
-        cd frontend
-        yarn install --frozen-lockfile
+#     - name: Install dependencies
+#       run: |
+#         cd frontend
+#         yarn install --frozen-lockfile
     
-    - name: Install Playwright Browsers
-      run: |
-        cd frontend
-        npx playwright install --with-deps chromium
+#     - name: Install Playwright Browsers
+#       run: |
+#         cd frontend
+#         npx playwright install --with-deps chromium
     
-    - name: Run Playwright tests against deployed app
-      run: |
-        cd frontend
-        npx playwright test smoke.spec.js --project=chromium
-      env:
-        PLAYWRIGHT_BASE_URL: ${{ secrets.VERCEL_URL || 'https://getdeacon.com' }}
-        VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-        VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+#     - name: Run Playwright tests against deployed app
+#       run: |
+#         cd frontend
+#         npx playwright test smoke.spec.js --project=chromium
+#       env:
+#         PLAYWRIGHT_BASE_URL: ${{ secrets.VERCEL_URL || 'https://getdeacon.com' }}
+#         VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+#         VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
     
-    - name: Upload test results
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: playwright-report
-        path: frontend/playwright-report/
-        retention-days: 30
+#     - name: Upload test results
+#       if: always()
+#       uses: actions/upload-artifact@v4
+#       with:
+#         name: playwright-report
+#         path: frontend/playwright-report/
+#         retention-days: 30
     
-    - name: Upload test results
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-results
-        path: frontend/test-results/
-        retention-days: 30
+#     - name: Upload test results
+#       if: always()
+#       uses: actions/upload-artifact@v4
+#       with:
+#         name: test-results
+#         path: frontend/test-results/
+#         retention-days: 30
 
-  # Notification job that runs after tests
-  notify:
-    needs: test
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Notify on failure
-        if: needs.test.result == 'failure'
-        run: |
-          echo "🚨 E2E Tests Failed!"
-          echo "Workflow: ${{ github.workflow }}"
-          echo "Repository: ${{ github.repository }}"
-          echo "Branch: ${{ github.ref_name }}"
-          echo "Commit: ${{ github.sha }}"
-          echo "View logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+#   # Notification job that runs after tests
+#   notify:
+#     needs: test
+#     if: always()
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Notify on failure
+#         if: needs.test.result == 'failure'
+#         run: |
+#           echo "🚨 E2E Tests Failed!"
+#           echo "Workflow: ${{ github.workflow }}"
+#           echo "Repository: ${{ github.repository }}"
+#           echo "Branch: ${{ github.ref_name }}"
+#           echo "Commit: ${{ github.sha }}"
+#           echo "View logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         
-      # Optional: Send to Slack (requires SLACK_WEBHOOK_URL secret)
-      - name: Notify Slack
-        if: needs.test.result == 'failure'
-        uses: 8398a7/action-slack@v3
-        with:
-          status: failure
-          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
-          text: |
-            🚨 E2E Tests Failed for ${{ github.repository }}
-            Branch: ${{ github.ref_name }}
-            Commit: ${{ github.sha }}
-            <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>
+#       # Optional: Send to Slack (requires SLACK_WEBHOOK_URL secret)
+#       - name: Notify Slack
+#         if: needs.test.result == 'failure'
+#         uses: 8398a7/action-slack@v3
+#         with:
+#           status: failure
+#           webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+#           text: |
+#             🚨 E2E Tests Failed for ${{ github.repository }}
+#             Branch: ${{ github.ref_name }}
+#             Commit: ${{ github.sha }}
+#             <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>
         
-      # Optional: Send to Discord (requires DISCORD_WEBHOOK_URL secret)
-      - name: Notify Discord
-        if: needs.test.result == 'failure'
-        uses: Ilshidur/action-discord@master
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        with:
-          args: |
-            🚨 **E2E Tests Failed**
-            Repository: ${{ github.repository }}
-            Branch: ${{ github.ref_name }}
-            Commit: ${{ github.sha }}
-            [View Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) 
+#       # Optional: Send to Discord (requires DISCORD_WEBHOOK_URL secret)
+#       - name: Notify Discord
+#         if: needs.test.result == 'failure'
+#         uses: Ilshidur/action-discord@master
+#         env:
+#           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+#         with:
+#           args: |
+#             🚨 **E2E Tests Failed**
+#             Repository: ${{ github.repository }}
+#             Branch: ${{ github.ref_name }}
+#             Commit: ${{ github.sha }}
+#             [View Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) 

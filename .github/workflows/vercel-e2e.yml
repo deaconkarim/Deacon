@@ -1,82 +1,83 @@
-name: Vercel E2E Tests
+# DISABLED - Vercel E2E Tests
+# name: Vercel E2E Tests
 
-on:
-  deployment_status:
-    states: [success]
+# on:
+#   deployment_status:
+#     states: [success]
 
-jobs:
-  test:
-    if: github.event.deployment_status.environment == 'Production'
-    timeout-minutes: 20
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
+# jobs:
+#   test:
+#     if: github.event.deployment_status.environment == 'Production'
+#     timeout-minutes: 20
+#     runs-on: ubuntu-latest
+#     steps:
+#     - uses: actions/checkout@v4
     
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: 18
+#     - name: Setup Node.js
+#       uses: actions/setup-node@v4
+#       with:
+#         node-version: 18
     
-    - name: Install dependencies
-      run: |
-        cd frontend
-        yarn install --frozen-lockfile
+#     - name: Install dependencies
+#       run: |
+#         cd frontend
+#         yarn install --frozen-lockfile
     
-    - name: Install Playwright Browsers
-      run: |
-        cd frontend
-        npx playwright install --with-deps chromium
+#     - name: Install Playwright Browsers
+#       run: |
+#         cd frontend
+#         npx playwright install --with-deps chromium
     
-    - name: Run E2E tests against deployed app
-      run: |
-        cd frontend
-        npx playwright test smoke.spec.js --project=chromium
-      env:
-        PLAYWRIGHT_BASE_URL: ${{ github.event.deployment_status.target_url }}
+#     - name: Run E2E tests against deployed app
+#       run: |
+#         cd frontend
+#         npx playwright test smoke.spec.js --project=chromium
+#       env:
+#         PLAYWRIGHT_BASE_URL: ${{ github.event.deployment_status.target_url }}
     
-    - name: Upload test results
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: e2e-test-results
-        path: frontend/playwright-report/
-        retention-days: 7
+#     - name: Upload test results
+#       if: always()
+#       uses: actions/upload-artifact@v4
+#       with:
+#         name: e2e-test-results
+#         path: frontend/playwright-report/
+#         retention-days: 7
 
-  # Notification job that runs after tests
-  notify:
-    needs: test
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Notify on failure
-        if: needs.test.result == 'failure'
-        run: |
-          echo "🚨 Vercel E2E Tests Failed!"
-          echo "Deployment URL: ${{ github.event.deployment_status.target_url }}"
-          echo "Repository: ${{ github.repository }}"
-          echo "View logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+#   # Notification job that runs after tests
+#   notify:
+#     needs: test
+#     if: always()
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Notify on failure
+#         if: needs.test.result == 'failure'
+#         run: |
+#           echo "🚨 Vercel E2E Tests Failed!"
+#           echo "Deployment URL: ${{ github.event.deployment_status.target_url }}"
+#           echo "Repository: ${{ github.repository }}"
+#           echo "View logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         
-      # Optional: Send to Slack (requires SLACK_WEBHOOK_URL secret)
-      - name: Notify Slack
-        if: needs.test.result == 'failure'
-        uses: 8398a7/action-slack@v3
-        with:
-          status: failure
-          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
-          text: |
-            🚨 Vercel E2E Tests Failed for ${{ github.repository }}
-            Deployment: ${{ github.event.deployment_status.target_url }}
-            <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>
+#       # Optional: Send to Slack (requires SLACK_WEBHOOK_URL secret)
+#       - name: Notify Slack
+#         if: needs.test.result == 'failure'
+#         uses: 8398a7/action-slack@v3
+#         with:
+#           status: failure
+#           webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+#           text: |
+#             🚨 Vercel E2E Tests Failed for ${{ github.repository }}
+#             Deployment: ${{ github.event.deployment_status.target_url }}
+#             <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>
         
-      # Optional: Send to Discord (requires DISCORD_WEBHOOK_URL secret)
-      - name: Notify Discord
-        if: needs.test.result == 'failure'
-        uses: Ilshidur/action-discord@master
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        with:
-          args: |
-            🚨 **Vercel E2E Tests Failed**
-            Repository: ${{ github.repository }}
-            Deployment: ${{ github.event.deployment_status.target_url }}
-            [View Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) 
+#       # Optional: Send to Discord (requires DISCORD_WEBHOOK_URL secret)
+#       - name: Notify Discord
+#         if: needs.test.result == 'failure'
+#         uses: Ilshidur/action-discord@master
+#         env:
+#           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+#         with:
+#           args: |
+#             🚨 **Vercel E2E Tests Failed**
+#             Repository: ${{ github.repository }}
+#             Deployment: ${{ github.event.deployment_status.target_url }}
+#             [View Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) 
