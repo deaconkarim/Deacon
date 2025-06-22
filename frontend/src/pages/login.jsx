@@ -234,10 +234,7 @@ export function Login() {
                   Now in Beta - Limited Availability
                 </div>
                 <h1 className="text-6xl lg:text-7xl font-bold text-gray-900 leading-tight">
-                  Your Church
-                  <span className="block bg-gradient-to-r from-emerald-600 via-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                    Command Center
-                  </span>
+                  Deacon
                 </h1>
                 <p className="text-xl text-gray-600 leading-relaxed max-w-lg">
                   Deacon is the comprehensive church management system built by someone who's walked in your shoes. 
