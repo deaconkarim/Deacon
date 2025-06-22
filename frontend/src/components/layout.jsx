@@ -134,7 +134,15 @@ export function Layout() {
       {/* Header with User Menu */}
       <header className="bg-white border-b px-4 py-3 flex justify-between items-center sticky top-0 z-40">
         <div className="flex items-center gap-2">
-          <Church className="h-6 w-6 text-primary" />
+          <span className="inline-block w-8 h-8 rounded-xl overflow-hidden shadow-lg bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m18 7 4 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9l4-2"></path>
+              <path d="M14 22v-4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v4"></path>
+              <path d="M18 22V5l-6-3-6 3v17"></path>
+              <path d="M12 7v5"></path>
+              <path d="M10 9h4"></path>
+            </svg>
+          </span>
           <span className="font-semibold text-lg">Deacon - {organizationName}</span>
         </div>
         
@@ -161,6 +169,37 @@ export function Layout() {
           </DropdownMenu>
         )}
       </header>
+
+      {/* Desktop Navigation - Top */}
+      <nav className="hidden lg:block bg-white border-b">
+        <div className="max-w-screen-xl mx-auto px-6">
+          <div className="flex items-center space-x-8">
+            {navigation.map((item) => {
+              const isActive = location.pathname === item.href;
+              return (
+                <NavLink
+                  key={item.name}
+                  to={item.href}
+                  className={({ isActive }) => cn(
+                    "flex items-center gap-2 px-3 py-4 text-sm font-medium border-b-2 transition-all relative",
+                    isActive
+                      ? "text-primary border-primary"
+                      : "text-gray-600 border-transparent hover:text-gray-900 hover:border-gray-300"
+                  )}
+                >
+                  <item.icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-gray-500")} />
+                  <span>{item.name}</span>
+                  {item.name === 'Settings' && isAdmin && pendingApprovals > 0 && (
+                    <span className="ml-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {pendingApprovals}
+                    </span>
+                  )}
+                </NavLink>
+              );
+            })}
+          </div>
+        </div>
+      </nav>
 
       <div className="flex-1 pb-20 tablet:pb-16 lg:pb-0">
         <main className="p-4 sm:p-6 tablet:p-8 pb-24 tablet:pb-20 lg:pb-6">
@@ -284,37 +323,6 @@ export function Layout() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
-        </div>
-      </nav>
-
-      {/* Desktop Navigation */}
-      <nav className="hidden lg:block border-t">
-        <div className="max-w-screen-xl mx-auto px-4">
-          <div className="flex justify-around items-center h-16">
-            {navigation.map((item) => {
-              const isActive = location.pathname === item.href;
-              return (
-                <NavLink
-                  key={item.name}
-                  to={item.href}
-                  className={({ isActive }) => cn(
-                    "flex flex-col items-center justify-center px-3 py-2 text-xs font-medium rounded-md transition-all relative",
-                    isActive
-                      ? "text-primary"
-                      : "text-gray-500 hover:text-gray-900"
-                  )}
-                >
-                  <item.icon className={cn("h-5 w-5 mb-1", isActive ? "text-primary" : "text-gray-500")} />
-                  <span>{item.name}</span>
-                  {item.name === 'Settings' && isAdmin && pendingApprovals > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {pendingApprovals}
-                    </span>
-                  )}
-                </NavLink>
-              );
-            })}
           </div>
         </div>
       </nav>
