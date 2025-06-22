@@ -322,7 +322,7 @@ export function Layout() {
       {/* Footer */}
       <footer className="py-4 px-6 border-t mt-16 tablet:mt-20 lg:mt-0">
         <div className="flex flex-col sm:flex-row justify-between items-center">
-          <p className="text-sm text-gray-500">© 2025 {organizationName}. All rights reserved.</p>
+          <p className="text-sm text-gray-500">© 2025 Deacon - Church Command Center. All rights reserved.</p>
         </div>
       </footer>
     </div>
