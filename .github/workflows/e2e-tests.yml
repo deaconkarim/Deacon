@@ -51,4 +51,47 @@ jobs:
       with:
         name: test-results
         path: frontend/test-results/
-        retention-days: 30 
+        retention-days: 30
+
+  # Notification job that runs after tests
+  notify:
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify on failure
+        if: needs.test.result == 'failure'
+        run: |
+          echo "🚨 E2E Tests Failed!"
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "View logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        
+      # Optional: Send to Slack (requires SLACK_WEBHOOK_URL secret)
+      - name: Notify Slack
+        if: needs.test.result == 'failure' && secrets.SLACK_WEBHOOK_URL
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          text: |
+            🚨 E2E Tests Failed for ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>
+        
+      # Optional: Send to Discord (requires DISCORD_WEBHOOK_URL secret)
+      - name: Notify Discord
+        if: needs.test.result == 'failure' && secrets.DISCORD_WEBHOOK_URL
+        uses: Ilshidur/action-discord@master
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        with:
+          args: |
+            🚨 **E2E Tests Failed**
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            [View Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) 

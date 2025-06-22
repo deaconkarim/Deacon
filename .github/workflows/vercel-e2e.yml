@@ -40,4 +40,43 @@ jobs:
       with:
         name: e2e-test-results
         path: frontend/playwright-report/
-        retention-days: 7 
+        retention-days: 7
+
+  # Notification job that runs after tests
+  notify:
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify on failure
+        if: needs.test.result == 'failure'
+        run: |
+          echo "🚨 Vercel E2E Tests Failed!"
+          echo "Deployment URL: ${{ github.event.deployment_status.target_url }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "View logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        
+      # Optional: Send to Slack (requires SLACK_WEBHOOK_URL secret)
+      - name: Notify Slack
+        if: needs.test.result == 'failure' && secrets.SLACK_WEBHOOK_URL
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          text: |
+            🚨 Vercel E2E Tests Failed for ${{ github.repository }}
+            Deployment: ${{ github.event.deployment_status.target_url }}
+            <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>
+        
+      # Optional: Send to Discord (requires DISCORD_WEBHOOK_URL secret)
+      - name: Notify Discord
+        if: needs.test.result == 'failure' && secrets.DISCORD_WEBHOOK_URL
+        uses: Ilshidur/action-discord@master
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        with:
+          args: |
+            🚨 **Vercel E2E Tests Failed**
+            Repository: ${{ github.repository }}
+            Deployment: ${{ github.event.deployment_status.target_url }}
+            [View Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) 
