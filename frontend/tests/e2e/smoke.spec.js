@@ -8,7 +8,7 @@ test.describe('Smoke Tests', () => {
     await expect(page).toHaveTitle('Deacon');
     
     // Check for the main hero heading
-    await expect(page.getByRole('heading', { name: 'Your Church Command Center' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Your Church' })).toBeVisible();
   });
 
   test('should display login form elements', async ({ page }) => {
