@@ -58,7 +58,7 @@ jobs:
         
       # Optional: Send to Slack (requires SLACK_WEBHOOK_URL secret)
       - name: Notify Slack
-        if: needs.test.result == 'failure' && secrets.SLACK_WEBHOOK_URL
+        if: needs.test.result == 'failure'
         uses: 8398a7/action-slack@v3
         with:
           status: failure
@@ -70,7 +70,7 @@ jobs:
         
       # Optional: Send to Discord (requires DISCORD_WEBHOOK_URL secret)
       - name: Notify Discord
-        if: needs.test.result == 'failure' && secrets.DISCORD_WEBHOOK_URL
+        if: needs.test.result == 'failure'
         uses: Ilshidur/action-discord@master
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
