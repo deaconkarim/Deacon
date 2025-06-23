@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,6 +30,13 @@ export function Register() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Force light mode for the register page
+  useEffect(() => {
+    const root = window.document.documentElement;
+    root.classList.remove('dark');
+    root.classList.add('light');
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

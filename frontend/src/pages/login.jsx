@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -64,6 +64,18 @@ export function Login() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const screenshotsRef = useRef(null);
+
+  // Force light mode for the landing page
+  useEffect(() => {
+    const root = window.document.documentElement;
+    root.classList.remove('dark');
+    root.classList.add('light');
+    
+    // Cleanup function to restore theme when component unmounts
+    return () => {
+      // Don't restore theme here as we want to keep light mode for the landing page
+    };
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
