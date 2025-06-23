@@ -784,7 +784,7 @@ export function Dashboard() {
             </CardHeader>
             <CardContent className="p-6">
               <div className="text-3xl font-bold">{stats.eventsWithVolunteersEnabled || 0}</div>
-              <p className="text-sm text-muted-foreground mt-1">Events with volunteers enabled (next 30 days)</p>
+              <p className="text-sm text-muted-foreground mt-1">Events with volunteers enabled</p>
               
               {/* Volunteers breakdown */}
               <div className="mt-4 space-y-2">

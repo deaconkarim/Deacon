@@ -12,12 +12,16 @@ serve(async (req) => {
   }
 
   try {
+    console.log('📱 SMS webhook received:', req.method, req.url)
+    
     // Parse form data from Twilio webhook
     const formData = await req.formData()
     const from = formData.get('From') as string
     const to = formData.get('To') as string
     const body = formData.get('Body') as string
     const messageSid = formData.get('MessageSid') as string
+
+    console.log('📨 SMS data:', { from, to, body, messageSid })
 
     // Initialize Supabase client
     const supabaseClient = createClient(
@@ -30,7 +34,15 @@ serve(async (req) => {
       .from('members')
       .select('id, firstname, lastname')
       .eq('phone', from)
-      .single()
+      .maybeSingle()
+
+    if (memberError) {
+      console.error('❌ Member lookup error:', memberError)
+    } else if (member) {
+      console.log('✅ Found member:', member.firstname, member.lastname)
+    } else {
+      console.log('ℹ️ No member found for phone number:', from)
+    }
 
     // Create or find conversation
     let conversationId = null
@@ -43,13 +55,14 @@ serve(async (req) => {
         .eq('status', 'active')
         .order('created_at', { ascending: false })
         .limit(1)
-        .single()
+        .maybeSingle()
 
       if (existingConversation) {
         conversationId = existingConversation.id
+        console.log('✅ Using existing conversation:', conversationId)
       } else {
         // Create new conversation
-        const { data: newConversation } = await supabaseClient
+        const { data: newConversation, error: convError } = await supabaseClient
           .from('sms_conversations')
           .insert({
             title: `SMS with ${member.firstname} ${member.lastname}`,
@@ -59,7 +72,12 @@ serve(async (req) => {
           .select('id')
           .single()
 
-        conversationId = newConversation?.id
+        if (convError) {
+          console.error('❌ Conversation creation error:', convError)
+        } else {
+          conversationId = newConversation?.id
+          console.log('✅ Created new conversation:', conversationId)
+        }
       }
     }
 
@@ -80,7 +98,12 @@ serve(async (req) => {
       .select()
       .single()
 
-    if (messageError) throw messageError
+    if (messageError) {
+      console.error('❌ Message storage error:', messageError)
+      throw messageError
+    }
+
+    console.log('✅ Message stored successfully:', message.id)
 
     // Return TwiML response (optional auto-reply)
     const twimlResponse = `<?xml version="1.0" encoding="UTF-8"?>
@@ -88,6 +111,7 @@ serve(async (req) => {
   <Message>Thank you for your message. We'll get back to you soon.</Message>
 </Response>`
 
+    console.log('📤 Sending TwiML response')
     return new Response(twimlResponse, {
       headers: { 
         ...corsHeaders, 
@@ -96,7 +120,7 @@ serve(async (req) => {
     })
 
   } catch (error) {
-    console.error('SMS receiving error:', error)
+    console.error('❌ SMS receiving error:', error)
     
     return new Response(
       JSON.stringify({ error: error.message }),
