@@ -56,6 +56,7 @@ export function Layout() {
     { name: 'Donations', href: '/donations', icon: DollarSign },
     { name: 'Groups', href: '/groups', icon: UserPlus },
     { name: 'Tasks', href: '/tasks', icon: ClipboardList },
+    { name: 'SMS', href: '/sms', icon: MessageSquare },
     { name: 'Reports', href: '/reports', icon: BarChart2 },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];

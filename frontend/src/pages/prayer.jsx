@@ -19,6 +19,8 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/authContext';
+import { smsService } from '@/lib/smsService';
+import { getCurrentUserMember } from '@/lib/data';
 
 export function Prayer() {
   const { requestId } = useParams();
@@ -34,6 +36,8 @@ export function Prayer() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isDeacon, setIsDeacon] = useState(false);
+  const [isSendingSMS, setIsSendingSMS] = useState(false);
+  const [currentUserMember, setCurrentUserMember] = useState(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -42,21 +46,50 @@ export function Prayer() {
       fetchPrayerRequest();
     }
     checkDeaconStatus();
+    loadCurrentUserMember();
   }, [requestId, user]);
+
+  const loadCurrentUserMember = async () => {
+    if (!user) return;
+    
+    try {
+      const memberData = await getCurrentUserMember();
+      setCurrentUserMember(memberData);
+      
+      // If we have member data, populate the form fields
+      if (memberData) {
+        setNewRequest(prev => ({
+          ...prev,
+          name: `${memberData.firstname} ${memberData.lastname}`,
+          email: memberData.email || '',
+          phone: memberData.phone || ''
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading current user member:', error);
+      // Don't show error toast as this is not critical for the prayer request functionality
+    }
+  };
 
   const checkDeaconStatus = async () => {
     if (!user) return;
     
     try {
+      // Check if user is a member of the Deacons group
       const { data, error } = await supabase
-        .from('members')
-        .select('group_id')
-        .eq('id', user.id)
-        .eq('status', 'active')
-        .single();
+        .from('group_members')
+        .select(`
+          member_id,
+          groups!inner (
+            name
+          )
+        `)
+        .eq('member_id', user.id)
+        .eq('groups.name', 'Deacons')
+        .maybeSingle();
 
       if (error) throw error;
-      setIsDeacon(data?.group_id === 'deacons');
+      setIsDeacon(!!data);
     } catch (error) {
       console.error('Error checking deacon status:', error);
     }
@@ -118,7 +151,7 @@ export function Prayer() {
 
       if (error) throw error;
 
-      // Notify deacons
+      // Notify deacons via email
       const { error: notifyError } = await supabase.functions.invoke('notify-deacons', {
         body: { requestId: data.id }
       });
@@ -132,14 +165,7 @@ export function Prayer() {
         });
       }
 
-      setIsAddRequestOpen(false);
-      setNewRequest({
-        name: '',
-        email: '',
-        phone: '',
-        request: '',
-        isPrivate: false
-      });
+      handleCloseAddRequest();
       toast({ 
         title: 'Prayer Request Submitted', 
         description: 'Your prayer request has been submitted and the deacons have been notified.' 
@@ -154,9 +180,14 @@ export function Prayer() {
   };
 
   const handleSendToMembers = async () => {
+    if (!prayerRequest) return;
+
+    setIsSendingSMS(true);
     try {
-      // Here you would integrate with your SMS service
-      // For now, we'll just update the status
+      // Send prayer request via SMS using the new SMS service
+      const conversation = await smsService.sendPrayerRequestSMS(prayerRequest);
+
+      // Update prayer request status
       const { error } = await supabase
         .from('prayer_requests')
         .update({
@@ -170,15 +201,46 @@ export function Prayer() {
 
       toast({
         title: 'Success',
-        description: 'Prayer request has been sent to members.'
+        description: `Prayer request has been sent to prayer team members via SMS. Conversation ID: ${conversation.id}`
       });
+
+      // Refresh the prayer request data
+      await fetchPrayerRequest();
     } catch (error) {
+      console.error('Error sending SMS:', error);
       toast({
         title: 'Error',
-        description: error.message,
+        description: `Failed to send SMS: ${error.message}`,
         variant: 'destructive'
       });
+    } finally {
+      setIsSendingSMS(false);
     }
+  };
+
+  const handleOpenAddRequest = () => {
+    // Reset form and populate with current user data
+    const resetForm = {
+      name: currentUserMember ? `${currentUserMember.firstname} ${currentUserMember.lastname}` : '',
+      email: currentUserMember?.email || '',
+      phone: currentUserMember?.phone || '',
+      request: '',
+      isPrivate: false
+    };
+    setNewRequest(resetForm);
+    setIsAddRequestOpen(true);
+  };
+
+  const handleCloseAddRequest = () => {
+    setIsAddRequestOpen(false);
+    // Reset form to initial state
+    setNewRequest({
+      name: '',
+      email: '',
+      phone: '',
+      request: '',
+      isPrivate: false
+    });
   };
 
   if (requestId && !prayerRequest) {
@@ -260,10 +322,28 @@ export function Prayer() {
               Back to Requests
             </Button>
             {isDeacon && !prayerRequest.sms_sent_to_members && (
-              <Button onClick={handleSendToMembers}>
-                <Send className="mr-2 h-4 w-4" />
-                Send to Members
+              <Button 
+                onClick={handleSendToMembers}
+                disabled={isSendingSMS}
+              >
+                {isSendingSMS ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Send to Prayer Team
+                  </>
+                )}
               </Button>
+            )}
+            {prayerRequest.sms_sent_to_members && (
+              <div className="flex items-center text-sm text-green-600">
+                <MessageSquare className="mr-1 h-4 w-4" />
+                Sent to prayer team via SMS
+              </div>
             )}
           </CardFooter>
         </Card>
@@ -281,19 +361,27 @@ export function Prayer() {
       </div>
 
       <div className="flex justify-end">
-        <Button onClick={() => setIsAddRequestOpen(true)}>
+        <Button onClick={handleOpenAddRequest}>
           <Plus className="mr-2 h-4 w-4" />
           Submit Prayer Request
         </Button>
       </div>
 
       {/* Add Prayer Request Dialog */}
-      <Dialog open={isAddRequestOpen} onOpenChange={setIsAddRequestOpen}>
+      <Dialog open={isAddRequestOpen} onOpenChange={(open) => {
+        if (!open) {
+          handleCloseAddRequest();
+        }
+      }}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Submit Prayer Request</DialogTitle>
             <DialogDescription>
-              Share your prayer request with our church community.
+              {currentUserMember ? (
+                <span>Your contact information has been pre-filled from your member profile. You can edit these fields if needed.</span>
+              ) : (
+                <span>Share your prayer request with our church community.</span>
+              )}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -304,7 +392,14 @@ export function Prayer() {
                 value={newRequest.name}
                 onChange={(e) => setNewRequest({...newRequest, name: e.target.value})}
                 required
+                className={currentUserMember ? "border-green-200 bg-green-50" : ""}
               />
+              {currentUserMember && (
+                <p className="text-xs text-green-600 flex items-center">
+                  <User className="h-3 w-3 mr-1" />
+                  Pre-filled from your member profile
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email Address *</Label>
@@ -314,7 +409,14 @@ export function Prayer() {
                 value={newRequest.email}
                 onChange={(e) => setNewRequest({...newRequest, email: e.target.value})}
                 required
+                className={currentUserMember && currentUserMember.email ? "border-green-200 bg-green-50" : ""}
               />
+              {currentUserMember && currentUserMember.email && (
+                <p className="text-xs text-green-600 flex items-center">
+                  <Mail className="h-3 w-3 mr-1" />
+                  Pre-filled from your member profile
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Phone Number *</Label>
@@ -325,7 +427,14 @@ export function Prayer() {
                 onChange={(e) => setNewRequest({...newRequest, phone: e.target.value})}
                 placeholder="(555) 123-4567"
                 required
+                className={currentUserMember && currentUserMember.phone ? "border-green-200 bg-green-50" : ""}
               />
+              {currentUserMember && currentUserMember.phone && (
+                <p className="text-xs text-green-600 flex items-center">
+                  <Phone className="h-3 w-3 mr-1" />
+                  Pre-filled from your member profile
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="request">Prayer Request *</Label>
@@ -349,7 +458,7 @@ export function Prayer() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddRequestOpen(false)}>
+            <Button variant="outline" onClick={handleCloseAddRequest}>
               Cancel
             </Button>
             <Button onClick={handleAddRequest}>

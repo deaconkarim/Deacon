@@ -14,6 +14,7 @@ import ChildrenCheckin from './pages/children-checkin';
 import AddChild from './pages/add-child';
 import { Login } from './pages/login';
 import { Register } from './pages/register';
+import { SMS } from './pages/sms';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import ApprovalStatus from './components/ApprovalStatus';
 
@@ -41,6 +42,7 @@ function App() {
         <Route path="/children-check-in/add" element={<AddChild />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/sms" element={<SMS />} />
       </Route>
     </Routes>
   );
