@@ -30,6 +30,7 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useAuth } from '@/lib/authContext';
 import { isUserAdmin, getApprovalNotifications, getOrganizationName } from '@/lib/data';
 import { cn } from '@/lib/utils';
@@ -130,9 +131,9 @@ export function Layout() {
   };
   
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header with User Menu */}
-      <header className="bg-white border-b px-4 py-3 flex justify-between items-center sticky top-0 z-40">
+      <header className="bg-card border-b px-4 py-3 flex justify-between items-center sticky top-0 z-40">
         <div className="flex items-center gap-2">
           <span className="inline-block w-8 h-8 rounded-xl overflow-hidden shadow-lg bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -143,35 +144,38 @@ export function Layout() {
               <path d="M10 9h4"></path>
             </svg>
           </span>
-          <span className="font-semibold text-lg">Deacon - {organizationName}</span>
+          <span className="font-semibold text-lg text-foreground">Deacon - {organizationName}</span>
         </div>
         
         {user && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-2">
-                <User className="h-4 w-4" />
-                <span className="hidden sm:inline">{user.email}</span>
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem className="flex items-center gap-2">
-                <User className="h-4 w-4" />
-                <span className="text-sm text-muted-foreground">{user.email}</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut} className="flex items-center gap-2 text-red-600">
-                <LogOut className="h-4 w-4" />
-                Sign Out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  <span className="hidden sm:inline">{user.email}</span>
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  <span className="text-sm text-muted-foreground">{user.email}</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut} className="flex items-center gap-2 text-red-600">
+                  <LogOut className="h-4 w-4" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         )}
       </header>
 
       {/* Desktop Navigation - Top */}
-      <nav className="hidden lg:block bg-white border-b">
+      <nav className="hidden lg:block bg-card border-b">
         <div className="max-w-screen-xl mx-auto px-6">
           <div className="flex items-center space-x-8">
             {navigation.map((item) => {
@@ -184,10 +188,10 @@ export function Layout() {
                     "flex items-center gap-2 px-3 py-4 text-sm font-medium border-b-2 transition-all relative",
                     isActive
                       ? "text-primary border-primary"
-                      : "text-gray-600 border-transparent hover:text-gray-900 hover:border-gray-300"
+                      : "text-muted-foreground border-transparent hover:text-foreground hover:border-muted-foreground"
                   )}
                 >
-                  <item.icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-gray-500")} />
+                  <item.icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-muted-foreground")} />
                   <span>{item.name}</span>
                   {item.name === 'Settings' && isAdmin && pendingApprovals > 0 && (
                     <span className="ml-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
@@ -208,7 +212,7 @@ export function Layout() {
       </div>
 
       {/* Mobile Navigation (phones only) */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg md:hidden z-50">
+      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t shadow-lg md:hidden z-50">
         <div className="max-w-screen-xl mx-auto px-2">
           <div className="flex justify-around items-center h-14">
             {mainNavItems.slice(0, 4).map((item) => {
@@ -221,10 +225,10 @@ export function Layout() {
                     "flex flex-col items-center justify-center px-2 py-1 text-[9px] font-medium rounded-md transition-all relative",
                     isActive
                       ? "text-primary"
-                      : "text-gray-500 hover:text-gray-900"
+                      : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  <item.icon className={cn("h-4 w-4 mb-0.5", isActive ? "text-primary" : "text-gray-500")} />
+                  <item.icon className={cn("h-4 w-4 mb-0.5", isActive ? "text-primary" : "text-muted-foreground")} />
                   <span>{item.name}</span>
                   {item.name === 'Settings' && isAdmin && pendingApprovals > 0 && (
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
@@ -237,7 +241,7 @@ export function Layout() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex flex-col items-center justify-center px-2 py-1 h-auto">
-                  <MoreHorizontal className="h-4 w-4 mb-0.5 text-gray-500" />
+                  <MoreHorizontal className="h-4 w-4 mb-0.5 text-muted-foreground" />
                   <span className="text-[9px] font-medium">More</span>
                 </Button>
               </DropdownMenuTrigger>
@@ -268,7 +272,7 @@ export function Layout() {
       </nav>
 
       {/* Tablet Navigation */}
-      <nav className="hidden md:block lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50">
+      <nav className="hidden md:block lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t shadow-lg z-50">
         <div className="max-w-screen-xl mx-auto px-4">
           <div className="flex justify-around items-center h-16">
             {mainNavItems.map((item) => {
@@ -281,10 +285,10 @@ export function Layout() {
                     "flex flex-col items-center justify-center px-3 py-2 text-xs font-medium rounded-md transition-all min-h-[44px] min-w-[44px] relative",
                     isActive
                       ? "text-primary bg-primary/10"
-                      : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   )}
                 >
-                  <item.icon className={cn("h-5 w-5 mb-1", isActive ? "text-primary" : "text-gray-500")} />
+                  <item.icon className={cn("h-5 w-5 mb-1", isActive ? "text-primary" : "text-muted-foreground")} />
                   <span className="text-[10px] leading-tight">{item.name}</span>
                   {item.name === 'Settings' && isAdmin && pendingApprovals > 0 && (
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
@@ -297,7 +301,7 @@ export function Layout() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex flex-col items-center justify-center px-3 py-2 min-h-[44px] min-w-[44px] h-auto">
-                  <MoreHorizontal className="h-5 w-5 mb-1 text-gray-500" />
+                  <MoreHorizontal className="h-5 w-5 mb-1 text-muted-foreground" />
                   <span className="text-[10px] font-medium">More</span>
                 </Button>
               </DropdownMenuTrigger>
@@ -328,9 +332,9 @@ export function Layout() {
       </nav>
 
       {/* Footer */}
-      <footer className="py-4 px-6 border-t mt-16 tablet:mt-20 lg:mt-0">
+      <footer className="py-4 px-6 border-t mt-16 tablet:mt-20 lg:mt-0 bg-card">
         <div className="flex flex-col sm:flex-row justify-between items-center">
-          <p className="text-sm text-gray-500">© 2025 Deacon - Church Command Center. All rights reserved.</p>
+          <p className="text-sm text-muted-foreground">© 2025 Deacon - Church Command Center. All rights reserved.</p>
         </div>
       </footer>
     </div>

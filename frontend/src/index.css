@@ -29,9 +29,9 @@
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
+    --card: 217.2 32.6% 17.5%;
     --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
+    --popover: 217.2 32.6% 17.5%;
     --popover-foreground: 210 40% 98%;
     --primary: 217.2 91.2% 59.8%;
     --primary-foreground: 222.2 47.4% 11.2%;
@@ -57,6 +57,56 @@
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+}
+
+/* Dark mode improvements */
+.dark {
+  /* Better text contrast */
+  --tw-text-opacity: 1;
+}
+
+.dark .text-muted-foreground {
+  color: hsl(215 20.2% 75%);
+}
+
+.dark .bg-muted {
+  background-color: hsl(217.2 32.6% 20%);
+}
+
+.dark .border {
+  border-color: hsl(217.2 32.6% 25%);
+}
+
+.dark .hover\:bg-muted:hover {
+  background-color: hsl(217.2 32.6% 25%);
+}
+
+/* Better card contrast in dark mode */
+.dark .bg-card {
+  background-color: hsl(217.2 32.6% 17.5%);
+  border: 1px solid hsl(217.2 32.6% 25%);
+}
+
+/* Improved button contrast */
+.dark .bg-primary {
+  background-color: hsl(217.2 91.2% 59.8%);
+  color: hsl(222.2 47.4% 11.2%);
+}
+
+.dark .text-primary {
+  color: hsl(217.2 91.2% 59.8%);
+}
+
+/* Better input fields */
+.dark .bg-input {
+  background-color: hsl(217.2 32.6% 20%);
+  border-color: hsl(217.2 32.6% 30%);
+}
+
+/* Improved dropdown menus */
+.dark .bg-popover {
+  background-color: hsl(217.2 32.6% 17.5%);
+  border: 1px solid hsl(217.2 32.6% 25%);
 }
 
 /* Tablet-specific optimizations */

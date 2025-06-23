@@ -21,7 +21,8 @@ import {
   Handshake,
   BookOpen,
   BarChart3,
-  Trophy
+  Trophy,
+  FileText
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -233,16 +234,40 @@ export function Dashboard() {
       console.log('Monthly donations calculated:', monthlyDonations);
       console.log('=== END DONATION DEBUGGING ===');
 
-      // Calculate weekly average (based on actual weeks with donation data)
-      const donationWeeks = donations?.map(d => {
-        const date = new Date(d.date);
-        const yearWeek = `${date.getFullYear()}-W${Math.ceil((date.getDate() + new Date(date.getFullYear(), date.getMonth(), 1).getDay()) / 7)}`;
-        return yearWeek;
-      }) || [];
+      // Calculate weekly average (average weekly donation total)
+      const weeklyDonationTotals = {};
       
-      const uniqueWeeks = new Set(donationWeeks);
-      const actualWeeksWithData = uniqueWeeks.size;
-      const weeklyAverage = actualWeeksWithData > 0 ? totalDonations / actualWeeksWithData : 0;
+      donations?.forEach(donation => {
+        try {
+          const date = new Date(donation.date);
+          
+          // Skip invalid dates
+          if (isNaN(date.getTime())) {
+            console.warn('Invalid donation date:', donation.date);
+            return;
+          }
+          
+          // Get the start of the week (Sunday) for this date
+          const startOfWeek = new Date(date);
+          const dayOfWeek = date.getDay();
+          startOfWeek.setDate(date.getDate() - dayOfWeek);
+          startOfWeek.setHours(0, 0, 0, 0);
+          
+          const weekKey = startOfWeek.toISOString().split('T')[0];
+          const amount = parseFloat(donation.amount) || 0;
+          
+          if (!weeklyDonationTotals[weekKey]) {
+            weeklyDonationTotals[weekKey] = 0;
+          }
+          weeklyDonationTotals[weekKey] += amount;
+        } catch (error) {
+          console.error('Error processing donation for weekly average:', donation, error);
+        }
+      });
+      
+      const weeklyTotals = Object.values(weeklyDonationTotals);
+      const weeklyAverage = weeklyTotals.length > 0 ? 
+        weeklyTotals.reduce((sum, total) => sum + total, 0) / weeklyTotals.length : 0;
 
       // Calculate monthly average (total donations divided by actual months with data)
       const donationDates = donations?.map(d => d.date) || [];
@@ -264,11 +289,12 @@ export function Dashboard() {
       console.log('=== CALCULATION DEBUG ===');
       console.log('Total donations:', totalDonations);
       console.log('Monthly donations:', monthlyDonations);
-      console.log('Unique weeks with data:', Array.from(uniqueWeeks));
-      console.log('Actual weeks with data:', actualWeeksWithData);
+      console.log('Weekly donation totals:', weeklyDonationTotals);
+      console.log('Weekly totals array:', weeklyTotals);
+      console.log('Number of weeks with donations:', weeklyTotals.length);
       console.log('Unique months with data:', Array.from(uniqueMonths));
       console.log('Actual months with data:', actualMonthsWithData);
-      console.log('Weekly average (total/actual weeks):', weeklyAverage);
+      console.log('Weekly average (avg of weekly totals):', weeklyAverage);
       console.log('Monthly average (total/actual months):', monthlyAverage);
       console.log('Growth rate:', growthRate);
       console.log('=== END CALCULATION DEBUG ===');
@@ -321,6 +347,103 @@ export function Dashboard() {
       console.log('Volunteer stats:', volunteerStats);
       console.log('=== END VOLUNTEER DEBUG ===');
 
+      // Calculate average attendance by event type
+      console.log('=== ATTENDANCE BY EVENT TYPE DEBUG ===');
+      
+      // Get current user's organization ID
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      let organizationId = null;
+      
+      if (currentUser) {
+        const { data: orgUser, error: orgError } = await supabase
+          .from('organization_users')
+          .select('organization_id')
+          .eq('user_id', currentUser.id)
+          .eq('status', 'active')
+          .eq('approval_status', 'approved')
+          .single();
+        
+        if (!orgError && orgUser) {
+          organizationId = orgUser.organization_id;
+        }
+      }
+      
+      // Get all events with attendance data for the last 6 months
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      
+      const { data: eventsWithAttendance, error: attendanceError } = await supabase
+        .from('events')
+        .select(`
+          id,
+          title,
+          event_type,
+          start_date,
+          event_attendance (
+            id,
+            status
+          )
+        `)
+        .eq('organization_id', organizationId)
+        .gte('start_date', sixMonthsAgo.toISOString())
+        .order('start_date', { ascending: false });
+
+      if (attendanceError) {
+        console.error('Error fetching events with attendance:', attendanceError);
+      }
+
+      console.log('Events with attendance data:', eventsWithAttendance?.length || 0);
+
+      // Group events by type and calculate averages
+      const eventTypeStats = {};
+      let eventsWithRecords = 0;
+      let eventsWithoutRecords = 0;
+      
+      eventsWithAttendance?.forEach(event => {
+        const eventType = event.event_type || 'Other';
+        const attendingCount = event.event_attendance?.filter(a => 
+          a.status === 'attending' || a.status === 'checked-in'
+        ).length || 0;
+        
+        // Only count events that have attendance records
+        if (event.event_attendance && event.event_attendance.length > 0) {
+          eventsWithRecords++;
+          if (!eventTypeStats[eventType]) {
+            eventTypeStats[eventType] = {
+              totalAttendance: 0,
+              eventCount: 0,
+              averageAttendance: 0
+            };
+          }
+          
+          eventTypeStats[eventType].totalAttendance += attendingCount;
+          eventTypeStats[eventType].eventCount += 1;
+          
+          console.log(`Event: ${event.title} (${eventType}) - Attendance: ${attendingCount}/${event.event_attendance.length} records`);
+        } else {
+          eventsWithoutRecords++;
+          console.log(`Event: ${event.title} (${eventType}) - No attendance records`);
+        }
+      });
+      
+      console.log(`Summary: ${eventsWithRecords} events with attendance records, ${eventsWithoutRecords} events without records`);
+
+      // Calculate averages
+      Object.keys(eventTypeStats).forEach(eventType => {
+        const stats = eventTypeStats[eventType];
+        stats.averageAttendance = stats.eventCount > 0 ? 
+          Math.round(stats.totalAttendance / stats.eventCount) : 0;
+      });
+
+      console.log('Event type statistics:', eventTypeStats);
+
+      // Map to the existing stats structure
+      const sundayServiceStats = eventTypeStats['Sunday Worship Service'] || { averageAttendance: 0, eventCount: 0 };
+      const bibleStudyStats = eventTypeStats['Bible Study'] || { averageAttendance: 0, eventCount: 0 };
+      const fellowshipStats = eventTypeStats['Fellowship Activity'] || { averageAttendance: 0, eventCount: 0 };
+
+      console.log('=== END ATTENDANCE BY EVENT TYPE DEBUG ===');
+
       setStats({
         totalPeople,
         activeMembers: activeMembers.length,
@@ -339,12 +462,12 @@ export function Dashboard() {
         upcomingVolunteers: volunteerStats.upcomingVolunteers,
         recentVolunteers: volunteerStats.recentVolunteers,
         eventsNeedingVolunteers: volunteerStats.eventsNeedingVolunteers,
-        sundayServiceAttendance: 0,
-        sundayServiceEvents: 0,
-        bibleStudyAttendance: 0,
-        bibleStudyEvents: 0,
-        fellowshipAttendance: 0,
-        fellowshipEvents: 0,
+        sundayServiceAttendance: sundayServiceStats.totalAttendance,
+        sundayServiceEvents: sundayServiceStats.eventCount,
+        bibleStudyAttendance: bibleStudyStats.totalAttendance,
+        bibleStudyEvents: bibleStudyStats.eventCount,
+        fellowshipAttendance: fellowshipStats.totalAttendance,
+        fellowshipEvents: fellowshipStats.eventCount,
         eventsWithVolunteersEnabled: volunteerStats.eventsWithVolunteersEnabled,
         totalVolunteersSignedUp: volunteerStats.totalVolunteersSignedUp,
         eventsStillNeedingVolunteers: volunteerStats.eventsStillNeedingVolunteers
@@ -511,7 +634,7 @@ export function Dashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Command Center</h1>
       </div>
 
       <div className="grid gap-4 tablet-portrait:grid-cols-2 tablet-landscape:grid-cols-2 md:grid-cols-2 lg:grid-cols-4">
@@ -543,11 +666,9 @@ export function Dashboard() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="bg-gray-50 py-2 px-6 border-t">
-              <Button variant="ghost" size="sm" className="ml-auto" asChild>
-                <a href="/members">
-                  View all <ChevronRight className="ml-1 h-4 w-4" />
-                </a>
+            <CardFooter className="bg-muted py-2 px-6 border-t">
+              <Button variant="outline" className="w-full" asChild>
+                <a href="/members">View All People</a>
               </Button>
             </CardFooter>
           </Card>
@@ -581,11 +702,9 @@ export function Dashboard() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="bg-gray-50 py-2 px-6 border-t">
-              <Button variant="ghost" size="sm" className="ml-auto" asChild>
-                <a href="/donations">
-                  View all <ChevronRight className="ml-1 h-4 w-4" />
-                </a>
+            <CardFooter className="bg-muted py-2 px-6 border-t">
+              <Button variant="outline" className="w-full" asChild>
+                <a href="/donations">View All Donations</a>
               </Button>
             </CardFooter>
           </Card>
@@ -619,11 +738,9 @@ export function Dashboard() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="bg-gray-50 py-2 px-6 border-t">
-              <Button variant="ghost" size="sm" className="ml-auto" asChild>
-                <a href="/events">
-                  View all <ChevronRight className="ml-1 h-4 w-4" />
-                </a>
+            <CardFooter className="bg-muted py-2 px-6 border-t">
+              <Button variant="outline" className="w-full" asChild>
+                <a href="/events">View All Events</a>
               </Button>
             </CardFooter>
           </Card>
@@ -657,16 +774,92 @@ export function Dashboard() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="bg-gray-50 py-2 px-6 border-t">
-              <Button variant="ghost" size="sm" className="ml-auto" asChild>
-                <a href="/events">
-                  Manage volunteers <ChevronRight className="ml-1 h-4 w-4" />
-                </a>
+            <CardFooter className="bg-muted py-2 px-6 border-t">
+              <Button variant="outline" className="w-full" asChild>
+                <a href="/events">Manage Volunteers</a>
               </Button>
             </CardFooter>
           </Card>
         </motion.div>
       </div>
+
+      {/* Average Attendance by Event Type Section */}
+      <motion.div variants={itemVariants}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center text-xl">
+              <Users2 className="mr-2 h-6 w-6" />
+              Average Attendance by Event Type
+            </CardTitle>
+            <CardDescription className="text-base">Average attendance for different event types (last 6 months)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-3">
+              {/* Sunday Service */}
+              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
+                    <BookOpen className="h-6 w-6 text-primary-foreground" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-base font-medium text-foreground">Sunday Service</p>
+                  <p className="text-2xl font-bold text-primary">
+                    {stats.sundayServiceEvents > 0 ? 
+                      Math.round(stats.sundayServiceAttendance / stats.sundayServiceEvents) : 0}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {stats.sundayServiceEvents} events • {stats.sundayServiceAttendance} total
+                  </p>
+                </div>
+              </div>
+
+              {/* Bible Study */}
+              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
+                    <FileText className="h-6 w-6 text-primary-foreground" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-base font-medium text-foreground">Bible Study</p>
+                  <p className="text-2xl font-bold text-primary">
+                    {stats.bibleStudyEvents > 0 ? 
+                      Math.round(stats.bibleStudyAttendance / stats.bibleStudyEvents) : 0}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {stats.bibleStudyEvents} events • {stats.bibleStudyAttendance} total
+                  </p>
+                </div>
+              </div>
+
+              {/* Fellowship */}
+              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
+                    <Users2 className="h-6 w-6 text-primary-foreground" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-base font-medium text-foreground">Fellowship</p>
+                  <p className="text-2xl font-bold text-primary">
+                    {stats.fellowshipEvents > 0 ? 
+                      Math.round(stats.fellowshipAttendance / stats.fellowshipEvents) : 0}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {stats.fellowshipEvents} events • {stats.fellowshipAttendance} total
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button variant="outline" className="w-full" asChild>
+              <a href="/reports">View Detailed Reports</a>
+            </Button>
+          </CardFooter>
+        </Card>
+      </motion.div>
 
       {/* Attendance Statistics Section */}
       <motion.div variants={itemVariants}>
@@ -697,39 +890,33 @@ export function Dashboard() {
                 {/* Service Breakdown and Event Attendance Side by Side */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Service Breakdown */}
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <BarChart3 className="w-4 h-4 text-blue-600" />
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-muted rounded-lg flex items-center justify-center">
+                        <BarChart3 className="w-4 h-4 text-primary" />
                       </div>
-                      <h4 className="font-semibold text-base text-gray-900">Service Breakdown</h4>
+                      <h4 className="font-semibold text-base text-foreground">Service Breakdown</h4>
                     </div>
                     
                     {serviceBreakdown.length === 0 ? (
-                      <div className="text-center py-4 bg-gray-50 rounded-lg">
-                        <div className="text-gray-400 mb-1 text-xl">📊</div>
-                        <p className="text-sm text-gray-600">No service data</p>
+                      <div className="text-center py-4 bg-muted rounded-lg">
+                        <div className="text-muted-foreground mb-1 text-xl">📊</div>
+                        <p className="text-sm text-muted-foreground">No service data</p>
                       </div>
                     ) : (
                       <div className="space-y-2">
                         {serviceBreakdown.map((service, index) => (
-                          <div key={service.name} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                            <div className="flex items-center space-x-2">
-                              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-sm ${
-                                index === 0 ? 'bg-yellow-500' : 
-                                index === 1 ? 'bg-gray-400' : 
-                                index === 2 ? 'bg-amber-600' : 'bg-blue-500'
-                              }`}>
-                                {index + 1}
-                              </div>
-                              <div className="min-w-0">
-                                <div className="font-medium text-gray-900 text-base truncate">{service.name}</div>
-                                <div className="text-sm text-gray-500">{service.value} attendees</div>
-                              </div>
+                          <div key={service.name} className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-3 h-3 rounded-full ${
+                                index === 0 ? 'bg-primary' :
+                                index === 1 ? 'bg-muted-foreground' :
+                                index === 2 ? 'bg-amber-600' : 'bg-primary'
+                              }`}></div>
+                              <div className="font-medium text-foreground text-base truncate">{service.name}</div>
+                              <div className="text-sm text-muted-foreground">{service.value} attendees</div>
                             </div>
-                            <div className="text-right">
-                              <div className="text-base font-bold text-blue-600">{service.value}</div>
-                            </div>
+                            <div className="text-base font-bold text-primary">{service.value}</div>
                           </div>
                         ))}
                       </div>
@@ -737,61 +924,57 @@ export function Dashboard() {
                   </div>
 
                   {/* Event Attendance */}
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-6 h-6 bg-purple-100 rounded-lg flex items-center justify-center">
-                        <TrendingUp className="w-4 h-4 text-purple-600" />
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-muted rounded-lg flex items-center justify-center">
+                        <Calendar className="w-4 h-4 text-primary" />
                       </div>
-                      <h4 className="font-semibold text-base text-gray-900">Event Attendance</h4>
+                      <h4 className="font-semibold text-base text-foreground">Event Attendance</h4>
                     </div>
                     
                     {eventDetails?.filter(event => event.attendees > 0).length === 0 ? (
-                      <div className="text-center py-4 bg-gray-50 rounded-lg">
-                        <div className="text-gray-400 mb-1 text-xl">📅</div>
-                        <p className="text-sm text-gray-600">No event data</p>
+                      <div className="text-center py-4 bg-muted rounded-lg">
+                        <div className="text-muted-foreground mb-1 text-xl">📅</div>
+                        <p className="text-sm text-muted-foreground">No event data</p>
                       </div>
                     ) : (
                       <div className="space-y-2">
                         {eventDetails
                           ?.filter(event => event.attendees > 0)
-                          .sort((a, b) => b.attendees - a.attendees)
+                          .sort((a, b) => new Date(b.date) - new Date(a.date))
                           .slice(0, 3)
                           .map(event => (
-                            <div key={event.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium text-gray-900 text-base truncate">{event.title}</div>
-                                <div className="text-sm text-gray-500 mt-0.5">
-                                  {format(parseISO(event.date), 'MMM d')} • {event.type}
-                                </div>
-                              </div>
-                              <div className="text-right ml-3">
-                                <div className="text-xl font-bold text-purple-600">{event.attendees}</div>
-                                <div className="text-sm text-gray-500">attendees</div>
+                          <div key={event.id} className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
+                            <div className="min-w-0">
+                              <div className="font-medium text-foreground text-base truncate">{event.title}</div>
+                              <div className="text-sm text-muted-foreground mt-0.5">
+                                {new Date(event.date).toLocaleDateString()} • {event.attendees} attendees
                               </div>
                             </div>
-                          ))
-                        }
+                            <div className="text-sm text-muted-foreground">attendees</div>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
                 </div>
 
                 {/* Top Attendees */}
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center">
-                      <Trophy className="w-4 h-4 text-green-600" />
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-muted rounded-lg flex items-center justify-center">
+                      <Trophy className="w-4 h-4 text-primary" />
                     </div>
-                    <h4 className="font-semibold text-base text-gray-900">Top Attendees</h4>
+                    <h4 className="font-semibold text-base text-foreground">Top Attendees</h4>
                   </div>
                   
                   {memberStats.length === 0 ? (
-                    <div className="text-center py-4 bg-gray-50 rounded-lg">
-                      <div className="text-gray-400 mb-1 text-xl">🏆</div>
-                      <p className="text-sm text-gray-600">No attendance data</p>
+                    <div className="text-center py-4 bg-muted rounded-lg">
+                      <div className="text-muted-foreground mb-1 text-xl">🏆</div>
+                      <p className="text-sm text-muted-foreground">No attendance data</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       {memberStats.slice(0, 6).map((member, index) => {
                         // Find the member data to get their image - improved lookup
                         const memberData = people.find(p => {
@@ -828,42 +1011,42 @@ export function Dashboard() {
                         });
                         
                         return (
-                          <div key={member.name} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                            <div className="flex items-center space-x-3">
-                              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-sm ${
-                                index === 0 ? 'bg-yellow-500' : 
-                                index === 1 ? 'bg-gray-400' : 
-                                index === 2 ? 'bg-amber-600' : 'bg-blue-500'
+                          <div key={member.name} className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
+                                index === 0 ? 'bg-primary' :
+                                index === 1 ? 'bg-muted-foreground' :
+                                index === 2 ? 'bg-amber-600' : 'bg-primary'
                               }`}>
                                 {index + 1}
                               </div>
-                              <Avatar className="h-8 w-8">
-                                {memberData?.image_url ? (
-                                  <AvatarImage 
-                                    src={memberData.image_url} 
-                                    alt={`${member.name}'s profile picture`}
-                                    onError={(e) => {
-                                      console.log('Image failed to load:', memberData.image_url);
-                                      e.target.style.display = 'none';
-                                    }}
-                                    onLoad={() => {
-                                      console.log('Image loaded successfully:', memberData.image_url);
-                                    }}
-                                  />
-                                ) : null}
-                                <AvatarFallback className="bg-gray-200 text-gray-700">
-                                  {memberData ? getInitials(memberData.firstName || '', memberData.lastName || '') : 
-                                   getInitials(member.name.split(' ')[0] || '', member.name.split(' ')[1] || '')}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="min-w-0">
-                                <div className="font-medium text-gray-900 text-base truncate">{member.name}</div>
-                                <div className="text-sm text-gray-500">{member.count} events</div>
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-8 w-8">
+                                  {memberData?.image_url ? (
+                                    <AvatarImage 
+                                      src={memberData.image_url} 
+                                      alt={`${member.name}'s profile picture`}
+                                      onError={(e) => {
+                                        console.log('Image failed to load:', memberData.image_url);
+                                        e.target.style.display = 'none';
+                                      }}
+                                      onLoad={() => {
+                                        console.log('Image loaded successfully:', memberData.image_url);
+                                      }}
+                                    />
+                                  ) : null}
+                                  <AvatarFallback className="bg-muted text-muted-foreground">
+                                    {memberData ? getInitials(memberData.firstName || '', memberData.lastName || '') : 
+                                     getInitials(member.name.split(' ')[0] || '', member.name.split(' ')[1] || '')}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="min-w-0">
+                                  <div className="font-medium text-foreground text-sm truncate">{member.name}</div>
+                                  <div className="text-xs text-muted-foreground">{member.count} events</div>
+                                </div>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <div className="text-base font-bold text-green-600">{member.count}</div>
-                            </div>
+                            <div className="text-sm font-bold text-primary">{member.count}</div>
                           </div>
                         );
                       })}
@@ -889,67 +1072,59 @@ export function Dashboard() {
           <CardContent>
             <div className="grid gap-4 md:grid-cols-3">
               {/* Active Members */}
-              <div className="flex items-center space-x-4 p-4 bg-green-50 rounded-lg border border-green-200">
+              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
                 <div className="flex-shrink-0">
                   <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
                     <Users2 className="h-6 w-6 text-white" />
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-green-800">Active Members</p>
-                  <p className="text-2xl font-bold text-green-900">{stats.activeMembers}</p>
-                  <p className="text-sm text-green-600">
+                  <p className="text-base font-medium text-foreground">Active Members</p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.activeMembers}</p>
+                  <p className="text-sm text-muted-foreground">
                     {stats.totalPeople > 0 ? `${((stats.activeMembers / stats.totalPeople) * 100).toFixed(1)}%` : '0%'} of total
                   </p>
                 </div>
               </div>
 
               {/* Inactive Members */}
-              <div className="flex items-center space-x-4 p-4 bg-orange-50 rounded-lg border border-orange-200">
+              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
                 <div className="flex-shrink-0">
                   <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center">
                     <Users2 className="h-6 w-6 text-white" />
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-orange-800">Inactive Members</p>
-                  <p className="text-2xl font-bold text-orange-900">{stats.inactiveMembers}</p>
-                  <p className="text-sm text-orange-600">
+                  <p className="text-base font-medium text-foreground">Inactive Members</p>
+                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{stats.inactiveMembers}</p>
+                  <p className="text-sm text-muted-foreground">
                     {stats.totalPeople > 0 ? `${((stats.inactiveMembers / stats.totalPeople) * 100).toFixed(1)}%` : '0%'} of total
                   </p>
                 </div>
               </div>
 
               {/* Visitors */}
-              <div className="flex items-center space-x-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
                 <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
-                    <Users2 className="h-6 w-6 text-white" />
+                  <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
+                    <UserPlus className="h-6 w-6 text-primary-foreground" />
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-blue-800">Visitors</p>
-                  <p className="text-2xl font-bold text-blue-900">{stats.visitors}</p>
-                  <p className="text-sm text-blue-600">
-                    {stats.totalPeople > 0 ? `${((stats.visitors / stats.totalPeople) * 100).toFixed(1)}%` : '0%'} of total
+                  <p className="text-base font-medium text-foreground">Visitors</p>
+                  <p className="text-2xl font-bold text-primary">{stats.visitors}</p>
+                  <p className="text-sm text-muted-foreground">
+                    <span className="text-primary font-medium">Visitors</span>
                   </p>
                 </div>
               </div>
             </div>
 
             {/* Summary Stats */}
-            <div className="mt-6 pt-6 border-t">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <p className="text-base text-gray-600">Total People</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.totalPeople}</p>
-                </div>
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <p className="text-base text-gray-600">Active Rate</p>
-                  <p className="text-3xl font-bold text-green-600">
-                    {stats.totalPeople > 0 ? `${((stats.activeMembers / stats.totalPeople) * 100).toFixed(1)}%` : '0%'}
-                  </p>
-                </div>
+            <div className="mt-6 grid gap-4 md:grid-cols-1">
+              <div className="text-center p-4 bg-muted rounded-lg">
+                <p className="text-base text-muted-foreground">Total People</p>
+                <p className="text-3xl font-bold text-foreground">{stats.totalPeople}</p>
               </div>
             </div>
           </CardContent>
@@ -972,65 +1147,43 @@ export function Dashboard() {
             <CardDescription className="text-base">Financial overview of your organization</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2">
               {/* Monthly Donations */}
-              <div className="flex items-center space-x-4 p-4 bg-green-50 rounded-lg border border-green-200">
+              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
                 <div className="flex-shrink-0">
                   <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
                     <DollarSign className="h-6 w-6 text-white" />
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-green-800">This Month</p>
-                  <p className="text-2xl font-bold text-green-900">${(stats.monthlyDonations || 0).toFixed(2)}</p>
-                  <p className="text-sm text-green-600">
+                  <p className="text-base font-medium text-foreground">This Month</p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">${(stats.monthlyDonations || 0).toFixed(2)}</p>
+                  <p className="text-sm text-muted-foreground">
                     {stats.totalDonations > 0 ? `${(((stats.monthlyDonations || 0) / stats.totalDonations) * 100).toFixed(1)}%` : '0%'} of total
                   </p>
                 </div>
               </div>
 
-              {/* Total Donations */}
-              <div className="flex items-center space-x-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
-                    <DollarSign className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-blue-800">Total Donations</p>
-                  <p className="text-2xl font-bold text-blue-900">${stats.totalDonations.toFixed(2)}</p>
-                  <p className="text-sm text-blue-600">All time</p>
-                </div>
-              </div>
-
               {/* Monthly Average */}
-              <div className="flex items-center space-x-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
                 <div className="flex-shrink-0">
                   <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center">
                     <TrendingUp className="h-6 w-6 text-white" />
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-purple-800">Monthly Average</p>
-                  <p className="text-2xl font-bold text-purple-900">${(stats.monthlyAverage || 0).toFixed(2)}</p>
-                  <p className="text-sm text-purple-600">Per month</p>
+                  <p className="text-base font-medium text-foreground">Monthly Average</p>
+                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">${(stats.monthlyAverage || 0).toFixed(2)}</p>
+                  <p className="text-sm text-muted-foreground">Per month</p>
                 </div>
               </div>
             </div>
 
             {/* Summary Stats */}
-            <div className="mt-6 pt-6 border-t">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <p className="text-base text-gray-600">Weekly Average</p>
-                  <p className="text-3xl font-bold text-gray-900">${(stats.weeklyAverage || 0).toFixed(2)}</p>
-                </div>
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <p className="text-base text-gray-600">Growth Rate</p>
-                  <p className="text-3xl font-bold text-green-600">
-                    {(stats.growthRate || 0) > 0 ? '+' : ''}{(stats.growthRate || 0).toFixed(1)}%
-                  </p>
-                </div>
+            <div className="mt-6 grid gap-4 md:grid-cols-1">
+              <div className="text-center p-4 bg-muted rounded-lg">
+                <p className="text-base text-muted-foreground">Weekly Average</p>
+                <p className="text-3xl font-bold text-foreground">${(stats.weeklyAverage || 0).toFixed(2)}</p>
               </div>
             </div>
           </CardContent>
@@ -1055,60 +1208,44 @@ export function Dashboard() {
           <CardContent>
             <div className="grid gap-4 md:grid-cols-3">
               {/* Upcoming Events */}
-              <div className="flex items-center space-x-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
                 <div className="flex-shrink-0">
                   <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center">
                     <Calendar className="h-6 w-6 text-white" />
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-purple-800">Upcoming</p>
-                  <p className="text-2xl font-bold text-purple-900">{stats.upcomingEvents}</p>
-                  <p className="text-sm text-purple-600">Future events</p>
+                  <p className="text-base font-medium text-foreground">Upcoming</p>
+                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{stats.upcomingEvents}</p>
+                  <p className="text-sm text-muted-foreground">Future events</p>
                 </div>
               </div>
 
               {/* This Week */}
-              <div className="flex items-center space-x-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
                 <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
-                    <Clock className="h-6 w-6 text-white" />
+                  <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
+                    <Calendar className="h-6 w-6 text-primary-foreground" />
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-blue-800">This Week</p>
-                  <p className="text-2xl font-bold text-blue-900">{stats.eventsThisWeek}</p>
-                  <p className="text-sm text-blue-600">Next 7 days</p>
+                  <p className="text-base font-medium text-foreground">This Week</p>
+                  <p className="text-2xl font-bold text-primary">{stats.eventsThisWeek}</p>
+                  <p className="text-sm text-muted-foreground">Next 7 days</p>
                 </div>
               </div>
 
               {/* This Month */}
-              <div className="flex items-center space-x-4 p-4 bg-green-50 rounded-lg border border-green-200">
+              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
                 <div className="flex-shrink-0">
                   <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
                     <Calendar className="h-6 w-6 text-white" />
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-green-800">This Month</p>
-                  <p className="text-2xl font-bold text-green-900">{stats.eventsThisMonth}</p>
-                  <p className="text-sm text-green-600">Next 30 days</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Summary Stats */}
-            <div className="mt-6 pt-6 border-t">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <p className="text-base text-gray-600">Total Events</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.totalEvents}</p>
-                </div>
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <p className="text-base text-gray-600">Event Frequency</p>
-                  <p className="text-3xl font-bold text-purple-600">
-                    {stats.totalEvents > 0 ? (stats.totalEvents / 12).toFixed(1) : '0'} per month
-                  </p>
+                  <p className="text-base font-medium text-foreground">This Month</p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.eventsThisMonth}</p>
+                  <p className="text-sm text-muted-foreground">Next 30 days</p>
                 </div>
               </div>
             </div>

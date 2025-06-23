@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
-import react from '@vitejs/plugin-react';
+// import react from '@vitejs/plugin-react';
 import { createLogger, defineConfig } from 'vite';
 import path from 'path';
 
@@ -185,7 +185,7 @@ logger.error = (msg, options) => {
 
 export default defineConfig({
 	customLogger: logger,
-	plugins: [react(), addTransformIndexHtml],
+	plugins: [addTransformIndexHtml],
 	server: {
 		cors: true,
 		headers: {

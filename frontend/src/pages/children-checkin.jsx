@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { format } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -217,10 +217,10 @@ export default function ChildrenCheckin() {
   return (
     <div className="w-full px-0 md:px-4">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 px-2 md:px-0">
-        <h1 className="text-3xl md:text-4xl font-bold">Children Check-in</h1>
+        <h1 className="text-3xl md:text-4xl font-bold text-foreground">Children Check-in</h1>
         <a
           href="/children-check-in/add"
-          className="w-full md:w-auto bg-blue-600 text-white px-6 py-3 rounded-lg text-lg font-medium hover:bg-blue-700 h-14 flex items-center justify-center"
+          className="w-full md:w-auto bg-primary text-primary-foreground px-6 py-3 rounded-lg text-lg font-medium hover:bg-primary/90 h-14 flex items-center justify-center transition-colors"
         >
           Add Child
         </a>
@@ -228,11 +228,11 @@ export default function ChildrenCheckin() {
 
       {/* Event Selection */}
       <div className="mb-8 px-2 md:px-0">
-        <label className="block text-lg font-medium text-gray-700 mb-3">
+        <label className="block text-lg font-medium text-foreground mb-3">
           Select Event
         </label>
         <select
-          className="w-full p-4 border rounded-lg text-lg h-14"
+          className="w-full p-4 border border-input bg-background text-foreground rounded-lg text-lg h-14 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           value={selectedEvent?.id || ''}
           onChange={(e) => {
             const event = events.find(ev => ev.id === e.target.value);
@@ -251,9 +251,9 @@ export default function ChildrenCheckin() {
       {selectedEvent && (
         <div className="space-y-8">
           {/* Check-in Section */}
-          <div className="bg-white p-3 md:p-6 rounded-lg shadow">
-            <h2 className="text-2xl font-semibold mb-6 px-1 md:px-0">Check-in Children</h2>
-            <div className="grid grid-cols-1 gap-4">
+          <div className="bg-card p-3 md:p-6 rounded-lg shadow border">
+            <h2 className="text-2xl font-semibold mb-6 px-1 md:px-0 text-foreground">Check-in Children</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {children.map(child => {
                 const childGuardians = guardians.filter(g => g.child_id === child.id);
                 const isCheckedIn = checkinLogs.some(
@@ -261,21 +261,21 @@ export default function ChildrenCheckin() {
                 );
 
                 return (
-                  <div key={child.id} className="border p-3 md:p-6 rounded-lg">
-                    <div className="flex items-center gap-4 mb-4">
-                      <Avatar className="h-16 w-16">
+                  <div key={child.id} className="border border-border p-3 md:p-4 rounded-lg bg-muted/50">
+                    <div className="flex items-center gap-3 mb-3">
+                      <Avatar className="h-12 w-12">
                         <AvatarImage src={child.image_url} />
-                        <AvatarFallback className="text-2xl">{getInitials(child.firstname, child.lastname)}</AvatarFallback>
+                        <AvatarFallback className="text-lg bg-muted text-muted-foreground">{getInitials(child.firstname, child.lastname)}</AvatarFallback>
                       </Avatar>
-                      <h3 className="text-xl font-medium">{child.firstname} {child.lastname}</h3>
+                      <h3 className="text-lg font-medium text-foreground">{child.firstname} {child.lastname}</h3>
                     </div>
                     {!isCheckedIn ? (
-                      <div className="mt-4">
-                        <label className="block text-lg text-gray-600 mb-2">
+                      <div className="mt-3">
+                        <label className="block text-sm text-muted-foreground mb-2">
                           Check in with guardian:
                         </label>
                         <select
-                          className="w-full p-4 border rounded-lg text-lg h-14"
+                          className="w-full p-3 border border-input bg-background text-foreground rounded-lg text-sm h-12 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                           onChange={(e) => handleCheckin(child.id, e.target.value)}
                         >
                           <option value="">Select guardian</option>
@@ -287,7 +287,7 @@ export default function ChildrenCheckin() {
                         </select>
                       </div>
                     ) : (
-                      <div className="mt-4 text-green-600 text-lg font-medium">
+                      <div className="mt-3 text-green-600 dark:text-green-400 text-sm font-medium">
                         Checked in
                       </div>
                     )}
@@ -298,8 +298,8 @@ export default function ChildrenCheckin() {
           </div>
 
           {/* Check-out Section */}
-          <div className="bg-white p-3 md:p-6 rounded-lg shadow">
-            <h2 className="text-2xl font-semibold mb-6 px-1 md:px-0">Check-out Children</h2>
+          <div className="bg-card p-3 md:p-6 rounded-lg shadow border">
+            <h2 className="text-2xl font-semibold mb-6 px-1 md:px-0 text-foreground">Check-out Children</h2>
             <div className="grid grid-cols-1 gap-4">
               {checkinLogs
                 .filter(log => !log.check_out_time)
@@ -307,27 +307,27 @@ export default function ChildrenCheckin() {
                   const childGuardians = guardians.filter(g => g.child_id === log.child_id);
 
                   return (
-                    <div key={log.id} className="border p-3 md:p-6 rounded-lg">
+                    <div key={log.id} className="border border-border p-3 md:p-6 rounded-lg bg-muted/50">
                       <div className="flex items-center gap-4 mb-4">
                         <Avatar className="h-16 w-16">
                           <AvatarImage src={log.child.image_url} />
-                          <AvatarFallback className="text-2xl">{getInitials(log.child.firstname, log.child.lastname)}</AvatarFallback>
+                          <AvatarFallback className="text-2xl bg-muted text-muted-foreground">{getInitials(log.child.firstname, log.child.lastname)}</AvatarFallback>
                         </Avatar>
                         <div>
-                          <h3 className="text-xl font-medium">
+                          <h3 className="text-xl font-medium text-foreground">
                             {log.child.firstname} {log.child.lastname}
                           </h3>
-                          <p className="text-lg text-gray-600">
+                          <p className="text-lg text-muted-foreground">
                             Checked in by: {log.checked_in_by.firstname} {log.checked_in_by.lastname}
                           </p>
                         </div>
                       </div>
                       <div className="mt-4">
-                        <label className="block text-lg text-gray-600 mb-2">
+                        <label className="block text-lg text-muted-foreground mb-2">
                           Check out with guardian:
                         </label>
                         <select
-                          className="w-full p-4 border rounded-lg text-lg h-14"
+                          className="w-full p-4 border border-input bg-background text-foreground rounded-lg text-lg h-14 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                           onChange={(e) => handleCheckout(log.id, e.target.value)}
                         >
                           <option value="">Select guardian</option>
@@ -345,53 +345,53 @@ export default function ChildrenCheckin() {
           </div>
 
           {/* Check-in History */}
-          <div className="bg-white p-3 md:p-6 rounded-lg shadow">
-            <h2 className="text-2xl font-semibold mb-6 px-1 md:px-0">Check-in History</h2>
+          <div className="bg-card p-3 md:p-6 rounded-lg shadow border">
+            <h2 className="text-2xl font-semibold mb-6 px-1 md:px-0 text-foreground">Check-in History</h2>
             <div className="overflow-x-auto -mx-3 md:mx-0">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-border">
+                <thead className="bg-muted">
                   <tr>
-                    <th className="px-3 md:px-6 py-4 text-left text-base font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 md:px-6 py-4 text-left text-base font-medium text-muted-foreground uppercase tracking-wider">
                       Child
                     </th>
-                    <th className="px-3 md:px-6 py-4 text-left text-base font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 md:px-6 py-4 text-left text-base font-medium text-muted-foreground uppercase tracking-wider">
                       Check-in Time
                     </th>
-                    <th className="px-3 md:px-6 py-4 text-left text-base font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 md:px-6 py-4 text-left text-base font-medium text-muted-foreground uppercase tracking-wider">
                       Check-in By
                     </th>
-                    <th className="px-3 md:px-6 py-4 text-left text-base font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 md:px-6 py-4 text-left text-base font-medium text-muted-foreground uppercase tracking-wider">
                       Check-out Time
                     </th>
-                    <th className="px-3 md:px-6 py-4 text-left text-base font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 md:px-6 py-4 text-left text-base font-medium text-muted-foreground uppercase tracking-wider">
                       Check-out By
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-card divide-y divide-border">
                   {checkinLogs.map(log => (
-                    <tr key={log.id}>
+                    <tr key={log.id} className="hover:bg-muted/50 transition-colors">
                       <td className="px-3 md:px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
                           <Avatar className="h-12 w-12">
                             <AvatarImage src={log.child.image_url} />
-                            <AvatarFallback className="text-lg">{getInitials(log.child.firstname, log.child.lastname)}</AvatarFallback>
+                            <AvatarFallback className="text-lg bg-muted text-muted-foreground">{getInitials(log.child.firstname, log.child.lastname)}</AvatarFallback>
                           </Avatar>
-                          <span className="text-lg">{log.child.firstname} {log.child.lastname}</span>
+                          <span className="text-lg text-foreground">{log.child.firstname} {log.child.lastname}</span>
                         </div>
                       </td>
-                      <td className="px-3 md:px-6 py-4 whitespace-nowrap text-lg">
+                      <td className="px-3 md:px-6 py-4 whitespace-nowrap text-lg text-foreground">
                         {format(new Date(log.check_in_time), 'MMM d, h:mm a')}
                       </td>
-                      <td className="px-3 md:px-6 py-4 whitespace-nowrap text-lg">
+                      <td className="px-3 md:px-6 py-4 whitespace-nowrap text-lg text-foreground">
                         {log.checked_in_by.firstname} {log.checked_in_by.lastname}
                       </td>
-                      <td className="px-3 md:px-6 py-4 whitespace-nowrap text-lg">
+                      <td className="px-3 md:px-6 py-4 whitespace-nowrap text-lg text-foreground">
                         {log.check_out_time
                           ? format(new Date(log.check_out_time), 'MMM d, h:mm a')
                           : '-'}
                       </td>
-                      <td className="px-3 md:px-6 py-4 whitespace-nowrap text-lg">
+                      <td className="px-3 md:px-6 py-4 whitespace-nowrap text-lg text-foreground">
                         {log.checked_out_by
                           ? `${log.checked_out_by.firstname} ${log.checked_out_by.lastname}`
                           : '-'}

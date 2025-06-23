@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ChurchInfoSettings from '@/components/settings/ChurchInfoSettings';
@@ -8,7 +8,6 @@ import DataManagementSettings from '@/components/settings/DataManagementSettings
 import UserManagementSettings from '@/components/settings/UserManagementSettings';
 import PendingApprovals from '@/components/settings/PendingApprovals';
 import { isUserAdmin } from '@/lib/data';
-import { useState, useEffect } from 'react';
 
 export function Settings() {
   const [isAdmin, setIsAdmin] = useState(false);
