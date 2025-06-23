@@ -22,7 +22,8 @@ import {
   BookOpen,
   BarChart3,
   Trophy,
-  FileText
+  FileText,
+  Home
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import { Input } from '@/components/ui/input';
 import { getMembers, getEvents, getDonations, getAllEvents, addMember, updateMember, deleteMember, getMemberAttendance, updateDonation, deleteDonation, addEventAttendance, getEventAttendance, getVolunteerStats } from '../lib/data';
+import { familyService } from '../lib/familyService';
 import {
   Dialog,
   DialogContent,
@@ -91,7 +93,12 @@ export function Dashboard() {
     fellowshipEvents: 0,
     eventsWithVolunteersEnabled: 0,
     totalVolunteersSignedUp: 0,
-    eventsStillNeedingVolunteers: 0
+    eventsStillNeedingVolunteers: 0,
+    totalFamilies: 0,
+    membersInFamilies: 0,
+    membersWithoutFamilies: 0,
+    adults: 0,
+    children: 0
   });
   const [recentPeople, setRecentPeople] = useState([]);
   const [people, setPeople] = useState([]);
@@ -444,6 +451,22 @@ export function Dashboard() {
 
       console.log('=== END ATTENDANCE BY EVENT TYPE DEBUG ===');
 
+      // Load family statistics
+      let familyStats = {
+        totalFamilies: 0,
+        membersInFamilies: 0,
+        membersWithoutFamilies: 0,
+        adults: 0,
+        children: 0
+      };
+      
+      try {
+        familyStats = await familyService.getFamilyStats();
+        console.log('Family stats loaded:', familyStats);
+      } catch (error) {
+        console.error('Error loading family stats:', error);
+      }
+
       setStats({
         totalPeople,
         activeMembers: activeMembers.length,
@@ -470,7 +493,12 @@ export function Dashboard() {
         fellowshipEvents: fellowshipStats.eventCount,
         eventsWithVolunteersEnabled: volunteerStats.eventsWithVolunteersEnabled,
         totalVolunteersSignedUp: volunteerStats.totalVolunteersSignedUp,
-        eventsStillNeedingVolunteers: volunteerStats.eventsStillNeedingVolunteers
+        eventsStillNeedingVolunteers: volunteerStats.eventsStillNeedingVolunteers,
+        totalFamilies: familyStats.totalFamilies,
+        membersInFamilies: familyStats.membersInFamilies,
+        membersWithoutFamilies: familyStats.membersWithoutFamilies,
+        adults: familyStats.adults,
+        children: familyStats.children
       });
       setRecentPeople(recentPeople);
       setPeople(transformedPeople);
@@ -637,7 +665,7 @@ export function Dashboard() {
         <h1 className="text-3xl font-bold tracking-tight">Command Center</h1>
       </div>
 
-      <div className="grid gap-4 tablet-portrait:grid-cols-2 tablet-landscape:grid-cols-2 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 tablet-portrait:grid-cols-2 tablet-landscape:grid-cols-2 md:grid-cols-2 lg:grid-cols-5">
         <motion.div variants={itemVariants}>
           <Card className="overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
@@ -781,6 +809,42 @@ export function Dashboard() {
             </CardFooter>
           </Card>
         </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <Card className="overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+              <CardTitle className="flex items-center text-xl">
+                <Home className="mr-2 h-5 w-5" />
+                Families
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="text-3xl font-bold">{stats.totalFamilies}</div>
+              <p className="text-sm text-muted-foreground mt-1">Total Families</p>
+              
+              {/* Family breakdown */}
+              <div className="mt-4 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-orange-600 font-medium">Members in Families</span>
+                  <span className="text-sm font-semibold">{stats.membersInFamilies}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-orange-600 font-medium">Adults</span>
+                  <span className="text-sm font-semibold">{stats.adults}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-orange-600 font-medium">Children</span>
+                  <span className="text-sm font-semibold">{stats.children}</span>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="bg-muted py-2 px-6 border-t">
+              <Button variant="outline" className="w-full" asChild>
+                <a href="/members">Manage Families</a>
+              </Button>
+            </CardFooter>
+          </Card>
+        </motion.div>
       </div>
 
       {/* Average Attendance by Event Type Section */}
@@ -906,7 +970,7 @@ export function Dashboard() {
                     ) : (
                       <div className="space-y-2">
                         {serviceBreakdown.map((service, index) => (
-                          <div key={service.name} className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
+                          <div key={service.name} className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-gray-50 transition-colors">
                             <div className="flex items-center gap-3">
                               <div className={`w-3 h-3 rounded-full ${
                                 index === 0 ? 'bg-primary' :
@@ -944,7 +1008,7 @@ export function Dashboard() {
                           .sort((a, b) => new Date(b.date) - new Date(a.date))
                           .slice(0, 3)
                           .map(event => (
-                          <div key={event.id} className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
+                          <div key={event.id} className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-gray-50 transition-colors">
                             <div className="min-w-0">
                               <div className="font-medium text-foreground text-base truncate">{event.title}</div>
                               <div className="text-sm text-muted-foreground mt-0.5">
@@ -1011,7 +1075,7 @@ export function Dashboard() {
                         });
                         
                         return (
-                          <div key={member.name} className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
+                          <div key={member.name} className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-gray-50 transition-colors">
                             <div className="flex items-center gap-3">
                               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
                                 index === 0 ? 'bg-primary' :
@@ -1035,7 +1099,7 @@ export function Dashboard() {
                                       }}
                                     />
                                   ) : null}
-                                  <AvatarFallback className="bg-muted text-muted-foreground">
+                                  <AvatarFallback className="bg-gray-200 text-gray-700">
                                     {memberData ? getInitials(memberData.firstName || '', memberData.lastName || '') : 
                                      getInitials(member.name.split(' ')[0] || '', member.name.split(' ')[1] || '')}
                                   </AvatarFallback>
@@ -1058,84 +1122,7 @@ export function Dashboard() {
           </CardContent>
         </Card>
       </motion.div>
-
-      {/* Member Statistics Section */}
-      <motion.div variants={itemVariants}>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center text-xl">
-              <Users2 className="mr-2 h-6 w-6" />
-              Member Statistics
-            </CardTitle>
-            <CardDescription className="text-base">Detailed breakdown of your organization's membership</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
-              {/* Active Members */}
-              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-                    <Users2 className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-foreground">Active Members</p>
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.activeMembers}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {stats.totalPeople > 0 ? `${((stats.activeMembers / stats.totalPeople) * 100).toFixed(1)}%` : '0%'} of total
-                  </p>
-                </div>
-              </div>
-
-              {/* Inactive Members */}
-              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center">
-                    <Users2 className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-foreground">Inactive Members</p>
-                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{stats.inactiveMembers}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {stats.totalPeople > 0 ? `${((stats.inactiveMembers / stats.totalPeople) * 100).toFixed(1)}%` : '0%'} of total
-                  </p>
-                </div>
-              </div>
-
-              {/* Visitors */}
-              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
-                    <UserPlus className="h-6 w-6 text-primary-foreground" />
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-foreground">Visitors</p>
-                  <p className="text-2xl font-bold text-primary">{stats.visitors}</p>
-                  <p className="text-sm text-muted-foreground">
-                    <span className="text-primary font-medium">Visitors</span>
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Summary Stats */}
-            <div className="mt-6 grid gap-4 md:grid-cols-1">
-              <div className="text-center p-4 bg-muted rounded-lg">
-                <p className="text-base text-muted-foreground">Total People</p>
-                <p className="text-3xl font-bold text-foreground">{stats.totalPeople}</p>
-              </div>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button variant="outline" className="w-full" asChild>
-              <a href="/members">Manage Members</a>
-            </Button>
-          </CardFooter>
-        </Card>
-      </motion.div>
-
+      
       {/* Donation Statistics Section */}
       <motion.div variants={itemVariants}>
         <Card>
@@ -1257,6 +1244,186 @@ export function Dashboard() {
           </CardFooter>
         </Card>
       </motion.div>
+      {/* Member Statistics Section */}
+      <motion.div variants={itemVariants}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center text-xl">
+              <Users2 className="mr-2 h-6 w-6" />
+              Member Statistics
+            </CardTitle>
+            <CardDescription className="text-base">Detailed breakdown of your organization's membership</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-3">
+              {/* Active Members */}
+              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+                    <Users2 className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-base font-medium text-foreground">Active Members</p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.activeMembers}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {stats.totalPeople > 0 ? `${((stats.activeMembers / stats.totalPeople) * 100).toFixed(1)}%` : '0%'} of total
+                  </p>
+                </div>
+              </div>
+
+              {/* Inactive Members */}
+              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center">
+                    <Users2 className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-base font-medium text-foreground">Inactive Members</p>
+                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{stats.inactiveMembers}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {stats.totalPeople > 0 ? `${((stats.inactiveMembers / stats.totalPeople) * 100).toFixed(1)}%` : '0%'} of total
+                  </p>
+                </div>
+              </div>
+
+              {/* Visitors */}
+              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
+                    <UserPlus className="h-6 w-6 text-primary-foreground" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-base font-medium text-foreground">Visitors</p>
+                  <p className="text-2xl font-bold text-primary">{stats.visitors}</p>
+                  <p className="text-sm text-muted-foreground">
+                    <span className="text-primary font-medium">Visitors</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Summary Stats */}
+            <div className="mt-6 grid gap-4 md:grid-cols-1">
+              <div className="text-center p-4 bg-muted rounded-lg">
+                <p className="text-base text-muted-foreground">Total People</p>
+                <p className="text-3xl font-bold text-foreground">{stats.totalPeople}</p>
+              </div>
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button variant="outline" className="w-full" asChild>
+              <a href="/members">Manage Members</a>
+            </Button>
+          </CardFooter>
+        </Card>
+      </motion.div>
+
+      {/* Family Overview Section */}
+      <motion.div variants={itemVariants}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center text-xl">
+              <Home className="mr-2 h-6 w-6" />
+              Family Overview
+            </CardTitle>
+            <CardDescription className="text-base">Family structure and member distribution</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-3">
+              {/* Total Families */}
+              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center">
+                    <Home className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-base font-medium text-foreground">Total Families</p>
+                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{stats.totalFamilies}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Organized family units
+                  </p>
+                </div>
+              </div>
+
+              {/* Members in Families */}
+              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                    <Users2 className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-base font-medium text-foreground">Members in Families</p>
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.membersInFamilies}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {stats.totalPeople > 0 ? `${((stats.membersInFamilies / stats.totalPeople) * 100).toFixed(1)}%` : '0%'} of total
+                  </p>
+                </div>
+              </div>
+
+              {/* Members Without Families */}
+              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-gray-500 rounded-full flex items-center justify-center">
+                    <UserPlus className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-base font-medium text-foreground">Unassigned Members</p>
+                  <p className="text-2xl font-bold text-gray-600 dark:text-gray-400">{stats.membersWithoutFamilies}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Need family assignment
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Age Distribution */}
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              {/* Adults */}
+              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+                    <Users className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-base font-medium text-foreground">Adults</p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.adults}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {stats.totalPeople > 0 ? `${((stats.adults / stats.totalPeople) * 100).toFixed(1)}%` : '0%'} of total
+                  </p>
+                </div>
+              </div>
+
+              {/* Children */}
+              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center">
+                    <Users2 className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-base font-medium text-foreground">Children</p>
+                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{stats.children}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {stats.totalPeople > 0 ? `${((stats.children / stats.totalPeople) * 100).toFixed(1)}%` : '0%'} of total
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button variant="outline" className="w-full" asChild>
+              <a href="/members">Manage Families</a>
+            </Button>
+          </CardFooter>
+        </Card>
+      </motion.div>
 
       <div className="grid gap-6 tablet:grid-cols-2 md:grid-cols-2">
         <motion.div variants={itemVariants}>
@@ -1368,7 +1535,7 @@ export function Dashboard() {
               filteredPeople.map((person) => (
                 <div 
                   key={person.id} 
-                  className="flex items-center space-x-2 p-2 hover:bg-muted rounded-lg cursor-pointer"
+                  className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded-lg cursor-pointer"
                   onClick={() => handlePersonClick(person)}
                 >
                   <Avatar className="h-8 w-8">
@@ -1393,7 +1560,7 @@ export function Dashboard() {
                 {people.filter(person => selectedPeople.includes(person.id)).map((person) => (
                   <div 
                     key={person.id} 
-                    className="flex items-center space-x-2 p-2 bg-muted/50 rounded-lg"
+                    className="flex items-center space-x-2 p-2 bg-gray-50 rounded-lg"
                   >
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={person.image_url} />

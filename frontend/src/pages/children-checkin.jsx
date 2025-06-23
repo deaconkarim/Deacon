@@ -11,6 +11,7 @@ export default function ChildrenCheckin() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [checkinLogs, setCheckinLogs] = useState([]);
+  const [allCheckinHistory, setAllCheckinHistory] = useState([]);
 
   // Fetch children and their guardians
   useEffect(() => {
@@ -88,6 +89,31 @@ export default function ChildrenCheckin() {
     fetchEvents();
   }, []);
 
+  // Fetch all check-in history
+  useEffect(() => {
+    async function fetchAllCheckinHistory() {
+      try {
+        const { data, error } = await supabase
+          .from('child_checkin_logs')
+          .select(`
+            *,
+            child:child_id(*),
+            checked_in_by(*),
+            checked_out_by(*),
+            event:event_id(*)
+          `)
+          .order('check_in_time', { ascending: false });
+
+        if (error) throw error;
+        setAllCheckinHistory(data);
+      } catch (err) {
+        console.error('Error fetching all check-in history:', err);
+      }
+    }
+
+    fetchAllCheckinHistory();
+  }, []);
+
   // Fetch check-in logs for selected event
   useEffect(() => {
     if (!selectedEvent) return;
@@ -148,8 +174,9 @@ export default function ChildrenCheckin() {
 
       if (attendanceError) throw attendanceError;
 
-      // Refresh check-in logs
+      // Refresh check-in logs and history
       fetchCheckinLogs();
+      fetchAllCheckinHistory();
     } catch (error) {
       console.error('Error checking in child:', error);
     }
@@ -176,6 +203,26 @@ export default function ChildrenCheckin() {
     }
   };
 
+  const fetchAllCheckinHistory = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('child_checkin_logs')
+        .select(`
+          *,
+          child:child_id(*),
+          checked_in_by(*),
+          checked_out_by(*),
+          event:event_id(*)
+        `)
+        .order('check_in_time', { ascending: false });
+
+      if (error) throw error;
+      setAllCheckinHistory(data);
+    } catch (error) {
+      console.error('Error fetching all check-in history:', error);
+    }
+  };
+
   // Handle check-out
   const handleCheckout = async (logId, guardianId) => {
     try {
@@ -189,7 +236,7 @@ export default function ChildrenCheckin() {
 
       if (error) throw error;
 
-      // Refresh check-in logs
+      // Refresh check-in logs and history
       const { data, error: fetchError } = await supabase
         .from('child_checkin_logs')
         .select(`
@@ -202,6 +249,9 @@ export default function ChildrenCheckin() {
 
       if (fetchError) throw fetchError;
       setCheckinLogs(data);
+      
+      // Also refresh all history
+      fetchAllCheckinHistory();
     } catch (err) {
       setError(err.message);
     }
@@ -251,7 +301,7 @@ export default function ChildrenCheckin() {
       {selectedEvent && (
         <div className="space-y-8">
           {/* Check-in Section */}
-          <div className="bg-card p-3 md:p-6 rounded-lg shadow border">
+          <div className="bg-card p-3 md:p-6 rounded-lg border">
             <h2 className="text-2xl font-semibold mb-6 px-1 md:px-0 text-foreground">Check-in Children</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {children.map(child => {
@@ -287,7 +337,7 @@ export default function ChildrenCheckin() {
                         </select>
                       </div>
                     ) : (
-                      <div className="mt-3 text-green-600 dark:text-green-400 text-sm font-medium">
+                      <div className="mt-3 text-green-600 text-sm font-medium">
                         Checked in
                       </div>
                     )}
@@ -298,7 +348,7 @@ export default function ChildrenCheckin() {
           </div>
 
           {/* Check-out Section */}
-          <div className="bg-card p-3 md:p-6 rounded-lg shadow border">
+          <div className="bg-card p-3 md:p-6 rounded-lg border">
             <h2 className="text-2xl font-semibold mb-6 px-1 md:px-0 text-foreground">Check-out Children</h2>
             <div className="grid grid-cols-1 gap-4">
               {checkinLogs
@@ -345,7 +395,7 @@ export default function ChildrenCheckin() {
           </div>
 
           {/* Check-in History */}
-          <div className="bg-card p-3 md:p-6 rounded-lg shadow border">
+          <div className="bg-card p-3 md:p-6 rounded-lg border">
             <h2 className="text-2xl font-semibold mb-6 px-1 md:px-0 text-foreground">Check-in History</h2>
             <div className="overflow-x-auto -mx-3 md:mx-0">
               <table className="min-w-full divide-y divide-border">
@@ -353,6 +403,9 @@ export default function ChildrenCheckin() {
                   <tr>
                     <th className="px-3 md:px-6 py-4 text-left text-base font-medium text-muted-foreground uppercase tracking-wider">
                       Child
+                    </th>
+                    <th className="px-3 md:px-6 py-4 text-left text-base font-medium text-muted-foreground uppercase tracking-wider">
+                      Event
                     </th>
                     <th className="px-3 md:px-6 py-4 text-left text-base font-medium text-muted-foreground uppercase tracking-wider">
                       Check-in Time
@@ -369,7 +422,7 @@ export default function ChildrenCheckin() {
                   </tr>
                 </thead>
                 <tbody className="bg-card divide-y divide-border">
-                  {checkinLogs.map(log => (
+                  {allCheckinHistory.map(log => (
                     <tr key={log.id} className="hover:bg-muted/50 transition-colors">
                       <td className="px-3 md:px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
@@ -379,6 +432,9 @@ export default function ChildrenCheckin() {
                           </Avatar>
                           <span className="text-lg text-foreground">{log.child.firstname} {log.child.lastname}</span>
                         </div>
+                      </td>
+                      <td className="px-3 md:px-6 py-4 whitespace-nowrap text-lg text-foreground">
+                        {log.event ? log.event.title : 'Unknown Event'}
                       </td>
                       <td className="px-3 md:px-6 py-4 whitespace-nowrap text-lg text-foreground">
                         {format(new Date(log.check_in_time), 'MMM d, h:mm a')}

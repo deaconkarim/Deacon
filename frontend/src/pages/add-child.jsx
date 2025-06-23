@@ -178,57 +178,57 @@ export default function AddChild() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Information */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-lg font-semibold mb-4">Basic Information</h2>
+        <div className="bg-white p-6 rounded-lg">
+          <h2 className="text-xl font-semibold mb-4">Child Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                First Name
+                First Name *
               </label>
               <input
                 type="text"
                 name="firstname"
                 value={formData.firstname}
                 onChange={handleChange}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
-                className="w-full p-2 border rounded"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Last Name
+                Last Name *
               </label>
               <input
                 type="text"
                 name="lastname"
                 value={formData.lastname}
                 onChange={handleChange}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
-                className="w-full p-2 border rounded"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date of Birth
+                Date of Birth *
               </label>
               <input
                 type="date"
                 name="birth_date"
                 value={formData.birth_date}
                 onChange={handleChange}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
-                className="w-full p-2 border rounded"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Gender (Optional)
+                Gender
               </label>
               <select
                 name="gender"
                 value={formData.gender}
                 onChange={handleChange}
-                className="w-full p-2 border rounded"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">Select gender</option>
                 <option value="male">Male</option>
@@ -240,8 +240,8 @@ export default function AddChild() {
         </div>
 
         {/* Guardians */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-lg font-semibold mb-4">Guardians</h2>
+        <div className="bg-white p-6 rounded-lg">
+          <h2 className="text-xl font-semibold mb-4">Guardian Information</h2>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -298,8 +298,8 @@ export default function AddChild() {
         </div>
 
         {/* Allergies */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-lg font-semibold mb-4">Allergies</h2>
+        <div className="bg-white p-6 rounded-lg">
+          <h2 className="text-xl font-semibold mb-4">Allergies</h2>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Allergies (if any)
@@ -309,15 +309,15 @@ export default function AddChild() {
               value={formData.allergies}
               onChange={handleChange}
               placeholder="List any allergies or medical conditions"
-              className="w-full p-2 border rounded"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               rows="3"
             />
           </div>
         </div>
 
         {/* Emergency Contact */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-lg font-semibold mb-4">Emergency Contact</h2>
+        <div className="bg-white p-6 rounded-lg">
+          <h2 className="text-xl font-semibold mb-4">Emergency Contact</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -328,7 +328,7 @@ export default function AddChild() {
                 name="emergency_contact_name"
                 value={formData.emergency_contact_name}
                 onChange={handleChange}
-                className="w-full p-2 border rounded"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
             <div>
@@ -340,7 +340,7 @@ export default function AddChild() {
                 name="emergency_contact_phone"
                 value={formData.emergency_contact_phone}
                 onChange={handleChange}
-                className="w-full p-2 border rounded"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
             <div className="md:col-span-2">
@@ -352,7 +352,7 @@ export default function AddChild() {
                 name="emergency_contact_relationship"
                 value={formData.emergency_contact_relationship}
                 onChange={handleChange}
-                className="w-full p-2 border rounded"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
           </div>

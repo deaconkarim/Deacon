@@ -20,7 +20,8 @@ import {
   Baby,
   UserPlus,
   ClipboardList,
-  BarChart2
+  BarChart2,
+  Heart
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
@@ -135,14 +136,8 @@ export function Layout() {
       {/* Header with User Menu */}
       <header className="bg-card border-b px-4 py-3 flex justify-between items-center sticky top-0 z-40">
         <div className="flex items-center gap-2">
-          <span className="inline-block w-8 h-8 rounded-xl overflow-hidden shadow-lg bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m18 7 4 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9l4-2"></path>
-              <path d="M14 22v-4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v4"></path>
-              <path d="M18 22V5l-6-3-6 3v17"></path>
-              <path d="M12 7v5"></path>
-              <path d="M10 9h4"></path>
-            </svg>
+          <span className="inline-block w-8 h-8 rounded-xl overflow-hidden bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center">
+            <Church className="h-5 w-5 text-white" />
           </span>
           <span className="font-semibold text-lg text-foreground">Deacon - {organizationName}</span>
         </div>
@@ -212,7 +207,7 @@ export function Layout() {
       </div>
 
       {/* Mobile Navigation (phones only) */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t shadow-lg md:hidden z-50">
+      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t md:hidden z-50">
         <div className="max-w-screen-xl mx-auto px-2">
           <div className="flex justify-around items-center h-14">
             {mainNavItems.slice(0, 4).map((item) => {
@@ -272,7 +267,7 @@ export function Layout() {
       </nav>
 
       {/* Tablet Navigation */}
-      <nav className="hidden md:block lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t shadow-lg z-50">
+      <nav className="hidden md:block lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t z-50">
         <div className="max-w-screen-xl mx-auto px-4">
           <div className="flex justify-around items-center h-16">
             {mainNavItems.map((item) => {

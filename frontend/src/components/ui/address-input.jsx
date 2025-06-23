@@ -2,30 +2,52 @@ import React from 'react';
 import { Input } from './input';
 
 export function AddressInput({ value, onChange, className }) {
-  // Split the address into components
-  const addressParts = value ? value.split(',') : ['', '', '', ''];
-  const [street, city, stateZip] = addressParts;
-  const [state, zip] = stateZip ? stateZip.trim().split(' ') : ['', ''];
+  // Handle both string and object value formats
+  let addressParts = ['', '', '', ''];
+  let street = '', city = '', state = '', zip = '';
+
+  if (typeof value === 'string') {
+    // Handle string format (comma-separated)
+    addressParts = value ? value.split(',') : ['', '', '', ''];
+    [street, city, stateZip] = addressParts;
+    [state, zip] = stateZip ? stateZip.trim().split(' ') : ['', ''];
+  } else if (value && typeof value === 'object') {
+    // Handle object format
+    street = value.street || '';
+    city = value.city || '';
+    state = value.state || '';
+    zip = value.zip || '';
+  }
 
   const handleChange = (field, newValue) => {
-    let newAddress = '';
+    let updatedStreet = street;
+    let updatedCity = city;
+    let updatedState = state;
+    let updatedZip = zip;
+
     switch (field) {
       case 'street':
-        newAddress = `${newValue}, ${city}, ${state} ${zip}`.trim();
+        updatedStreet = newValue;
         break;
       case 'city':
-        newAddress = `${street}, ${newValue}, ${state} ${zip}`.trim();
+        updatedCity = newValue;
         break;
       case 'state':
-        newAddress = `${street}, ${city}, ${newValue} ${zip}`.trim();
+        updatedState = newValue;
         break;
       case 'zip':
-        newAddress = `${street}, ${city}, ${state} ${newValue}`.trim();
+        updatedZip = newValue;
         break;
     }
-    // Remove any double commas or extra spaces
-    newAddress = newAddress.replace(/,\s*,/g, ',').replace(/\s+/g, ' ').trim();
-    onChange(newAddress);
+
+    // Return object format
+    const addressObj = {
+      street: updatedStreet,
+      city: updatedCity,
+      state: updatedState,
+      zip: updatedZip
+    };
+    onChange(addressObj);
   };
 
   return (

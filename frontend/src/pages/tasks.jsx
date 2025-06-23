@@ -390,7 +390,7 @@ export function Tasks() {
         </div>
         <Button 
           onClick={() => setIsCreateDialogOpen(true)}
-          className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
+          className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground"
         >
           <Plus className="mr-2 h-4 w-4" />
           <span className="hidden sm:inline">New Task</span>

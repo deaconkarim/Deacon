@@ -14,7 +14,8 @@ import {
   User,
   Trash2,
   Plus,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  Crown
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { getMembers, getMemberAttendance, getMemberGroups, updateMember, deleteMember } from '../lib/data';
+import { familyService } from '../lib/familyService';
 import MemberForm from '@/components/members/MemberForm';
 import { formatName, getInitials, formatPhoneNumber } from '@/lib/utils/formatters';
 import { supabase } from '@/lib/supabase';
@@ -44,6 +46,8 @@ export function MemberProfile() {
   const [pastEvents, setPastEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isEventsLoading, setIsEventsLoading] = useState(false);
+  const [familyInfo, setFamilyInfo] = useState(null);
+  const [isFamilyLoading, setIsFamilyLoading] = useState(true);
 
   useEffect(() => {
     loadMemberData();
@@ -57,6 +61,7 @@ export function MemberProfile() {
         setMember(foundMember);
         loadAttendance(foundMember.id);
         loadGroups(foundMember.id);
+        loadFamilyInfo(foundMember.id);
       } else {
         toast({
           title: "Error",
@@ -109,6 +114,39 @@ export function MemberProfile() {
     } finally {
       setIsGroupsLoading(false);
     }
+  };
+
+  const loadFamilyInfo = async (memberId) => {
+    setIsFamilyLoading(true);
+    try {
+      // Get all families and find which one contains this member
+      const families = await familyService.getFamilies();
+      const memberFamily = families.find(family => 
+        family.members.some(member => member.id === memberId)
+      );
+      setFamilyInfo(memberFamily);
+    } catch (error) {
+      console.error('Error loading family info:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load family information",
+        variant: "destructive",
+      });
+    } finally {
+      setIsFamilyLoading(false);
+    }
+  };
+
+  const calculateAge = (birthDate) => {
+    if (!birthDate) return null;
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age;
   };
 
   const loadPastEvents = async () => {
@@ -333,6 +371,10 @@ export function MemberProfile() {
                 <Church className="h-4 w-4 mr-2" />
                 Attendance
               </TabsTrigger>
+              <TabsTrigger value="family">
+                <Users className="h-4 w-4 mr-2" />
+                Family
+              </TabsTrigger>
               <TabsTrigger value="groups">
                 <Users className="h-4 w-4 mr-2" />
                 Groups
@@ -398,6 +440,118 @@ export function MemberProfile() {
                   ) : (
                     <div className="text-center py-4">
                       <p className="text-muted-foreground">No attendance records found.</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="family">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Family Information</CardTitle>
+                  <CardDescription>
+                    {member?.firstname} {member?.lastname}'s family details
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {isFamilyLoading ? (
+                    <div className="text-center py-4">
+                      <p className="text-muted-foreground">Loading family information...</p>
+                    </div>
+                  ) : familyInfo ? (
+                    <div className="space-y-6">
+                      {/* Family Header */}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-xl font-semibold">{familyInfo.family_name}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {familyInfo.members.length} member{familyInfo.members.length !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          onClick={() => navigate('/members?tab=families')}
+                        >
+                          <Users className="h-4 w-4 mr-2" />
+                          View Family
+                        </Button>
+                      </div>
+
+                      {/* Family Members */}
+                      <div className="space-y-3">
+                        <h4 className="text-lg font-medium">Family Members</h4>
+                        {familyInfo.members.map((familyMember) => (
+                          <Card key={familyMember.id} className="hover:shadow-md transition-shadow">
+                            <CardContent className="p-4">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                  <Avatar className="h-10 w-10">
+                                    <AvatarImage src={familyMember.image_url} />
+                                    <AvatarFallback className="text-sm">
+                                      {getInitials(familyMember.firstname, familyMember.lastname)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <div className="font-medium">
+                                      {familyMember.firstname} {familyMember.lastname}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground space-x-2">
+                                      <span className="capitalize">{familyMember.member_type}</span>
+                                      <span>•</span>
+                                      <span className="capitalize">{familyMember.relationship_type}</span>
+                                      {familyMember.birth_date && (
+                                        <>
+                                          <span>•</span>
+                                          <span>{calculateAge(familyMember.birth_date)} years old</span>
+                                        </>
+                                      )}
+                                    </div>
+                                    {(familyMember.email || familyMember.phone) && (
+                                      <div className="text-sm text-muted-foreground mt-1">
+                                        {familyMember.email && (
+                                          <div className="flex items-center gap-1">
+                                            <Mail className="w-3 h-3" />
+                                            {familyMember.email}
+                                          </div>
+                                        )}
+                                        {familyMember.phone && (
+                                          <div className="flex items-center gap-1">
+                                            <Phone className="w-3 h-3" />
+                                            {familyMember.phone}
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {familyMember.is_primary && (
+                                    <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                                      <Crown className="w-3 h-3 mr-1" />
+                                      Primary
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-medium mb-2">Not in a family</h3>
+                      <p className="text-muted-foreground mb-4">
+                        {member?.firstname} {member?.lastname} is not currently assigned to any family.
+                      </p>
+                      <Button
+                        onClick={() => navigate('/members?tab=families')}
+                      >
+                        <Users className="w-4 h-4 mr-2" />
+                        Manage Families
+                      </Button>
                     </div>
                   )}
                 </CardContent>
