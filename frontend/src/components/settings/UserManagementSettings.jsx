@@ -189,10 +189,44 @@ const UserManagementSettings = () => {
         throw new Error('User not authenticated');
       }
 
+      console.log('Current user:', user.id);
+
+      // Check current user's organization membership and admin status
+      const { data: userMembership, error: membershipError } = await supabase
+        .from('organization_users')
+        .select('role, approval_status, organization_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .single();
+
+      if (membershipError) {
+        console.error('Error fetching user membership:', membershipError);
+        throw new Error('Unable to verify user permissions');
+      }
+
+      console.log('User membership:', userMembership);
+
+      if (userMembership.role !== 'admin') {
+        throw new Error('Only admins can invite users');
+      }
+
+      if (userMembership.approval_status !== 'approved') {
+        throw new Error('User account not approved');
+      }
+
+      // Ensure organizationId matches user's organization
+      if (userMembership.organization_id !== organizationId) {
+        console.error('Organization mismatch:', { userOrg: userMembership.organization_id, componentOrg: organizationId });
+        throw new Error('Organization mismatch detected');
+      }
+
+      console.log('Organization ID for invitation:', organizationId);
+
       let memberId = inviteData.memberId;
 
       // If no existing member is selected, create a new member record
       if (!memberId) {
+        console.log('Creating new member record for:', inviteData);
         const { data: newMember, error: memberError } = await supabase
           .from('members')
           .insert({
@@ -205,10 +239,16 @@ const UserManagementSettings = () => {
           .select()
           .single();
 
-        if (memberError) throw memberError;
+        if (memberError) {
+          console.error('Error creating member record:', memberError);
+          throw memberError;
+        }
+        
+        console.log('Member record created successfully:', newMember);
         memberId = newMember.id;
       } else {
         // Update existing member with new information if provided
+        console.log('Updating existing member record:', memberId);
         const { error: updateError } = await supabase
           .from('members')
           .update({
@@ -219,11 +259,15 @@ const UserManagementSettings = () => {
           })
           .eq('id', memberId);
 
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error('Error updating member record:', updateError);
+          throw updateError;
+        }
       }
 
       // Try to create organization invitation (table might not exist yet)
       try {
+        console.log('Creating invitation with memberId:', memberId);
         const { data, error } = await supabase
           .from('organization_invitations')
           .insert({
@@ -232,14 +276,19 @@ const UserManagementSettings = () => {
             last_name: inviteData.lastName,
             role: inviteData.role,
             status: 'pending',
-            member_id: memberId,
+            member_id: memberId || null, // Make member_id optional
             organization_id: organizationId,
             invited_by: user.id
           })
           .select()
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error creating invitation:', error);
+          throw error;
+        }
+        
+        console.log('Invitation created successfully:', data);
 
         // Send invitation email
         try {

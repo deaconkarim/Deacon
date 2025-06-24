@@ -110,6 +110,20 @@ export function Invite() {
 
       if (authError) throw authError;
 
+      // Create member record
+      const { error: memberError } = await supabase
+        .from('members')
+        .insert({
+          id: authData.user.id, // Use the same ID as the auth user
+          firstname: invitation.first_name,
+          lastname: invitation.last_name,
+          email: invitation.email,
+          status: 'active',
+          organization_id: invitation.organization_id
+        });
+
+      if (memberError) throw memberError;
+
       // Create organization membership
       const { error: membershipError } = await supabase
         .from('organization_users')
@@ -134,13 +148,21 @@ export function Invite() {
 
       if (updateError) throw updateError;
 
-      toast({
-        title: "Account created successfully!",
-        description: "Please check your email to verify your account before signing in.",
+      // Automatically sign in the user
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: invitation.email,
+        password: formData.password
       });
 
-      // Redirect to login
-      navigate('/login');
+      if (signInError) throw signInError;
+
+      toast({
+        title: "Welcome to " + invitation.organizations.name + "!",
+        description: "Your account has been created and you're now logged in.",
+      });
+
+      // Redirect to dashboard
+      navigate('/dashboard');
     } catch (error) {
       console.error('Error accepting invitation:', error);
       toast({
