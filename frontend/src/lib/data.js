@@ -1468,10 +1468,10 @@ export const updateCurrentUserMember = async (updates) => {
       throw new Error('User not associated with any organization');
     }
 
-    // First check if a member record exists
+    // First check if a member record exists for this user
     const { data: existingMember, error: checkError } = await supabase
       .from('members')
-      .select('id')
+      .select('id, email')
       .eq('user_id', user.id)
       .maybeSingle();
 
@@ -1487,23 +1487,113 @@ export const updateCurrentUserMember = async (updates) => {
         .select()
         .single();
 
-      if (error) throw error;
-      result = data;
+      if (error) {
+        // If there's a duplicate email error, try to find and update the member with that email
+        if (error.code === '23505' && error.details?.includes('email')) {
+          console.log('Duplicate email detected, trying to update existing member with that email');
+          
+          // Find the member with the duplicate email
+          const { data: duplicateMember, error: duplicateError } = await supabase
+            .from('members')
+            .select('id, user_id')
+            .eq('email', updates.email)
+            .maybeSingle();
+          
+          if (duplicateError) throw duplicateError;
+          
+          if (duplicateMember) {
+            // If the duplicate member has no user_id, update it with the current user's ID
+            if (!duplicateMember.user_id) {
+              const { data: updatedData, error: updateError } = await supabase
+                .from('members')
+                .update({
+                  ...updates,
+                  user_id: user.id,
+                  organization_id: organizationId
+                })
+                .eq('id', duplicateMember.id)
+                .select()
+                .single();
+              
+              if (updateError) throw updateError;
+              result = updatedData;
+            } else {
+              // If the duplicate member has a different user_id, this is a conflict
+              throw new Error('Email is already associated with another user account');
+            }
+          } else {
+            throw error; // Re-throw the original error if we can't find the duplicate
+          }
+        } else {
+          throw error;
+        }
+      } else {
+        result = data;
+      }
     } else {
-      // Create new member record
-      const { data, error } = await supabase
-        .from('members')
-        .insert([{
-          ...updates,
-          user_id: user.id,
-          organization_id: organizationId,
-          status: 'active'
-        }])
-        .select()
-        .single();
+      // Check if there's already a member with the same email
+      if (updates.email) {
+        const { data: duplicateMember, error: duplicateError } = await supabase
+          .from('members')
+          .select('id, user_id')
+          .eq('email', updates.email)
+          .maybeSingle();
+        
+        if (duplicateError) throw duplicateError;
+        
+        if (duplicateMember) {
+          // If the duplicate member has no user_id, update it with the current user's ID
+          if (!duplicateMember.user_id) {
+            const { data: updatedData, error: updateError } = await supabase
+              .from('members')
+              .update({
+                ...updates,
+                user_id: user.id,
+                organization_id: organizationId,
+                status: 'active'
+              })
+              .eq('id', duplicateMember.id)
+              .select()
+              .single();
+            
+            if (updateError) throw updateError;
+            result = updatedData;
+          } else {
+            // If the duplicate member has a different user_id, this is a conflict
+            throw new Error('Email is already associated with another user account');
+          }
+        } else {
+          // Create new member record
+          const { data, error } = await supabase
+            .from('members')
+            .insert([{
+              ...updates,
+              user_id: user.id,
+              organization_id: organizationId,
+              status: 'active'
+            }])
+            .select()
+            .single();
 
-      if (error) throw error;
-      result = data;
+          if (error) throw error;
+          result = data;
+        }
+      } else {
+        // Create new member record without email
+        const { data, error } = await supabase
+          .from('members')
+          .insert([{
+            ...updates,
+            user_id: user.id,
+            organization_id: organizationId,
+            status: 'active'
+          }])
+          .select()
+          .single();
+
+        if (error) throw error;
+        result = data;
+      }
     }
 
     return result;

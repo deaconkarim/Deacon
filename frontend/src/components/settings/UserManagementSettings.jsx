@@ -49,11 +49,6 @@ const UserManagementSettings = () => {
         await checkAdminStatus();
         const orgId = await getCurrentUserOrganizationId();
         setOrganizationId(orgId);
-        
-        if (orgId) {
-          await fetchUsers();
-          await fetchMembersWithoutAccounts();
-        }
       } catch (error) {
         console.error('Error initializing component:', error);
       }
@@ -61,6 +56,14 @@ const UserManagementSettings = () => {
 
     initializeComponent();
   }, []);
+
+  // Separate useEffect to fetch data when organizationId is available
+  useEffect(() => {
+    if (organizationId) {
+      fetchUsers();
+      fetchMembersWithoutAccounts();
+    }
+  }, [organizationId]);
 
   const checkAdminStatus = async () => {
     try {
@@ -82,7 +85,6 @@ const UserManagementSettings = () => {
 
   const fetchUsers = async () => {
     if (!organizationId) {
-      console.log('No organization ID available, skipping user fetch');
       setUsers([]);
       setFilteredUsers([]);
       return;
@@ -103,35 +105,24 @@ const UserManagementSettings = () => {
           .order('created_at', { ascending: false })
       ]);
 
-      console.log('Organization users:', orgUsersResult.data);
-      console.log('Members:', membersResult.data);
-
       if (orgUsersResult.error) throw orgUsersResult.error;
       if (membersResult.error) throw membersResult.error;
 
       // Create a map of user_id to member data
       const membersMap = new Map();
-      membersResult.data.forEach(member => {
-        // Map by both member.id and member.user_id
-        membersMap.set(member.id, member);
+      membersResult.data?.forEach(member => {
+        // Map by member.user_id (which should match organization_users.user_id)
         if (member.user_id) {
           membersMap.set(member.user_id, member);
         }
+        // Also map by member.id for backward compatibility
+        membersMap.set(member.id, member);
       });
-
-      // Create a map of user_id to organization user data
-      const orgUsersMap = new Map();
-      orgUsersResult.data.forEach(orgUser => {
-        orgUsersMap.set(orgUser.user_id, orgUser);
-      });
-
-      console.log('Members map:', membersMap);
-      console.log('Org users map:', orgUsersMap);
 
       // Show users who have organization membership (accounts)
       const transformedUsers = [];
       
-      orgUsersResult.data.forEach(orgUser => {
+      orgUsersResult.data?.forEach(orgUser => {
         // Try to find a member with the same user_id
         const member = membersMap.get(orgUser.user_id);
         
@@ -147,11 +138,20 @@ const UserManagementSettings = () => {
             created_at: member.created_at
           });
         } else {
-          console.log('No member found for org user:', orgUser.user_id);
+          // If no member found, create a basic user object from auth data
+          // This handles cases where users exist in auth but not in members table
+          transformedUsers.push({
+            id: orgUser.user_id,
+            firstname: 'Unknown',
+            lastname: 'User',
+            email: 'No email',
+            status: 'active',
+            role: orgUser.role,
+            approval_status: orgUser.approval_status,
+            created_at: orgUser.created_at
+          });
         }
       });
-
-      console.log('Transformed users:', transformedUsers);
 
       // Sort by creation date (newest first)
       transformedUsers.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -369,6 +369,7 @@ const UserManagementSettings = () => {
         .select('organization_id')
         .eq('user_id', user.id)
         .eq('status', 'active')
+        .eq('approval_status', 'approved')
         .single();
 
       if (error) throw error;
@@ -523,14 +524,27 @@ const UserManagementSettings = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Search className="h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search users..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="max-w-sm"
-                />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search users..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="max-w-sm"
+                  />
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => {
+                    fetchUsers();
+                    fetchMembersWithoutAccounts();
+                  }}
+                  disabled={isLoading}
+                >
+                  Refresh
+                </Button>
               </div>
 
               <div className="space-y-2">

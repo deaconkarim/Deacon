@@ -1,6 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { SmtpClient } from 'https://deno.land/x/smtp@v0.7.0/mod.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -39,37 +38,42 @@ serve(async (req) => {
 
     if (deaconsError) throw deaconsError
 
-    // Initialize SMTP client
-    const client = new SmtpClient()
-    await client.connectTLS({
-      hostname: Deno.env.get('SMTP_HOSTNAME') || '',
-      port: parseInt(Deno.env.get('SMTP_PORT') || '587'),
-      username: Deno.env.get('SMTP_USERNAME') || '',
-      password: Deno.env.get('SMTP_PASSWORD') || '',
-    })
+    // Get Resend API key
+    const resendApiKey = Deno.env.get('RESEND_API_KEY')
+    if (!resendApiKey) {
+      throw new Error('RESEND_API_KEY environment variable is not set')
+    }
 
     // Create email content
     const appUrl = Deno.env.get('APP_URL') || 'http://localhost:3000'
     const prayerUrl = `${appUrl}/prayer/${requestId}`
     
     const emailContent = `
-      New Prayer Request from ${request.name}
-      
-      Request: ${request.request}
-      Contact: ${request.phone}
-      
-      Click here to view and send to members: ${prayerUrl}
+      <h2>New Prayer Request</h2>
+      <p><strong>From:</strong> ${request.name}</p>
+      <p><strong>Request:</strong> ${request.request}</p>
+      <p><strong>Contact:</strong> ${request.phone}</p>
+      <p><a href="${prayerUrl}">Click here to view and send to members</a></p>
     `
 
-    // Send email to each deacon
-    for (const deacon of deacons) {
-      await client.send({
-        from: Deno.env.get('SMTP_FROM_EMAIL') || '',
-        to: deacon.email,
-        subject: 'New Prayer Request',
-        content: emailContent,
+    // Send email to each deacon using Resend
+    const emailPromises = deacons.map(deacon => 
+      fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: Deno.env.get('ADMIN_EMAIL') || 'noreply@yourdomain.com',
+          to: deacon.email,
+          subject: 'New Prayer Request',
+          html: emailContent,
+        }),
       })
-    }
+    )
+
+    await Promise.all(emailPromises)
 
     // Update prayer request status
     const { error: updateError } = await supabaseClient
@@ -81,8 +85,6 @@ serve(async (req) => {
       .eq('id', requestId)
 
     if (updateError) throw updateError
-
-    await client.close()
 
     return new Response(
       JSON.stringify({ success: true }),
