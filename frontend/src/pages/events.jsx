@@ -20,7 +20,8 @@ import {
   Calendar,
   Clock,
   X,
-  Handshake
+  Handshake,
+  Star
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -281,6 +282,8 @@ export default function Events() {
   });
   const [isVolunteerDialogOpen, setIsVolunteerDialogOpen] = useState(false);
   const [volunteerDialogEvent, setVolunteerDialogEvent] = useState(null);
+  const [suggestedMembers, setSuggestedMembers] = useState([]);
+  const [memberAttendanceCount, setMemberAttendanceCount] = useState({});
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -1059,7 +1062,64 @@ export default function Events() {
       // Get the full member data for already RSVP'd/Checked In People
       const alreadyAttendingMembers = attendanceData.map(record => record.members);
 
-      setMembers(availableMembers);
+      // If this is a recurring event, get attendance suggestions based on previous instances
+      let suggestedMembers = [];
+      let attendanceCounts = {};
+      if (event.is_recurring || event.recurrence_pattern) {
+        try {
+          // Get previous instances of this event (or similar events of the same type)
+          const { data: previousAttendance, error: prevError } = await supabase
+            .from('event_attendance')
+            .select(`
+              member_id,
+              status,
+              events!inner (
+                id,
+                title,
+                event_type,
+                start_date,
+                is_recurring,
+                recurrence_pattern
+              )
+            `)
+            .eq('events.event_type', event.event_type)
+            .eq('events.is_recurring', true)
+            .gte('events.start_date', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()); // Last 90 days
+
+          if (!prevError && previousAttendance) {
+            // Count attendance frequency for each member
+            previousAttendance.forEach(record => {
+              const memberId = record.member_id;
+              attendanceCounts[memberId] = (attendanceCounts[memberId] || 0) + 1;
+            });
+
+            // Sort members by attendance frequency (most frequent first)
+            const sortedMemberIds = Object.keys(attendanceCounts)
+              .sort((a, b) => attendanceCounts[b] - attendanceCounts[a]);
+
+            // Get the top 10 most frequent attendees who are available
+            const topAttendees = sortedMemberIds
+              .slice(0, 10)
+              .map(memberId => availableMembers.find(m => m.id === memberId))
+              .filter(Boolean);
+
+            suggestedMembers = topAttendees;
+          }
+        } catch (error) {
+          console.error('Error fetching attendance suggestions:', error);
+          // Continue without suggestions if there's an error
+        }
+      }
+
+      // Sort available members: suggested members first, then alphabetically
+      const sortedAvailableMembers = [
+        ...suggestedMembers,
+        ...availableMembers.filter(member => !suggestedMembers.find(s => s.id === member.id))
+      ];
+
+      setMembers(sortedAvailableMembers);
+      setSuggestedMembers(suggestedMembers);
+      setMemberAttendanceCount(attendanceCounts);
       setAlreadyRSVPMembers(alreadyAttendingMembers || []);
     } catch (error) {
       console.error('Error fetching members:', error);
@@ -1077,6 +1137,8 @@ export default function Events() {
     setSelectedMembers([]);
     setMembers([]);
     setAlreadyRSVPMembers([]);
+    setSuggestedMembers([]);
+    setMemberAttendanceCount({});
   };
 
   const handlePotluckRSVP = useCallback(async (event) => {
@@ -1271,14 +1333,29 @@ export default function Events() {
       <Dialog open={isMemberDialogOpen} onOpenChange={setIsMemberDialogOpen}>
         <DialogContent className="w-full max-w-full h-full md:h-auto md:max-w-3xl p-0">
           <DialogHeader className="p-3 md:p-6 border-b">
-            <DialogTitle className="text-2xl md:text-3xl">
-              {selectedEvent?.attendance_type === 'check-in' ? 'Check In People' : 'RSVP Members'} - {selectedEvent?.title}
-            </DialogTitle>
+            <div className="space-y-2">
+              <DialogTitle className="text-2xl md:text-3xl">
+                {selectedEvent?.attendance_type === 'check-in' ? 'Check In People' : 'RSVP Members'} - {selectedEvent?.title}
+              </DialogTitle>
+              {suggestedMembers.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <Star className="h-5 w-5 text-green-600" />
+                  <span className="text-lg text-green-600 font-normal">
+                    Smart suggestions available
+                  </span>
+                </div>
+              )}
+            </div>
             <DialogDescription className="text-lg mt-2">
               {selectedEvent?.attendance_type === 'check-in'
                 ? 'Check In People for the event'
                 : `Select members to RSVP for ${selectedEvent?.title}`}
             </DialogDescription>
+            {suggestedMembers.length > 0 && (
+              <div className="mt-2 text-sm text-green-600">
+                Members who frequently attend similar events are highlighted below
+              </div>
+            )}
           </DialogHeader>
 
           <div className="p-3 md:p-6">
@@ -1310,25 +1387,82 @@ export default function Events() {
                     </Button>
                   </div>
                   <div className="space-y-2">
-                    {filteredMembers.map((member) => (
-                      <div
-                        key={member.id}
-                        className="flex items-center space-x-4 p-3 md:p-4 rounded-lg border cursor-pointer hover:bg-gray-50"
-                        onClick={() => handleMemberClick(member)}
-                      >
-                        <Avatar className="h-12 w-12 md:h-16 md:w-16">
-                          <AvatarImage src={member.image_url} />
-                          <AvatarFallback className="text-lg md:text-xl">
-                            {getInitials(member.firstname, member.lastname)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="text-lg md:text-xl font-medium">
-                            {member.firstname} {member.lastname}
-                          </p>
+                    {suggestedMembers.length > 0 && (
+                      <div className="mb-4">
+                        <h3 className="text-lg font-semibold text-green-700 mb-2 flex items-center gap-2">
+                          <Star className="h-5 w-5" />
+                          Suggested Based on Previous Attendance
+                        </h3>
+                        <div className="space-y-2">
+                          {suggestedMembers
+                            .filter(member => 
+                              member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                              member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase())
+                            )
+                            .map((member) => (
+                            <div
+                              key={member.id}
+                              className="flex items-center space-x-4 p-3 md:p-4 rounded-lg border-2 border-green-200 bg-green-50 cursor-pointer hover:bg-green-100 transition-colors"
+                              onClick={() => handleMemberClick(member)}
+                            >
+                              <Avatar className="h-12 w-12 md:h-16 md:w-16">
+                                <AvatarImage src={member.image_url} />
+                                <AvatarFallback className="text-lg md:text-xl">
+                                  {getInitials(member.firstname, member.lastname)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1">
+                                <p className="text-lg md:text-xl font-medium">
+                                  {member.firstname} {member.lastname}
+                                </p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge variant="secondary" className="bg-green-100 text-green-800">
+                                    {memberAttendanceCount[member.id] || 0} previous attendances
+                                  </Badge>
+                                  <span className="text-sm text-green-600">Frequent attendee</span>
+                                </div>
+                              </div>
+                              <Star className="h-5 w-5 text-green-600" />
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    ))}
+                    )}
+                    
+                    <div className="space-y-2">
+                      {members
+                        .filter(member => 
+                          !suggestedMembers.find(s => s.id === member.id) &&
+                          (member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                           member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase()))
+                        )
+                        .map((member) => (
+                        <div
+                          key={member.id}
+                          className="flex items-center space-x-4 p-3 md:p-4 rounded-lg border cursor-pointer hover:bg-gray-50"
+                          onClick={() => handleMemberClick(member)}
+                        >
+                          <Avatar className="h-12 w-12 md:h-16 md:w-16">
+                            <AvatarImage src={member.image_url} />
+                            <AvatarFallback className="text-lg md:text-xl">
+                              {getInitials(member.firstname, member.lastname)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <p className="text-lg md:text-xl font-medium">
+                              {member.firstname} {member.lastname}
+                            </p>
+                            {memberAttendanceCount[member.id] && (
+                              <div className="mt-1">
+                                <Badge variant="outline" className="text-xs">
+                                  {memberAttendanceCount[member.id]} previous attendances
+                                </Badge>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </TabsContent>
