@@ -49,7 +49,7 @@ serve(async (req) => {
     const appUrl = Deno.env.get('APP_URL') || 'https://your-app-domain.com'
     const invitationUrl = `${appUrl}/invite/${invitationId}`
     
-    // Create email content
+    // Create beautiful email content using the same design as invite.html
     const emailContent = `
       <!DOCTYPE html>
       <html>
@@ -89,21 +89,28 @@ serve(async (req) => {
             color: #1f2937;
             margin-bottom: 20px;
           }
+          .subtitle {
+            font-size: 18px;
+            color: #6b7280;
+            margin-bottom: 30px;
+          }
           .content {
             margin-bottom: 30px;
           }
           .button {
             display: inline-block;
-            background-color: #2563eb;
+            background-color: #10b981;
             color: white;
-            padding: 12px 24px;
+            padding: 14px 28px;
             text-decoration: none;
             border-radius: 6px;
             font-weight: 500;
+            font-size: 16px;
             margin: 20px 0;
+            transition: background-color 0.2s;
           }
           .button:hover {
-            background-color: #1d4ed8;
+            background-color: #059669;
           }
           .footer {
             text-align: center;
@@ -114,11 +121,37 @@ serve(async (req) => {
             font-size: 14px;
           }
           .highlight {
-            background-color: #fef3c7;
-            padding: 15px;
-            border-radius: 6px;
-            border-left: 4px solid #f59e0b;
-            margin: 20px 0;
+            background-color: #eff6ff;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #2563eb;
+            margin: 25px 0;
+          }
+          .features {
+            background-color: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 25px 0;
+          }
+          .feature-item {
+            display: flex;
+            align-items: center;
+            margin: 12px 0;
+          }
+          .feature-icon {
+            width: 20px;
+            height: 20px;
+            background-color: #10b981;
+            border-radius: 50%;
+            margin-right: 12px;
+            display: inline-block;
+          }
+          .welcome-message {
+            background-color: #ecfdf5;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #d1fae5;
+            margin: 25px 0;
           }
         </style>
       </head>
@@ -127,32 +160,60 @@ serve(async (req) => {
           <div class="header">
             <div class="logo">${invitation.organizations.name}</div>
             <h1 class="title">You're Invited!</h1>
+            <p class="subtitle">Join our church community and stay connected</p>
           </div>
           
           <div class="content">
             <p>Hello ${invitation.first_name},</p>
             
-            <p>You've been invited to join <strong>${invitation.organizations.name}</strong>! We're excited to have you as part of our community.</p>
+            <p>You've been invited to join <strong>${invitation.organizations.name}</strong>! We're excited to welcome you to our church community and help you stay connected with everything happening at our church.</p>
             
-            <div class="highlight">
-              <strong>Your Role:</strong> ${invitation.role.charAt(0).toUpperCase() + invitation.role.slice(1)}<br>
-              <strong>Expires:</strong> ${new Date(invitation.expires_at).toLocaleDateString()}
+            <div class="welcome-message">
+              <strong>🎉 Welcome to ${invitation.organizations.name}!</strong>
+              <p>We're thrilled to have you join our church family. This invitation gives you access to our church management system where you can:</p>
             </div>
             
-            <p>To get started, please click the button below to accept your invitation:</p>
+            <div class="features">
+              <div class="feature-item">
+                <span class="feature-icon"></span>
+                <span>View and RSVP to upcoming events</span>
+              </div>
+              <div class="feature-item">
+                <span class="feature-icon"></span>
+                <span>Stay updated with church announcements</span>
+              </div>
+              <div class="feature-item">
+                <span class="feature-icon"></span>
+                <span>Connect with other church members</span>
+              </div>
+              <div class="feature-item">
+                <span class="feature-icon"></span>
+                <span>Access your family information</span>
+              </div>
+              <div class="feature-item">
+                <span class="feature-icon"></span>
+                <span>Receive important church communications</span>
+              </div>
+            </div>
+            
+            <div class="highlight">
+              <strong>Ready to get started?</strong>
+              <p>Click the button below to accept your invitation and create your account. This will only take a few minutes!</p>
+            </div>
             
             <div style="text-align: center;">
-              <a href="${invitationUrl}" class="button">Accept Invitation</a>
+              <a href="${invitationUrl}" class="button">Accept Invitation & Join ${invitation.organizations.name}</a>
             </div>
             
             <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
-            <p style="word-break: break-all; color: #6b7280;">${invitationUrl}</p>
+            <p style="word-break: break-all; color: #6b7280; background-color: #f3f4f6; padding: 10px; border-radius: 4px;">${invitationUrl}</p>
             
-            <p>This invitation will expire on ${new Date(invitation.expires_at).toLocaleDateString()} for security reasons.</p>
+            <p><strong>Important:</strong> This invitation link will expire in 7 days for security reasons. If you need a new invitation, please contact your church administrator.</p>
           </div>
           
           <div class="footer">
-            <p>If you didn't expect this invitation, you can safely ignore this email.</p>
+            <p>If you received this invitation by mistake, you can safely ignore this email.</p>
+            <p>Questions? Contact your church administrator for assistance.</p>
             <p>&copy; ${invitation.organizations.name}. All rights reserved.</p>
           </div>
         </div>
