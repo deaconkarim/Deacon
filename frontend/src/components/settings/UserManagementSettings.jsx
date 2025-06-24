@@ -31,7 +31,8 @@ const UserManagementSettings = () => {
     email: '',
     firstName: '',
     lastName: '',
-    role: 'member'
+    role: 'member',
+    memberId: ''
   });
   const [createAccountData, setCreateAccountData] = useState({
     memberId: '',
@@ -182,51 +183,107 @@ const UserManagementSettings = () => {
 
     setIsLoading(true);
     try {
-      // Instead of creating a user account directly, we'll create a pending invitation
-      // The user will need to register themselves and then be approved
-      const { data, error } = await supabase
-        .from('organization_invitations')
-        .insert({
-          email: inviteData.email,
-          first_name: inviteData.firstName,
-          last_name: inviteData.lastName,
-          role: inviteData.role,
-          status: 'pending',
-          invited_by: user.id
-        })
-        .select()
-        .single();
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
 
-      if (error) {
-        // If the invitations table doesn't exist, fall back to a simpler approach
-        console.log('Invitations table not available, using alternative approach');
-        
-        // Create a member record with pending status
-        const { error: memberError } = await supabase
+      let memberId = inviteData.memberId;
+
+      // If no existing member is selected, create a new member record
+      if (!memberId) {
+        const { data: newMember, error: memberError } = await supabase
           .from('members')
           .insert({
             firstname: inviteData.firstName,
             lastname: inviteData.lastName,
             email: inviteData.email,
-            status: 'pending'
-          });
+            status: 'pending',
+            organization_id: organizationId
+          })
+          .select()
+          .single();
 
         if (memberError) throw memberError;
+        memberId = newMember.id;
+      } else {
+        // Update existing member with new information if provided
+        const { error: updateError } = await supabase
+          .from('members')
+          .update({
+            firstname: inviteData.firstName,
+            lastname: inviteData.lastName,
+            email: inviteData.email,
+            status: 'pending'
+          })
+          .eq('id', memberId);
 
+        if (updateError) throw updateError;
+      }
+
+      // Try to create organization invitation (table might not exist yet)
+      try {
+        const { data, error } = await supabase
+          .from('organization_invitations')
+          .insert({
+            email: inviteData.email,
+            first_name: inviteData.firstName,
+            last_name: inviteData.lastName,
+            role: inviteData.role,
+            status: 'pending',
+            member_id: memberId,
+            organization_id: organizationId,
+            invited_by: user.id
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        // Send invitation email
+        try {
+          console.log('📧 Calling send-invitation function with invitationId:', data.id);
+          
+          const { data: emailData, error: emailError } = await supabase.functions.invoke('send-invitation', {
+            body: { invitationId: data.id }
+          });
+
+          console.log('📧 Email function response:', { emailData, emailError });
+
+          if (emailError) {
+            console.error('Email sending failed:', emailError);
+            toast({
+              title: "Invitation created",
+              description: `Invitation created for ${inviteData.email} but email sending failed. They can still register with their email address.`,
+            });
+          } else {
+            toast({
+              title: "User invited successfully",
+              description: `Invitation sent to ${inviteData.email} with role: ${inviteData.role}. They will receive an email to complete their registration.`,
+            });
+          }
+        } catch (emailError) {
+          console.error('Email function error:', emailError);
+          toast({
+            title: "Invitation created",
+            description: `Invitation created for ${inviteData.email} but email sending failed. They can still register with their email address.`,
+          });
+        }
+      } catch (invitationError) {
+        // If the invitations table doesn't exist, fall back to a simpler approach
+        console.log('Invitations table not available, using alternative approach');
+        
         toast({
           title: "User invitation prepared",
           description: `${inviteData.firstName} ${inviteData.lastName} has been added to the system. They will need to register with their email address to access the system.`,
         });
-      } else {
-        toast({
-          title: "User invited successfully",
-          description: `Invitation sent to ${inviteData.email} with role: ${inviteData.role}. They will receive an email to complete their registration.`,
-        });
       }
 
       setIsInviteDialogOpen(false);
-      setInviteData({ email: '', firstName: '', lastName: '', role: 'member' });
+      setInviteData({ email: '', firstName: '', lastName: '', role: 'member', memberId: '' });
       fetchUsers();
+      fetchMembersWithoutAccounts();
     } catch (error) {
       console.error('Error inviting user:', error);
       toast({
@@ -634,13 +691,53 @@ const UserManagementSettings = () => {
           <DialogHeader>
             <DialogTitle>Invite New User</DialogTitle>
             <DialogDescription>
-              Create a new user account for your organization management system.
+              Invite a new user to your organization. You can select an existing member or create a new one.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Member Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="member-select">Select Existing Member (Optional)</Label>
+              <Select
+                value={inviteData.memberId || 'new'}
+                onValueChange={(value) => {
+                  if (value && value !== 'new') {
+                    const selectedMember = membersWithoutAccounts.find(m => m.id === value);
+                    setInviteData(prev => ({ 
+                      ...prev, 
+                      memberId: value,
+                      firstName: selectedMember?.firstname || '',
+                      lastName: selectedMember?.lastname || '',
+                      email: selectedMember?.email || ''
+                    }));
+                  } else {
+                    setInviteData(prev => ({ 
+                      ...prev, 
+                      memberId: '',
+                      firstName: '',
+                      lastName: '',
+                      email: ''
+                    }));
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose an existing member or leave blank for new..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new">Create New User</SelectItem>
+                  {membersWithoutAccounts.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.firstname} {member.lastname} ({member.email || 'No email'})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="firstName">First Name</Label>
+                <Label htmlFor="firstName">First Name *</Label>
                 <Input
                   id="firstName"
                   value={inviteData.firstName}
@@ -649,7 +746,7 @@ const UserManagementSettings = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="lastName">Last Name</Label>
+                <Label htmlFor="lastName">Last Name *</Label>
                 <Input
                   id="lastName"
                   value={inviteData.lastName}
@@ -659,7 +756,7 @@ const UserManagementSettings = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email *</Label>
               <Input
                 id="email"
                 type="email"
@@ -690,7 +787,7 @@ const UserManagementSettings = () => {
               Cancel
             </Button>
             <Button onClick={handleInviteUser} disabled={isLoading}>
-              {isLoading ? 'Creating...' : 'Create User'}
+              {isLoading ? 'Creating...' : 'Invite User'}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -14,6 +14,7 @@ import ChildrenCheckin from './pages/children-checkin';
 import AddChild from './pages/add-child';
 import { Login } from './pages/login';
 import { Register } from './pages/register';
+import { Invite } from './pages/invite';
 import { SMS } from './pages/sms';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import ApprovalStatus from './components/ApprovalStatus';
@@ -24,6 +25,7 @@ function App() {
       {/* Public routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/invite/:invitationId" element={<Invite />} />
       
       {/* Approval status route */}
       <Route path="/approval-status" element={<ApprovalStatus />} />
