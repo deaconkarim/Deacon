@@ -101,7 +101,8 @@ export function Dashboard() {
     membersInFamilies: 0,
     membersWithoutFamilies: 0,
     adults: 0,
-    children: 0
+    children: 0,
+    lastMonthDonations: 0
   });
   const [recentPeople, setRecentPeople] = useState([]);
   const [people, setPeople] = useState([]);
@@ -485,6 +486,16 @@ export function Dashboard() {
         }
       }
 
+      // Calculate last month's donations
+      const lastMonth = new Date(currentYear, currentMonth - 1, 1);
+      const lastMonthEnd = new Date(currentYear, currentMonth, 0);
+      const lastMonthDonations = donations
+        .filter(donation => {
+          const date = new Date(donation.date);
+          return date >= lastMonth && date <= lastMonthEnd;
+        })
+        .reduce((sum, donation) => sum + (parseFloat(donation.amount) || 0), 0);
+
       setStats({
         totalPeople,
         activeMembers: activeMembers.length,
@@ -518,7 +529,8 @@ export function Dashboard() {
         membersInFamilies: familyStats.membersInFamilies,
         membersWithoutFamilies: familyStats.membersWithoutFamilies,
         adults: familyStats.adults,
-        children: familyStats.children
+        children: familyStats.children,
+        lastMonthDonations
       });
       setRecentPeople(recentPeople);
       setPeople(transformedPeople);
@@ -668,6 +680,14 @@ export function Dashboard() {
       });
     }
   };
+
+  const now = new Date();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const dayOfMonth = now.getDate();
+  const percentMonth = dayOfMonth / daysInMonth;
+  const projectedDonations = percentMonth > 0 ? (stats.monthlyDonations / percentMonth) : 0;
+  const lastMonthDonations = stats.lastMonthDonations || 0; // You may need to fetch/calculate this if not present
+  const donationTrend = lastMonthDonations > 0 ? ((projectedDonations - lastMonthDonations) / lastMonthDonations) * 100 : 0;
 
   return (
     <div className="space-y-6">
@@ -846,7 +866,7 @@ export function Dashboard() {
               ) : (
                 <div className="text-3xl font-bold">{stats.eventsWithVolunteersEnabled || 0}</div>
               )}
-              <p className="text-sm text-muted-foreground mt-1">Events with volunteers enabled</p>
+              <p className="text-sm text-muted-foreground mt-1">Events with volunteers</p>
               
               {/* Volunteers breakdown */}
               <div className="mt-4 space-y-2">
@@ -989,21 +1009,21 @@ export function Dashboard() {
 
               {/* Donation Growth */}
               <div className={`p-4 rounded-lg border ${
-                stats.growthRate > 5 ? 
+                donationTrend > 5 ? 
                   'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800' :
-                stats.growthRate > 0 ? 
+                donationTrend > 0 ? 
                   'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-yellow-200 dark:border-yellow-800' :
                   'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800'
               }`}>
                 <div className="flex items-center gap-2 mb-2">
                   <TrendingUp className={`h-5 w-5 ${
-                    stats.growthRate > 5 ? 'text-green-600' :
-                    stats.growthRate > 0 ? 'text-yellow-600' :
+                    donationTrend > 5 ? 'text-green-600' :
+                    donationTrend > 0 ? 'text-yellow-600' :
                     'text-red-600'
                   }`} />
                   <h4 className={`font-semibold ${
-                    stats.growthRate > 5 ? 'text-green-900 dark:text-green-100' :
-                    stats.growthRate > 0 ? 'text-yellow-900 dark:text-yellow-100' :
+                    donationTrend > 5 ? 'text-green-900 dark:text-green-100' :
+                    donationTrend > 0 ? 'text-yellow-900 dark:text-yellow-100' :
                     'text-red-900 dark:text-red-100'
                   }`}>Donation Trend</h4>
                 </div>
@@ -1011,19 +1031,24 @@ export function Dashboard() {
                   <Skeleton className="h-4 w-32 mb-2" />
                 ) : (
                   <p className={`text-2xl font-bold mb-1 ${
-                    stats.growthRate > 5 ? 'text-green-700 dark:text-green-300' :
-                    stats.growthRate > 0 ? 'text-yellow-700 dark:text-yellow-300' :
+                    donationTrend > 5 ? 'text-green-700 dark:text-green-300' :
+                    donationTrend > 0 ? 'text-yellow-700 dark:text-yellow-300' :
                     'text-red-700 dark:text-red-300'
                   }`}>
-                    {stats.growthRate > 0 ? '+' : ''}{stats.growthRate.toFixed(1)}%
+                    {donationTrend > 0 ? '+' : ''}{donationTrend.toFixed(1)}%
+                    {donationTrend > 0 ? (
+                      <ArrowUpRight className="inline h-5 w-5 text-green-500 ml-1" />
+                    ) : (
+                      <ArrowUpRight className="inline h-5 w-5 text-red-500 ml-1 rotate-180" />
+                    )}
                   </p>
                 )}
                 <p className={`text-sm ${
-                  stats.growthRate > 5 ? 'text-green-600 dark:text-green-400' :
-                  stats.growthRate > 0 ? 'text-yellow-600 dark:text-yellow-400' :
+                  donationTrend > 5 ? 'text-green-600 dark:text-green-400' :
+                  donationTrend > 0 ? 'text-yellow-600 dark:text-yellow-400' :
                   'text-red-600 dark:text-red-400'
                 }`}>
-                  {stats.growthRate > 0 ? 'Above' : 'Below'} monthly average
+                  Projected: ${projectedDonations.toLocaleString(undefined, {maximumFractionDigits: 0})} vs Last Month: ${lastMonthDonations.toLocaleString(undefined, {maximumFractionDigits: 0})}
                 </p>
               </div>
 
