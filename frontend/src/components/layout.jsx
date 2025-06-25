@@ -47,6 +47,8 @@ export function Layout() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [pendingApprovals, setPendingApprovals] = useState(0);
   const [organizationName, setOrganizationName] = useState('Church App');
+  const [hoveredNav, setHoveredNav] = useState(null);
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
@@ -133,81 +135,88 @@ export function Layout() {
   };
   
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header with User Menu */}
-      <header className="bg-card border-b px-4 py-3 flex justify-between items-center sticky top-0 z-40">
-        <div className="flex items-center gap-2">
-          <span className="inline-block w-8 h-8 rounded-xl overflow-hidden bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center">
-            <Church className="h-5 w-5 text-white" />
-          </span>
-          <span className="font-semibold text-lg text-foreground">Deacon - {organizationName}</span>
-        </div>
-        
-        {user && (
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  <span className="hidden sm:inline">{user.email}</span>
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem className="flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  <span className="text-sm text-muted-foreground">{user.email}</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut} className="flex items-center gap-2 text-red-600">
-                  <LogOut className="h-4 w-4" />
-                  Sign Out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+    <div className="min-h-screen bg-background flex">
+      {/* Overlaying Expand-on-hover Sidebar for Desktop/Tablet */}
+      <aside
+        className={cn(
+          "hidden md:flex fixed inset-y-0 left-0 z-50 bg-card border-r flex-col items-center py-4 transition-all duration-200",
+          sidebarExpanded ? "w-56 shadow-xl" : "w-16"
         )}
-      </header>
-
-      {/* Desktop Navigation - Top */}
-      <nav className="hidden lg:block bg-card border-b">
-        <div className="max-w-screen-xl mx-auto px-6">
-          <div className="flex items-center space-x-8">
-            {navigation.map((item) => {
-              const isActive = location.pathname === item.href;
-              return (
-                <NavLink
-                  key={item.name}
-                  to={item.href}
-                  className={({ isActive }) => cn(
-                    "flex items-center gap-2 px-3 py-4 text-sm font-medium border-b-2 transition-all relative",
-                    isActive
-                      ? "text-primary border-primary"
-                      : "text-muted-foreground border-transparent hover:text-foreground hover:border-muted-foreground"
-                  )}
-                >
-                  <item.icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-muted-foreground")} />
-                  <span>{item.name}</span>
-                  {item.name === 'Settings' && isAdmin && pendingApprovals > 0 && (
-                    <span className="ml-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {pendingApprovals}
-                    </span>
-                  )}
-                </NavLink>
-              );
-            })}
+        style={{ pointerEvents: 'auto' }}
+        onMouseEnter={() => setSidebarExpanded(true)}
+        onMouseLeave={() => setSidebarExpanded(false)}
+      >
+        {navigation.map((item) => {
+          const isActive = location.pathname === item.href;
+          return (
+            <NavLink
+              key={item.name}
+              to={item.href}
+              className={({ isActive }) => cn(
+                "flex items-center gap-3 w-full h-12 px-3 rounded-lg transition-all",
+                isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
+              )}
+              title={item.name}
+            >
+              <item.icon className={cn("h-6 w-6 flex-shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
+              {sidebarExpanded && <span className="truncate text-base font-medium">{item.name}</span>}
+              {item.name === 'Settings' && isAdmin && pendingApprovals > 0 && (
+                <span className="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center flex-shrink-0">
+                  {pendingApprovals}
+                </span>
+              )}
+            </NavLink>
+          );
+        })}
+      </aside>
+      {/* Main Content with Header */}
+      <div className="flex-1 flex flex-col md:ml-16 transition-all duration-200">
+        {/* Header stays at the top, full width */}
+        <header className="bg-card border-b px-4 py-3 flex justify-between items-center sticky top-0 z-40">
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-8 h-8 rounded-xl overflow-hidden bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center">
+              <Church className="h-5 w-5 text-white" />
+            </span>
+            <span className="font-semibold text-lg text-foreground">Deacon - {organizationName}</span>
           </div>
-        </div>
-      </nav>
-
-      <div className="flex-1 pb-20 tablet:pb-16 lg:pb-0">
-        <main className="p-4 sm:p-6 tablet:p-8 pb-24 tablet:pb-20 lg:pb-6">
+          {user && (
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    <span className="hidden sm:inline">{user.email}</span>
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    <span className="text-sm text-muted-foreground">{user.email}</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut} className="flex items-center gap-2 text-red-600">
+                    <LogOut className="h-4 w-4" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
+        </header>
+        {/* Main Content Area */}
+        <main className="flex-1 p-4 sm:p-6 md:p-8">
           <Outlet />
         </main>
+        {/* Footer */}
+        <footer className="py-4 px-6 border-t bg-card">
+          <div className="flex flex-col sm:flex-row justify-between items-center">
+            <p className="text-sm text-muted-foreground">© 2025 Deacon - Church Command Center. All rights reserved.</p>
+          </div>
+        </footer>
       </div>
-
-      {/* Mobile Navigation (phones only) */}
+      {/* Mobile Navigation (phones only) remains unchanged */}
       <nav className="fixed bottom-0 left-0 right-0 bg-card border-t md:hidden z-50">
         <div className="max-w-screen-xl mx-auto px-2">
           <div className="flex justify-around items-center h-14">
@@ -266,73 +275,6 @@ export function Layout() {
           </div>
         </div>
       </nav>
-
-      {/* Tablet Navigation */}
-      <nav className="hidden md:block lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t z-50">
-        <div className="max-w-screen-xl mx-auto px-4">
-          <div className="flex justify-around items-center h-16">
-            {mainNavItems.map((item) => {
-              const isActive = location.pathname === item.href;
-              return (
-                <NavLink
-                  key={item.name}
-                  to={item.href}
-                  className={({ isActive }) => cn(
-                    "flex flex-col items-center justify-center px-3 py-2 text-xs font-medium rounded-md transition-all min-h-[44px] min-w-[44px] relative",
-                    isActive
-                      ? "text-primary bg-primary/10"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  )}
-                >
-                  <item.icon className={cn("h-5 w-5 mb-1", isActive ? "text-primary" : "text-muted-foreground")} />
-                  <span className="text-[10px] leading-tight">{item.name}</span>
-                  {item.name === 'Settings' && isAdmin && pendingApprovals > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {pendingApprovals}
-                    </span>
-                  )}
-                </NavLink>
-              );
-            })}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex flex-col items-center justify-center px-3 py-2 min-h-[44px] min-w-[44px] h-auto">
-                  <MoreHorizontal className="h-5 w-5 mb-1 text-muted-foreground" />
-                  <span className="text-[10px] font-medium">More</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                {moreNavItems.map((item) => (
-                  <DropdownMenuItem key={item.name} asChild>
-                    <NavLink
-                      to={item.href}
-                      className={cn(
-                        "flex items-center gap-3 px-4 py-3 text-sm relative",
-                        location.pathname === item.href ? "text-primary bg-primary/10" : ""
-                      )}
-                    >
-                      <item.icon className="h-5 w-5" />
-                      <span>{item.name}</span>
-                      {item.name === 'Settings' && isAdmin && pendingApprovals > 0 && (
-                        <span className="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                          {pendingApprovals}
-                        </span>
-                      )}
-                    </NavLink>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-      </nav>
-
-      {/* Footer */}
-      <footer className="py-4 px-6 border-t mt-16 tablet:mt-20 lg:mt-0 bg-card">
-        <div className="flex flex-col sm:flex-row justify-between items-center">
-          <p className="text-sm text-muted-foreground">© 2025 Deacon - Church Command Center. All rights reserved.</p>
-        </div>
-      </footer>
     </div>
   );
 }
