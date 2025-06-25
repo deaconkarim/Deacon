@@ -104,25 +104,51 @@ export function Invite() {
           data: {
             first_name: invitation.first_name,
             last_name: invitation.last_name
-          }
+          },
+          emailConfirm: false
         }
       });
 
       if (authError) throw authError;
 
-      // Create member record
-      const { error: memberError } = await supabase
+      // Check if member record already exists
+      const { data: existingMember, error: memberCheckError } = await supabase
         .from('members')
-        .insert({
-          id: authData.user.id, // Use the same ID as the auth user
-          firstname: invitation.first_name,
-          lastname: invitation.last_name,
-          email: invitation.email,
-          status: 'active',
-          organization_id: invitation.organization_id
-        });
+        .select('id')
+        .eq('email', invitation.email)
+        .single();
 
-      if (memberError) throw memberError;
+      let memberId = authData.user.id;
+
+      if (existingMember) {
+        // Member already exists, update it with the auth user ID and organization
+        const { error: updateMemberError } = await supabase
+          .from('members')
+          .update({
+            id: authData.user.id, // Link to the auth user
+            firstname: invitation.first_name,
+            lastname: invitation.last_name,
+            status: 'active',
+            organization_id: invitation.organization_id
+          })
+          .eq('email', invitation.email);
+
+        if (updateMemberError) throw updateMemberError;
+      } else {
+        // Create new member record
+        const { error: memberError } = await supabase
+          .from('members')
+          .insert({
+            id: authData.user.id, // Use the same ID as the auth user
+            firstname: invitation.first_name,
+            lastname: invitation.last_name,
+            email: invitation.email,
+            status: 'active',
+            organization_id: invitation.organization_id
+          });
+
+        if (memberError) throw memberError;
+      }
 
       // Create organization membership
       const { error: membershipError } = await supabase
