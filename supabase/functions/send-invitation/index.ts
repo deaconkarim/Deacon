@@ -49,176 +49,88 @@ serve(async (req) => {
     const appUrl = Deno.env.get('APP_URL') || 'https://your-app-domain.com'
     const invitationUrl = `${appUrl}/invite/${invitationId}`
     
-    // Create beautiful email content using the same design as invite.html
+    // Create beautiful email content
     const emailContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>You're Invited to Join ${invitation.organizations.name}</title>
-        <style>
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f9f9f9;
-          }
-          .container {
-            background-color: white;
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-          }
-          .header {
-            text-align: center;
-            margin-bottom: 30px;
-          }
-          .logo {
-            font-size: 24px;
-            font-weight: bold;
-            color: #2563eb;
-            margin-bottom: 10px;
-          }
-          .title {
-            font-size: 28px;
-            font-weight: bold;
-            color: #1f2937;
-            margin-bottom: 20px;
-          }
-          .subtitle {
-            font-size: 18px;
-            color: #6b7280;
-            margin-bottom: 30px;
-          }
-          .content {
-            margin-bottom: 30px;
-          }
-          .button {
-            display: inline-block;
-            background-color: #10b981;
-            color: white;
-            padding: 14px 28px;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: 500;
-            font-size: 16px;
-            margin: 20px 0;
-            transition: background-color 0.2s;
-          }
-          .button:hover {
-            background-color: #059669;
-          }
-          .footer {
-            text-align: center;
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #e5e7eb;
-            color: #6b7280;
-            font-size: 14px;
-          }
-          .highlight {
-            background-color: #eff6ff;
-            padding: 20px;
-            border-radius: 8px;
-            border-left: 4px solid #2563eb;
-            margin: 25px 0;
-          }
-          .features {
-            background-color: #f8fafc;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 25px 0;
-          }
-          .feature-item {
-            display: flex;
-            align-items: center;
-            margin: 12px 0;
-          }
-          .feature-icon {
-            width: 20px;
-            height: 20px;
-            background-color: #10b981;
-            border-radius: 50%;
-            margin-right: 12px;
-            display: inline-block;
-          }
-          .welcome-message {
-            background-color: #ecfdf5;
-            padding: 20px;
-            border-radius: 8px;
-            border: 1px solid #d1fae5;
-            margin: 25px 0;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <div class="logo">${invitation.organizations.name}</div>
-            <h1 class="title">You're Invited!</h1>
-            <p class="subtitle">Join our church community and stay connected</p>
-          </div>
-          
-          <div class="content">
-            <p>Hello ${invitation.first_name},</p>
-            
-            <p>You've been invited to join <strong>${invitation.organizations.name}</strong>! We're excited to welcome you to our church community and help you stay connected with everything happening at our church.</p>
-            
-            <div class="welcome-message">
-              <strong>🎉 Welcome to ${invitation.organizations.name}!</strong>
-              <p>We're thrilled to have you join our church family. This invitation gives you access to our church management system where you can:</p>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>You're Invited to Join ${invitation.organizations.name}</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8fafc; line-height: 1.6;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: white;">
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 60px 40px; text-align: center;">
+            <div style="width: 80px; height: 80px; background: rgba(255, 255, 255, 0.15); border-radius: 50%; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);">
+                <span style="font-size: 36px; color: white;">⛪</span>
             </div>
-            
-            <div class="features">
-              <div class="feature-item">
-                <span class="feature-icon"></span>
-                <span>View and RSVP to upcoming events</span>
-              </div>
-              <div class="feature-item">
-                <span class="feature-icon"></span>
-                <span>Stay updated with church announcements</span>
-              </div>
-              <div class="feature-item">
-                <span class="feature-icon"></span>
-                <span>Connect with other church members</span>
-              </div>
-              <div class="feature-item">
-                <span class="feature-icon"></span>
-                <span>Access your family information</span>
-              </div>
-              <div class="feature-item">
-                <span class="feature-icon"></span>
-                <span>Receive important church communications</span>
-              </div>
-            </div>
-            
-            <div class="highlight">
-              <strong>Ready to get started?</strong>
-              <p>Click the button below to accept your invitation and create your account. This will only take a few minutes!</p>
-            </div>
-            
-            <div style="text-align: center;">
-              <a href="${invitationUrl}" class="button">Accept Invitation & Join ${invitation.organizations.name}</a>
-            </div>
-            
-            <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
-            <p style="word-break: break-all; color: #6b7280; background-color: #f3f4f6; padding: 10px; border-radius: 4px;">${invitationUrl}</p>
-            
-            <p><strong>Important:</strong> This invitation link will expire in 7 days for security reasons. If you need a new invitation, please contact your church administrator.</p>
-          </div>
-          
-          <div class="footer">
-            <p>If you received this invitation by mistake, you can safely ignore this email.</p>
-            <p>Questions? Contact your church administrator for assistance.</p>
-            <p>&copy; ${invitation.organizations.name}. All rights reserved.</p>
-          </div>
+            <h1 style="color: white; margin: 0; font-size: 32px; font-weight: 700; letter-spacing: -0.5px;">You're Invited!</h1>
+            <p style="color: rgba(255, 255, 255, 0.9); margin: 12px 0 0; font-size: 18px; font-weight: 400;">Join ${invitation.organizations.name}</p>
         </div>
-      </body>
-      </html>
+
+        <!-- Main Content -->
+        <div style="padding: 60px 40px;">
+            <h2 style="color: #1a202c; margin: 0 0 24px; font-size: 28px; font-weight: 600; letter-spacing: -0.3px;">
+                Welcome to ${invitation.organizations.name}
+            </h2>
+            
+            <p style="color: #4a5568; margin: 0 0 32px; font-size: 16px; line-height: 1.7;">
+                Hello ${invitation.first_name},<br><br>
+                You've been invited to join <strong style="color: #2d3748;">${invitation.organizations.name}</strong>! We're excited to welcome you to our church community and help you stay connected with everything happening at our church.
+            </p>
+
+            <!-- CTA Section -->
+            <div style="text-align: center; margin: 48px 0; padding: 40px; background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%); border-radius: 16px;">
+                <h3 style="color: #2d3748; margin: 0 0 16px; font-size: 20px; font-weight: 600;">Ready to get started?</h3>
+                <p style="color: #718096; margin: 0 0 32px; font-size: 16px;">Click the button below to accept your invitation and create your account.</p>
+                
+                <a href="${invitationUrl}" 
+                   style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 18px 36px; text-decoration: none; border-radius: 12px; display: inline-block; font-weight: 600; font-size: 16px; box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3); transition: all 0.3s ease;">
+                    Accept Invitation & Join ${invitation.organizations.name}
+                </a>
+            </div>
+
+            <!-- Manual Link -->
+            <div style="background: #f7fafc; padding: 24px; border-radius: 12px; margin: 32px 0; border: 1px solid #e2e8f0;">
+                <p style="color: #4a5568; margin: 0 0 12px; font-size: 14px; font-weight: 500;">
+                    If the button doesn't work, copy and paste this link into your browser:
+                </p>
+                <a href="${invitationUrl}" style="color: #667eea; word-break: break-all; font-size: 14px; text-decoration: underline;">
+                    ${invitationUrl}
+                </a>
+            </div>
+
+            <!-- Important Notice -->
+            <div style="background: #fff5f5; padding: 24px; border-radius: 12px; margin: 32px 0; border-left: 4px solid #f56565;">
+                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                    <span style="font-size: 20px; margin-right: 12px;">⏰</span>
+                    <h4 style="color: #c53030; margin: 0; font-size: 16px; font-weight: 600;">Important</h4>
+                </div>
+                <p style="color: #c53030; margin: 0; line-height: 1.6; font-size: 14px;">
+                    This invitation link will expire in 7 days for security reasons. If you need a new invitation, please contact your church administrator.
+                </p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="background: #2d3748; padding: 40px; text-align: center;">
+            <div style="margin-bottom: 24px;">
+                <h3 style="color: white; margin: 0 0 8px; font-size: 18px; font-weight: 600;">Deacon</h3>
+                <p style="color: #a0aec0; margin: 0; font-size: 14px;">Church Command Center</p>
+            </div>
+            <div style="border-top: 1px solid #4a5568; padding-top: 24px;">
+                <p style="color: #a0aec0; margin: 0 0 8px; font-size: 12px;">
+                    If you received this invitation by mistake, you can safely ignore this email.
+                </p>
+                <p style="color: #a0aec0; margin: 0; font-size: 12px;">
+                    Questions? Contact your church administrator for assistance.
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
     `
 
     // Send email using Resend

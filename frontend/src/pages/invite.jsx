@@ -121,7 +121,17 @@ export function Invite() {
       let memberId = authData.user.id;
 
       if (existingMember) {
-        // Member already exists, update it with the auth user ID and organization
+        // First, update the invitation to remove the member_id reference
+        const { error: updateInvitationError } = await supabase
+          .from('organization_invitations')
+          .update({
+            member_id: null
+          })
+          .eq('id', invitationId);
+
+        if (updateInvitationError) throw updateInvitationError;
+
+        // Now update the member record with the auth user ID and organization
         const { error: updateMemberError } = await supabase
           .from('members')
           .update({
