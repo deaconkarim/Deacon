@@ -80,7 +80,7 @@ export function Donations() {
         attendance: newDonation.attendance ? parseInt(newDonation.attendance) : null
       };
 
-      console.log('Adding donation with data:', donationData);
+      // console.log('Adding donation with data:', donationData);
       const addedDonation = await addDonation(donationData);
       setDonations([addedDonation, ...donations]);
       setNewDonation({
@@ -130,9 +130,6 @@ export function Donations() {
           parseInt(selectedDonation.attendance, 10)) : 
         null;
 
-      console.log('Selected donation attendance:', selectedDonation.attendance);
-      console.log('Processed attendance:', attendance);
-
       const updates = {
         amount: parseFloat(selectedDonation.amount),
         date: new Date(selectedDonation.date).toISOString(),
@@ -141,10 +138,7 @@ export function Donations() {
         attendance
       };
 
-      console.log('Submitting update with data:', { id: selectedDonation.id, updates });
-
       const updatedDonation = await updateDonation(selectedDonation.id, updates);
-      console.log('Update donation completed:', updatedDonation);
 
       if (!updatedDonation) {
         throw new Error('No data returned from update');

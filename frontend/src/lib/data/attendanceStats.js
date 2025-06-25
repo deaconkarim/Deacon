@@ -10,7 +10,6 @@ export function useAttendanceStats(startDate, endDate) {
   const [eventDetails, setEventDetails] = useState([]);
   const [error, setError] = useState(null);
 
-  console.log('useAttendanceStats called with:', { startDate, endDate });
 
   // Memoize the loadAttendanceData function to prevent infinite loops
   const loadAttendanceData = useCallback(async () => {
@@ -19,14 +18,12 @@ export function useAttendanceStats(startDate, endDate) {
       return;
     }
 
-    console.log('loadAttendanceData starting...');
     setIsLoading(true);
     setError(null);
     
     try {
       const startDateStr = format(startDate, 'yyyy-MM-dd');
       const endDateStr = format(endDate, 'yyyy-MM-dd');
-      console.log('Fetching events from', startDateStr, 'to', endDateStr);
       
       // Fetch events for the given range
       const { data: events, error: eventsError } = await supabase
@@ -36,7 +33,6 @@ export function useAttendanceStats(startDate, endDate) {
         .lte('start_date', endDateStr)
         .order('start_date', { ascending: false });
       
-      console.log('Events query result:', { events, eventsError });
       
       if (eventsError) throw eventsError;
       if (!events || events.length === 0) {
@@ -49,7 +45,6 @@ export function useAttendanceStats(startDate, endDate) {
         return;
       }
       
-      console.log('Found', events.length, 'events');
       
       // Fetch attendance records for these events
       const { data: attendance, error: attendanceError } = await supabase
@@ -57,7 +52,6 @@ export function useAttendanceStats(startDate, endDate) {
         .select(`*, members (firstname, lastname)`)
         .in('event_id', events.map(e => e.id));
       
-      console.log('Attendance query result:', { attendance, attendanceError });
       
       if (attendanceError) throw attendanceError;
       
@@ -120,13 +114,6 @@ export function useAttendanceStats(startDate, endDate) {
         };
       });
       
-      console.log('Processed data:', {
-        serviceBreakdown: formattedServiceBreakdown,
-        memberStats,
-        dailyData,
-        eventDetails
-      });
-      
       setServiceBreakdown(formattedServiceBreakdown);
       setMemberStats(memberStats);
       setDailyData(dailyData);
@@ -144,7 +131,6 @@ export function useAttendanceStats(startDate, endDate) {
   }, [startDate, endDate]);
 
   useEffect(() => {
-    console.log('useAttendanceStats useEffect triggered');
     loadAttendanceData();
   }, [loadAttendanceData]);
 

@@ -348,9 +348,7 @@ export function People() {
           zip: newMember.address.zip || ''
         } : null
       };
-      console.log('Adding person with data:', memberData);
       const addedMember = await addMember(memberData);
-      console.log('Added person:', addedMember);
       setMembers(prev => [addedMember, ...prev]);
       setIsAddDialogOpen(false);
       setNewMember({

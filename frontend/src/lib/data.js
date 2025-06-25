@@ -719,9 +719,7 @@ const generateRecurringInstances = (event) => {
 export async function getDonations() {
   try {
     const organizationId = await getCurrentUserOrganizationId();
-    console.log('=== GETDONATIONS DEBUG ===');
-    console.log('Organization ID:', organizationId);
-    
+  
     if (!organizationId) {
       console.error('No organization ID found for user');
       throw new Error('User not associated with any organization');
@@ -737,11 +735,6 @@ export async function getDonations() {
       console.error('Supabase error:', error);
       throw error;
     }
-    
-    console.log('Donations fetched:', data?.length || 0, 'records');
-    console.log('Sample donation:', data?.[0]);
-    console.log('All donations:', data);
-    console.log('=== END GETDONATIONS DEBUG ===');
     
     return data || [];
   } catch (error) {
@@ -1396,9 +1389,7 @@ export const getVolunteerStats = async () => {
 // Get the current user's organization name
 export const getOrganizationName = async () => {
   try {
-    console.log('getOrganizationName: Starting...');
     const { data: { user } } = await supabase.auth.getUser();
-    console.log('getOrganizationName: User:', user?.id);
     if (!user) return null;
 
     // Get the user's organization ID
@@ -1409,7 +1400,6 @@ export const getOrganizationName = async () => {
       .eq('status', 'active')
       .single();
 
-    console.log('getOrganizationName: User org data:', userOrg, 'Error:', userOrgError);
     if (userOrgError || !userOrg) return null;
 
     // Get the organization name
@@ -1419,10 +1409,8 @@ export const getOrganizationName = async () => {
       .eq('id', userOrg.organization_id)
       .single();
 
-    console.log('getOrganizationName: Organization data:', org, 'Error:', orgError);
     if (orgError || !org) return null;
 
-    console.log('getOrganizationName: Returning name:', org.name);
     return org.name;
   } catch (error) {
     console.error('Error getting organization name:', error);

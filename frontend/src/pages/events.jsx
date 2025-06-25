@@ -512,7 +512,7 @@ export default function Events() {
 
   // Add this debug log
   useEffect(() => {
-    console.log('Current events:', events);
+    // console.log('Current events:', events);
   }, [events]);
 
   const getStatusColor = (status) => {

@@ -58,16 +58,12 @@ export default function ChildrenCheckin() {
 
         if (allEventsError) throw allEventsError;
         
-        console.log('All events:', allEvents);
-        
         // Filter for check-in events
         const checkinEvents = allEvents.filter(event => 
           event.attendance_type === 'checkin' || 
           event.attendance_type === 'Check-in' ||
           event.attendance_type === 'check-in'
         );
-        
-        console.log('Filtered check-in events:', checkinEvents);
         
         setEvents(checkinEvents);
 

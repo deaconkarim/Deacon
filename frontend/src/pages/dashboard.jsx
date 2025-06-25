@@ -30,6 +30,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/components/ui/use-toast';
@@ -81,6 +82,8 @@ export function Dashboard() {
     totalEvents: 0,
     eventsThisWeek: 0,
     eventsThisMonth: 0,
+    averageEventsPerMonth: 0,
+    sundayServiceRate: 0,
     totalVolunteers: 0,
     upcomingVolunteers: 0,
     recentVolunteers: 0,
@@ -168,29 +171,18 @@ export function Dashboard() {
       // Fetch donations using the filtered getDonations function
       const donations = await getDonations();
 
-      // Debug: Log donation data to understand the structure
-      console.log('=== DONATION DEBUGGING ===');
-      console.log('Donations data:', donations);
-      console.log('Donations length:', donations?.length);
-      console.log('Current date:', new Date().toISOString());
-      console.log('Current date object:', new Date());
-
       // Calculate total donations
       const totalDonations = donations?.reduce((sum, donation) => {
         const amount = parseFloat(donation.amount) || 0;
-        console.log('Processing donation:', donation, 'Amount:', amount);
         return sum + amount;
       }, 0) || 0;
 
-      console.log('Total donations calculated:', totalDonations);
 
       // Calculate monthly donations
       const now = new Date();
       const currentYear = now.getFullYear();
       const currentMonth = now.getMonth(); // getMonth() returns 0-11
       
-      console.log('Current year:', currentYear, 'Current month:', currentMonth);
-      console.log('Current month name:', ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][currentMonth]);
       
       const monthlyDonations = donations?.filter(donation => {
         try {
@@ -219,12 +211,8 @@ export function Dashboard() {
           const donationDateStr = donation.date; // Use original date string
           const currentDateStr = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}`;
           const isCurrentMonth = donationDateStr.startsWith(currentDateStr);
-          
-          console.log(`Donation date: ${donation.date} -> Parsed: ${donationDate.toISOString()} (${donationMonthName} ${donationYear}) - Current month: ${isCurrentMonth}`);
-          console.log(`Comparing: ${donationDateStr} starts with ${currentDateStr} = ${isCurrentMonth}`);
-          
+                    
           if (isCurrentMonth) {
-            console.log('✓ Found donation for current month:', donation);
           }
           
           return isCurrentMonth;
@@ -234,12 +222,9 @@ export function Dashboard() {
         }
       }).reduce((sum, donation) => {
         const amount = parseFloat(donation.amount) || 0;
-        console.log('Adding to monthly total:', amount);
         return sum + amount;
       }, 0) || 0;
 
-      console.log('Monthly donations calculated:', monthlyDonations);
-      console.log('=== END DONATION DEBUGGING ===');
 
       // Calculate weekly average (average weekly donation total)
       const weeklyDonationTotals = {};
@@ -293,19 +278,6 @@ export function Dashboard() {
       const growthRate = monthlyAverage > 0 ? 
         ((monthlyDonations - monthlyAverage) / monthlyAverage) * 100 : 0;
 
-      console.log('=== CALCULATION DEBUG ===');
-      console.log('Total donations:', totalDonations);
-      console.log('Monthly donations:', monthlyDonations);
-      console.log('Weekly donation totals:', weeklyDonationTotals);
-      console.log('Weekly totals array:', weeklyTotals);
-      console.log('Number of weeks with donations:', weeklyTotals.length);
-      console.log('Unique months with data:', Array.from(uniqueMonths));
-      console.log('Actual months with data:', actualMonthsWithData);
-      console.log('Weekly average (avg of weekly totals):', weeklyAverage);
-      console.log('Monthly average (total/actual months):', monthlyAverage);
-      console.log('Growth rate:', growthRate);
-      console.log('=== END CALCULATION DEBUG ===');
-
       // Fetch upcoming events using the filtered getEvents function
       const events = await getEvents();
       const upcomingEvents = events?.filter(event => 
@@ -338,24 +310,38 @@ export function Dashboard() {
         return eventDate >= today && eventDate <= monthFromNow;
       }).length;
 
-      console.log('=== EVENTS DEBUG ===');
-      console.log('Total events:', allEvents.length);
-      console.log('Upcoming events:', upcomingEvents.length);
-      console.log('Events this week:', eventsThisWeek);
-      console.log('Events this month:', eventsThisMonth);
-      console.log('Current date:', today.toISOString());
-      console.log('Week from now:', weekFromNow.toISOString());
-      console.log('Month from now:', monthFromNow.toISOString());
-      console.log('=== END EVENTS DEBUG ===');
-
+      // Calculate average events per month based on last 6 months
+      const sixMonthsAgoForAvg = new Date();
+      sixMonthsAgoForAvg.setMonth(sixMonthsAgoForAvg.getMonth() - 6);
+      
+      const eventsLast6Months = allEvents.filter(event => {
+        const eventDate = new Date(event.start_date);
+        return eventDate >= sixMonthsAgoForAvg && eventDate <= today;
+      });
+      
+      // Calculate average with better handling of edge cases
+      let averageEventsPerMonth = 0;
+      
+      if (eventsLast6Months.length > 0) {
+        // Group events by month to count actual months with events
+        const monthsWithEvents = new Set();
+        eventsLast6Months.forEach(event => {
+          const eventDate = new Date(event.start_date);
+          const monthKey = `${eventDate.getFullYear()}-${eventDate.getMonth()}`;
+          monthsWithEvents.add(monthKey);
+        });
+        
+        const actualMonthsWithEvents = monthsWithEvents.size;
+        averageEventsPerMonth = Math.round(eventsLast6Months.length / actualMonthsWithEvents);
+      } else {
+        // If no events in last 6 months, show 0 or use total events as fallback
+        averageEventsPerMonth = allEvents?.length > 0 ? Math.round(allEvents.length / 12) : 0;
+      }
+      
+      
       // Fetch volunteer statistics
       const volunteerStats = await getVolunteerStats();
-      console.log('=== VOLUNTEER DEBUG ===');
-      console.log('Volunteer stats:', volunteerStats);
-      console.log('=== END VOLUNTEER DEBUG ===');
-
-      // Calculate average attendance by event type
-      console.log('=== ATTENDANCE BY EVENT TYPE DEBUG ===');
+     
       
       // Get current user's organization ID
       const { data: { user: currentUser } } = await supabase.auth.getUser();
@@ -399,7 +385,6 @@ export function Dashboard() {
         console.error('Error fetching events with attendance:', attendanceError);
       }
 
-      console.log('Events with attendance data:', eventsWithAttendance?.length || 0);
 
       // Group events by type and calculate averages
       const eventTypeStats = {};
@@ -426,14 +411,11 @@ export function Dashboard() {
           eventTypeStats[eventType].totalAttendance += attendingCount;
           eventTypeStats[eventType].eventCount += 1;
           
-          console.log(`Event: ${event.title} (${eventType}) - Attendance: ${attendingCount}/${event.event_attendance.length} records`);
         } else {
           eventsWithoutRecords++;
-          console.log(`Event: ${event.title} (${eventType}) - No attendance records`);
         }
       });
       
-      console.log(`Summary: ${eventsWithRecords} events with attendance records, ${eventsWithoutRecords} events without records`);
 
       // Calculate averages
       Object.keys(eventTypeStats).forEach(eventType => {
@@ -442,14 +424,12 @@ export function Dashboard() {
           Math.round(stats.totalAttendance / stats.eventCount) : 0;
       });
 
-      console.log('Event type statistics:', eventTypeStats);
 
       // Map to the existing stats structure
       const sundayServiceStats = eventTypeStats['Sunday Worship Service'] || { averageAttendance: 0, eventCount: 0 };
       const bibleStudyStats = eventTypeStats['Bible Study'] || { averageAttendance: 0, eventCount: 0 };
       const fellowshipStats = eventTypeStats['Fellowship Activity'] || { averageAttendance: 0, eventCount: 0 };
 
-      console.log('=== END ATTENDANCE BY EVENT TYPE DEBUG ===');
 
       // Load family statistics
       let familyStats = {
@@ -462,9 +442,47 @@ export function Dashboard() {
       
       try {
         familyStats = await familyService.getFamilyStats();
-        console.log('Family stats loaded:', familyStats);
       } catch (error) {
         console.error('Error loading family stats:', error);
+      }
+
+      // Calculate Sunday Service Rate (last 30 days)
+      let sundayServiceRate = 0;
+      if (organizationId && activeMembers.length > 0) {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        
+        const { data: sundayEvents } = await supabase
+          .from('events')
+          .select(`
+            id,
+            event_attendance (
+              id,
+              status,
+              members (firstname, lastname, status)
+            )
+          `)
+          .eq('organization_id', organizationId)
+          .eq('event_type', 'Sunday Worship Service')
+          .gte('start_date', thirtyDaysAgo.toISOString())
+          .lte('start_date', new Date().toISOString());
+        
+        if (sundayEvents && sundayEvents.length > 0) {
+          // Get unique active members who attended Sunday service
+          const activeAttendees = new Set();
+          sundayEvents.forEach(event => {
+            event.event_attendance?.forEach(attendance => {
+              if ((attendance.status === 'attending' || attendance.status === 'checked-in') &&
+                  attendance.members?.status === 'active') {
+                const memberName = `${attendance.members.firstname} ${attendance.members.lastname}`;
+                activeAttendees.add(memberName);
+              }
+            });
+          });
+          
+          const uniqueAttendees = activeAttendees.size;
+          sundayServiceRate = Math.min((uniqueAttendees / activeMembers.length) * 100, 100);
+        }
       }
 
       setStats({
@@ -481,6 +499,8 @@ export function Dashboard() {
         totalEvents: allEvents?.length || 0,
         eventsThisWeek,
         eventsThisMonth,
+        averageEventsPerMonth,
+        sundayServiceRate,
         totalVolunteers: volunteerStats.totalVolunteers,
         upcomingVolunteers: volunteerStats.upcomingVolunteers,
         recentVolunteers: volunteerStats.recentVolunteers,
@@ -506,16 +526,6 @@ export function Dashboard() {
       setWeeklyDonations(weeklyDonations);
       setDonations(donations || []);
 
-      // Debug: Check people data for images
-      console.log('People data debug:', {
-        totalPeople: transformedPeople.length,
-        peopleWithImages: transformedPeople.filter(p => p.image_url).length,
-        samplePeople: transformedPeople.slice(0, 3).map(p => ({
-          name: `${p.firstName} ${p.lastName}`,
-          image_url: p.image_url,
-          hasImage: !!p.image_url
-        }))
-      });
     } catch (error) {
       console.error('Error loading dashboard data:', error);
       toast({
@@ -675,22 +685,38 @@ export function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
-              <div className="text-3xl font-bold">{stats.totalPeople}</div>
+              {isLoading ? (
+                <Skeleton className="h-8 w-16 mb-1" />
+              ) : (
+                <div className="text-3xl font-bold">{stats.totalPeople}</div>
+              )}
               <p className="text-sm text-muted-foreground mt-1">Total People</p>
               
               {/* Member type breakdown */}
               <div className="mt-4 space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-green-600 font-medium">Active</span>
-                  <span className="text-sm font-semibold">{stats.activeMembers}</span>
+                  {isLoading ? (
+                    <Skeleton className="h-4 w-8" />
+                  ) : (
+                    <span className="text-sm font-semibold">{stats.activeMembers}</span>
+                  )}
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-orange-600 font-medium">Inactive</span>
-                  <span className="text-sm font-semibold">{stats.inactiveMembers}</span>
+                  {isLoading ? (
+                    <Skeleton className="h-4 w-8" />
+                  ) : (
+                    <span className="text-sm font-semibold">{stats.inactiveMembers}</span>
+                  )}
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-blue-600 font-medium">Visitors</span>
-                  <span className="text-sm font-semibold">{stats.visitors}</span>
+                  {isLoading ? (
+                    <Skeleton className="h-4 w-8" />
+                  ) : (
+                    <span className="text-sm font-semibold">{stats.visitors}</span>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -711,22 +737,38 @@ export function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
-              <div className="text-3xl font-bold">${(stats.monthlyDonations || 0).toFixed(2)}</div>
+              {isLoading ? (
+                <Skeleton className="h-8 w-20 mb-1" />
+              ) : (
+                <div className="text-3xl font-bold">${(stats.monthlyDonations || 0).toFixed(2)}</div>
+              )}
               <p className="text-sm text-muted-foreground mt-1">This month</p>
               
               {/* Donation breakdown */}
               <div className="mt-4 space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-green-600 font-medium">Total Donations</span>
-                  <span className="text-sm font-semibold">${(stats.totalDonations || 0).toFixed(2)}</span>
+                  {isLoading ? (
+                    <Skeleton className="h-4 w-16" />
+                  ) : (
+                    <span className="text-sm font-semibold">${(stats.totalDonations || 0).toFixed(2)}</span>
+                  )}
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-green-600 font-medium">Monthly Average</span>
-                  <span className="text-sm font-semibold">${(stats.monthlyAverage || 0).toFixed(2)}</span>
+                  {isLoading ? (
+                    <Skeleton className="h-4 w-16" />
+                  ) : (
+                    <span className="text-sm font-semibold">${(stats.monthlyAverage || 0).toFixed(2)}</span>
+                  )}
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-green-600 font-medium">Weekly Average</span>
-                  <span className="text-sm font-semibold">${(stats.weeklyAverage || 0).toFixed(2)}</span>
+                  {isLoading ? (
+                    <Skeleton className="h-4 w-16" />
+                  ) : (
+                    <span className="text-sm font-semibold">${(stats.weeklyAverage || 0).toFixed(2)}</span>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -747,22 +789,38 @@ export function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
-              <div className="text-3xl font-bold">{stats.upcomingEvents}</div>
-              <p className="text-sm text-muted-foreground mt-1">Upcoming events</p>
+              {isLoading ? (
+                <Skeleton className="h-8 w-16 mb-1" />
+              ) : (
+                <div className="text-3xl font-bold">{stats.averageEventsPerMonth}</div>
+              )}
+              <p className="text-sm text-muted-foreground mt-1">Average per month</p>
               
               {/* Events breakdown */}
               <div className="mt-4 space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-purple-600 font-medium">Total Events</span>
-                  <span className="text-sm font-semibold">{stats.totalEvents}</span>
-                </div>
-                <div className="flex justify-between items-center">
                   <span className="text-sm text-purple-600 font-medium">This Week</span>
-                  <span className="text-sm font-semibold">{stats.eventsThisWeek}</span>
+                  {isLoading ? (
+                    <Skeleton className="h-4 w-8" />
+                  ) : (
+                    <span className="text-sm font-semibold">{stats.eventsThisWeek}</span>
+                  )}
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-purple-600 font-medium">This Month</span>
-                  <span className="text-sm font-semibold">{stats.eventsThisMonth}</span>
+                  {isLoading ? (
+                    <Skeleton className="h-4 w-8" />
+                  ) : (
+                    <span className="text-sm font-semibold">{stats.eventsThisMonth}</span>
+                  )}
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-purple-600 font-medium">Average Per Month</span>
+                  {isLoading ? (
+                    <Skeleton className="h-4 w-8" />
+                  ) : (
+                    <span className="text-sm font-semibold">{stats.averageEventsPerMonth}</span>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -783,22 +841,38 @@ export function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
-              <div className="text-3xl font-bold">{stats.eventsWithVolunteersEnabled || 0}</div>
+              {isLoading ? (
+                <Skeleton className="h-8 w-16 mb-1" />
+              ) : (
+                <div className="text-3xl font-bold">{stats.eventsWithVolunteersEnabled || 0}</div>
+              )}
               <p className="text-sm text-muted-foreground mt-1">Events with volunteers enabled</p>
               
               {/* Volunteers breakdown */}
               <div className="mt-4 space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-teal-600 font-medium">Total Volunteers Signed Up</span>
-                  <span className="text-sm font-semibold">{stats.totalVolunteersSignedUp || 0}</span>
+                  {isLoading ? (
+                    <Skeleton className="h-4 w-8" />
+                  ) : (
+                    <span className="text-sm font-semibold">{stats.totalVolunteersSignedUp || 0}</span>
+                  )}
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-teal-600 font-medium">Events Still Needing Help</span>
-                  <span className="text-sm font-semibold">{stats.eventsStillNeedingVolunteers || 0}</span>
+                  {isLoading ? (
+                    <Skeleton className="h-4 w-8" />
+                  ) : (
+                    <span className="text-sm font-semibold">{stats.eventsStillNeedingVolunteers || 0}</span>
+                  )}
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-teal-600 font-medium">Active Volunteers</span>
-                  <span className="text-sm font-semibold">{stats.totalVolunteers || 0}</span>
+                  {isLoading ? (
+                    <Skeleton className="h-4 w-8" />
+                  ) : (
+                    <span className="text-sm font-semibold">{stats.totalVolunteers || 0}</span>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -819,22 +893,38 @@ export function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
-              <div className="text-3xl font-bold">{stats.totalFamilies}</div>
+              {isLoading ? (
+                <Skeleton className="h-8 w-16 mb-1" />
+              ) : (
+                <div className="text-3xl font-bold">{stats.totalFamilies}</div>
+              )}
               <p className="text-sm text-muted-foreground mt-1">Total Families</p>
               
               {/* Family breakdown */}
               <div className="mt-4 space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-orange-600 font-medium">Members in Families</span>
-                  <span className="text-sm font-semibold">{stats.membersInFamilies}</span>
+                  {isLoading ? (
+                    <Skeleton className="h-4 w-8" />
+                  ) : (
+                    <span className="text-sm font-semibold">{stats.membersInFamilies}</span>
+                  )}
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-orange-600 font-medium">Adults</span>
-                  <span className="text-sm font-semibold">{stats.adults}</span>
+                  {isLoading ? (
+                    <Skeleton className="h-4 w-8" />
+                  ) : (
+                    <span className="text-sm font-semibold">{stats.adults}</span>
+                  )}
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-orange-600 font-medium">Children</span>
-                  <span className="text-sm font-semibold">{stats.children}</span>
+                  {isLoading ? (
+                    <Skeleton className="h-4 w-8" />
+                  ) : (
+                    <span className="text-sm font-semibold">{stats.children}</span>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -846,6 +936,534 @@ export function Dashboard() {
           </Card>
         </motion.div>
       </div>
+
+      {/* Insights Section */}
+      <motion.div variants={itemVariants}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center text-xl">
+              <BarChart3 className="mr-2 h-6 w-6" />
+              Key Insights
+            </CardTitle>
+            <CardDescription className="text-base">Interesting patterns and trends from your data</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {/* Member Engagement */}
+              <div className={`p-4 rounded-lg border ${
+                stats.totalPeople > 0 ? 
+                  (stats.activeMembers / stats.totalPeople) >= 0.8 ? 
+                    'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800' :
+                  (stats.activeMembers / stats.totalPeople) >= 0.6 ? 
+                    'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-yellow-200 dark:border-yellow-800' :
+                    'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800'
+                : 'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800'
+              }`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Users2 className={`h-5 w-5 ${
+                    stats.totalPeople > 0 ? 
+                      (stats.activeMembers / stats.totalPeople) >= 0.8 ? 'text-green-600' :
+                      (stats.activeMembers / stats.totalPeople) >= 0.6 ? 'text-yellow-600' :
+                      'text-red-600'
+                    : 'text-blue-600'
+                  }`} />
+                  <h4 className={`font-semibold ${
+                    stats.totalPeople > 0 ? 
+                      (stats.activeMembers / stats.totalPeople) >= 0.8 ? 'text-green-900 dark:text-green-100' :
+                      (stats.activeMembers / stats.totalPeople) >= 0.6 ? 'text-yellow-900 dark:text-yellow-100' :
+                      'text-red-900 dark:text-red-100'
+                    : 'text-blue-900 dark:text-blue-100'
+                  }`}>Member Engagement</h4>
+                </div>
+                {isLoading ? (
+                  <Skeleton className="h-4 w-32 mb-2" />
+                ) : (
+                  <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 mb-1">
+                    {stats.totalPeople > 0 ? `${((stats.activeMembers / stats.totalPeople) * 100).toFixed(0)}%` : '0%'}
+                  </p>
+                )}
+                <p className="text-sm text-blue-600 dark:text-blue-400">
+                  {stats.activeMembers} of {stats.totalPeople} people are active members
+                </p>
+              </div>
+
+              {/* Donation Growth */}
+              <div className={`p-4 rounded-lg border ${
+                stats.growthRate > 5 ? 
+                  'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800' :
+                stats.growthRate > 0 ? 
+                  'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-yellow-200 dark:border-yellow-800' :
+                  'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800'
+              }`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp className={`h-5 w-5 ${
+                    stats.growthRate > 5 ? 'text-green-600' :
+                    stats.growthRate > 0 ? 'text-yellow-600' :
+                    'text-red-600'
+                  }`} />
+                  <h4 className={`font-semibold ${
+                    stats.growthRate > 5 ? 'text-green-900 dark:text-green-100' :
+                    stats.growthRate > 0 ? 'text-yellow-900 dark:text-yellow-100' :
+                    'text-red-900 dark:text-red-100'
+                  }`}>Donation Trend</h4>
+                </div>
+                {isLoading ? (
+                  <Skeleton className="h-4 w-32 mb-2" />
+                ) : (
+                  <p className={`text-2xl font-bold mb-1 ${
+                    stats.growthRate > 5 ? 'text-green-700 dark:text-green-300' :
+                    stats.growthRate > 0 ? 'text-yellow-700 dark:text-yellow-300' :
+                    'text-red-700 dark:text-red-300'
+                  }`}>
+                    {stats.growthRate > 0 ? '+' : ''}{stats.growthRate.toFixed(1)}%
+                  </p>
+                )}
+                <p className={`text-sm ${
+                  stats.growthRate > 5 ? 'text-green-600 dark:text-green-400' :
+                  stats.growthRate > 0 ? 'text-yellow-600 dark:text-yellow-400' :
+                  'text-red-600 dark:text-red-400'
+                }`}>
+                  {stats.growthRate > 0 ? 'Above' : 'Below'} monthly average
+                </p>
+              </div>
+
+              {/* Event Activity */}
+              <div className={`p-4 rounded-lg border ${
+                stats.eventsThisMonth > stats.averageEventsPerMonth * 1.2 ? 
+                  'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800' :
+                stats.eventsThisMonth > stats.averageEventsPerMonth ? 
+                  'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-yellow-200 dark:border-yellow-800' :
+                  'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800'
+              }`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Calendar className={`h-5 w-5 ${
+                    stats.eventsThisMonth > stats.averageEventsPerMonth * 1.2 ? 'text-green-600' :
+                    stats.eventsThisMonth > stats.averageEventsPerMonth ? 'text-yellow-600' :
+                    'text-red-600'
+                  }`} />
+                  <h4 className={`font-semibold ${
+                    stats.eventsThisMonth > stats.averageEventsPerMonth * 1.2 ? 'text-green-900 dark:text-green-100' :
+                    stats.eventsThisMonth > stats.averageEventsPerMonth ? 'text-yellow-900 dark:text-yellow-100' :
+                    'text-red-900 dark:text-red-100'
+                  }`}>Event Activity</h4>
+                </div>
+                {isLoading ? (
+                  <Skeleton className="h-4 w-32 mb-2" />
+                ) : (
+                  <p className={`text-2xl font-bold mb-1 ${
+                    stats.eventsThisMonth > stats.averageEventsPerMonth * 1.2 ? 'text-green-700 dark:text-green-300' :
+                    stats.eventsThisMonth > stats.averageEventsPerMonth ? 'text-yellow-700 dark:text-yellow-300' :
+                    'text-red-700 dark:text-red-300'
+                  }`}>
+                    {stats.eventsThisMonth > stats.averageEventsPerMonth ? 'Above' : 'Below'} Average
+                  </p>
+                )}
+                <p className={`text-sm ${
+                  stats.eventsThisMonth > stats.averageEventsPerMonth * 1.2 ? 'text-green-600 dark:text-green-400' :
+                  stats.eventsThisMonth > stats.averageEventsPerMonth ? 'text-yellow-600 dark:text-yellow-400' :
+                  'text-red-600 dark:text-red-400'
+                }`}>
+                  {stats.eventsThisMonth} events this month vs {stats.averageEventsPerMonth} average
+                </p>
+              </div>
+
+
+              {/* Sunday Service Attendance Rate */}
+              <div className={`p-4 rounded-lg border ${
+                stats.sundayServiceRate >= 70 ? 
+                  'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800' :
+                stats.sundayServiceRate >= 50 ? 
+                  'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-yellow-200 dark:border-yellow-800' :
+                  'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800'
+              }`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <BookOpen className={`h-5 w-5 ${
+                    stats.sundayServiceRate >= 70 ? 'text-green-600' :
+                    stats.sundayServiceRate >= 50 ? 'text-yellow-600' :
+                    'text-red-600'
+                  }`} />
+                  <h4 className={`font-semibold ${
+                    stats.sundayServiceRate >= 70 ? 'text-green-900 dark:text-green-100' :
+                    stats.sundayServiceRate >= 50 ? 'text-yellow-900 dark:text-yellow-100' :
+                    'text-red-900 dark:text-red-100'
+                  }`}>Sunday Service Rate</h4>
+                </div>
+                {isLoading ? (
+                  <Skeleton className="h-4 w-32 mb-2" />
+                ) : (
+                  <p className={`text-2xl font-bold mb-1 ${
+                    stats.sundayServiceRate >= 70 ? 'text-green-700 dark:text-green-300' :
+                    stats.sundayServiceRate >= 50 ? 'text-yellow-700 dark:text-yellow-300' :
+                    'text-red-700 dark:text-red-300'
+                  }`}>
+                    {stats.sundayServiceRate.toFixed(0)}%
+                  </p>
+                )}
+                <p className={`text-sm ${
+                  stats.sundayServiceRate >= 70 ? 'text-green-600 dark:text-green-400' :
+                  stats.sundayServiceRate >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
+                  'text-red-600 dark:text-red-400'
+                }`}>
+                  Active members who attend Sunday service (last 30 days)
+                </p>
+              </div>
+
+              {/* Volunteer Engagement */}
+              <div className={`p-4 rounded-lg border ${
+                stats.eventsStillNeedingVolunteers === 0 ? 
+                  'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800' :
+                stats.eventsStillNeedingVolunteers <= 2 ? 
+                  'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-yellow-200 dark:border-yellow-800' :
+                  'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800'
+              }`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Handshake className={`h-5 w-5 ${
+                    stats.eventsStillNeedingVolunteers === 0 ? 'text-green-600' :
+                    stats.eventsStillNeedingVolunteers <= 2 ? 'text-yellow-600' :
+                    'text-red-600'
+                  }`} />
+                  <h4 className={`font-semibold ${
+                    stats.eventsStillNeedingVolunteers === 0 ? 'text-green-900 dark:text-green-100' :
+                    stats.eventsStillNeedingVolunteers <= 2 ? 'text-yellow-900 dark:text-yellow-100' :
+                    'text-red-900 dark:text-red-100'
+                  }`}>Volunteer Need</h4>
+                </div>
+                {isLoading ? (
+                  <Skeleton className="h-4 w-32 mb-2" />
+                ) : (
+                  <p className={`text-2xl font-bold mb-1 ${
+                    stats.eventsStillNeedingVolunteers === 0 ? 'text-green-700 dark:text-green-300' :
+                    stats.eventsStillNeedingVolunteers <= 2 ? 'text-yellow-700 dark:text-yellow-300' :
+                    'text-red-700 dark:text-red-300'
+                  }`}>
+                    {stats.eventsStillNeedingVolunteers}
+                  </p>
+                )}
+                <p className={`text-sm ${
+                  stats.eventsStillNeedingVolunteers === 0 ? 'text-green-600 dark:text-green-400' :
+                  stats.eventsStillNeedingVolunteers <= 2 ? 'text-yellow-600 dark:text-yellow-400' :
+                  'text-red-600 dark:text-red-400'
+                }`}>
+                  Events still need volunteers
+                </p>
+              </div>
+
+              {/* Recent Visitors */}
+              <div className={`p-4 rounded-lg border ${
+                (() => {
+                  const thirtyDaysAgo = new Date();
+                  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                  const recentVisitors = people.filter(person => 
+                    person.status === 'visitor' && 
+                    new Date(person.createdAt) >= thirtyDaysAgo
+                  ).length;
+                  return recentVisitors >= 3 ? 
+                    'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800' :
+                  recentVisitors >= 1 ? 
+                    'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-yellow-200 dark:border-yellow-800' :
+                    'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800';
+                })()
+              }`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <UserPlus className={`h-5 w-5 ${
+                    (() => {
+                      const thirtyDaysAgo = new Date();
+                      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                      const recentVisitors = people.filter(person => 
+                        person.status === 'visitor' && 
+                        new Date(person.createdAt) >= thirtyDaysAgo
+                      ).length;
+                      return recentVisitors >= 3 ? 'text-green-600' :
+                             recentVisitors >= 1 ? 'text-yellow-600' :
+                             'text-red-600';
+                    })()
+                  }`} />
+                  <h4 className={`font-semibold ${
+                    (() => {
+                      const thirtyDaysAgo = new Date();
+                      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                      const recentVisitors = people.filter(person => 
+                        person.status === 'visitor' && 
+                        new Date(person.createdAt) >= thirtyDaysAgo
+                      ).length;
+                      return recentVisitors >= 3 ? 'text-green-900 dark:text-green-100' :
+                             recentVisitors >= 1 ? 'text-yellow-900 dark:text-yellow-100' :
+                             'text-red-900 dark:text-red-100';
+                    })()
+                  }`}>Recent Visitors</h4>
+                </div>
+                {isLoading ? (
+                  <Skeleton className="h-4 w-32 mb-2" />
+                ) : (
+                  <p className={`text-2xl font-bold mb-1 ${
+                    (() => {
+                      const thirtyDaysAgo = new Date();
+                      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                      const recentVisitors = people.filter(person => 
+                        person.status === 'visitor' && 
+                        new Date(person.createdAt) >= thirtyDaysAgo
+                      ).length;
+                      return recentVisitors >= 3 ? 'text-green-700 dark:text-green-300' :
+                             recentVisitors >= 1 ? 'text-yellow-700 dark:text-yellow-300' :
+                             'text-red-700 dark:text-red-300';
+                    })()
+                  }`}>
+                    {(() => {
+                      const thirtyDaysAgo = new Date();
+                      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                      
+                      // Count visitors added in the last 30 days
+                      const recentVisitors = people.filter(person => 
+                        person.status === 'visitor' && 
+                        new Date(person.createdAt) >= thirtyDaysAgo
+                      ).length;
+                      
+                      return recentVisitors;
+                    })()}
+                  </p>
+                )}
+                <p className={`text-sm ${
+                  (() => {
+                    const thirtyDaysAgo = new Date();
+                    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                    const recentVisitors = people.filter(person => 
+                      person.status === 'visitor' && 
+                      new Date(person.createdAt) >= thirtyDaysAgo
+                    ).length;
+                    return recentVisitors >= 3 ? 'text-green-600 dark:text-green-400' :
+                           recentVisitors >= 1 ? 'text-yellow-600 dark:text-yellow-400' :
+                           'text-red-600 dark:text-red-400';
+                  })()
+                }`}>
+                  New visitors added in the last 30 days
+                </p>
+              </div>
+            </div>
+
+            {/* Additional Insights Row */}
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              {/* Top Performing Metric */}
+              <div className="p-4 bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-950 dark:to-emerald-900 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                <div className="flex items-center gap-2 mb-3">
+                  <Trophy className="h-5 w-5 text-emerald-600" />
+                  <h4 className="font-semibold text-emerald-900 dark:text-emerald-100">Top Performing Area</h4>
+                </div>
+                {isLoading ? (
+                  <Skeleton className="h-4 w-48 mb-2" />
+                ) : (
+                  <div>
+                    <p className="text-lg font-bold text-emerald-700 dark:text-emerald-300 mb-1">
+                      {(() => {
+                        const metrics = [
+                          { 
+                            name: 'Member Engagement', 
+                            value: stats.totalPeople > 0 ? (stats.activeMembers / stats.totalPeople) * 100 : 0,
+                            condition: stats.totalPeople > 0,
+                            recommendation: 'Keep fostering community connections and involvement.'
+                          },
+                          { 
+                            name: 'Sunday Service Rate', 
+                            value: stats.sundayServiceRate,
+                            condition: stats.sundayServiceRate > 0,
+                            recommendation: 'Continue building meaningful Sunday experiences.'
+                          },
+                          { 
+                            name: 'Event Activity', 
+                            value: stats.eventsThisMonth > stats.averageEventsPerMonth ? 100 : 50,
+                            condition: stats.eventsThisMonth > 0,
+                            recommendation: 'Maintain this strong event planning momentum.'
+                          },
+                          { 
+                            name: 'Donation Growth', 
+                            value: stats.growthRate > 0 ? Math.abs(stats.growthRate) : 0,
+                            condition: stats.growthRate > 0,
+                            recommendation: 'Keep communicating the impact of giving.'
+                          },
+                          { 
+                            name: 'Volunteer Coverage', 
+                            value: stats.eventsStillNeedingVolunteers === 0 ? 100 : 0,
+                            condition: stats.eventsStillNeedingVolunteers === 0,
+                            recommendation: 'Excellent volunteer engagement - keep recognizing their efforts.'
+                          },
+                          { 
+                            name: 'Visitor Growth', 
+                            value: (() => {
+                              const thirtyDaysAgo = new Date();
+                              thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                              const recentVisitors = people.filter(person => 
+                                person.status === 'visitor' && 
+                                new Date(person.createdAt) >= thirtyDaysAgo
+                              ).length;
+                              return recentVisitors > 0 ? 100 : 0;
+                            })(),
+                            condition: (() => {
+                              const thirtyDaysAgo = new Date();
+                              thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                              return people.filter(person => 
+                                person.status === 'visitor' && 
+                                new Date(person.createdAt) >= thirtyDaysAgo
+                              ).length > 0;
+                            })(),
+                            recommendation: 'Great visitor attraction - focus on follow-up and integration.'
+                          }
+                        ].filter(m => m.condition && !isNaN(m.value) && isFinite(m.value));
+                        
+                        if (metrics.length === 0) return 'No data available';
+                        
+                        const topMetric = metrics.reduce((max, current) => 
+                          current.value > max.value ? current : max
+                        );
+                        
+                        return topMetric.name;
+                      })()}
+                    </p>
+                    <p className="text-sm text-emerald-600 dark:text-emerald-400">
+                      {(() => {
+                        const metrics = [
+                          { 
+                            name: 'Member Engagement', 
+                            value: stats.totalPeople > 0 ? (stats.activeMembers / stats.totalPeople) * 100 : 0,
+                            condition: stats.totalPeople > 0,
+                            recommendation: 'Keep fostering community connections and involvement.'
+                          },
+                          { 
+                            name: 'Sunday Service Rate', 
+                            value: stats.sundayServiceRate,
+                            condition: stats.sundayServiceRate > 0,
+                            recommendation: 'Continue building meaningful Sunday experiences.'
+                          },
+                          { 
+                            name: 'Event Activity', 
+                            value: stats.eventsThisMonth > stats.averageEventsPerMonth ? 100 : 50,
+                            condition: stats.eventsThisMonth > 0,
+                            recommendation: 'Maintain this strong event planning momentum.'
+                          },
+                          { 
+                            name: 'Donation Growth', 
+                            value: stats.growthRate > 0 ? Math.abs(stats.growthRate) : 0,
+                            condition: stats.growthRate > 0,
+                            recommendation: 'Keep communicating the impact of giving.'
+                          },
+                          { 
+                            name: 'Volunteer Coverage', 
+                            value: stats.eventsStillNeedingVolunteers === 0 ? 100 : 0,
+                            condition: stats.eventsStillNeedingVolunteers === 0,
+                            recommendation: 'Excellent volunteer engagement - keep recognizing their efforts.'
+                          },
+                          { 
+                            name: 'Visitor Growth', 
+                            value: (() => {
+                              const thirtyDaysAgo = new Date();
+                              thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                              const recentVisitors = people.filter(person => 
+                                person.status === 'visitor' && 
+                                new Date(person.createdAt) >= thirtyDaysAgo
+                              ).length;
+                              return recentVisitors > 0 ? 100 : 0;
+                            })(),
+                            condition: (() => {
+                              const thirtyDaysAgo = new Date();
+                              thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                              return people.filter(person => 
+                                person.status === 'visitor' && 
+                                new Date(person.createdAt) >= thirtyDaysAgo
+                              ).length > 0;
+                            })(),
+                            recommendation: 'Great visitor attraction - focus on follow-up and integration.'
+                          }
+                        ].filter(m => m.condition && !isNaN(m.value) && isFinite(m.value));
+                        
+                        if (metrics.length === 0) return 'Your strongest organizational metric';
+                        
+                        const topMetric = metrics.reduce((max, current) => 
+                          current.value > max.value ? current : max
+                        );
+                        
+                        return topMetric.recommendation;
+                      })()}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Growth Opportunity */}
+              <div className="p-4 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 rounded-lg border border-amber-200 dark:border-amber-800">
+                <div className="flex items-center gap-2 mb-3">
+                  <Activity className="h-5 w-5 text-amber-600" />
+                  <h4 className="font-semibold text-amber-900 dark:text-amber-100">Growth Opportunity</h4>
+                </div>
+                {isLoading ? (
+                  <Skeleton className="h-4 w-48 mb-2" />
+                ) : (
+                  <div>
+                    <p className="text-lg font-bold text-amber-700 dark:text-amber-300 mb-1">
+                      {(() => {
+                        // Priority 1: Immediate needs
+                        if (stats.eventsStillNeedingVolunteers > 0) return 'Volunteer Recruitment';
+                    
+                        // Priority 2: Donation trends
+                        if (stats.growthRate < 0) return 'Donation Growth';
+
+                        // Priority 4: Sunday service attendance
+                        if (stats.sundayServiceRate < 50) return 'Sunday Service Attendance';
+                        
+                        // Priority 4: Event activity
+                        if (stats.eventsThisMonth < stats.averageEventsPerMonth) return 'Event Planning';                        
+                        
+                        // Priority 7: Visitor follow-up
+                        const thirtyDaysAgo = new Date();
+                        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                        const recentVisitors = people.filter(person => 
+                          person.status === 'visitor' && 
+                          new Date(person.createdAt) >= thirtyDaysAgo
+                        ).length;
+                      
+                        if (recentVisitors > 0) return 'Visitor Follow-up';
+                        // Priority 3: Member engagement issues
+                        if (stats.totalPeople > 0 && (stats.activeMembers / stats.totalPeople) < 0.7) return 'Member Engagement';
+                            
+                        // Default: Member retention
+                        return 'Member Retention';
+                      })()}
+                    </p>
+                    <p className="text-sm text-amber-600 dark:text-amber-400">
+                      {(() => {
+                        // Priority 1: Immediate needs
+                        if (stats.eventsStillNeedingVolunteers > 0) return 'Reach out to members and encourage volunteer sign-ups for upcoming events.';
+                   
+                        // Priority 2: Donation trends
+                        if (stats.growthRate < 0) return 'Share stories of impact and consider different giving opportunities to encourage donations.';
+
+                        // Priority 3: Member engagement issues
+                        if (stats.totalPeople > 0 && (stats.activeMembers / stats.totalPeople) < 0.7) return 'Focus on engaging visitors and inactive members through personal outreach and meaningful activities.';
+                        
+                        // Priority 4: Sunday service attendance
+                        if (stats.sundayServiceRate < 50) return 'Consider what might be preventing members from attending and address those barriers.';
+                        
+                        // Priority 5: Event activity
+                        if (stats.eventsThisMonth < stats.averageEventsPerMonth) return 'Plan more events or activities to increase member engagement and community building.';
+                        
+                        // Priority 6: Visitor follow-up
+                        const thirtyDaysAgo = new Date();
+                        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                        const recentVisitors = people.filter(person => 
+                          person.status === 'visitor' && 
+                          new Date(person.createdAt) >= thirtyDaysAgo
+                        ).length;
+                        
+                        if (recentVisitors > 0) return 'Follow up with recent visitors to help them feel welcome and connected.';
+                        
+                        // Default: Member retention
+                        return 'Focus on maintaining strong relationships and preventing member turnover.';
+                      })()}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Average Attendance by Event Type Section */}
       <motion.div variants={itemVariants}>
@@ -868,13 +1486,21 @@ export function Dashboard() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-base font-medium text-foreground">Sunday Service</p>
-                  <p className="text-2xl font-bold text-primary">
-                    {stats.sundayServiceEvents > 0 ? 
-                      Math.round(stats.sundayServiceAttendance / stats.sundayServiceEvents) : 0}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {stats.sundayServiceEvents} events • {stats.sundayServiceAttendance} total
-                  </p>
+                  {isLoading ? (
+                    <Skeleton className="h-8 w-12 mb-1" />
+                  ) : (
+                    <p className="text-2xl font-bold text-primary">
+                      {stats.sundayServiceEvents > 0 ? 
+                        Math.round(stats.sundayServiceAttendance / stats.sundayServiceEvents) : 0}
+                    </p>
+                  )}
+                  {isLoading ? (
+                    <Skeleton className="h-4 w-32" />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      {stats.sundayServiceEvents} events • {stats.sundayServiceAttendance} total
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -887,13 +1513,21 @@ export function Dashboard() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-base font-medium text-foreground">Bible Study</p>
-                  <p className="text-2xl font-bold text-primary">
-                    {stats.bibleStudyEvents > 0 ? 
-                      Math.round(stats.bibleStudyAttendance / stats.bibleStudyEvents) : 0}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {stats.bibleStudyEvents} events • {stats.bibleStudyAttendance} total
-                  </p>
+                  {isLoading ? (
+                    <Skeleton className="h-8 w-12 mb-1" />
+                  ) : (
+                    <p className="text-2xl font-bold text-primary">
+                      {stats.bibleStudyEvents > 0 ? 
+                        Math.round(stats.bibleStudyAttendance / stats.bibleStudyEvents) : 0}
+                    </p>
+                  )}
+                  {isLoading ? (
+                    <Skeleton className="h-4 w-32" />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      {stats.bibleStudyEvents} events • {stats.bibleStudyAttendance} total
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -906,13 +1540,21 @@ export function Dashboard() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-base font-medium text-foreground">Fellowship</p>
-                  <p className="text-2xl font-bold text-primary">
-                    {stats.fellowshipEvents > 0 ? 
-                      Math.round(stats.fellowshipAttendance / stats.fellowshipEvents) : 0}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {stats.fellowshipEvents} events • {stats.fellowshipAttendance} total
-                  </p>
+                  {isLoading ? (
+                    <Skeleton className="h-8 w-12 mb-1" />
+                  ) : (
+                    <p className="text-2xl font-bold text-primary">
+                      {stats.fellowshipEvents > 0 ? 
+                        Math.round(stats.fellowshipAttendance / stats.fellowshipEvents) : 0}
+                    </p>
+                  )}
+                  {isLoading ? (
+                    <Skeleton className="h-4 w-32" />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      {stats.fellowshipEvents} events • {stats.fellowshipAttendance} total
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -1015,7 +1657,6 @@ export function Dashboard() {
                                 {new Date(event.date).toLocaleDateString()} • {event.attendees} attendees
                               </div>
                             </div>
-                            <div className="text-sm text-muted-foreground">attendees</div>
                           </div>
                         ))}
                       </div>
@@ -1062,17 +1703,6 @@ export function Dashboard() {
                           
                           return false;
                         });
-
-                        // Debug: Log image data
-                        console.log('Member image debug:', {
-                          memberName: member.name,
-                          memberData: memberData ? {
-                            firstName: memberData.firstName,
-                            lastName: memberData.lastName,
-                            image_url: memberData.image_url,
-                            hasImage: !!memberData.image_url
-                          } : 'No member data found'
-                        });
                         
                         return (
                           <div key={member.name} className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-gray-50 transition-colors">
@@ -1093,9 +1723,6 @@ export function Dashboard() {
                                       onError={(e) => {
                                         console.log('Image failed to load:', memberData.image_url);
                                         e.target.style.display = 'none';
-                                      }}
-                                      onLoad={() => {
-                                        console.log('Image loaded successfully:', memberData.image_url);
                                       }}
                                     />
                                   ) : null}
@@ -1146,7 +1773,13 @@ export function Dashboard() {
                   <p className="text-base font-medium text-foreground">This Month</p>
                   <p className="text-2xl font-bold text-green-600 dark:text-green-400">${(stats.monthlyDonations || 0).toFixed(2)}</p>
                   <p className="text-sm text-muted-foreground">
-                    {stats.totalDonations > 0 ? `${(((stats.monthlyDonations || 0) / stats.totalDonations) * 100).toFixed(1)}%` : '0%'} of total
+                    {(() => {
+                      const now = new Date();
+                      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+                      const dayOfMonth = now.getDate();
+                      const monthProgress = ((dayOfMonth / daysInMonth) * 100).toFixed(1);
+                      return `${monthProgress}% of month completed`;
+                    })()}
                   </p>
                 </div>
               </div>
@@ -1194,7 +1827,7 @@ export function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-3">
-              {/* Upcoming Events */}
+              {/* Average Events Per Month */}
               <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
                 <div className="flex-shrink-0">
                   <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center">
@@ -1202,9 +1835,9 @@ export function Dashboard() {
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-foreground">Upcoming</p>
-                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{stats.upcomingEvents}</p>
-                  <p className="text-sm text-muted-foreground">Future events</p>
+                  <p className="text-base font-medium text-foreground">Average Per Month</p>
+                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{stats.averageEventsPerMonth}</p>
+                  <p className="text-sm text-muted-foreground">Last 6 months average</p>
                 </div>
               </div>
 

@@ -88,14 +88,14 @@ export function Layout() {
 
     const fetchOrganizationName = async () => {
       try {
-        console.log('Fetching organization name...');
+        // console.log('Fetching organization name...');
         const name = await getOrganizationName();
-        console.log('Organization name received:', name);
+        // console.log('Organization name received:', name);
         if (name) {
           setOrganizationName(name);
-          console.log('Organization name set to:', name);
+          // console.log('Organization name set to:', name);
         } else {
-          console.log('No organization name received, keeping default');
+          // console.log('No organization name received, keeping default');
         }
       } catch (error) {
         console.error('Error fetching organization name:', error);
@@ -108,7 +108,7 @@ export function Layout() {
 
   const handleSignOut = async () => {
     try {
-      console.log('Sign out initiated...');
+      // console.log('Sign out initiated...');
       
       // Clear any local storage or session data
       localStorage.clear();
@@ -117,7 +117,7 @@ export function Layout() {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
-      console.log('Sign out successful, navigating to login...');
+      // console.log('Sign out successful, navigating to login...');
       
       // Force a page reload to ensure clean state
       window.location.href = '/login';
