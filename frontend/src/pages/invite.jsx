@@ -118,8 +118,6 @@ export function Invite() {
         .eq('email', invitation.email)
         .single();
 
-      let memberId = authData.user.id;
-
       if (existingMember) {
         // First, update the invitation to remove the member_id reference
         const { error: updateInvitationError } = await supabase
@@ -131,34 +129,28 @@ export function Invite() {
 
         if (updateInvitationError) throw updateInvitationError;
 
-        // Now update the member record with the auth user ID and organization
-        const { error: updateMemberError } = await supabase
+        // Delete the old member record since we'll create a new one with the auth user ID
+        const { error: deleteMemberError } = await supabase
           .from('members')
-          .update({
-            id: authData.user.id, // Link to the auth user
-            firstname: invitation.first_name,
-            lastname: invitation.last_name,
-            status: 'active',
-            organization_id: invitation.organization_id
-          })
+          .delete()
           .eq('email', invitation.email);
 
-        if (updateMemberError) throw updateMemberError;
-      } else {
-        // Create new member record
-        const { error: memberError } = await supabase
-          .from('members')
-          .insert({
-            id: authData.user.id, // Use the same ID as the auth user
-            firstname: invitation.first_name,
-            lastname: invitation.last_name,
-            email: invitation.email,
-            status: 'active',
-            organization_id: invitation.organization_id
-          });
-
-        if (memberError) throw memberError;
+        if (deleteMemberError) throw deleteMemberError;
       }
+
+      // Create new member record with auth user ID
+      const { error: memberError } = await supabase
+        .from('members')
+        .insert({
+          id: authData.user.id, // Use the same ID as the auth user
+          firstname: invitation.first_name,
+          lastname: invitation.last_name,
+          email: invitation.email,
+          status: 'active',
+          organization_id: invitation.organization_id
+        });
+
+      if (memberError) throw memberError;
 
       // Create organization membership
       const { error: membershipError } = await supabase
