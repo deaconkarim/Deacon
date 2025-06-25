@@ -1786,7 +1786,7 @@ export function Dashboard() {
             <CardDescription className="text-base">Financial overview of your organization</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-3">
               {/* Monthly Donations */}
               <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
                 <div className="flex-shrink-0">
@@ -1808,7 +1808,19 @@ export function Dashboard() {
                   </p>
                 </div>
               </div>
-
+              {/* Last Month's Donations */}
+              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                    <DollarSign className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-base font-medium text-foreground">Last Month</p>
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">${(stats.lastMonthDonations || 0).toFixed(2)}</p>
+                  <p className="text-sm text-muted-foreground">Previous month's total</p>
+                </div>
+              </div>
               {/* Monthly Average */}
               <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
                 <div className="flex-shrink-0">
