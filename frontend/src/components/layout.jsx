@@ -21,7 +21,12 @@ import {
   UserPlus,
   ClipboardList,
   BarChart2,
-  Heart
+  Heart,
+  Bell,
+  CheckCircle,
+  Clock,
+  XCircle,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
@@ -32,12 +37,12 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { Logo } from '@/components/ui/logo';
 import { useAuth } from '@/lib/authContext';
 import { isUserAdmin, getApprovalNotifications, getOrganizationName } from '@/lib/data';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabaseClient';
-import { Logo } from '@/components/ui/logo';
 
 export function Layout() {
   const { user, signOut } = useAuth();
@@ -54,7 +59,7 @@ export function Layout() {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Events', href: '/events', icon: Calendar },
-    { name: 'Children', href: '/children-check-in', icon: Baby },
+    { name: 'Children Check-In', href: '/children-check-in', icon: Baby },
     { name: 'People', href: '/members', icon: Users },
     { name: 'Donations', href: '/donations', icon: DollarSign },
     { name: 'Groups', href: '/groups', icon: UserPlus },
@@ -175,10 +180,8 @@ export function Layout() {
         {/* Header stays at the top, full width */}
         <header className="bg-card border-b px-4 py-3 flex justify-between items-center sticky top-0 z-40">
           <div className="flex items-center gap-2">
-            <span className="hidden sm:inline-block w-10 h-10 sm:w-8 sm:h-8 rounded-xl overflow-hidden flex items-center justify-center">
-              <Logo size={32} />
-            </span>
-            <span className="font-semibold text-lg sm:text-base text-foreground">Deacon - {organizationName}</span>
+            <Logo showText={false} size={40} />
+            <span className="font-semibold text-lg text-foreground">Deacon - {organizationName}</span>
           </div>
           {user && (
             <div className="flex items-center gap-2">
@@ -223,7 +226,7 @@ export function Layout() {
       {/* Mobile Navigation (phones only) remains unchanged */}
       <nav className="fixed bottom-0 left-0 right-0 bg-card border-t md:hidden z-50">
         <div className="max-w-screen-xl mx-auto px-2">
-          <div className="flex justify-around items-center h-20">
+          <div className="flex justify-around items-center h-14">
             {mainNavItems.slice(0, 4).map((item) => {
               const isActive = location.pathname === item.href;
               return (
@@ -231,13 +234,13 @@ export function Layout() {
                   key={item.name}
                   to={item.href}
                   className={({ isActive }) => cn(
-                    "flex flex-col items-center justify-center px-3 py-2 text-xs font-medium rounded-md transition-all relative",
+                    "flex flex-col items-center justify-center px-2 py-1 text-[9px] font-medium rounded-md transition-all relative",
                     isActive
                       ? "text-primary"
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  <item.icon className={cn("h-6 w-6 mb-1", isActive ? "text-primary" : "text-muted-foreground")} />
+                  <item.icon className={cn("h-4 w-4 mb-0.5", isActive ? "text-primary" : "text-muted-foreground")} />
                   <span>{item.name}</span>
                   {item.name === 'Settings' && isAdmin && pendingApprovals > 0 && (
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
@@ -249,9 +252,9 @@ export function Layout() {
             })}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex flex-col items-center justify-center px-3 py-2 h-auto">
-                  <MoreHorizontal className="h-6 w-6 mb-1 text-muted-foreground" />
-                  <span className="text-xs font-medium">More</span>
+                <Button variant="ghost" className="flex flex-col items-center justify-center px-2 py-1 h-auto">
+                  <MoreHorizontal className="h-4 w-4 mb-0.5 text-muted-foreground" />
+                  <span className="text-[9px] font-medium">More</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
