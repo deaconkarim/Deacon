@@ -44,12 +44,21 @@ export default function PrivacyPolicy() {
     </ul>
   
     <h2 className="text-xl font-semibold mt-6 mb-2">5. Information Sharing and Disclosure</h2>
-    <ul className="list-disc ml-6 mb-4">
-      <li>We do <strong>not</strong> share, sell, rent, or disclose your mobile number or SMS consent data to third parties for marketing or promotional use.</li>
-      <li>We may share data with trusted service providers who assist in operating the app or delivering services (e.g., hosting, analytics, customer support).</li>
-      <li>All third-party partners are contractually bound to safeguard your data.</li>
-      <li>We may disclose information if required by law or to protect our legal rights.</li>
-    </ul>
+<ul className="list-disc ml-6 mb-4">
+  <li>
+    We do <strong>not</strong> share mobile information (including phone numbers) with third parties or affiliates for marketing or promotional purposes.
+  </li>
+  <li>
+    Information may be shared with trusted subcontractors who perform services on our behalf, such as customer support or technical infrastructure. These parties are bound by confidentiality agreements and may only use information as necessary to support our services.
+  </li>
+  <li>
+    Text messaging originator opt-in data and consent will <strong>not</strong> be shared with any third parties.
+  </li>
+  <li>
+    We may disclose information if required by law, regulation, subpoena, or to protect our legal rights and those of our users.
+  </li>
+</ul>
+
   
     <h2 className="text-xl font-semibold mt-6 mb-2">6. Cookies and Tracking Technologies</h2>
     <p className="mb-4">
