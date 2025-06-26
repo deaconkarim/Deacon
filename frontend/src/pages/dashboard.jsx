@@ -969,44 +969,46 @@ export function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {/* Member Engagement */}
-              <div className={`p-4 rounded-lg border ${
-                stats.totalPeople > 0 ? 
-                  (stats.activeMembers / stats.totalPeople) >= 0.8 ? 
-                    'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800' :
-                  (stats.activeMembers / stats.totalPeople) >= 0.6 ? 
-                    'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-yellow-200 dark:border-yellow-800' :
-                    'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800'
-                : 'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800'
+               {/* Sunday Service Attendance Rate */}
+               <div className={`p-4 rounded-lg border ${
+                stats.sundayServiceRate >= 70 ? 
+                  'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800' :
+                stats.sundayServiceRate >= 50 ? 
+                  'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-yellow-200 dark:border-yellow-800' :
+                  'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800'
               }`}>
                 <div className="flex items-center gap-2 mb-2">
-                  <Users2 className={`h-5 w-5 ${
-                    stats.totalPeople > 0 ? 
-                      (stats.activeMembers / stats.totalPeople) >= 0.8 ? 'text-green-600' :
-                      (stats.activeMembers / stats.totalPeople) >= 0.6 ? 'text-yellow-600' :
-                      'text-red-600'
-                    : 'text-blue-600'
+                  <BookOpen className={`h-5 w-5 ${
+                    stats.sundayServiceRate >= 70 ? 'text-green-600' :
+                    stats.sundayServiceRate >= 50 ? 'text-yellow-600' :
+                    'text-red-600'
                   }`} />
                   <h4 className={`font-semibold ${
-                    stats.totalPeople > 0 ? 
-                      (stats.activeMembers / stats.totalPeople) >= 0.8 ? 'text-green-900 dark:text-green-100' :
-                      (stats.activeMembers / stats.totalPeople) >= 0.6 ? 'text-yellow-900 dark:text-yellow-100' :
-                      'text-red-900 dark:text-red-100'
-                    : 'text-blue-900 dark:text-blue-100'
-                  }`}>Member Engagement</h4>
+                    stats.sundayServiceRate >= 70 ? 'text-green-900 dark:text-green-100' :
+                    stats.sundayServiceRate >= 50 ? 'text-yellow-900 dark:text-yellow-100' :
+                    'text-red-900 dark:text-red-100'
+                  }`}>Sunday Service Rate</h4>
                 </div>
                 {isLoading ? (
                   <Skeleton className="h-4 w-32 mb-2" />
                 ) : (
-                  <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 mb-1">
-                    {stats.totalPeople > 0 ? `${((stats.activeMembers / stats.totalPeople) * 100).toFixed(0)}%` : '0%'}
+                  <p className={`text-2xl font-bold mb-1 ${
+                    stats.sundayServiceRate >= 70 ? 'text-green-700 dark:text-green-300' :
+                    stats.sundayServiceRate >= 50 ? 'text-yellow-700 dark:text-yellow-300' :
+                    'text-red-700 dark:text-red-300'
+                  }`}>
+                    {stats.sundayServiceRate.toFixed(0)}%
                   </p>
                 )}
-                <p className="text-sm text-blue-600 dark:text-blue-400">
-                  {stats.activeMembers} of {stats.totalPeople} people are active members
+                <p className={`text-sm ${
+                  stats.sundayServiceRate >= 70 ? 'text-green-600 dark:text-green-400' :
+                  stats.sundayServiceRate >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
+                  'text-red-600 dark:text-red-400'
+                }`}>
+                  Active members who attend Sunday service (last 30 days)
                 </p>
               </div>
-
+             
               {/* Donation Growth */}
               <div className={`p-4 rounded-lg border ${
                 donationTrend > 5 ? 
@@ -1051,7 +1053,45 @@ export function Dashboard() {
                   Projected: ${projectedDonations.toLocaleString(undefined, {maximumFractionDigits: 0})} vs Last Month: ${lastMonthDonations.toLocaleString(undefined, {maximumFractionDigits: 0})}
                 </p>
               </div>
-
+{/* Volunteer Engagement */}
+<div className={`p-4 rounded-lg border ${
+                stats.eventsStillNeedingVolunteers === 0 ? 
+                  'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800' :
+                stats.eventsStillNeedingVolunteers <= 2 ? 
+                  'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-yellow-200 dark:border-yellow-800' :
+                  'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800'
+              }`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Handshake className={`h-5 w-5 ${
+                    stats.eventsStillNeedingVolunteers === 0 ? 'text-green-600' :
+                    stats.eventsStillNeedingVolunteers <= 2 ? 'text-yellow-600' :
+                    'text-red-600'
+                  }`} />
+                  <h4 className={`font-semibold ${
+                    stats.eventsStillNeedingVolunteers === 0 ? 'text-green-900 dark:text-green-100' :
+                    stats.eventsStillNeedingVolunteers <= 2 ? 'text-yellow-900 dark:text-yellow-100' :
+                    'text-red-900 dark:text-red-100'
+                  }`}>Volunteer Need</h4>
+                </div>
+                {isLoading ? (
+                  <Skeleton className="h-4 w-32 mb-2" />
+                ) : (
+                  <p className={`text-2xl font-bold mb-1 ${
+                    stats.eventsStillNeedingVolunteers === 0 ? 'text-green-700 dark:text-green-300' :
+                    stats.eventsStillNeedingVolunteers <= 2 ? 'text-yellow-700 dark:text-yellow-300' :
+                    'text-red-700 dark:text-red-300'
+                  }`}>
+                    {stats.eventsStillNeedingVolunteers}
+                  </p>
+                )}
+                <p className={`text-sm ${
+                  stats.eventsStillNeedingVolunteers === 0 ? 'text-green-600 dark:text-green-400' :
+                  stats.eventsStillNeedingVolunteers <= 2 ? 'text-yellow-600 dark:text-yellow-400' :
+                  'text-red-600 dark:text-red-400'
+                }`}>
+                  Events still need volunteers
+                </p>
+              </div>
               {/* Event Activity */}
               <div className={`p-4 rounded-lg border ${
                 stats.eventsThisMonth > stats.averageEventsPerMonth * 1.2 ? 
@@ -1092,86 +1132,47 @@ export function Dashboard() {
                 </p>
               </div>
 
-
-              {/* Sunday Service Attendance Rate */}
-              <div className={`p-4 rounded-lg border ${
-                stats.sundayServiceRate >= 70 ? 
-                  'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800' :
-                stats.sundayServiceRate >= 50 ? 
-                  'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-yellow-200 dark:border-yellow-800' :
-                  'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800'
+ {/* Member Engagement */}
+ <div className={`p-4 rounded-lg border ${
+                stats.totalPeople > 0 ? 
+                  (stats.activeMembers / stats.totalPeople) >= 0.8 ? 
+                    'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800' :
+                  (stats.activeMembers / stats.totalPeople) >= 0.6 ? 
+                    'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-yellow-200 dark:border-yellow-800' :
+                    'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800'
+                : 'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800'
               }`}>
                 <div className="flex items-center gap-2 mb-2">
-                  <BookOpen className={`h-5 w-5 ${
-                    stats.sundayServiceRate >= 70 ? 'text-green-600' :
-                    stats.sundayServiceRate >= 50 ? 'text-yellow-600' :
-                    'text-red-600'
+                  <Users2 className={`h-5 w-5 ${
+                    stats.totalPeople > 0 ? 
+                      (stats.activeMembers / stats.totalPeople) >= 0.8 ? 'text-green-600' :
+                      (stats.activeMembers / stats.totalPeople) >= 0.6 ? 'text-yellow-600' :
+                      'text-red-600'
+                    : 'text-blue-600'
                   }`} />
                   <h4 className={`font-semibold ${
-                    stats.sundayServiceRate >= 70 ? 'text-green-900 dark:text-green-100' :
-                    stats.sundayServiceRate >= 50 ? 'text-yellow-900 dark:text-yellow-100' :
-                    'text-red-900 dark:text-red-100'
-                  }`}>Sunday Service Rate</h4>
+                    stats.totalPeople > 0 ? 
+                      (stats.activeMembers / stats.totalPeople) >= 0.8 ? 'text-green-900 dark:text-green-100' :
+                      (stats.activeMembers / stats.totalPeople) >= 0.6 ? 'text-yellow-900 dark:text-yellow-100' :
+                      'text-red-900 dark:text-red-100'
+                    : 'text-blue-900 dark:text-blue-100'
+                  }`}>Member Engagement</h4>
                 </div>
                 {isLoading ? (
                   <Skeleton className="h-4 w-32 mb-2" />
                 ) : (
-                  <p className={`text-2xl font-bold mb-1 ${
-                    stats.sundayServiceRate >= 70 ? 'text-green-700 dark:text-green-300' :
-                    stats.sundayServiceRate >= 50 ? 'text-yellow-700 dark:text-yellow-300' :
-                    'text-red-700 dark:text-red-300'
-                  }`}>
-                    {stats.sundayServiceRate.toFixed(0)}%
+                  <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 mb-1">
+                    {stats.totalPeople > 0 ? `${((stats.activeMembers / stats.totalPeople) * 100).toFixed(0)}%` : '0%'}
                   </p>
                 )}
-                <p className={`text-sm ${
-                  stats.sundayServiceRate >= 70 ? 'text-green-600 dark:text-green-400' :
-                  stats.sundayServiceRate >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
-                  'text-red-600 dark:text-red-400'
-                }`}>
-                  Active members who attend Sunday service (last 30 days)
+                <p className="text-sm text-blue-600 dark:text-blue-400">
+                  {stats.activeMembers} of {stats.totalPeople} people are active members
                 </p>
               </div>
 
-              {/* Volunteer Engagement */}
-              <div className={`p-4 rounded-lg border ${
-                stats.eventsStillNeedingVolunteers === 0 ? 
-                  'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800' :
-                stats.eventsStillNeedingVolunteers <= 2 ? 
-                  'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-yellow-200 dark:border-yellow-800' :
-                  'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800'
-              }`}>
-                <div className="flex items-center gap-2 mb-2">
-                  <Handshake className={`h-5 w-5 ${
-                    stats.eventsStillNeedingVolunteers === 0 ? 'text-green-600' :
-                    stats.eventsStillNeedingVolunteers <= 2 ? 'text-yellow-600' :
-                    'text-red-600'
-                  }`} />
-                  <h4 className={`font-semibold ${
-                    stats.eventsStillNeedingVolunteers === 0 ? 'text-green-900 dark:text-green-100' :
-                    stats.eventsStillNeedingVolunteers <= 2 ? 'text-yellow-900 dark:text-yellow-100' :
-                    'text-red-900 dark:text-red-100'
-                  }`}>Volunteer Need</h4>
-                </div>
-                {isLoading ? (
-                  <Skeleton className="h-4 w-32 mb-2" />
-                ) : (
-                  <p className={`text-2xl font-bold mb-1 ${
-                    stats.eventsStillNeedingVolunteers === 0 ? 'text-green-700 dark:text-green-300' :
-                    stats.eventsStillNeedingVolunteers <= 2 ? 'text-yellow-700 dark:text-yellow-300' :
-                    'text-red-700 dark:text-red-300'
-                  }`}>
-                    {stats.eventsStillNeedingVolunteers}
-                  </p>
-                )}
-                <p className={`text-sm ${
-                  stats.eventsStillNeedingVolunteers === 0 ? 'text-green-600 dark:text-green-400' :
-                  stats.eventsStillNeedingVolunteers <= 2 ? 'text-yellow-600 dark:text-yellow-400' :
-                  'text-red-600 dark:text-red-400'
-                }`}>
-                  Events still need volunteers
-                </p>
-              </div>
+             
+
+              
 
               {/* Recent Visitors */}
               <div className={`p-4 rounded-lg border ${
