@@ -19,15 +19,16 @@ import { SMS } from './pages/sms';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import ApprovalStatus from './components/ApprovalStatus';
 import PrivacyPolicy from './pages/privacy-policy';
+import PublicLayout from './components/PublicLayout';
 
 function App() {
   return (
     <Routes>
       {/* Public routes */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/invite/:invitationId" element={<Invite />} />
-      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+      <Route path="/login" element={<PublicLayout><Login /></PublicLayout>} />
+      <Route path="/register" element={<PublicLayout><Register /></PublicLayout>} />
+      <Route path="/invite/:invitationId" element={<PublicLayout><Invite /></PublicLayout>} />
+      <Route path="/privacy-policy" element={<PublicLayout><PrivacyPolicy /></PublicLayout>} />
       
       {/* Approval status route */}
       <Route path="/approval-status" element={<ApprovalStatus />} />
