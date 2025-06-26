@@ -18,6 +18,7 @@ import { Invite } from './pages/invite';
 import { SMS } from './pages/sms';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import ApprovalStatus from './components/ApprovalStatus';
+import PrivacyPolicy from './pages/privacy-policy';
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/invite/:invitationId" element={<Invite />} />
+      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
       
       {/* Approval status route */}
       <Route path="/approval-status" element={<ApprovalStatus />} />
