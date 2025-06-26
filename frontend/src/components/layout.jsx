@@ -21,7 +21,12 @@ import {
   UserPlus,
   ClipboardList,
   BarChart2,
-  Heart
+  Heart,
+  Bell,
+  CheckCircle,
+  Clock,
+  XCircle,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
@@ -32,6 +37,7 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { Logo } from '@/components/ui/logo';
 import { useAuth } from '@/lib/authContext';
 import { isUserAdmin, getApprovalNotifications, getOrganizationName } from '@/lib/data';
 import { cn } from '@/lib/utils';
@@ -174,9 +180,7 @@ export function Layout() {
         {/* Header stays at the top, full width */}
         <header className="bg-card border-b px-4 py-3 flex justify-between items-center sticky top-0 z-40">
           <div className="flex items-center gap-2">
-            <span className="inline-block w-8 h-8 rounded-xl overflow-hidden bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center">
-              <Church className="h-5 w-5 text-white" />
-            </span>
+            <Logo showText={false} size={40} />
             <span className="font-semibold text-lg text-foreground">Deacon - {organizationName}</span>
           </div>
           {user && (
