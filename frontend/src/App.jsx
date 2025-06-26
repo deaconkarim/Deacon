@@ -20,11 +20,13 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import ApprovalStatus from './components/ApprovalStatus';
 import PrivacyPolicy from './pages/privacy-policy';
 import PublicLayout from './components/PublicLayout';
+import Landing from './pages/landing';
 
 function App() {
   return (
     <Routes>
       {/* Public routes */}
+      <Route path="/" element={<PublicLayout><Login /></PublicLayout>} />
       <Route path="/login" element={<PublicLayout><Login /></PublicLayout>} />
       <Route path="/register" element={<PublicLayout><Register /></PublicLayout>} />
       <Route path="/invite/:invitationId" element={<PublicLayout><Invite /></PublicLayout>} />
@@ -35,7 +37,6 @@ function App() {
       
       {/* Protected routes */}
       <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/members" element={<People />} />
         <Route path="/members/:id" element={<MemberProfile />} />

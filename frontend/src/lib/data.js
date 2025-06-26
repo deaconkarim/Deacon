@@ -743,6 +743,39 @@ export async function getDonations() {
   }
 }
 
+export async function getRecentDonationsForDashboard() {
+  try {
+    const organizationId = await getCurrentUserOrganizationId();
+  
+    if (!organizationId) {
+      console.error('No organization ID found for user');
+      throw new Error('User not associated with any organization');
+    }
+
+    // Get donations from the last 6 months for dashboard calculations
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const sixMonthsAgoStr = sixMonthsAgo.toISOString().split('T')[0];
+
+    const { data, error } = await supabase
+      .from('donations')
+      .select('*')
+      .eq('organization_id', organizationId)
+      .gte('date', sixMonthsAgoStr)
+      .order('date', { ascending: false });
+
+    if (error) {
+      console.error('Supabase error:', error);
+      throw error;
+    }
+    
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching recent donations:', error);
+    return [];
+  }
+}
+
 export async function addDonation(donation) {
   try {
     const organizationId = await getCurrentUserOrganizationId();

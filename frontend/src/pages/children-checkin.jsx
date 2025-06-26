@@ -261,12 +261,12 @@ export default function ChildrenCheckin() {
   if (error) return <div className="p-4 text-red-500">Error: {error}</div>;
 
   return (
-    <div className="w-full px-0 md:px-4">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 px-2 md:px-0">
-        <h1 className="text-3xl md:text-4xl font-bold text-foreground">Children Check-in</h1>
+    <div className="w-full max-w-full overflow-x-hidden px-0 sm:px-4 sm:rounded-lg sm:shadow bg-background box-border">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 px-2 md:px-0 w-full">
+        <h1 className="text-3xl md:text-4xl font-bold text-foreground w-full md:w-auto">Children Check-in</h1>
         <a
           href="/children-check-in/add"
-          className="w-full md:w-auto bg-primary text-primary-foreground px-6 py-3 rounded-lg text-lg font-medium hover:bg-primary/90 h-14 flex items-center justify-center transition-colors"
+          className="w-full md:w-auto mt-2 md:mt-0 bg-primary text-primary-foreground px-6 md:px-6 py-3 md:py-3 rounded-lg text-lg md:text-lg font-medium hover:bg-primary/90 h-14 md:h-14 flex items-center justify-center transition-colors"
         >
           Add Child
         </a>
@@ -274,12 +274,12 @@ export default function ChildrenCheckin() {
 
       {/* Event Selection */}
       <div className="mb-8 px-2 md:px-0">
-        <label className="block text-lg font-medium text-foreground mb-3">
+        <label className="block text-lg md:text-lg font-medium text-foreground mb-3 md:mb-3">
           Select Event
         </label>
         <select
-          className="w-full p-4 border border-input bg-background text-foreground rounded-lg text-lg h-14 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-          value={selectedEvent?.id || ''}
+          className="w-full p-4 md:p-4 border border-input bg-background text-foreground rounded-lg text-lg md:text-lg h-14 md:h-14 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          value={selectedEvent?.id || ''} 
           onChange={(e) => {
             const event = events.find(ev => ev.id === e.target.value);
             setSelectedEvent(event);
@@ -295,11 +295,11 @@ export default function ChildrenCheckin() {
       </div>
 
       {selectedEvent && (
-        <div className="space-y-8">
+        <div className="space-y-8 md:space-y-8">
           {/* Check-in Section */}
           <div className="bg-card p-3 md:p-6 rounded-lg border">
-            <h2 className="text-2xl font-semibold mb-6 px-1 md:px-0 text-foreground">Check-in Children</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <h2 className="text-2xl md:text-2xl font-semibold mb-6 md:mb-6 px-1 md:px-0 text-foreground">Check-in Children</h2>
+            <div className="flex flex-col gap-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4">
               {children.map(child => {
                 const childGuardians = guardians.filter(g => g.child_id === child.id);
                 const isCheckedIn = checkinLogs.some(
@@ -307,21 +307,21 @@ export default function ChildrenCheckin() {
                 );
 
                 return (
-                  <div key={child.id} className="border border-border p-3 md:p-4 rounded-lg bg-muted/50">
-                    <div className="flex items-center gap-3 mb-3">
-                      <Avatar className="h-12 w-12">
+                  <div key={child.id} className="border border-border p-4 md:p-4 rounded-lg bg-muted/50 w-full">
+                    <div className="flex items-center gap-3 md:gap-3 mb-3 md:mb-3">
+                      <Avatar className="h-12 w-12 md:h-12 md:w-12">
                         <AvatarImage src={child.image_url} />
-                        <AvatarFallback className="text-lg bg-muted text-muted-foreground">{getInitials(child.firstname, child.lastname)}</AvatarFallback>
+                        <AvatarFallback className="text-lg md:text-lg bg-muted text-muted-foreground">{getInitials(child.firstname, child.lastname)}</AvatarFallback>
                       </Avatar>
-                      <h3 className="text-lg font-medium text-foreground">{child.firstname} {child.lastname}</h3>
+                      <h3 className="text-lg md:text-lg font-medium text-foreground">{child.firstname} {child.lastname}</h3>
                     </div>
                     {!isCheckedIn ? (
-                      <div className="mt-3">
-                        <label className="block text-sm text-muted-foreground mb-2">
+                      <div className="mt-3 md:mt-3">
+                        <label className="block text-sm md:text-sm text-muted-foreground mb-2 md:mb-2">
                           Check in with guardian:
                         </label>
                         <select
-                          className="w-full p-3 border border-input bg-background text-foreground rounded-lg text-sm h-12 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                          className="w-full p-3 md:p-3 border border-input bg-background text-foreground rounded-lg text-sm md:text-sm h-12 md:h-12 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                           onChange={(e) => handleCheckin(child.id, e.target.value)}
                         >
                           <option value="">Select guardian</option>
@@ -333,7 +333,7 @@ export default function ChildrenCheckin() {
                         </select>
                       </div>
                     ) : (
-                      <div className="mt-3 text-green-600 text-sm font-medium">
+                      <div className="mt-3 md:mt-3 text-green-600 text-sm md:text-sm font-medium">
                         Checked in
                       </div>
                     )}
@@ -345,35 +345,35 @@ export default function ChildrenCheckin() {
 
           {/* Check-out Section */}
           <div className="bg-card p-3 md:p-6 rounded-lg border">
-            <h2 className="text-2xl font-semibold mb-6 px-1 md:px-0 text-foreground">Check-out Children</h2>
-            <div className="grid grid-cols-1 gap-4">
+            <h2 className="text-2xl md:text-2xl font-semibold mb-6 md:mb-6 px-1 md:px-0 text-foreground">Check-out Children</h2>
+            <div className="flex flex-col gap-4 md:grid md:grid-cols-1 md:gap-4">
               {checkinLogs
                 .filter(log => !log.check_out_time)
                 .map(log => {
                   const childGuardians = guardians.filter(g => g.child_id === log.child_id);
 
                   return (
-                    <div key={log.id} className="border border-border p-3 md:p-6 rounded-lg bg-muted/50">
-                      <div className="flex items-center gap-4 mb-4">
-                        <Avatar className="h-16 w-16">
+                    <div key={log.id} className="border border-border p-4 md:p-6 rounded-lg bg-muted/50 w-full">
+                      <div className="flex items-center gap-3 md:gap-4 mb-3 md:mb-4">
+                        <Avatar className="h-16 w-16 md:h-16 md:w-16">
                           <AvatarImage src={log.child.image_url} />
-                          <AvatarFallback className="text-2xl bg-muted text-muted-foreground">{getInitials(log.child.firstname, log.child.lastname)}</AvatarFallback>
+                          <AvatarFallback className="text-2xl md:text-2xl bg-muted text-muted-foreground">{getInitials(log.child.firstname, log.child.lastname)}</AvatarFallback>
                         </Avatar>
                         <div>
-                          <h3 className="text-xl font-medium text-foreground">
+                          <h3 className="text-xl md:text-xl font-medium text-foreground">
                             {log.child.firstname} {log.child.lastname}
                           </h3>
-                          <p className="text-lg text-muted-foreground">
+                          <p className="text-lg md:text-lg text-muted-foreground">
                             Checked in by: {log.checked_in_by.firstname} {log.checked_in_by.lastname}
                           </p>
                         </div>
                       </div>
-                      <div className="mt-4">
-                        <label className="block text-lg text-muted-foreground mb-2">
+                      <div className="mt-4 md:mt-4">
+                        <label className="block text-lg md:text-lg text-muted-foreground mb-2 md:mb-2">
                           Check out with guardian:
                         </label>
                         <select
-                          className="w-full p-4 border border-input bg-background text-foreground rounded-lg text-lg h-14 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                          className="w-full p-4 md:p-4 border border-input bg-background text-foreground rounded-lg text-lg md:text-lg h-14 md:h-14 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                           onChange={(e) => handleCheckout(log.id, e.target.value)}
                         >
                           <option value="">Select guardian</option>
@@ -392,61 +392,59 @@ export default function ChildrenCheckin() {
 
           {/* Check-in History */}
           <div className="bg-card p-3 md:p-6 rounded-lg border">
-            <h2 className="text-2xl font-semibold mb-6 px-1 md:px-0 text-foreground">Check-in History</h2>
-            <div className="overflow-x-auto -mx-3 md:mx-0">
-              <table className="min-w-full divide-y divide-border">
+            <h2 className="text-2xl md:text-2xl font-semibold mb-6 md:mb-6 px-1 md:px-0 text-foreground">Check-in History</h2>
+            {/* Mobile: vertical list, Desktop: table */}
+            <div className="block md:hidden">
+              <ul className="space-y-4">
+                {allCheckinHistory.map(log => (
+                  <li key={log.id} className="border border-border rounded-lg p-4 bg-muted/50">
+                    <div className="font-semibold text-lg">{log.child.firstname} {log.child.lastname}</div>
+                    <div className="text-base text-muted-foreground">{log.event?.title}</div>
+                    <div className="text-base">Checked in: {log.check_in_time ? format(new Date(log.check_in_time), 'MMM d, yyyy h:mm a') : '-'}</div>
+                    <div className="text-base">Checked out: {log.check_out_time ? format(new Date(log.check_out_time), 'MMM d, yyyy h:mm a') : '-'}</div>
+                    <div className="text-base text-muted-foreground">Guardian: {log.checked_in_by?.firstname} {log.checked_in_by?.lastname}</div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="hidden md:block overflow-x-auto -mx-2 md:mx-0">
+              <table className="min-w-full divide-y divide-border text-xs md:text-base">
                 <thead className="bg-muted">
                   <tr>
-                    <th className="px-3 md:px-6 py-4 text-left text-base font-medium text-muted-foreground uppercase tracking-wider">
+                    <th className="px-2 md:px-6 py-2 md:py-4 text-left text-xs md:text-base font-medium text-muted-foreground uppercase tracking-wider">
                       Child
                     </th>
-                    <th className="px-3 md:px-6 py-4 text-left text-base font-medium text-muted-foreground uppercase tracking-wider">
+                    <th className="px-2 md:px-6 py-2 md:py-4 text-left text-xs md:text-base font-medium text-muted-foreground uppercase tracking-wider">
                       Event
                     </th>
-                    <th className="px-3 md:px-6 py-4 text-left text-base font-medium text-muted-foreground uppercase tracking-wider">
-                      Check-in Time
+                    <th className="px-2 md:px-6 py-2 md:py-4 text-left text-xs md:text-base font-medium text-muted-foreground uppercase tracking-wider">
+                      Checked In
                     </th>
-                    <th className="px-3 md:px-6 py-4 text-left text-base font-medium text-muted-foreground uppercase tracking-wider">
-                      Check-in By
+                    <th className="px-2 md:px-6 py-2 md:py-4 text-left text-xs md:text-base font-medium text-muted-foreground uppercase tracking-wider">
+                      Checked Out
                     </th>
-                    <th className="px-3 md:px-6 py-4 text-left text-base font-medium text-muted-foreground uppercase tracking-wider">
-                      Check-out Time
-                    </th>
-                    <th className="px-3 md:px-6 py-4 text-left text-base font-medium text-muted-foreground uppercase tracking-wider">
-                      Check-out By
+                    <th className="px-2 md:px-6 py-2 md:py-4 text-left text-xs md:text-base font-medium text-muted-foreground uppercase tracking-wider">
+                      Guardian
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-card divide-y divide-border">
+                <tbody className="bg-background divide-y divide-border">
                   {allCheckinHistory.map(log => (
-                    <tr key={log.id} className="hover:bg-muted/50 transition-colors">
-                      <td className="px-3 md:px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-12 w-12">
-                            <AvatarImage src={log.child.image_url} />
-                            <AvatarFallback className="text-lg bg-muted text-muted-foreground">{getInitials(log.child.firstname, log.child.lastname)}</AvatarFallback>
-                          </Avatar>
-                          <span className="text-lg text-foreground">{log.child.firstname} {log.child.lastname}</span>
-                        </div>
+                    <tr key={log.id}>
+                      <td className="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap">
+                        {log.child.firstname} {log.child.lastname}
                       </td>
-                      <td className="px-3 md:px-6 py-4 whitespace-nowrap text-lg text-foreground">
-                        {log.event ? log.event.title : 'Unknown Event'}
+                      <td className="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap">
+                        {log.event?.title}
                       </td>
-                      <td className="px-3 md:px-6 py-4 whitespace-nowrap text-lg text-foreground">
-                        {format(new Date(log.check_in_time), 'MMM d, h:mm a')}
+                      <td className="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap">
+                        {log.check_in_time ? format(new Date(log.check_in_time), 'MMM d, yyyy h:mm a') : ''}
                       </td>
-                      <td className="px-3 md:px-6 py-4 whitespace-nowrap text-lg text-foreground">
-                        {log.checked_in_by.firstname} {log.checked_in_by.lastname}
+                      <td className="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap">
+                        {log.check_out_time ? format(new Date(log.check_out_time), 'MMM d, yyyy h:mm a') : ''}
                       </td>
-                      <td className="px-3 md:px-6 py-4 whitespace-nowrap text-lg text-foreground">
-                        {log.check_out_time
-                          ? format(new Date(log.check_out_time), 'MMM d, h:mm a')
-                          : '-'}
-                      </td>
-                      <td className="px-3 md:px-6 py-4 whitespace-nowrap text-lg text-foreground">
-                        {log.checked_out_by
-                          ? `${log.checked_out_by.firstname} ${log.checked_out_by.lastname}`
-                          : '-'}
+                      <td className="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap">
+                        {log.checked_in_by?.firstname} {log.checked_in_by?.lastname}
                       </td>
                     </tr>
                   ))}

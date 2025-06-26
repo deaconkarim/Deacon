@@ -35,7 +35,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import { Input } from '@/components/ui/input';
-import { getMembers, getEvents, getDonations, getAllEvents, addMember, updateMember, deleteMember, getMemberAttendance, updateDonation, deleteDonation, addEventAttendance, getEventAttendance, getVolunteerStats } from '../lib/data';
+import { getMembers, getEvents, getDonations, getRecentDonationsForDashboard, getAllEvents, addMember, updateMember, deleteMember, getMemberAttendance, updateDonation, deleteDonation, addEventAttendance, getEventAttendance, getVolunteerStats } from '../lib/data';
 import { familyService } from '../lib/familyService';
 import {
   Dialog,
@@ -49,6 +49,7 @@ import { useAuth } from '@/lib/authContext';
 import { Label } from '@/components/ui/label';
 import { formatName, getInitials } from '@/lib/utils/formatters';
 import { useAttendanceStats } from '../lib/data/attendanceStats';
+import LeadershipVerse from '@/components/LeadershipVerse';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -102,7 +103,9 @@ export function Dashboard() {
     membersWithoutFamilies: 0,
     adults: 0,
     children: 0,
-    lastMonthDonations: 0
+    lastMonthDonations: 0,
+    lastWeekDonations: 0,
+    lastSundayDonations: 0
   });
   const [recentPeople, setRecentPeople] = useState([]);
   const [people, setPeople] = useState([]);
@@ -169,8 +172,8 @@ export function Dashboard() {
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
         .slice(0, 5);
 
-      // Fetch donations using the filtered getDonations function
-      const donations = await getDonations();
+      // Fetch donations using the optimized function for dashboard
+      const donations = await getRecentDonationsForDashboard();
 
       // Calculate total donations
       const totalDonations = donations?.reduce((sum, donation) => {
@@ -262,18 +265,39 @@ export function Dashboard() {
       const weeklyAverage = weeklyTotals.length > 0 ? 
         weeklyTotals.reduce((sum, total) => sum + total, 0) / weeklyTotals.length : 0;
 
-      // Calculate monthly average (total donations divided by actual months with data)
+      // Calculate monthly average (total donations divided by actual months with data, excluding current month)
       const donationDates = donations?.map(d => d.date) || [];
       const uniqueMonths = new Set();
+      const avgCurrentYear = new Date().getFullYear();
+      const avgCurrentMonth = new Date().getMonth();
+      
+      // Calculate total donations excluding current month
+      const totalDonationsExcludingCurrent = donations?.reduce((sum, donation) => {
+        try {
+          const donationDate = new Date(donation.date + 'T00:00:00');
+          // Exclude current month from the calculation
+          if (donationDate.getFullYear() !== avgCurrentYear || donationDate.getMonth() !== avgCurrentMonth) {
+            const amount = parseFloat(donation.amount) || 0;
+            return sum + amount;
+          }
+          return sum;
+        } catch (error) {
+          console.error('Error processing donation for monthly average:', donation.date, error);
+          return sum;
+        }
+      }, 0) || 0;
       
       donationDates.forEach(dateStr => {
         const date = new Date(dateStr);
         const yearMonth = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-        uniqueMonths.add(yearMonth);
+        // Exclude current month from the calculation
+        if (date.getFullYear() !== avgCurrentYear || date.getMonth() !== avgCurrentMonth) {
+          uniqueMonths.add(yearMonth);
+        }
       });
       
       const actualMonthsWithData = uniqueMonths.size;
-      const monthlyAverage = actualMonthsWithData > 0 ? totalDonations / actualMonthsWithData : 0;
+      const monthlyAverage = actualMonthsWithData > 0 ? totalDonationsExcludingCurrent / actualMonthsWithData : 0;
 
       // Calculate growth rate
       const growthRate = monthlyAverage > 0 ? 
@@ -496,6 +520,37 @@ export function Dashboard() {
         })
         .reduce((sum, donation) => sum + (parseFloat(donation.amount) || 0), 0);
 
+      // Calculate last Sunday's donations
+      const lastSunday = new Date();
+      const dayOfWeek = lastSunday.getDay();
+      const daysToSubtract = dayOfWeek === 0 ? 7 : dayOfWeek; // If today is Sunday, go back 7 days
+      lastSunday.setDate(lastSunday.getDate() - daysToSubtract);
+      lastSunday.setHours(0, 0, 0, 0);
+      
+      const lastSundayDonations = donations?.filter(donation => {
+        try {
+          // Parse the donation date more carefully to avoid timezone issues
+          const donationDate = new Date(donation.date + 'T00:00:00');
+          
+          // Use the same logic as getSundayDate to find the Sunday of the donation's week
+          const donationSunday = new Date(donationDate);
+          const donationDayOfWeek = donationDate.getDay();
+          donationSunday.setDate(donationDate.getDate() - donationDayOfWeek);
+          donationSunday.setHours(0, 0, 0, 0);
+          
+          // Check if this donation belongs to the last Sunday's week
+          return donationSunday.toDateString() === lastSunday.toDateString();
+        } catch (error) {
+          console.error('Error processing donation date for last Sunday:', donation.date, error);
+          return false;
+        }
+      }).reduce((sum, donation) => {
+        const amount = parseFloat(donation.amount) || 0;
+        return sum + amount;
+      }, 0) || 0;
+      
+      console.log('Last Sunday donations total:', lastSundayDonations);
+
       setStats({
         totalPeople,
         activeMembers: activeMembers.length,
@@ -530,7 +585,9 @@ export function Dashboard() {
         membersWithoutFamilies: familyStats.membersWithoutFamilies,
         adults: familyStats.adults,
         children: familyStats.children,
-        lastMonthDonations
+        lastMonthDonations,
+        lastWeekDonations: weeklyTotals[weeklyTotals.length - 1] || 0,
+        lastSundayDonations
       });
       setRecentPeople(recentPeople);
       setPeople(transformedPeople);
@@ -695,6 +752,11 @@ export function Dashboard() {
         <h1 className="text-3xl font-bold tracking-tight">Command Center</h1>
       </div>
 
+      {/* Leadership Verse - Inspirational component */}
+      <motion.div variants={itemVariants}>
+        <LeadershipVerse />
+      </motion.div>
+
       <div className="grid gap-4 tablet-portrait:grid-cols-2 tablet-landscape:grid-cols-2 md:grid-cols-2 lg:grid-cols-5">
         <motion.div variants={itemVariants}>
           <Card className="overflow-hidden">
@@ -767,14 +829,6 @@ export function Dashboard() {
               {/* Donation breakdown */}
               <div className="mt-4 space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-green-600 font-medium">Total Donations</span>
-                  {isLoading ? (
-                    <Skeleton className="h-4 w-16" />
-                  ) : (
-                    <span className="text-sm font-semibold">${(stats.totalDonations || 0).toFixed(2)}</span>
-                  )}
-                </div>
-                <div className="flex justify-between items-center">
                   <span className="text-sm text-green-600 font-medium">Monthly Average</span>
                   {isLoading ? (
                     <Skeleton className="h-4 w-16" />
@@ -788,6 +842,14 @@ export function Dashboard() {
                     <Skeleton className="h-4 w-16" />
                   ) : (
                     <span className="text-sm font-semibold">${(stats.weeklyAverage || 0).toFixed(2)}</span>
+                  )}
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-green-600 font-medium">Last Week's Donations</span>
+                  {isLoading ? (
+                    <Skeleton className="h-4 w-16" />
+                  ) : (
+                    <span className="text-sm font-semibold">${(stats.lastSundayDonations || 0).toFixed(2)}</span>
                   )}
                 </div>
               </div>
@@ -871,7 +933,7 @@ export function Dashboard() {
               {/* Volunteers breakdown */}
               <div className="mt-4 space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-teal-600 font-medium">Total Volunteers Signed Up</span>
+                  <span className="text-sm text-teal-600 font-medium">Volunteers Signed Up</span>
                   {isLoading ? (
                     <Skeleton className="h-4 w-8" />
                   ) : (
@@ -1837,11 +1899,33 @@ export function Dashboard() {
               </div>
             </div>
 
-            {/* Summary Stats */}
-            <div className="mt-6 grid gap-4 md:grid-cols-1">
-              <div className="text-center p-4 bg-muted rounded-lg">
-                <p className="text-base text-muted-foreground">Weekly Average</p>
-                <p className="text-3xl font-bold text-foreground">${(stats.weeklyAverage || 0).toFixed(2)}</p>
+            {/* Weekly Stats Row */}
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              {/* Last Week's Donations */}
+              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-teal-500 rounded-full flex items-center justify-center">
+                    <DollarSign className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-base font-medium text-foreground">Last Week</p>
+                  <p className="text-2xl font-bold text-teal-600 dark:text-teal-400">${(stats.lastSundayDonations || 0).toFixed(2)}</p>
+                  <p className="text-sm text-muted-foreground">Previous week's total</p>
+                </div>
+              </div>
+              {/* Weekly Average */}
+              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center">
+                    <TrendingUp className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-base font-medium text-foreground">Weekly Average</p>
+                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">${(stats.weeklyAverage || 0).toFixed(2)}</p>
+                  <p className="text-sm text-muted-foreground">Per week</p>
+                </div>
               </div>
             </div>
           </CardContent>
