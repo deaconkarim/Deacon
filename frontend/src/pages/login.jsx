@@ -379,7 +379,7 @@ export function Login() {
             {/* Content */}
             <div className="space-y-10">
               <div className="space-y-6">
-                <h1 className="text-6xl lg:text-7xl font-bold text-gray-900 leading-tight">``
+                <h1 className="text-6xl lg:text-7xl font-bold text-gray-900 leading-tight">
                   <span className="bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 bg-clip-text text-transparent">
                     Your Church <br />Command Center
                   </span>
