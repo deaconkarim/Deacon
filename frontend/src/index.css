@@ -199,13 +199,17 @@
   
   /* Better spacing for touch devices */
   .touch-spacing {
-    @apply gap-3;
+    @apply px-4 py-3;
   }
   
-  /* Improved scrollable areas */
+  /* Improved scrolling for touch */
   .touch-scroll {
-    @apply overflow-auto;
     -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
   }
+}
+
+/* Override p-4 padding to 0 */
+.p-4 {
+  padding: 0 !important;
 }

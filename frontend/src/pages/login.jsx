@@ -185,7 +185,12 @@ export function Login() {
   };
 
   const openLightbox = (imageSrc, imageAlt) => {
-    setSelectedImage(imageSrc);
+    // Use mobile screenshot on mobile devices
+    const isMobile = window.innerWidth <= 768;
+    const screenshot = screenshots.find(s => s.src === imageSrc);
+    const displayImage = isMobile && screenshot ? screenshot.srcMobile : imageSrc;
+    
+    setSelectedImage(displayImage);
     setSelectedImageAlt(imageAlt);
     setShowLightbox(true);
   };
@@ -194,7 +199,7 @@ export function Login() {
     { 
       icon: Users, 
       label: "Members", 
-      color: "bg-emerald-500/10 text-emerald-600 border-emerald-200",
+      color: "bg-blue-500/10 text-blue-600 border-blue-200",
       action: scrollToScreenshots
     },
     { 
@@ -276,29 +281,26 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
-      {/* Decorative Background Elements */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 relative overflow-hidden">
+      {/* Modern Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
-        {/* Large gradient circles */}
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-500/20 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-emerald-400/20 to-blue-500/20 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-purple-400/10 to-pink-400/10 rounded-full blur-3xl"></div>
+        {/* Animated gradient mesh */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-100/30 via-blue-50/30 to-indigo-100/30 animate-pulse"></div>
         
-        {/* Subtle grid pattern */}
-        <div className="absolute inset-0 opacity-50" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+        {/* Geometric shapes */}
+        <div className="absolute top-0 left-0 w-72 h-72 bg-gradient-to-br from-blue-200/20 to-transparent rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-tl from-indigo-200/20 to-transparent rounded-full blur-3xl"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-gradient-to-r from-blue-100/10 to-indigo-100/10 rounded-full blur-3xl"></div>
+        
+        {/* Grid pattern */}
+        <div className="absolute inset-0 opacity-10" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
         }}></div>
-        
-        {/* Floating elements */}
-        <div className="absolute top-20 left-10 w-2 h-2 bg-blue-400/30 rounded-full animate-pulse"></div>
-        <div className="absolute top-40 right-20 w-3 h-3 bg-purple-400/30 rounded-full animate-pulse" style={{animationDelay: '1s'}}></div>
-        <div className="absolute bottom-20 left-20 w-2 h-2 bg-emerald-400/30 rounded-full animate-pulse" style={{animationDelay: '2s'}}></div>
-        <div className="absolute bottom-40 right-10 w-3 h-3 bg-pink-400/30 rounded-full animate-pulse" style={{animationDelay: '0.5s'}}></div>
       </div>
 
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-200/50">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <Logo size={64} />
@@ -310,13 +312,13 @@ export function Login() {
               <Button 
                 variant="outline" 
                 onClick={() => setShowLoginModal(true)}
-                className="border-gray-300 hover:bg-gray-50"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50 backdrop-blur-sm bg-white/80"
               >
                 Sign In
               </Button>
               <Button 
                 onClick={() => setShowBetaSignup(true)}
-                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg"
               >
                 Get Started
               </Button>
@@ -328,6 +330,7 @@ export function Login() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="text-gray-700 hover:bg-gray-100"
               >
                 <Menu className="h-6 w-6" />
               </Button>
@@ -338,7 +341,7 @@ export function Login() {
 
       {/* Mobile Menu Dropdown */}
       {mobileMenuOpen && (
-        <div className="md:hidden fixed top-16 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-lg">
+        <div className="md:hidden fixed top-16 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-b border-gray-200/50">
           <div className="px-4 py-6 space-y-4">
             <a 
               href="#features" 
@@ -354,7 +357,7 @@ export function Login() {
                   setShowLoginModal(true);
                   setMobileMenuOpen(false);
                 }}
-                className="border-gray-300 hover:bg-gray-50"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-white/80"
               >
                 Sign In
               </Button>
@@ -363,7 +366,7 @@ export function Login() {
                   setShowBetaSignup(true);
                   setMobileMenuOpen(false);
                 }}
-                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white"
               >
                 Get Started
               </Button>
@@ -372,73 +375,47 @@ export function Login() {
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto px-6 relative z-10">
+      <div className="w-full relative z-10">
         {/* Hero Section */}
-        <div className="pt-16 pb-12">
-          <div className="max-w-4xl mx-auto text-center">
-            {/* Content */}
-            <div className="space-y-10">
+        <div className="pt-24 pb-16 text-center px-6">
+          <div className="max-w-4xl mx-auto">
+            <div className="space-y-8">
               <div className="space-y-6">
                 <h1 className="text-6xl lg:text-7xl font-bold text-gray-900 leading-tight">
-                  Deacon
-                  <br />
-                  <span className="bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 bg-clip-text text-transparent">
+                  <span className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 bg-clip-text text-transparent">
                     Your Church <br />Command Center
                   </span>
-                  <br />
                 </h1>
                 <p className="text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto">
-                  <strong> Built by a deacon. Backed by data. Ready to serve. </strong>
+                  <strong className="text-gray-900"> Built by a deacon. Backed by data. Ready to serve. </strong>
                   <br />
                   Deacon combines all essential church management tools into one powerful, intuitive platform.
                 </p>
+              </div>
+              
+              {/* CTA Buttons */}
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button 
+                  onClick={() => setShowBetaSignup(true)}
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 px-8 py-4 text-lg font-semibold shadow-xl"
+                >
+                  Get Started Free
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => setShowLoginModal(true)}
+                  className="border-gray-300 text-gray-700 hover:bg-gray-50 px-8 py-4 text-lg font-semibold backdrop-blur-sm bg-white/80"
+                >
+                  Sign In
+                </Button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Screenshots Section */}
-        <div className="py-12">
-         
-
-          <div className="relative max-w-4xl mx-auto">
-            <div className="overflow-hidden rounded-2xl shadow-2xl bg-white/90 backdrop-blur-sm border border-white/50">
-              <picture>
-                <source 
-                  media="(max-width: 768px)" 
-                  srcSet={screenshots[currentSlide].srcMobile} 
-                />
-                <img
-                  src={screenshots[currentSlide].src}
-                  alt={screenshots[currentSlide].title}
-                  className="w-full h-96 object-cover object-top transition-all duration-700"
-                />
-              </picture>
-            </div>
-            
-            <div className="text-center mt-8">
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">{screenshots[currentSlide].title}</h3>
-              <p className="text-lg text-gray-600">{screenshots[currentSlide].desc}</p>
-            </div>
-
-            {/* Navigation Dots */}
-            <div className="flex justify-center gap-3 mt-8">
-              {screenshots.map((_, idx) => (
-                <button
-                  key={idx}
-                  className={`w-3 h-3 rounded-full transition-all duration-200 ${
-                    idx === currentSlide ? 'bg-blue-600' : 'bg-gray-300'
-                  }`}
-                  onClick={() => goToSlide(idx)}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* 9 Features Section */}
-        <div className="py-20">
-          <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
+        {/* Features Section */}
+        <div className="py-20" id="features">
+          <div className="w-full px-6">
             <div className="text-center mb-16">
               <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
                 All-in-One Ministry Management
@@ -448,93 +425,237 @@ export function Login() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-              <div className="p-6 sm:p-8 bg-white/80 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/90 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
-                <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-2xl flex items-center justify-center mb-6 border border-emerald-200/50">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div 
+                className="p-8 bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200/50 hover:bg-white hover:border-gray-300 hover:scale-105 transition-all duration-300 group cursor-pointer shadow-lg"
+                onClick={() => openLightbox(screenshots[0].src, screenshots[0].title)}
+              >
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                   <Command className="h-7 w-7 text-white" />
                 </div>
+                <div className="relative overflow-hidden rounded-xl bg-gray-100 mb-6">
+                  <picture>
+                    <source 
+                      media="(max-width: 768px)" 
+                      srcSet={screenshots[0].srcMobile} 
+                    />
+                    <img
+                      src={screenshots[0].src}
+                      alt={screenshots[0].title}
+                      className="w-full h-32 object-cover object-top transition-all duration-500 group-hover:scale-110"
+                    />
+                  </picture>
+                </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-4">Command Center</h3>
-                <p className="text-gray-600 leading-relaxed text-lg">
+                <p className="text-gray-600 leading-relaxed">
                   Get real-time access to key metrics, attendance trends, giving data, and overall ministry activity—all from one centralized dashboard.
                 </p>
               </div>
 
-              <div className="p-6 sm:p-8 bg-white/80 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/90 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
-                <div className="w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-6 border border-emerald-200/50">
-                  <TrendingUp className="h-7 w-7 text-emerald-600" />
+              <div 
+                className="p-8 bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200/50 hover:bg-white hover:border-gray-300 hover:scale-105 transition-all duration-300 group cursor-pointer shadow-lg"
+                onClick={() => openLightbox(screenshots[1].src, screenshots[1].title)}
+              >
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <TrendingUp className="h-7 w-7 text-white" />
+                </div>
+                <div className="relative overflow-hidden rounded-xl bg-gray-100 mb-6">
+                  <picture>
+                    <source 
+                      media="(max-width: 768px)" 
+                      srcSet={screenshots[1].srcMobile} 
+                    />
+                    <img
+                      src={screenshots[1].src}
+                      alt={screenshots[1].title}
+                      className="w-full h-32 object-cover object-top transition-all duration-500 group-hover:scale-110"
+                    />
+                  </picture>
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-4">Actionable Insights & Ministry Health</h3>
-                <p className="text-gray-600 leading-relaxed text-lg">
+                <p className="text-gray-600 leading-relaxed">
                   Receive intelligent suggestions based on your data—from re-engaging absent members to improving event turnout—and get a clear picture of your church's overall spiritual and operational health.
                 </p>
               </div>
 
-              <div className="p-6 sm:p-8 bg-white/80 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/90 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
-                <div className="w-14 h-14 bg-blue-500/10 rounded-2xl flex items-center justify-center mb-6 border border-blue-200/50">
-                  <Users className="h-7 w-7 text-blue-600" />
+              <div 
+                className="p-8 bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200/50 hover:bg-white hover:border-gray-300 hover:scale-105 transition-all duration-300 group cursor-pointer shadow-lg"
+                onClick={() => openLightbox(screenshots[2].src, screenshots[2].title)}
+              >
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <Users className="h-7 w-7 text-white" />
+                </div>
+                <div className="relative overflow-hidden rounded-xl bg-gray-100 mb-6">
+                  <picture>
+                    <source 
+                      media="(max-width: 768px)" 
+                      srcSet={screenshots[2].srcMobile} 
+                    />
+                    <img
+                      src={screenshots[2].src}
+                      alt={screenshots[2].title}
+                      className="w-full h-32 object-cover object-top transition-all duration-500 group-hover:scale-110"
+                    />
+                  </picture>
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-4">People Management</h3>
-                <p className="text-gray-600 leading-relaxed text-lg">
+                <p className="text-gray-600 leading-relaxed">
                   Maintain rich member profiles, track family relationships, attendance history, and ministry involvement.
                 </p>
               </div>
 
-              <div className="p-6 sm:p-8 bg-white/80 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/90 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
-                <div className="w-14 h-14 bg-teal-500/10 rounded-2xl flex items-center justify-center mb-6 border border-teal-200/50">
-                  <Baby className="h-7 w-7 text-teal-600" />
+              <div 
+                className="p-8 bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200/50 hover:bg-white hover:border-gray-300 hover:scale-105 transition-all duration-300 group cursor-pointer shadow-lg"
+                onClick={() => openLightbox(screenshots[3].src, screenshots[3].title)}
+              >
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <Calendar className="h-7 w-7 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">Children's Ministry Check-in/Checkout</h3>
-                <p className="text-gray-600 leading-relaxed text-lg">
-                  Securely manage child check-ins with guardian verification, digital pickup codes, and full access logs—ensuring safety and accountability.
-                </p>
-              </div>
-
-              <div className="p-6 sm:p-8 bg-white/80 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/90 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
-                <div className="w-14 h-14 bg-purple-500/10 rounded-2xl flex items-center justify-center mb-6 border border-purple-200/50">
-                  <Calendar className="h-7 w-7 text-purple-600" />
+                <div className="relative overflow-hidden rounded-xl bg-gray-100 mb-6">
+                  <picture>
+                    <source 
+                      media="(max-width: 768px)" 
+                      srcSet={screenshots[3].srcMobile} 
+                    />
+                    <img
+                      src={screenshots[3].src}
+                      alt={screenshots[3].title}
+                      className="w-full h-32 object-cover object-top transition-all duration-500 group-hover:scale-110"
+                    />
+                  </picture>
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-4">Event Planning</h3>
-                <p className="text-gray-600 leading-relaxed text-lg">
+                <p className="text-gray-600 leading-relaxed">
                   Coordinate services, Bible studies, community events, and volunteer teams with streamlined scheduling tools.
                 </p>
               </div>
 
-              <div className="p-6 sm:p-8 bg-white/80 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/90 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
-                <div className="w-14 h-14 bg-orange-500/10 rounded-2xl flex items-center justify-center mb-6 border border-orange-200/50">
-                  <Monitor className="h-7 w-7 text-orange-600" />
+              <div 
+                className="p-8 bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200/50 hover:bg-white hover:border-gray-300 hover:scale-105 transition-all duration-300 group cursor-pointer shadow-lg"
+                onClick={() => openLightbox(screenshots[4].src, screenshots[4].title)}
+              >
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <Monitor className="h-7 w-7 text-white" />
+                </div>
+                <div className="relative overflow-hidden rounded-xl bg-gray-100 mb-6">
+                  <picture>
+                    <source 
+                      media="(max-width: 768px)" 
+                      srcSet={screenshots[4].srcMobile} 
+                    />
+                    <img
+                      src={screenshots[4].src}
+                      alt={screenshots[4].title}
+                      className="w-full h-32 object-cover object-top transition-all duration-500 group-hover:scale-110"
+                    />
+                  </picture>
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-4">Kiosk Mode</h3>
-                <p className="text-gray-600 leading-relaxed text-lg">
+                <p className="text-gray-600 leading-relaxed">
                   Set up self-service kiosks for check-ins, new guest sign-ups, and info displays that boost engagement and flow.
                 </p>
               </div>
 
-              <div className="p-6 sm:p-8 bg-white/80 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/90 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
-                <div className="w-14 h-14 bg-indigo-500/10 rounded-2xl flex items-center justify-center mb-6 border border-indigo-200/50">
-                  <CheckSquare className="h-7 w-7 text-indigo-600" />
+              <div 
+                className="p-8 bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200/50 hover:bg-white hover:border-gray-300 hover:scale-105 transition-all duration-300 group cursor-pointer shadow-lg"
+                onClick={() => openLightbox(screenshots[5].src, screenshots[5].title)}
+              >
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <CheckSquare className="h-7 w-7 text-white" />
+                </div>
+                <div className="relative overflow-hidden rounded-xl bg-gray-100 mb-6">
+                  <picture>
+                    <source 
+                      media="(max-width: 768px)" 
+                      srcSet={screenshots[5].srcMobile} 
+                    />
+                    <img
+                      src={screenshots[5].src}
+                      alt={screenshots[5].title}
+                      className="w-full h-32 object-cover object-top transition-all duration-500 group-hover:scale-110"
+                    />
+                  </picture>
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-4">Task & Team Oversight</h3>
-                <p className="text-gray-600 leading-relaxed text-lg">
+                <p className="text-gray-600 leading-relaxed">
                   Assign, follow up, and complete ministry responsibilities with built-in task tracking and accountability features.
                 </p>
               </div>
 
-              <div className="p-6 sm:p-8 bg-white/80 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/90 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
-                <div className="w-14 h-14 bg-pink-500/10 rounded-2xl flex items-center justify-center mb-6 border border-pink-200/50">
-                  <MessageSquare className="h-7 w-7 text-pink-600" />
+              <div 
+                className="p-8 bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200/50 hover:bg-white hover:border-gray-300 hover:scale-105 transition-all duration-300 group cursor-pointer shadow-lg"
+                onClick={() => openLightbox(screenshots[6].src, screenshots[6].title)}
+              >
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <MessageSquare className="h-7 w-7 text-white" />
+                </div>
+                <div className="relative overflow-hidden rounded-xl bg-gray-100 mb-6">
+                  <picture>
+                    <source 
+                      media="(max-width: 768px)" 
+                      srcSet={screenshots[6].srcMobile} 
+                    />
+                    <img
+                      src={screenshots[6].src}
+                      alt={screenshots[6].title}
+                      className="w-full h-32 object-cover object-top transition-all duration-500 group-hover:scale-110"
+                    />
+                  </picture>
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-4">Messaging Hub</h3>
-                <p className="text-gray-600 leading-relaxed text-lg">
+                <p className="text-gray-600 leading-relaxed">
                   Send SMS and email updates right from Deacon—keep your church informed without needing outside software.
                 </p>
               </div>
 
-              <div className="p-6 sm:p-8 bg-white/80 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/90 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
-                <div className="w-14 h-14 bg-amber-500/10 rounded-2xl flex items-center justify-center mb-6 border border-amber-200/50">
-                  <BarChart3 className="h-7 w-7 text-amber-600" />
+              <div 
+                className="p-8 bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200/50 hover:bg-white hover:border-gray-300 hover:scale-105 transition-all duration-300 group cursor-pointer shadow-lg"
+                onClick={() => openLightbox(screenshots[7].src, screenshots[7].title)}
+              >
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <Baby className="h-7 w-7 text-white" />
+                </div>
+                <div className="relative overflow-hidden rounded-xl bg-gray-100 mb-6">
+                  <picture>
+                    <source 
+                      media="(max-width: 768px)" 
+                      srcSet={screenshots[7].srcMobile} 
+                    />
+                    <img
+                      src={screenshots[7].src}
+                      alt={screenshots[7].title}
+                      className="w-full h-32 object-cover object-top transition-all duration-500 group-hover:scale-110"
+                    />
+                  </picture>
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">Children's Ministry Check-in/Checkout</h3>
+                <p className="text-gray-600 leading-relaxed">
+                  Securely manage child check-ins with guardian verification, digital pickup codes, and full access logs—ensuring safety and accountability.
+                </p>
+              </div>
+
+              <div 
+                className="p-8 bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200/50 hover:bg-white hover:border-gray-300 hover:scale-105 transition-all duration-300 group cursor-pointer shadow-lg"
+                onClick={() => openLightbox(screenshots[8].src, screenshots[8].title)}
+              >
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <BarChart3 className="h-7 w-7 text-white" />
+                </div>
+                <div className="relative overflow-hidden rounded-xl bg-gray-100 mb-6">
+                  <picture>
+                    <source 
+                      media="(max-width: 768px)" 
+                      srcSet={screenshots[8].srcMobile} 
+                    />
+                    <img
+                      src={screenshots[8].src}
+                      alt={screenshots[8].title}
+                      className="w-full h-32 object-cover object-top transition-all duration-500 group-hover:scale-110"
+                    />
+                  </picture>
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-4">Smart Reports & Analytics</h3>
-                <p className="text-gray-600 leading-relaxed text-lg">
+                <p className="text-gray-600 leading-relaxed">
                   Visualize giving patterns, attendance shifts, and ministry growth with powerful, easy-to-read reports.
                 </p>
               </div>
@@ -543,35 +664,37 @@ export function Login() {
         </div>
 
         {/* CTA Section */}
-        <div className="py-20 bg-gradient-to-br from-gray-50 to-blue-50 rounded-3xl my-20">
-          <div className="max-w-4xl mx-auto text-center px-6">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              Ready to Transform Your Ministry?
-            </h2>
-            <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-              Join the growing number of churches using Deacon to streamline their operations and focus on what matters most—serving their community.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                onClick={() => setShowBetaSignup(true)}
-                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 px-8 py-4 text-lg font-semibold"
-              >
-                Apply for Beta Access
-              </Button>
-              <Button 
-                variant="outline"
-                onClick={() => setShowLoginModal(true)}
-                className="border-gray-300 hover:bg-gray-50 px-8 py-4 text-lg font-semibold"
-              >
-                Sign In
-              </Button>
+        <div className="py-20 px-6">
+          <div className="text-center">
+            <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-12 border border-gray-200/50 max-w-4xl mx-auto shadow-lg">
+              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+                Ready to Transform Your Ministry?
+              </h2>
+              <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+                Join the growing number of churches using Deacon to streamline their operations and focus on what matters most—serving their community.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button 
+                  onClick={() => setShowBetaSignup(true)}
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 px-8 py-4 text-lg font-semibold shadow-xl"
+                >
+                  Apply for Beta Access
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => setShowLoginModal(true)}
+                  className="border-gray-300 text-gray-700 hover:bg-gray-50 px-8 py-4 text-lg font-semibold backdrop-blur-sm bg-white/80"
+                >
+                  Sign In
+                </Button>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <footer className="py-12 border-t border-gray-200">
-          <div className="max-w-7xl mx-auto px-6">
+        <footer className="py-12 border-t border-gray-200/50">
+          <div className="w-full px-6">
             <div className="grid md:grid-cols-4 gap-8">
               <div className="md:col-span-2">
                 <div className="flex items-center mb-4">
@@ -617,7 +740,7 @@ export function Login() {
               </div>
             </div>
             
-            <div className="mt-8 pt-8 border-t border-gray-200">
+            <div className="mt-8 pt-8 border-t border-gray-200/50">
               <p className="text-gray-500 text-center">
                 © 2024 Deacon. Built with ❤️ for churches everywhere.
               </p>
@@ -653,7 +776,7 @@ export function Login() {
                   placeholder="name@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10 py-3 text-sm bg-white border-gray-200 focus:border-emerald-500 focus:ring-emerald-500/20 h-12 transition-all duration-300 rounded-lg"
+                  className="pl-10 py-3 text-sm bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 h-12 transition-all duration-300 rounded-lg"
                   required
                 />
               </div>
@@ -668,7 +791,7 @@ export function Login() {
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 py-3 text-sm bg-white border-gray-200 focus:border-emerald-500 focus:ring-emerald-500/20 h-12 transition-all duration-300 rounded-lg"
+                  className="pl-10 py-3 text-sm bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 h-12 transition-all duration-300 rounded-lg"
                   required
                 />
               </div>
@@ -704,9 +827,6 @@ export function Login() {
                 className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-2xl"
               />
             </div>
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/50 text-white px-4 py-2 rounded-full text-sm">
-              {selectedImageAlt}
-            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -715,11 +835,11 @@ export function Login() {
       <Dialog open={showBetaSignup} onOpenChange={setShowBetaSignup}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-3xl font-bold text-center bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
+            <DialogTitle className="text-3xl font-bold text-center bg-gradient-to-r from-blue-500 to-blue-600 bg-clip-text text-transparent">
               Apply for Beta Access
             </DialogTitle>
             <div className="text-center space-y-4">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-700 rounded-full text-sm font-semibold border border-emerald-200/50">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/10 text-blue-700 rounded-full text-sm font-semibold border border-blue-200/50">
                 <AlertCircle className="h-4 w-4" />
                 Limited Beta Availability
               </div>
@@ -814,7 +934,7 @@ export function Login() {
                 value={betaSignupData.needs}
                 onChange={(e) => setBetaSignupData({...betaSignupData, needs: e.target.value})}
                 placeholder="What are your biggest challenges in church management? What would help you most?"
-                className="w-full min-h-[100px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                className="w-full min-h-[100px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               />
             </div>
