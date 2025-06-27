@@ -284,11 +284,6 @@ export function Login() {
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-emerald-400/20 to-blue-500/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-purple-400/10 to-pink-400/10 rounded-full blur-3xl"></div>
         
-        {/* Subtle grid pattern */}
-        <div className="absolute inset-0 opacity-50" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-        }}></div>
-        
         {/* Floating elements */}
         <div className="absolute top-20 left-10 w-2 h-2 bg-blue-400/30 rounded-full animate-pulse"></div>
         <div className="absolute top-40 right-20 w-3 h-3 bg-purple-400/30 rounded-full animate-pulse" style={{animationDelay: '1s'}}></div>
@@ -435,7 +430,7 @@ export function Login() {
         </div>
 
         {/* 9 Features Section */}
-        <div className="py-20">
+        <div id="features" className="py-20">
           <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
             <div className="text-center mb-16">
               <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
