@@ -276,9 +276,28 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
+      {/* Decorative Background Elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        {/* Large gradient circles */}
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-500/20 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-emerald-400/20 to-blue-500/20 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-purple-400/10 to-pink-400/10 rounded-full blur-3xl"></div>
+        
+        {/* Subtle grid pattern */}
+        <div className="absolute inset-0 opacity-50" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+        }}></div>
+        
+        {/* Floating elements */}
+        <div className="absolute top-20 left-10 w-2 h-2 bg-blue-400/30 rounded-full animate-pulse"></div>
+        <div className="absolute top-40 right-20 w-3 h-3 bg-purple-400/30 rounded-full animate-pulse" style={{animationDelay: '1s'}}></div>
+        <div className="absolute bottom-20 left-20 w-2 h-2 bg-emerald-400/30 rounded-full animate-pulse" style={{animationDelay: '2s'}}></div>
+        <div className="absolute bottom-40 right-10 w-3 h-3 bg-pink-400/30 rounded-full animate-pulse" style={{animationDelay: '0.5s'}}></div>
+      </div>
+
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
@@ -317,7 +336,43 @@ export function Login() {
         </div>
       </nav>
 
-      <div className="max-w-7xl mx-auto px-6">
+      {/* Mobile Menu Dropdown */}
+      {mobileMenuOpen && (
+        <div className="md:hidden fixed top-16 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-lg">
+          <div className="px-4 py-6 space-y-4">
+            <a 
+              href="#features" 
+              className="block text-gray-700 hover:text-gray-900 transition-colors py-2"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Features
+            </a>
+            <div className="flex flex-col gap-3">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setShowLoginModal(true);
+                  setMobileMenuOpen(false);
+                }}
+                className="border-gray-300 hover:bg-gray-50"
+              >
+                Sign In
+              </Button>
+              <Button 
+                onClick={() => {
+                  setShowBetaSignup(true);
+                  setMobileMenuOpen(false);
+                }}
+                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+              >
+                Get Started
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="max-w-7xl mx-auto px-6 relative z-10">
         {/* Hero Section */}
         <div className="pt-16 pb-12">
           <div className="max-w-4xl mx-auto text-center">
@@ -347,7 +402,7 @@ export function Login() {
          
 
           <div className="relative max-w-4xl mx-auto">
-            <div className="overflow-hidden rounded-2xl shadow-2xl bg-white">
+            <div className="overflow-hidden rounded-2xl shadow-2xl bg-white/90 backdrop-blur-sm border border-white/50">
               <picture>
                 <source 
                   media="(max-width: 768px)" 
@@ -383,7 +438,7 @@ export function Login() {
 
         {/* 9 Features Section */}
         <div className="py-20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
             <div className="text-center mb-16">
               <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
                 All-in-One Ministry Management
@@ -393,8 +448,8 @@ export function Login() {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              <div className="p-8 bg-white/60 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/80 hover:scale-105 transition-all duration-300 shadow-lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+              <div className="p-6 sm:p-8 bg-white/80 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/90 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
                 <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-2xl flex items-center justify-center mb-6 border border-emerald-200/50">
                   <Command className="h-7 w-7 text-white" />
                 </div>
@@ -404,7 +459,7 @@ export function Login() {
                 </p>
               </div>
 
-              <div className="p-8 bg-white/60 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/80 hover:scale-105 transition-all duration-300 shadow-lg">
+              <div className="p-6 sm:p-8 bg-white/80 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/90 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
                 <div className="w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-6 border border-emerald-200/50">
                   <TrendingUp className="h-7 w-7 text-emerald-600" />
                 </div>
@@ -414,7 +469,7 @@ export function Login() {
                 </p>
               </div>
 
-              <div className="p-8 bg-white/60 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/80 hover:scale-105 transition-all duration-300 shadow-lg">
+              <div className="p-6 sm:p-8 bg-white/80 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/90 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
                 <div className="w-14 h-14 bg-blue-500/10 rounded-2xl flex items-center justify-center mb-6 border border-blue-200/50">
                   <Users className="h-7 w-7 text-blue-600" />
                 </div>
@@ -424,7 +479,7 @@ export function Login() {
                 </p>
               </div>
 
-              <div className="p-8 bg-white/60 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/80 hover:scale-105 transition-all duration-300 shadow-lg">
+              <div className="p-6 sm:p-8 bg-white/80 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/90 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
                 <div className="w-14 h-14 bg-teal-500/10 rounded-2xl flex items-center justify-center mb-6 border border-teal-200/50">
                   <Baby className="h-7 w-7 text-teal-600" />
                 </div>
@@ -434,7 +489,7 @@ export function Login() {
                 </p>
               </div>
 
-              <div className="p-8 bg-white/60 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/80 hover:scale-105 transition-all duration-300 shadow-lg">
+              <div className="p-6 sm:p-8 bg-white/80 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/90 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
                 <div className="w-14 h-14 bg-purple-500/10 rounded-2xl flex items-center justify-center mb-6 border border-purple-200/50">
                   <Calendar className="h-7 w-7 text-purple-600" />
                 </div>
@@ -444,7 +499,7 @@ export function Login() {
                 </p>
               </div>
 
-              <div className="p-8 bg-white/60 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/80 hover:scale-105 transition-all duration-300 shadow-lg">
+              <div className="p-6 sm:p-8 bg-white/80 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/90 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
                 <div className="w-14 h-14 bg-orange-500/10 rounded-2xl flex items-center justify-center mb-6 border border-orange-200/50">
                   <Monitor className="h-7 w-7 text-orange-600" />
                 </div>
@@ -454,7 +509,7 @@ export function Login() {
                 </p>
               </div>
 
-              <div className="p-8 bg-white/60 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/80 hover:scale-105 transition-all duration-300 shadow-lg">
+              <div className="p-6 sm:p-8 bg-white/80 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/90 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
                 <div className="w-14 h-14 bg-indigo-500/10 rounded-2xl flex items-center justify-center mb-6 border border-indigo-200/50">
                   <CheckSquare className="h-7 w-7 text-indigo-600" />
                 </div>
@@ -464,7 +519,7 @@ export function Login() {
                 </p>
               </div>
 
-              <div className="p-8 bg-white/60 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/80 hover:scale-105 transition-all duration-300 shadow-lg">
+              <div className="p-6 sm:p-8 bg-white/80 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/90 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
                 <div className="w-14 h-14 bg-pink-500/10 rounded-2xl flex items-center justify-center mb-6 border border-pink-200/50">
                   <MessageSquare className="h-7 w-7 text-pink-600" />
                 </div>
@@ -474,7 +529,7 @@ export function Login() {
                 </p>
               </div>
 
-              <div className="p-8 bg-white/60 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/80 hover:scale-105 transition-all duration-300 shadow-lg">
+              <div className="p-6 sm:p-8 bg-white/80 backdrop-blur-sm rounded-3xl border border-white/50 hover:bg-white/90 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
                 <div className="w-14 h-14 bg-amber-500/10 rounded-2xl flex items-center justify-center mb-6 border border-amber-200/50">
                   <BarChart3 className="h-7 w-7 text-amber-600" />
                 </div>
