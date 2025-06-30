@@ -19,6 +19,7 @@ import { SMS } from './pages/sms';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import ApprovalStatus from './components/ApprovalStatus';
 import PrivacyPolicy from './pages/privacy-policy';
+import { TermsOfService } from './pages/terms-of-service';
 import PublicLayout from './components/PublicLayout';
 import Landing from './pages/landing';
 
@@ -31,6 +32,7 @@ function App() {
       <Route path="/register" element={<PublicLayout><Register /></PublicLayout>} />
       <Route path="/invite/:invitationId" element={<PublicLayout><Invite /></PublicLayout>} />
       <Route path="/privacy-policy" element={<PublicLayout><PrivacyPolicy /></PublicLayout>} />
+      <Route path="/terms-of-service" element={<PublicLayout><TermsOfService /></PublicLayout>} />
       
       {/* Approval status route */}
       <Route path="/approval-status" element={<ApprovalStatus />} />

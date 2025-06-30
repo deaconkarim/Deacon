@@ -45,6 +45,7 @@ import {
   Baby
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export function Login() {
   const [email, setEmail] = useState('');
@@ -63,7 +64,8 @@ export function Login() {
     phone: '',
     churchSize: '',
     currentTools: '',
-    needs: ''
+    needs: '',
+    smsOptIn: false
   });
   const [betaSignupLoading, setBetaSignupLoading] = useState(false);
   const navigate = useNavigate();
@@ -246,7 +248,8 @@ export function Login() {
           phone: betaSignupData.phone || null,
           church_size: betaSignupData.churchSize,
           current_tools: betaSignupData.currentTools || null,
-          needs: betaSignupData.needs
+          needs: betaSignupData.needs,
+          sms_opt_in: betaSignupData.smsOptIn
         }])
         .select()
         .single();
@@ -266,7 +269,8 @@ export function Login() {
         phone: '',
         churchSize: '',
         currentTools: '',
-        needs: ''
+        needs: '',
+        smsOptIn: false
       });
     } catch (error) {
       console.error('Error submitting beta signup:', error);
@@ -938,6 +942,39 @@ export function Login() {
                 required
               />
             </div>
+
+            {/* SMS Opt-in Disclaimer */}
+            <div className="space-y-3">
+              <div className="flex items-start space-x-2">
+                <Checkbox
+                  id="smsOptIn"
+                  checked={betaSignupData.smsOptIn}
+                  onCheckedChange={(checked) => 
+                    setBetaSignupData(prev => ({ ...prev, smsOptIn: checked }))
+                  }
+                />
+                <div className="space-y-2">
+                  <Label htmlFor="smsOptIn" className="text-sm font-medium">
+                    I agree to receive SMS messages from Deacon
+                  </Label>
+                  <div className="text-xs text-gray-600 space-y-1">
+                    <p>
+                      By checking this box, you consent to receive SMS messages including beta program updates, 
+                      feature announcements, and occasional offers from Deacon.
+                    </p>
+                    <p>
+                      <strong>Message and data rates may apply.</strong> Message frequency varies based on beta program activities.
+                    </p>
+                    <p>
+                      <strong>Text HELP for help</strong> or contact us for assistance.
+                    </p>
+                    <p>
+                      <strong>Text STOP to unsubscribe</strong> from SMS messages at any time.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
             
             <div className="flex gap-4 pt-4">
               <Button
@@ -957,6 +994,30 @@ export function Login() {
               </Button>
             </div>
           </form>
+
+          {/* Legal Links */}
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <div className="text-xs text-gray-600 text-center space-y-1">
+              <p>
+                By submitting this application, you agree to our{' '}
+                <Button
+                  variant="link"
+                  className="p-0 h-auto font-normal text-xs underline"
+                  onClick={() => window.open('/privacy-policy', '_blank')}
+                >
+                  Privacy Policy
+                </Button>
+                {' '}and{' '}
+                <Button
+                  variant="link"
+                  className="p-0 h-auto font-normal text-xs underline"
+                  onClick={() => window.open('/terms-of-service', '_blank')}
+                >
+                  Terms of Service
+                </Button>
+              </p>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

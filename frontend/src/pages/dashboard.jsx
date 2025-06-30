@@ -84,6 +84,7 @@ export function Dashboard() {
     eventsThisWeek: 0,
     eventsThisMonth: 0,
     averageEventsPerMonth: 0,
+    mostCommonEventType: 'None',
     sundayServiceRate: 0,
     totalVolunteers: 0,
     upcomingVolunteers: 0,
@@ -551,6 +552,23 @@ export function Dashboard() {
       
       console.log('Last Sunday donations total:', lastSundayDonations);
 
+      // Calculate event types breakdown for upcoming events
+      const eventTypesBreakdown = {};
+      upcomingEvents.forEach(event => {
+        const eventType = event.event_type || 'Other';
+        eventTypesBreakdown[eventType] = (eventTypesBreakdown[eventType] || 0) + 1;
+      });
+      
+      // Get the most common upcoming event type
+      const mostCommonEventType = Object.keys(eventTypesBreakdown).length > 0 
+        ? Object.keys(eventTypesBreakdown).reduce((a, b) => 
+            eventTypesBreakdown[a] > eventTypesBreakdown[b] ? a : b
+          )
+        : 'None';
+      
+      // Calculate events needing volunteers (events with needs_volunteers = true)
+      const eventsNeedingVolunteers = upcomingEvents.filter(event => event.needs_volunteers === true).length;
+
       setStats({
         totalPeople,
         activeMembers: activeMembers.length,
@@ -566,11 +584,12 @@ export function Dashboard() {
         eventsThisWeek,
         eventsThisMonth,
         averageEventsPerMonth,
+        mostCommonEventType,
         sundayServiceRate,
         totalVolunteers: volunteerStats.totalVolunteers,
         upcomingVolunteers: volunteerStats.upcomingVolunteers,
         recentVolunteers: volunteerStats.recentVolunteers,
-        eventsNeedingVolunteers: volunteerStats.eventsNeedingVolunteers,
+        eventsNeedingVolunteers,
         sundayServiceAttendance: sundayServiceStats.totalAttendance,
         sundayServiceEvents: sundayServiceStats.eventCount,
         bibleStudyAttendance: bibleStudyStats.totalAttendance,
@@ -874,12 +893,20 @@ export function Dashboard() {
               {isLoading ? (
                 <Skeleton className="h-8 w-16 mb-1" />
               ) : (
-                <div className="text-3xl font-bold">{stats.averageEventsPerMonth}</div>
+                <div className="text-3xl font-bold">{stats.upcomingEvents || 0}</div>
               )}
-              <p className="text-sm text-muted-foreground mt-1">Average per month</p>
+              <p className="text-sm text-muted-foreground mt-1">Upcoming events</p>
               
               {/* Events breakdown */}
               <div className="mt-4 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-purple-600 font-medium">Need Volunteers</span>
+                  {isLoading ? (
+                    <Skeleton className="h-4 w-8" />
+                  ) : (
+                    <span className="text-sm font-semibold">{stats.eventsNeedingVolunteers || 0}</span>
+                  )}
+                </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-purple-600 font-medium">This Week</span>
                   {isLoading ? (
@@ -889,19 +916,18 @@ export function Dashboard() {
                   )}
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-purple-600 font-medium">This Month</span>
+                  <span className="text-sm text-purple-600 font-medium">Most Common</span>
                   {isLoading ? (
                     <Skeleton className="h-4 w-8" />
                   ) : (
-                    <span className="text-sm font-semibold">{stats.eventsThisMonth}</span>
-                  )}
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-purple-600 font-medium">Average Per Month</span>
-                  {isLoading ? (
-                    <Skeleton className="h-4 w-8" />
-                  ) : (
-                    <span className="text-sm font-semibold">{stats.averageEventsPerMonth}</span>
+                    <span className="text-sm font-semibold">
+                      {stats.mostCommonEventType === 'Sunday Worship Service' ? 'Sunday Service' :
+                       stats.mostCommonEventType === 'Bible Study' ? 'Bible Study' :
+                       stats.mostCommonEventType === 'Fellowship' ? 'Fellowship' :
+                       stats.mostCommonEventType === 'Other' ? 'Other' :
+                       stats.mostCommonEventType === 'None' ? 'None' :
+                       stats.mostCommonEventType}
+                    </span>
                   )}
                 </div>
               </div>

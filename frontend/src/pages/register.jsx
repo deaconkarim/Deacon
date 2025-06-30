@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/components/ui/use-toast';
 import { Church, UserPlus, Mail, Lock, User, Building, MapPin, Phone } from 'lucide-react';
 
@@ -25,7 +26,9 @@ export function Register() {
       city: '',
       state: '',
       zip: ''
-    }
+    },
+    // SMS opt-in
+    smsOptIn: false
   });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -84,6 +87,9 @@ export function Register() {
       return;
     }
 
+    // Note: SMS opt-in is optional, so we don't require it to be checked
+    // The checkbox defaults to false and must be explicitly checked by the user
+
     setLoading(true);
 
     try {
@@ -95,6 +101,7 @@ export function Register() {
           data: {
             first_name: formData.firstName,
             last_name: formData.lastName,
+            sms_opt_in: formData.smsOptIn,
           }
         }
       });
@@ -369,6 +376,42 @@ export function Register() {
                 </div>
               </div>
             </div>
+
+            {/* SMS Opt-in Disclaimer */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Communication Preferences</h3>
+              <div className="space-y-3">
+                <div className="flex items-start space-x-2">
+                  <Checkbox
+                    id="smsOptIn"
+                    checked={formData.smsOptIn}
+                    onCheckedChange={(checked) => 
+                      setFormData(prev => ({ ...prev, smsOptIn: checked }))
+                    }
+                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="smsOptIn" className="text-sm font-medium">
+                      I agree to receive SMS messages from {formData.organizationName || 'our church'}
+                    </Label>
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <p>
+                        By checking this box, you consent to receive SMS messages including appointment reminders, 
+                        event notifications, ministry updates, and occasional offers from {formData.organizationName || 'our church'}.
+                      </p>
+                      <p>
+                        <strong>Message and data rates may apply.</strong> Message frequency varies based on church activities and events.
+                      </p>
+                      <p>
+                        <strong>Text HELP for help</strong> or call {formData.organizationPhone || '(925) 304-3799'} for assistance.
+                      </p>
+                      <p>
+                        <strong>Text STOP to unsubscribe</strong> from SMS messages at any time.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
             
             <Button
               type="submit"
@@ -391,6 +434,30 @@ export function Register() {
                 Sign in
               </Button>
             </p>
+          </div>
+
+          {/* Legal Links */}
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <div className="text-xs text-muted-foreground text-center space-y-1">
+              <p>
+                By creating an account, you agree to our{' '}
+                <Button
+                  variant="link"
+                  className="p-0 h-auto font-normal text-xs underline"
+                  onClick={() => window.open('/privacy-policy', '_blank')}
+                >
+                  Privacy Policy
+                </Button>
+                {' '}and{' '}
+                <Button
+                  variant="link"
+                  className="p-0 h-auto font-normal text-xs underline"
+                  onClick={() => window.open('/terms-of-service', '_blank')}
+                >
+                  Terms of Service
+                </Button>
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>

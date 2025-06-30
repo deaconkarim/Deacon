@@ -89,7 +89,7 @@ const formatRecurrencePattern = (pattern, monthlyWeek, monthlyWeekday) => {
   }
 };
 
-const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVolunteers }) => {
+const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVolunteers, isPastEvent = false }) => {
   const startDate = new Date(event.start_date);
   const endDate = new Date(event.end_date);
   const isRecurring = event.is_recurring;
@@ -119,6 +119,11 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVol
                 <Badge variant="outline" className="ml-0 md:ml-2 text-xs md:text-sm text-yellow-600 border-yellow-600 flex items-center gap-1">
                   <Handshake className="h-3 w-3" />
                   Volunteers Needed
+                </Badge>
+              )}
+              {isPastEvent && (
+                <Badge variant="outline" className="ml-0 md:ml-2 text-xs md:text-sm text-gray-600 border-gray-600">
+                  Past Event
                 </Badge>
               )}
             </CardTitle>
@@ -181,7 +186,15 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVol
             )}
             {event.allow_rsvp && (
               <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2">
-                {isCheckIn ? (
+                {isPastEvent ? (
+                  <Button
+                    onClick={() => onRSVP(event)}
+                    className="bg-orange-600 hover:bg-orange-700 text-white h-12 md:h-9 text-base md:text-sm"
+                  >
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit Attendance
+                  </Button>
+                ) : isCheckIn ? (
                   <Button
                     onClick={() => onRSVP(event)}
                     className="bg-green-600 hover:bg-green-700 h-12 md:h-9 text-base md:text-sm"
@@ -220,9 +233,13 @@ export default function Events() {
   const { user } = useAuth();
 
   const [events, setEvents] = useState([]);
+  const [pastEvents, setPastEvents] = useState([]);
   const [filteredEvents, setFilteredEvents] = useState([]);
+  const [filteredPastEvents, setFilteredPastEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingPast, setIsLoadingPast] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [pastSearchQuery, setPastSearchQuery] = useState('');
   const [attendance, setAttendance] = useState({});
   const [members, setMembers] = useState([]);
   const [isMemberDialogOpen, setIsMemberDialogOpen] = useState(false);
@@ -284,6 +301,8 @@ export default function Events() {
   const [volunteerDialogEvent, setVolunteerDialogEvent] = useState(null);
   const [suggestedMembers, setSuggestedMembers] = useState([]);
   const [memberAttendanceCount, setMemberAttendanceCount] = useState({});
+  const [activeTab, setActiveTab] = useState('upcoming');
+  const [isEditingPastEvent, setIsEditingPastEvent] = useState(false);
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -345,6 +364,46 @@ export default function Events() {
     }
   }, [toast]);
 
+  const fetchPastEvents = useCallback(async () => {
+    try {
+      setIsLoadingPast(true);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Get events from the last week
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+      oneWeekAgo.setHours(0, 0, 0, 0);
+
+      const { data, error } = await supabase
+        .from('events')
+        .select('*, event_attendance(*)')
+        .gte('start_date', oneWeekAgo.toISOString())
+        .lt('start_date', today.toISOString())
+        .order('start_date', { ascending: false });
+
+      if (error) throw error;
+
+      // Process past events and add attendance count
+      const processedPastEvents = data.map(event => ({
+        ...event,
+        attendance: event.event_attendance?.length || 0
+      }));
+
+      setPastEvents(processedPastEvents);
+      setFilteredPastEvents(processedPastEvents);
+    } catch (error) {
+      console.error('Error fetching past events:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load past events',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsLoadingPast(false);
+    }
+  }, [toast]);
+
   // Update the filtering effect to only handle search and attendance filters
   useEffect(() => {
     let filtered = [...events];
@@ -372,10 +431,26 @@ export default function Events() {
     setFilteredEvents(filtered);
   }, [events, searchQuery, attendanceFilter]);
 
+  // Filter past events
+  useEffect(() => {
+    let filtered = [...pastEvents];
+
+    // Apply search filter
+    if (pastSearchQuery) {
+      filtered = filtered.filter(event =>
+        event.title.toLowerCase().includes(pastSearchQuery.toLowerCase()) ||
+        event.location?.toLowerCase().includes(pastSearchQuery.toLowerCase())
+      );
+    }
+
+    setFilteredPastEvents(filtered);
+  }, [pastEvents, pastSearchQuery]);
+
   // Initial fetch
   useEffect(() => {
     fetchEvents();
-  }, [fetchEvents]);
+    fetchPastEvents();
+  }, [fetchEvents, fetchPastEvents]);
 
   const generateNextInstance = (event) => {
     if (!event.is_recurring) return null;
@@ -1027,6 +1102,13 @@ export default function Events() {
     setMemberSearchQuery('');
     setIsMemberDialogOpen(true);
     
+    // Check if this is a past event
+    const eventDate = new Date(event.start_date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const isPastEvent = eventDate < today;
+    setIsEditingPastEvent(isPastEvent);
+    
     try {
       // Fetch all members
       const { data: allMembers, error: membersError } = await supabase
@@ -1139,6 +1221,7 @@ export default function Events() {
     setAlreadyRSVPMembers([]);
     setSuggestedMembers([]);
     setMemberAttendanceCount({});
+    setIsEditingPastEvent(false);
   };
 
   const handlePotluckRSVP = useCallback(async (event) => {
@@ -1283,20 +1366,146 @@ export default function Events() {
         </Button>
       </div>
 
-      {/* Event List */}
-      <div className="space-y-4 px-2 md:px-0">
-        {filteredEvents.map((event) => (
-          <EventCard
-            key={event.id}
-            event={event}
-            onRSVP={handleOpenDialog}
-            onPotluckRSVP={handlePotluckRSVP}
-            onEdit={handleEditClick}
-            onDelete={handleDeleteEvent}
-            onManageVolunteers={handleManageVolunteers}
-          />
-        ))}
-      </div>
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full px-2 md:px-0">
+        <TabsList className="grid w-full grid-cols-2 h-14 mb-6">
+          <TabsTrigger value="upcoming" className="text-lg">Upcoming Events</TabsTrigger>
+          <TabsTrigger value="past" className="text-lg">Past Events</TabsTrigger>
+        </TabsList>
+
+        {/* Upcoming Events Tab */}
+        <TabsContent value="upcoming" className="space-y-4">
+          {/* Search and Filters for Upcoming Events */}
+          <div className="flex flex-col md:flex-row gap-3 mb-4">
+            <div className="flex-1">
+              <Input
+                placeholder="Search upcoming events..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full h-14 text-lg"
+              />
+            </div>
+            <Select value={attendanceFilter} onValueChange={setAttendanceFilter}>
+              <SelectTrigger className="w-full md:w-48 h-14 text-lg">
+                <SelectValue placeholder="Filter by attendance" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Events</SelectItem>
+                <SelectItem value="attending">With Attendance</SelectItem>
+                <SelectItem value="not_attending">No Attendance</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Upcoming Events List */}
+          {isLoading ? (
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <Card key={i} className="p-6">
+                  <div className="animate-pulse">
+                    <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : filteredEvents.length > 0 ? (
+            <div className="space-y-4">
+              {filteredEvents.map((event) => (
+                <EventCard
+                  key={event.id}
+                  event={event}
+                  onRSVP={handleOpenDialog}
+                  onPotluckRSVP={handlePotluckRSVP}
+                  onEdit={handleEditClick}
+                  onDelete={handleDeleteEvent}
+                  onManageVolunteers={handleManageVolunteers}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No upcoming events</h3>
+              <p className="text-gray-500 mb-4">
+                {searchQuery || attendanceFilter !== 'all' 
+                  ? 'No events match your current filters.' 
+                  : 'Get started by creating your first event.'}
+              </p>
+              {!searchQuery && attendanceFilter === 'all' && (
+                <Button onClick={() => setIsCreateEventOpen(true)}>
+                  Create Event
+                </Button>
+              )}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Past Events Tab */}
+        <TabsContent value="past" className="space-y-4">
+          {/* Search for Past Events */}
+          <div className="flex flex-col md:flex-row gap-3 mb-4">
+            <div className="flex-1">
+              <Input
+                placeholder="Search past events..."
+                value={pastSearchQuery}
+                onChange={(e) => setPastSearchQuery(e.target.value)}
+                className="w-full h-14 text-lg"
+              />
+            </div>
+            <Button
+              onClick={fetchPastEvents}
+              variant="outline"
+              className="w-full md:w-auto h-14 text-lg"
+              disabled={isLoadingPast}
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${isLoadingPast ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
+
+          {/* Past Events List */}
+          {isLoadingPast ? (
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <Card key={i} className="p-6">
+                  <div className="animate-pulse">
+                    <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : filteredPastEvents.length > 0 ? (
+            <div className="space-y-4">
+              {filteredPastEvents.map((event) => (
+                <EventCard
+                  key={event.id}
+                  event={event}
+                  onRSVP={handleOpenDialog}
+                  onPotluckRSVP={handlePotluckRSVP}
+                  onEdit={handleEditClick}
+                  onDelete={handleDeleteEvent}
+                  onManageVolunteers={handleManageVolunteers}
+                  isPastEvent={true}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No past events</h3>
+              <p className="text-gray-500 mb-4">
+                {pastSearchQuery 
+                  ? 'No past events match your search.' 
+                  : 'No events from the last week found.'}
+              </p>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Create/Edit Event Dialog */}
       <Dialog open={isCreateEventOpen} onOpenChange={setIsCreateEventOpen}>
@@ -1335,7 +1544,12 @@ export default function Events() {
           <DialogHeader className="p-3 md:p-6 border-b">
             <div className="space-y-2">
               <DialogTitle className="text-2xl md:text-3xl">
-                {selectedEvent?.attendance_type === 'check-in' ? 'Check In People' : 'RSVP Members'} - {selectedEvent?.title}
+                {isEditingPastEvent 
+                  ? 'Edit Attendance' 
+                  : selectedEvent?.attendance_type === 'check-in' 
+                    ? 'Check In People' 
+                    : 'RSVP Members'
+                } - {selectedEvent?.title}
               </DialogTitle>
               {suggestedMembers.length > 0 && (
                 <div className="flex items-center gap-2">
@@ -1347,9 +1561,12 @@ export default function Events() {
               )}
             </div>
             <DialogDescription className="text-lg mt-2">
-              {selectedEvent?.attendance_type === 'check-in'
-                ? 'Check In People for the event'
-                : `Select members to RSVP for ${selectedEvent?.title}`}
+              {isEditingPastEvent
+                ? `Edit attendance records for ${selectedEvent?.title}`
+                : selectedEvent?.attendance_type === 'check-in'
+                  ? 'Check In People for the event'
+                  : `Select members to RSVP for ${selectedEvent?.title}`
+              }
             </DialogDescription>
             {suggestedMembers.length > 0 && (
               <div className="mt-2 text-sm text-green-600">
@@ -1361,7 +1578,9 @@ export default function Events() {
           <div className="p-3 md:p-6">
             <Tabs defaultValue="available" className="w-full">
               <TabsList className="grid w-full grid-cols-2 h-14">
-                <TabsTrigger value="available" className="text-lg">Available People</TabsTrigger>
+                <TabsTrigger value="available" className="text-lg">
+                  {isEditingPastEvent ? 'Add Attendance' : 'Available People'}
+                </TabsTrigger>
                 <TabsTrigger value="checked-in" className="text-lg">
                   {selectedEvent?.attendance_type === 'check-in' ? 'Checked In' : 'RSVP\'d'}
                 </TabsTrigger>

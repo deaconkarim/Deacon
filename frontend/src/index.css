@@ -208,8 +208,3 @@
     scroll-behavior: smooth;
   }
 }
-
-/* Override p-4 padding to 0 */
-.p-4 {
-  padding: 0 !important;
-}
