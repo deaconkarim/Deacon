@@ -4,9 +4,7 @@ export function Logo({ size = 60, className = "", showText = true }) {
   // Calculate sizes
   const iconSize = showText ? Math.floor(size * 0.6) : size;
   const textSize = Math.floor(size * 0.4);
-  
-  console.log('Logo component rendering with showText:', showText, 'size:', size);
-  
+    
   return (
     <div className={`inline-flex items-center gap-2 ${className}`}>
       {/* Church Icon */}

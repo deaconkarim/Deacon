@@ -44,6 +44,7 @@ import EventForm from '@/components/events/EventForm';
 import { addEvent, updateEvent, deleteEvent } from '@/lib/data';
 import { getInitials } from '@/lib/utils/formatters';
 import { PotluckRSVPDialog } from '@/components/events/PotluckRSVPDialog';
+import { automationService } from '@/lib/automationService';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -196,6 +197,10 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete }) => {
 export function Events() {
   const { toast } = useToast();
   const { user } = useAuth();
+  
+  // Debug user context
+  console.log('🔍 Events component - User context:', user);
+  console.log('🔍 Events component - User organization_id:', user?.organization_id);
   const [events, setEvents] = useState([]);
   const [filteredEvents, setFilteredEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -780,11 +785,44 @@ export function Events() {
         status: 'attending'
       }));
 
-      const { error } = await supabase
+      const { data: attendanceData, error } = await supabase
         .from('event_attendance')
-        .insert(rsvpsToAdd);
+        .insert(rsvpsToAdd)
+        .select();
 
       if (error) throw error;
+
+      // Trigger automation for each attendance record
+      if (user?.organization_id && attendanceData) {
+        for (const attendance of attendanceData) {
+          try {
+            // Get member details for automation
+            const member = members.find(m => m.id === attendance.member_id);
+            if (member) {
+              await automationService.triggerAutomation(
+                'event_attendance',
+                {
+                  id: attendance.id,
+                  event_id: selectedEvent.id,
+                  member_id: attendance.member_id,
+                  status: 'attending',
+                  event_type: selectedEvent.event_type,
+                  member_type: member.status === 'visitor' ? 'visitor' : (member.member_type || 'adult'),
+                  attendance_status: 'attended',
+                  is_first_visit: member.status === 'visitor',
+                  firstname: member.firstname,
+                  lastname: member.lastname,
+                  phone: member.phone
+                },
+                user.organization_id
+              );
+            }
+          } catch (automationError) {
+            console.error('Automation trigger failed for member:', attendance.member_id, automationError);
+            // Don't fail the main operation if automation fails
+          }
+        }
+      }
 
       // Update the alreadyRSVPMembers list with the newly added members
       const { data: newMembers } = await supabase
@@ -1291,17 +1329,60 @@ export function Events() {
                     key={member.id}
                     className="flex items-center space-x-2 p-2 rounded-md cursor-pointer hover:bg-gray-100"
                     onClick={async () => {
+                      console.log('🖱️ Member clicked:', member.firstname, member.lastname);
+                      console.log('🖱️ Selected event:', selectedEvent);
                       try {
                         // Add member to event attendance
-                        const { error } = await supabase
+                        const { data: attendanceData, error } = await supabase
                           .from('event_attendance')
                           .insert({
                             event_id: selectedEvent.id,
                             member_id: member.id,
                             status: 'attending'
-                          });
+                          })
+                          .select()
+                          .single();
 
                         if (error) throw error;
+
+                        // Trigger automation for event attendance
+                        console.log('🔍 Checking if automation should trigger...');
+                        console.log('👤 User organization_id:', user?.organization_id);
+                        console.log('👤 Member status:', member.status);
+                        console.log('🎯 Event type:', selectedEvent.event_type);
+                        
+                        if (user?.organization_id) {
+                          try {
+                            const triggerData = {
+                              id: attendanceData.id,
+                              event_id: selectedEvent.id,
+                              member_id: member.id,
+                              status: 'attending',
+                              event_type: selectedEvent.event_type,
+                              member_type: member.status === 'visitor' ? 'visitor' : (member.member_type || 'adult'),
+                              attendance_status: 'attended',
+                              is_first_visit: member.status === 'visitor',
+                              firstname: member.firstname,
+                              lastname: member.lastname,
+                              phone: member.phone
+                            };
+                            
+                            console.log('🎯 Event data:', selectedEvent);
+                            console.log('👤 Member data:', member);
+                            console.log('🚀 Triggering automation with data:', triggerData);
+                            
+                            await automationService.triggerAutomation(
+                              'event_attendance',
+                              triggerData,
+                              user.organization_id
+                            );
+                          } catch (automationError) {
+                            console.error('Automation trigger failed:', automationError);
+                            // Don't fail the main operation if automation fails
+                          }
+                        } else {
+                          console.log('❌ No organization_id found, skipping automation');
+                        }
 
                         // Move member to Already RSVP'd list
                         setAlreadyRSVPMembers(prev => [...prev, member]);

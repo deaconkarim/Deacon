@@ -16,6 +16,7 @@ import { Login } from './pages/login';
 import { Register } from './pages/register';
 import { Invite } from './pages/invite';
 import { SMS } from './pages/sms';
+import { Alerts } from './pages/alerts';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import ApprovalStatus from './components/ApprovalStatus';
 import PrivacyPolicy from './pages/privacy-policy';
@@ -51,6 +52,7 @@ function App() {
         <Route path="/reports" element={<Reports />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/sms" element={<SMS />} />
+        <Route path="/alerts" element={<Alerts />} />
       </Route>
     </Routes>
   );

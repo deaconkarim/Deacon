@@ -16,7 +16,6 @@ import {
   Users,
   Grid,
   List,
-  MoreVertical,
   UserPlus,
   MapPin,
   ChevronDown,
@@ -37,7 +36,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/components/ui/use-toast';
 import { getMembers, addMember, updateMember, deleteMember, getMemberAttendance } from '../lib/data';
 import { familyService } from '../lib/familyService';
@@ -55,6 +53,7 @@ export function People() {
   const [families, setFamilies] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [ageFilter, setAgeFilter] = useState('adults'); // Default to adults
   const [viewMode, setViewMode] = useState('grid');
   const [sortField, setSortField] = useState('lastName');
   const [sortDirection, setSortDirection] = useState('asc');
@@ -78,7 +77,6 @@ export function People() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedMembers, setSelectedMembers] = useState([]);
   const [isFamilyDialogOpen, setIsFamilyDialogOpen] = useState(false);
   const [newFamily, setNewFamily] = useState({
     family_name: ''
@@ -108,6 +106,9 @@ export function People() {
         if (lastNameCompare !== 0) return lastNameCompare;
         return (a.firstName || '').localeCompare(b.firstName || '');
       });
+      
+
+      
       setMembers(sortedData);
       setFilteredMembers(sortedData);
     } catch (error) {
@@ -304,6 +305,14 @@ export function People() {
       filtered = filtered.filter(member => member.status === statusFilter);
     }
 
+    // Apply age filter
+    if (ageFilter === 'adults') {
+      filtered = filtered.filter(member => isAdult(member));
+    } else if (ageFilter === 'children') {
+      filtered = filtered.filter(member => isChild(member));
+    }
+    // If ageFilter is 'all', don't filter by age
+
     // Apply sorting
     filtered.sort((a, b) => {
       let aValue = a[sortField] || '';
@@ -329,7 +338,7 @@ export function People() {
     });
     
     setFilteredMembers(filtered);
-  }, [searchQuery, statusFilter, members, sortField, sortDirection]);
+  }, [searchQuery, statusFilter, ageFilter, members, sortField, sortDirection]);
   
   const handleAddMember = async () => {
     try {
@@ -427,24 +436,6 @@ export function People() {
         description: "Failed to delete person",
         variant: "destructive",
       });
-    }
-  };
-  
-  const handleSelectMember = (memberId) => {
-    setSelectedMembers(prev => {
-      if (prev.includes(memberId)) {
-        return prev.filter(id => id !== memberId);
-      } else {
-        return [...prev, memberId];
-      }
-    });
-  };
-  
-  const handleSelectAll = (e) => {
-    if (e.target.checked) {
-      setSelectedMembers(filteredMembers.map(member => member.id));
-    } else {
-      setSelectedMembers([]);
     }
   };
   
@@ -564,6 +555,14 @@ export function People() {
     }
     return age;
   };
+
+  const isAdult = (member) => {
+    return member.member_type === 'adult';
+  };
+
+  const isChild = (member) => {
+    return member.member_type === 'child';
+  };
   
   if (isLoading) {
     return (
@@ -603,6 +602,17 @@ export function People() {
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="inactive">Inactive</SelectItem>
               <SelectItem value="visitor">Visitor</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Select value={ageFilter} onValueChange={setAgeFilter}>
+            <SelectTrigger className="w-full sm:w-[150px]">
+              <SelectValue placeholder="Filter by age" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Ages</SelectItem>
+              <SelectItem value="adults">Adults</SelectItem>
+              <SelectItem value="children">Children</SelectItem>
             </SelectContent>
           </Select>
           
@@ -720,27 +730,19 @@ export function People() {
                   <table className="w-full caption-bottom text-sm tablet-table">
                     <thead className="[&_tr]:border-b">
                       <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                        <th className="h-12 tablet:h-14 px-3 tablet:px-4 text-left align-middle font-medium">
-                          <div className="flex items-center space-x-2">
-                            <Checkbox 
-                              id="select-all" 
-                              onCheckedChange={handleSelectAll}
-                              checked={selectedMembers.length === filteredMembers.length && filteredMembers.length > 0}
-                              className="touch-target"
-                            />
-                            <Button 
-                              variant="ghost" 
-                              className="flex items-center gap-1 touch-target"
-                              onClick={() => handleSort('lastName')}
-                            >
-                              Name
-                              {sortField === 'lastName' && (
-                                sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
+                        <th className="h-16 px-4 text-left align-middle font-medium">
+                          <Button 
+                            variant="ghost" 
+                            className="flex items-center gap-1 touch-target"
+                            onClick={() => handleSort('lastName')}
+                          >
+                            Name
+                            {sortField === 'lastName' && (
+                              sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                            )}
+                          </Button>
                         </th>
-                        <th className="h-12 tablet:h-14 px-3 tablet:px-4 text-left align-middle font-medium hidden sm:table-cell">
+                        <th className="h-16 px-4 text-left align-middle font-medium hidden sm:table-cell">
                           <Button 
                             variant="ghost" 
                             className="flex items-center gap-1 touch-target"
@@ -752,7 +754,7 @@ export function People() {
                             )}
                           </Button>
                         </th>
-                        <th className="h-12 tablet:h-14 px-3 tablet:px-4 text-left align-middle font-medium hidden tablet:table-cell">
+                        <th className="h-16 px-4 text-left align-middle font-medium hidden tablet:table-cell">
                           <Button 
                             variant="ghost" 
                             className="flex items-center gap-1 touch-target"
@@ -764,7 +766,7 @@ export function People() {
                             )}
                           </Button>
                         </th>
-                        <th className="h-12 tablet:h-14 px-3 tablet:px-4 text-left align-middle font-medium hidden lg:table-cell">
+                        <th className="h-16 px-4 text-left align-middle font-medium hidden lg:table-cell">
                           <Button 
                             variant="ghost" 
                             className="flex items-center gap-1 touch-target"
@@ -776,7 +778,7 @@ export function People() {
                             )}
                           </Button>
                         </th>
-                        <th className="h-12 tablet:h-14 px-3 tablet:px-4 text-left align-middle font-medium hidden xl:table-cell">
+                        <th className="h-16 px-4 text-left align-middle font-medium hidden xl:table-cell">
                           <Button 
                             variant="ghost" 
                             className="flex items-center gap-1 touch-target"
@@ -788,46 +790,43 @@ export function People() {
                             )}
                           </Button>
                         </th>
-                        <th className="h-12 tablet:h-14 px-3 tablet:px-4 text-left align-middle font-medium">
+                        <th className="h-16 px-4 text-left align-middle font-medium">
                           Status
                         </th>
-                        <th className="h-12 tablet:h-14 px-3 tablet:px-4 text-left align-middle font-medium">
+                        <th className="h-16 px-4 text-left align-middle font-medium">
                           Actions
                         </th>
+
                       </tr>
                     </thead>
                     <tbody className="[&_tr:last-child]:border-0">
                       {filteredMembers.map((member) => (
-                        <tr key={member.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                          <td className="h-12 tablet:h-14 px-3 tablet:px-4 align-middle">
-                            <div className="flex items-center space-x-2">
-                              <Checkbox 
-                                id={`member-${member.id}`}
-                                checked={selectedMembers.includes(member.id)}
-                                onCheckedChange={() => handleSelectMember(member.id)}
-                                className="touch-target"
-                              />
-                              <div className="flex items-center space-x-2">
-                                <Avatar className="h-8 w-8">
-                                  <AvatarImage src={member.image_url} />
-                                  <AvatarFallback className="text-xs">
-                                    {getInitials(member.firstname, member.lastname)}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <div className="font-medium">{formatName(member.firstname, member.lastname)}</div>
-                                </div>
+                        <tr 
+                          key={member.id} 
+                          className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted cursor-pointer"
+                          onClick={() => handleMemberClick(member.id)}
+                        >
+                          <td className="h-16 px-4 align-middle">
+                            <div className="flex items-center space-x-3">
+                              <Avatar className="h-12 w-12">
+                                <AvatarImage src={member.image_url} />
+                                <AvatarFallback className="text-sm font-medium">
+                                  {getInitials(member.firstname, member.lastname)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <div className="font-semibold text-base">{formatName(member.firstname, member.lastname)}</div>
                               </div>
                             </div>
                           </td>
-                          <td className="h-12 tablet:h-14 px-3 tablet:px-4 align-middle hidden sm:table-cell">
-                            <div className="text-sm">{member.email || '-'}</div>
+                          <td className="h-16 px-4 align-middle hidden sm:table-cell">
+                            <div className="text-base">{member.email || '-'}</div>
                           </td>
-                          <td className="h-12 tablet:h-14 px-3 tablet:px-4 align-middle hidden tablet:table-cell">
-                            <div className="text-sm">{member.phone ? formatPhoneNumber(member.phone) : '-'}</div>
+                          <td className="h-16 px-4 align-middle hidden tablet:table-cell">
+                            <div className="text-base">{member.phone ? formatPhoneNumber(member.phone) : '-'}</div>
                           </td>
-                          <td className="h-12 tablet:h-14 px-3 tablet:px-4 align-middle hidden lg:table-cell">
-                            <div className="text-sm">
+                          <td className="h-16 px-4 align-middle hidden lg:table-cell">
+                            <div className="text-base">
                               {member.address ? (
                                 [
                                   member.address.street,
@@ -838,64 +837,27 @@ export function People() {
                               ) : '-'}
                             </div>
                           </td>
-                          <td className="h-12 tablet:h-14 px-3 tablet:px-4 align-middle hidden xl:table-cell">
-                            <div className="text-sm">{formatDate(member.joinDate || member.created_at)}</div>
+                          <td className="h-16 px-4 align-middle hidden xl:table-cell">
+                            <div className="text-base">{formatDate(member.joinDate || member.created_at)}</div>
                           </td>
-                          <td className="h-12 tablet:h-14 px-3 tablet:px-4 align-middle">
+                          <td className="h-16 px-4 align-middle">
                             {member.status === 'active' ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
                                 Active
                               </span>
                             ) : member.status === 'visitor' ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                                 Visitor
                               </span>
                             ) : (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
                                 Inactive
                               </span>
                             )}
                           </td>
-                          <td className="h-12 tablet:h-14 px-3 tablet:px-4 align-middle">
-                            <div className="flex items-center space-x-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleMemberClick(member.id);
-                                }}
-                                className="touch-target"
-                              >
-                                <User className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedMember(member);
-                                  setIsEditDialogOpen(true);
-                                }}
-                                className="touch-target"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedMember(member);
-                                  setIsDeleteDialogOpen(true);
-                                }}
-                                className="touch-target text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
+                                                      <td className="h-16 px-4 align-middle">
+                            </td>
+                          </tr>
                       ))}
                     </tbody>
                   </table>
@@ -1083,19 +1045,23 @@ export function People() {
               phone: '',
               status: 'active',
               image_url: '',
-              gender: 'male'
+              gender: 'prefer_not_to_say',
+              member_type: 'adult',
+              birth_date: '',
+              anniversary_date: '',
+              spouse_name: '',
+              has_children: false,
+              marital_status: 'single',
+              occupation: '',
+              notes: '',
+              attendance_frequency: 'regular',
+              ministry_involvement: [],
+              communication_preferences: { sms: true, email: true, mail: false },
+              tags: []
             }}
             onSave={async (memberData) => {
               try {
-                const addedMember = await addMember({
-                  firstname: memberData.firstname,
-                  lastname: memberData.lastname,
-                  email: memberData.email,
-                  phone: memberData.phone,
-                  status: memberData.status,
-                  image_url: memberData.image_url,
-                  gender: memberData.gender
-                });
+                const addedMember = await addMember(memberData);
                 setMembers(prev => [addedMember, ...prev]);
                 setIsAddDialogOpen(false);
                 toast({
@@ -1127,26 +1093,32 @@ export function People() {
           </DialogHeader>
           {selectedMember && (
             <MemberForm
+              key={selectedMember.id}
               initialData={{
-                firstname: selectedMember.firstName,
-                lastname: selectedMember.lastName,
-                email: selectedMember.email,
-                phone: selectedMember.phone,
-                status: selectedMember.status,
-                image_url: selectedMember.image_url,
-                gender: selectedMember.gender
+                firstname: '',
+                lastname: '',
+                email: '',
+                phone: '',
+                status: 'active',
+                image_url: '',
+                gender: 'prefer_not_to_say',
+                member_type: 'adult',
+                birth_date: '',
+                anniversary_date: '',
+                spouse_name: '',
+                has_children: false,
+                marital_status: 'single',
+                occupation: '',
+                notes: '',
+                attendance_frequency: 'regular',
+                ministry_involvement: [],
+                communication_preferences: { sms: true, email: true, mail: false },
+                tags: [],
+                ...selectedMember
               }}
               onSave={async (memberData) => {
                 try {
-                  const updatedMember = await updateMember(selectedMember.id, {
-                    firstName: memberData.firstname,
-                    lastName: memberData.lastname,
-                    email: memberData.email,
-                    phone: memberData.phone,
-                    status: memberData.status,
-                    image_url: memberData.image_url,
-                    gender: memberData.gender
-                  });
+                  const updatedMember = await updateMember(selectedMember.id, memberData);
                   setMembers(prev => prev.map(m => m.id === updatedMember.id ? updatedMember : m));
                   setIsEditDialogOpen(false);
                   setSelectedMember(null);

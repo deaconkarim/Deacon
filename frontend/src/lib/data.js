@@ -289,19 +289,7 @@ export const deleteMember = async (id) => {
       // Continue execution even if this fails
     }
 
-    // Then try to delete from member_event_attendance
-    try {
-      const { error: memberEventAttendanceError } = await supabase
-        .from('member_event_attendance')
-        .delete()
-        .eq('member_id', id);
 
-      if (memberEventAttendanceError && memberEventAttendanceError.code !== '42P01') { // Ignore "table doesn't exist" error
-        throw memberEventAttendanceError;
-      }
-    } catch (error) {
-      // Continue execution even if this fails
-    }
 
     // Finally delete the member (only if they belong to the same organization)
     const { error: memberError } = await supabase

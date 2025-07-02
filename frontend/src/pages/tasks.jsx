@@ -10,7 +10,8 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
-  Pencil
+  Pencil,
+  Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,11 +47,13 @@ export function Tasks() {
   const { user } = useAuth();
   const [tasks, setTasks] = useState([]);
   const [members, setMembers] = useState([]);
-  const [staffMembers, setStaffMembers] = useState([]);
+  const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
+  const [deletingTask, setDeletingTask] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedPriority, setSelectedPriority] = useState('all');
@@ -68,6 +71,7 @@ export function Tasks() {
   useEffect(() => {
     fetchTasks();
     fetchMembers();
+    fetchUsers();
   }, [user]);
 
   // Fetch tasks
@@ -125,29 +129,79 @@ export function Tasks() {
     try {
       const allMembers = await getMembers();
       setMembers(allMembers);
-
-      // Get deacons members
-      const { data: deaconsGroup, error: groupError } = await supabase
-        .from('groups')
-        .select('id')
-        .eq('name', 'Deacons')
-        .single();
-
-      if (groupError) throw groupError;
-
-      const { data: deaconsMembers, error: membersError } = await supabase
-        .from('group_members')
-        .select('member_id')
-        .eq('group_id', deaconsGroup.id);
-
-      if (membersError) throw membersError;
-
-      const deaconIds = deaconsMembers.map(m => m.member_id);
-      setStaffMembers(allMembers.filter(m => deaconIds.includes(m.id)));
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to load members",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      // Get the current user's organization ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const { data: orgData } = await supabase
+        .from('organization_users')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .single();
+
+      if (!orgData?.organization_id) throw new Error('User not associated with any organization');
+
+      // Get organization users with member data
+      const [orgUsersResult, membersResult] = await Promise.all([
+        supabase
+          .from('organization_users')
+          .select('user_id, role, approval_status')
+          .eq('organization_id', orgData.organization_id)
+          .eq('status', 'active')
+          .eq('approval_status', 'approved')
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('members')
+          .select('id, firstname, lastname, email, user_id')
+          .eq('organization_id', orgData.organization_id)
+          .order('firstname', { ascending: true })
+      ]);
+
+      if (orgUsersResult.error) throw orgUsersResult.error;
+      if (membersResult.error) throw membersResult.error;
+
+      // Create a map of user_id to member data
+      const membersMap = new Map();
+      membersResult.data?.forEach(member => {
+        if (member.user_id) {
+          membersMap.set(member.user_id, member);
+        }
+      });
+
+      // Transform to user list for assignment
+      const userList = [];
+      orgUsersResult.data?.forEach(orgUser => {
+        const member = membersMap.get(orgUser.user_id);
+        if (member) {
+          userList.push({
+            id: member.id, // Use member.id for task assignment
+            user_id: member.user_id,
+            name: `${member.firstname} ${member.lastname}`,
+            email: member.email,
+            role: orgUser.role
+          });
+        }
+      });
+
+      console.log('Users loaded for tasks:', userList);
+      setUsers(userList);
+    } catch (error) {
+      console.error('Error loading users:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load users",
         variant: "destructive",
       });
     }
@@ -318,6 +372,39 @@ export function Tasks() {
     setIsEditDialogOpen(true);
   };
 
+  const openDeleteDialog = (task) => {
+    setDeletingTask(task);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteTask = async () => {
+    if (!deletingTask) return;
+
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', deletingTask.id);
+
+      if (error) throw error;
+
+      setTasks(tasks.filter(task => task.id !== deletingTask.id));
+      setIsDeleteDialogOpen(false);
+      setDeletingTask(null);
+
+      toast({
+        title: "Success",
+        description: "Task deleted successfully."
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete task. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const getPriorityColor = (priority) => {
     switch (priority) {
       case 'high':
@@ -437,9 +524,9 @@ export function Tasks() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Assignees</SelectItem>
-            {staffMembers.map((member) => (
-              <SelectItem key={member.id} value={member.id}>
-                {member.firstname} {member.lastname}
+            {users.map((user) => (
+              <SelectItem key={user.id} value={user.id}>
+                {user.name} ({user.role})
               </SelectItem>
             ))}
           </SelectContent>
@@ -482,7 +569,7 @@ export function Tasks() {
                       <CardContent>
                         <div className="space-y-4">
                           {task.description && (
-                            <p className="text-sm text-muted-foreground">{task.description}</p>
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{task.description}</p>
                           )}
                           <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                             {task.due_date && (
@@ -569,6 +656,16 @@ export function Tasks() {
                               <span className="hidden sm:inline">Edit</span>
                               <span className="sm:hidden">Edit</span>
                             </Button>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => openDeleteDialog(task)}
+                              className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
+                            >
+                              <Trash2 className="mr-1 h-3.5 w-3.5" />
+                              <span className="hidden sm:inline">Delete</span>
+                              <span className="sm:hidden">Delete</span>
+                            </Button>
                           </div>
                         </div>
                       </CardContent>
@@ -610,7 +707,7 @@ export function Tasks() {
                       <CardContent>
                         <div className="space-y-4">
                           {task.description && (
-                            <p className="text-sm text-muted-foreground">{task.description}</p>
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{task.description}</p>
                           )}
                           <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                             {task.due_date && (
@@ -646,6 +743,16 @@ export function Tasks() {
                               <Pencil className="mr-1 h-3.5 w-3.5" />
                               <span className="hidden sm:inline">Edit</span>
                               <span className="sm:hidden">Edit</span>
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => openDeleteDialog(task)}
+                              className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
+                            >
+                              <Trash2 className="mr-1 h-3.5 w-3.5" />
+                              <span className="hidden sm:inline">Delete</span>
+                              <span className="sm:hidden">Delete</span>
                             </Button>
                           </div>
                         </div>
@@ -743,12 +850,12 @@ export function Tasks() {
                 onValueChange={(value) => setNewTask({...newTask, assignee_id: value})}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select deacon" />
+                  <SelectValue placeholder="Select user" />
                 </SelectTrigger>
                 <SelectContent>
-                  {staffMembers.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.firstname} {member.lastname}
+                  {users.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name} ({user.role})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -761,12 +868,12 @@ export function Tasks() {
                 onValueChange={(value) => setNewTask({ ...newTask, requestor_id: value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select deacon" />
+                  <SelectValue placeholder="Select user" />
                 </SelectTrigger>
                 <SelectContent>
-                  {staffMembers.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.firstname} {member.lastname}
+                  {users.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name} ({user.role})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -865,12 +972,12 @@ export function Tasks() {
                 onValueChange={(value) => setEditingTask({...editingTask, assignee_id: value})}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select deacon" />
+                  <SelectValue placeholder="Select user" />
                 </SelectTrigger>
                 <SelectContent>
-                  {staffMembers.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.firstname} {member.lastname}
+                  {users.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name} ({user.role})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -883,12 +990,12 @@ export function Tasks() {
                 onValueChange={(value) => setEditingTask({ ...editingTask, requestor_id: value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select deacon" />
+                  <SelectValue placeholder="Select user" />
                 </SelectTrigger>
                 <SelectContent>
-                  {staffMembers.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.firstname} {member.lastname}
+                  {users.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name} ({user.role})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -901,6 +1008,30 @@ export function Tasks() {
             </Button>
             <Button onClick={handleEditTask}>
               Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Task Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Delete Task</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{deletingTask?.title}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteTask}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete Task
             </Button>
           </DialogFooter>
         </DialogContent>

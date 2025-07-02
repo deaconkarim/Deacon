@@ -65,6 +65,7 @@ export function Layout() {
     { name: 'Groups', href: '/groups', icon: UserPlus },
     { name: 'Tasks', href: '/tasks', icon: ClipboardList },
     { name: 'SMS', href: '/sms', icon: MessageSquare },
+    { name: 'Alerts', href: '/alerts', icon: Bell },
     { name: 'Reports', href: '/reports', icon: BarChart2 },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];

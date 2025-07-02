@@ -52,6 +52,7 @@ import { getInitials } from '@/lib/utils/formatters';
 import { PotluckRSVPDialog } from '@/components/events/PotluckRSVPDialog';
 import { VolunteerList } from '@/components/events/VolunteerList';
 import { AddVolunteerForm } from '@/components/events/AddVolunteerForm';
+import { automationService } from '@/lib/automationService';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -690,15 +691,72 @@ export default function Events() {
   const handleMemberClick = async (member) => {
     try {
       // Add Person to event attendance
-      const { error } = await supabase
+      const { data: attendanceData, error } = await supabase
         .from('event_attendance')
         .upsert({
           event_id: selectedEvent.id,
           member_id: member.id,
           status: 'attending'
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Trigger automation for event attendance
+      console.log('🔍 User object for event attendance:', user);
+      
+      // Get organization_id from organization_users table
+      let organizationId = null;
+      try {
+        const { data: orgData, error: orgError } = await supabase
+          .from('organization_users')
+          .select('organization_id')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .single();
+        
+        if (orgError) {
+          console.error('Error fetching organization_id for event attendance:', orgError);
+        } else {
+          organizationId = orgData?.organization_id;
+          console.log('🔍 Found organization_id for event attendance:', organizationId);
+        }
+      } catch (error) {
+        console.error('Error fetching organization_id for event attendance:', error);
+      }
+      
+      if (organizationId) {
+        try {
+          console.log('🚀 Triggering event_attendance automation for member:', member);
+          console.log('🎯 Event data:', selectedEvent);
+          const triggerData = {
+            id: attendanceData.id,
+            event_id: selectedEvent.id,
+            member_id: member.id,
+            status: 'attending',
+            event_type: selectedEvent.event_type,
+            member_type: member.status === 'visitor' ? 'visitor' : (member.member_type || 'adult'),
+            attendance_status: 'attended',
+            is_first_visit: member.status === 'visitor',
+            event_date: selectedEvent.start_date,
+            firstname: member.firstname,
+            lastname: member.lastname,
+            phone: member.phone
+          };
+          console.log('📊 Trigger data:', triggerData);
+          await automationService.triggerAutomation(
+            'event_attendance',
+            triggerData,
+            organizationId
+          );
+        } catch (automationError) {
+          console.error('Automation trigger failed:', automationError);
+          // Don't fail the main operation if automation fails
+        }
+      } else {
+        console.log('❌ No organization_id found for event attendance, skipping automation');
+      }
 
       // Update local state
       setSelectedMembers(prev => [...prev, member.id]);
@@ -784,11 +842,44 @@ export default function Events() {
         status: 'attending'
       }));
 
-      const { error } = await supabase
+      const { data: attendanceData, error } = await supabase
         .from('event_attendance')
-        .insert(rsvpsToAdd);
+        .insert(rsvpsToAdd)
+        .select();
 
       if (error) throw error;
+
+      // Trigger automation for each attendance record
+      if (user?.organization_id && attendanceData) {
+        for (const attendance of attendanceData) {
+          try {
+            // Get member details for automation
+            const member = members.find(m => m.id === attendance.member_id);
+            if (member) {
+              await automationService.triggerAutomation(
+                'event_attendance',
+                {
+                  id: attendance.id,
+                  event_id: selectedEvent.id,
+                  member_id: attendance.member_id,
+                  status: 'attending',
+                  event_type: selectedEvent.event_type,
+                  member_type: member.status === 'visitor' ? 'visitor' : (member.member_type || 'adult'),
+                  attendance_status: 'attended',
+                  is_first_visit: member.status === 'visitor',
+                  firstname: member.firstname,
+                  lastname: member.lastname,
+                  phone: member.phone
+                },
+                user.organization_id
+              );
+            }
+          } catch (automationError) {
+            console.error('Automation trigger failed for member:', attendance.member_id, automationError);
+            // Don't fail the main operation if automation fails
+          }
+        }
+      }
 
       // Update the alreadyRSVPMembers list with the newly added members
       const { data: newMembers } = await supabase
@@ -932,6 +1023,55 @@ export default function Events() {
 
       // Add the new member to the event
       await handleMemberClick(data);
+
+      // Trigger automation for new visitor creation
+      console.log('🔍 User object:', user);
+      console.log('🔍 Automation service:', automationService);
+      
+      // Get organization_id from organization_users table
+      let organizationId = null;
+      try {
+        const { data: orgData, error: orgError } = await supabase
+          .from('organization_users')
+          .select('organization_id')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .single();
+        
+        if (orgError) {
+          console.error('Error fetching organization_id:', orgError);
+        } else {
+          organizationId = orgData?.organization_id;
+          console.log('🔍 Found organization_id:', organizationId);
+        }
+      } catch (error) {
+        console.error('Error fetching organization_id:', error);
+      }
+      
+      if (organizationId) {
+        try {
+          console.log('🚀 Triggering member_created automation for new visitor:', data);
+          await automationService.triggerAutomation(
+            'member_created',
+            {
+              id: data.id,
+              firstname: data.firstname,
+              lastname: data.lastname,
+              email: data.email,
+              phone: data.phone,
+              status: 'visitor',
+              member_type: 'visitor',
+              created_at: data.created_at
+            },
+            organizationId
+          );
+        } catch (automationError) {
+          console.error('Automation trigger failed for new visitor:', automationError);
+          // Don't fail the main operation if automation fails
+        }
+      } else {
+        console.log('❌ No organization_id found, skipping automation');
+      }
 
       // Reset form and close dialog
       setNewMember({

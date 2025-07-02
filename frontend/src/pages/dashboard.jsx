@@ -105,6 +105,7 @@ export function Dashboard() {
     adults: 0,
     children: 0,
     lastMonthDonations: 0,
+    twoMonthsAgoDonations: 0,
     lastWeekDonations: 0,
     lastSundayDonations: 0
   });
@@ -521,6 +522,16 @@ export function Dashboard() {
         })
         .reduce((sum, donation) => sum + (parseFloat(donation.amount) || 0), 0);
 
+      // Calculate two months ago donations for comparison
+      const twoMonthsAgo = new Date(currentYear, currentMonth - 2, 1);
+      const twoMonthsAgoEnd = new Date(currentYear, currentMonth - 1, 0);
+      const twoMonthsAgoDonations = donations
+        .filter(donation => {
+          const date = new Date(donation.date);
+          return date >= twoMonthsAgo && date <= twoMonthsAgoEnd;
+        })
+        .reduce((sum, donation) => sum + (parseFloat(donation.amount) || 0), 0);
+
       // Calculate last Sunday's donations
       const lastSunday = new Date();
       const dayOfWeek = lastSunday.getDay();
@@ -605,6 +616,7 @@ export function Dashboard() {
         adults: familyStats.adults,
         children: familyStats.children,
         lastMonthDonations,
+        twoMonthsAgoDonations,
         lastWeekDonations: weeklyTotals[weeklyTotals.length - 1] || 0,
         lastSundayDonations
       });
@@ -763,13 +775,53 @@ export function Dashboard() {
   const percentMonth = dayOfMonth / daysInMonth;
   const projectedDonations = percentMonth > 0 ? (stats.monthlyDonations / percentMonth) : 0;
   const lastMonthDonations = stats.lastMonthDonations || 0; // You may need to fetch/calculate this if not present
-  const donationTrend = lastMonthDonations > 0 ? ((projectedDonations - lastMonthDonations) / lastMonthDonations) * 100 : 0;
+  const twoMonthsAgoDonations = stats.twoMonthsAgoDonations || 0;
+  
+  // Calculate donation trend, but handle cases where we can't calculate it
+  let donationTrend = null;
+  let canCalculateTrend = false;
+  let trendDescription = '';
+  
+  console.log('Donation trend debug:', {
+    lastMonthDonations,
+    twoMonthsAgoDonations,
+    monthlyDonations: stats.monthlyDonations,
+    projectedDonations,
+    percentMonth
+  });
+  
+  if (lastMonthDonations > 0 && stats.monthlyDonations > 0) {
+    // Calculate trend between current month (projected) and last month
+    donationTrend = ((projectedDonations - lastMonthDonations) / lastMonthDonations) * 100;
+    canCalculateTrend = true;
+    trendDescription = `Projected: $${projectedDonations.toLocaleString(undefined, {maximumFractionDigits: 0})} vs Last Month: $${lastMonthDonations.toLocaleString(undefined, {maximumFractionDigits: 0})}`;
+    console.log('Calculated trend (current vs last month):', donationTrend);
+  } else if (lastMonthDonations === 0 && stats.monthlyDonations > 0) {
+    // If we have donations this month but none last month, it's a positive trend
+    donationTrend = 100;
+    canCalculateTrend = true;
+    trendDescription = `This Month: $${stats.monthlyDonations.toLocaleString(undefined, {maximumFractionDigits: 0})} vs Last Month: $0`;
+    console.log('No last month donations, but current month has donations. Trend set to 100%');
+  } else if (lastMonthDonations > 0 && stats.monthlyDonations === 0 && twoMonthsAgoDonations > 0) {
+    // If no current month donations, compare last month vs two months ago
+    donationTrend = ((lastMonthDonations - twoMonthsAgoDonations) / twoMonthsAgoDonations) * 100;
+    canCalculateTrend = true;
+    trendDescription = `Last Month: $${lastMonthDonations.toLocaleString(undefined, {maximumFractionDigits: 0})} vs Two Months Ago: $${twoMonthsAgoDonations.toLocaleString(undefined, {maximumFractionDigits: 0})}`;
+    console.log('Calculated trend (last month vs two months ago):', donationTrend);
+  } else if (lastMonthDonations > 0 && stats.monthlyDonations === 0 && twoMonthsAgoDonations === 0) {
+    // If we have last month donations but no current month or two months ago donations, show waiting message
+    console.log('Last month had donations but no current month or two months ago donations, showing waiting message');
+  } else {
+    console.log('No donations in any of the last 3 months, cannot calculate trend');
+  }
+  
+  console.log('Final values:', { donationTrend, canCalculateTrend, trendDescription });
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Command Center</h1>
-      </div>
+            </div>
 
       {/* Leadership Verse - Inspirational component */}
       <motion.div variants={itemVariants}>
@@ -802,7 +854,7 @@ export function Dashboard() {
                   ) : (
                     <span className="text-sm font-semibold">{stats.activeMembers}</span>
                   )}
-                </div>
+              </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-orange-600 font-medium">Inactive</span>
                   {isLoading ? (
@@ -810,7 +862,7 @@ export function Dashboard() {
                   ) : (
                     <span className="text-sm font-semibold">{stats.inactiveMembers}</span>
                   )}
-                </div>
+              </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-blue-600 font-medium">Visitors</span>
                   {isLoading ? (
@@ -818,8 +870,8 @@ export function Dashboard() {
                   ) : (
                     <span className="text-sm font-semibold">{stats.visitors}</span>
                   )}
-                </div>
-              </div>
+            </div>
+          </div>
             </CardContent>
             <CardFooter className="bg-muted py-2 px-6 border-t">
               <Button variant="outline" className="w-full" asChild>
@@ -854,7 +906,7 @@ export function Dashboard() {
                   ) : (
                     <span className="text-sm font-semibold">${(stats.monthlyAverage || 0).toFixed(2)}</span>
                   )}
-                </div>
+        </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-green-600 font-medium">Weekly Average</span>
                   {isLoading ? (
@@ -938,9 +990,9 @@ export function Dashboard() {
               </Button>
             </CardFooter>
           </Card>
-        </motion.div>
+      </motion.div>
 
-        <motion.div variants={itemVariants}>
+      <motion.div variants={itemVariants}>
           <Card className="overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-teal-500 to-teal-600 text-white">
               <CardTitle className="flex items-center text-xl">
@@ -965,7 +1017,7 @@ export function Dashboard() {
                   ) : (
                     <span className="text-sm font-semibold">{stats.totalVolunteersSignedUp || 0}</span>
                   )}
-                </div>
+        </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-teal-600 font-medium">Events Still Needing Help</span>
                   {isLoading ? (
@@ -990,7 +1042,7 @@ export function Dashboard() {
               </Button>
             </CardFooter>
           </Card>
-        </motion.div>
+      </motion.div>
 
         <motion.div variants={itemVariants}>
           <Card className="overflow-hidden">
@@ -1025,7 +1077,7 @@ export function Dashboard() {
                   ) : (
                     <span className="text-sm font-semibold">{stats.adults}</span>
                   )}
-                </div>
+                  </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-orange-600 font-medium">Children</span>
                   {isLoading ? (
@@ -1043,8 +1095,8 @@ export function Dashboard() {
             </CardFooter>
           </Card>
         </motion.div>
-      </div>
-
+              </div>
+              
       {/* Insights Section */}
       <motion.div variants={itemVariants}>
         <Card>
@@ -1095,10 +1147,12 @@ export function Dashboard() {
                 }`}>
                   Active members who attend Sunday service (last 30 days)
                 </p>
-              </div>
-             
+                </div>
+                
               {/* Donation Growth */}
               <div className={`p-4 rounded-lg border ${
+                !canCalculateTrend ? 
+                  'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800' :
                 donationTrend > 5 ? 
                   'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800' :
                 donationTrend > 0 ? 
@@ -1107,11 +1161,13 @@ export function Dashboard() {
               }`}>
                 <div className="flex items-center gap-2 mb-2">
                   <TrendingUp className={`h-5 w-5 ${
+                    !canCalculateTrend ? 'text-blue-600' :
                     donationTrend > 5 ? 'text-green-600' :
                     donationTrend > 0 ? 'text-yellow-600' :
                     'text-red-600'
                   }`} />
                   <h4 className={`font-semibold ${
+                    !canCalculateTrend ? 'text-blue-900 dark:text-blue-100' :
                     donationTrend > 5 ? 'text-green-900 dark:text-green-100' :
                     donationTrend > 0 ? 'text-yellow-900 dark:text-yellow-100' :
                     'text-red-900 dark:text-red-100'
@@ -1119,6 +1175,10 @@ export function Dashboard() {
                 </div>
                 {isLoading ? (
                   <Skeleton className="h-4 w-32 mb-2" />
+                ) : !canCalculateTrend ? (
+                  <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 mb-1">
+                    Waiting for data
+                  </p>
                 ) : (
                   <p className={`text-2xl font-bold mb-1 ${
                     donationTrend > 5 ? 'text-green-700 dark:text-green-300' :
@@ -1134,13 +1194,17 @@ export function Dashboard() {
                   </p>
                 )}
                 <p className={`text-sm ${
+                  !canCalculateTrend ? 'text-blue-600 dark:text-blue-400' :
                   donationTrend > 5 ? 'text-green-600 dark:text-green-400' :
                   donationTrend > 0 ? 'text-yellow-600 dark:text-yellow-400' :
                   'text-red-600 dark:text-red-400'
                 }`}>
-                  Projected: ${projectedDonations.toLocaleString(undefined, {maximumFractionDigits: 0})} vs Last Month: ${lastMonthDonations.toLocaleString(undefined, {maximumFractionDigits: 0})}
+                  {!canCalculateTrend ? 
+                    'Waiting for first donation of the month to calculate trend' :
+                    trendDescription
+                  }
                 </p>
-              </div>
+                </div>
 {/* Volunteer Engagement */}
 <div className={`p-4 rounded-lg border ${
                 stats.eventsStillNeedingVolunteers === 0 ? 
@@ -1219,7 +1283,7 @@ export function Dashboard() {
                   {stats.eventsThisMonth} events this month vs {stats.averageEventsPerMonth} average
                 </p>
               </div>
-
+              
  {/* Member Engagement */}
  <div className={`p-4 rounded-lg border ${
                 stats.totalPeople > 0 ? 
@@ -1245,7 +1309,7 @@ export function Dashboard() {
                       'text-red-900 dark:text-red-100'
                     : 'text-blue-900 dark:text-blue-100'
                   }`}>Member Engagement</h4>
-                </div>
+            </div>
                 {isLoading ? (
                   <Skeleton className="h-4 w-32 mb-2" />
                 ) : (
@@ -1256,7 +1320,7 @@ export function Dashboard() {
                 <p className="text-sm text-blue-600 dark:text-blue-400">
                   {stats.activeMembers} of {stats.totalPeople} people are active members
                 </p>
-              </div>
+          </div>
 
              
 
@@ -1351,8 +1415,8 @@ export function Dashboard() {
                 }`}>
                   New visitors added in the last 30 days
                 </p>
-              </div>
-            </div>
+                  </div>
+                </div>
 
             {/* Additional Insights Row */}
             <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -1361,7 +1425,7 @@ export function Dashboard() {
                 <div className="flex items-center gap-2 mb-3">
                   <Trophy className="h-5 w-5 text-emerald-600" />
                   <h4 className="font-semibold text-emerald-900 dark:text-emerald-100">Top Performing Area</h4>
-                </div>
+              </div>
                 {isLoading ? (
                   <Skeleton className="h-4 w-48 mb-2" />
                 ) : (
@@ -1496,9 +1560,9 @@ export function Dashboard() {
                         return topMetric.recommendation;
                       })()}
                     </p>
-                  </div>
+                </div>
                 )}
-              </div>
+                </div>
 
               {/* Growth Opportunity */}
               <div className="p-4 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 rounded-lg border border-amber-200 dark:border-amber-800">
@@ -1571,16 +1635,16 @@ export function Dashboard() {
                         return 'Focus on maintaining strong relationships and preventing member turnover.';
                       })()}
                     </p>
-                  </div>
+            </div>
                 )}
-              </div>
+          </div>
             </div>
           </CardContent>
         </Card>
-      </motion.div>
+        </motion.div>
 
       {/* Average Attendance by Event Type Section */}
-      <motion.div variants={itemVariants}>
+        <motion.div variants={itemVariants}>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center text-xl">
@@ -1596,8 +1660,8 @@ export function Dashboard() {
                 <div className="flex-shrink-0">
                   <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
                     <BookOpen className="h-6 w-6 text-primary-foreground" />
-                  </div>
                 </div>
+                  </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-base font-medium text-foreground">Sunday Service</p>
                   {isLoading ? (
@@ -1617,13 +1681,13 @@ export function Dashboard() {
                   )}
                 </div>
               </div>
-
+              
               {/* Bible Study */}
               <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
                 <div className="flex-shrink-0">
                   <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
                     <FileText className="h-6 w-6 text-primary-foreground" />
-                  </div>
+                </div>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-base font-medium text-foreground">Bible Study</p>
@@ -1644,14 +1708,14 @@ export function Dashboard() {
                   )}
                 </div>
               </div>
-
+              
               {/* Fellowship */}
               <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
                 <div className="flex-shrink-0">
                   <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
                     <Users2 className="h-6 w-6 text-primary-foreground" />
-                  </div>
-                </div>
+            </div>
+          </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-base font-medium text-foreground">Fellowship</p>
                   {isLoading ? (
@@ -1679,10 +1743,10 @@ export function Dashboard() {
             </Button>
           </CardFooter>
         </Card>
-      </motion.div>
+        </motion.div>
 
       {/* Attendance Statistics Section */}
-      <motion.div variants={itemVariants}>
+        <motion.div variants={itemVariants}>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center text-xl">
@@ -1699,12 +1763,12 @@ export function Dashboard() {
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
                   <span className="text-muted-foreground text-base">Loading attendance data...</span>
                 </div>
-              </div>
+                  </div>
             ) : error ? (
               <div className="text-center py-6">
                 <div className="text-red-500 mb-2 text-2xl">⚠️</div>
                 <p className="text-base text-muted-foreground">Failed to load attendance data</p>
-              </div>
+                </div>
             ) : (
               <div className="space-y-6">
                 {/* Service Breakdown and Event Attendance Side by Side */}
@@ -1716,13 +1780,13 @@ export function Dashboard() {
                         <BarChart3 className="w-4 h-4 text-primary" />
                       </div>
                       <h4 className="font-semibold text-base text-foreground">Service Breakdown</h4>
-                    </div>
-                    
+              </div>
+              
                     {serviceBreakdown.length === 0 ? (
                       <div className="text-center py-4 bg-muted rounded-lg">
                         <div className="text-muted-foreground mb-1 text-xl">📊</div>
                         <p className="text-sm text-muted-foreground">No service data</p>
-                      </div>
+                </div>
                     ) : (
                       <div className="space-y-2">
                         {serviceBreakdown.map((service, index) => (
@@ -1735,28 +1799,28 @@ export function Dashboard() {
                               }`}></div>
                               <div className="font-medium text-foreground text-base truncate">{service.name}</div>
                               <div className="text-sm text-muted-foreground">{service.value} attendees</div>
-                            </div>
+                </div>
                             <div className="text-base font-bold text-primary">{service.value}</div>
-                          </div>
+                </div>
                         ))}
                       </div>
                     )}
-                  </div>
-
+              </div>
+              
                   {/* Event Attendance */}
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 bg-muted rounded-lg flex items-center justify-center">
                         <Calendar className="w-4 h-4 text-primary" />
-                      </div>
+            </div>
                       <h4 className="font-semibold text-base text-foreground">Event Attendance</h4>
-                    </div>
-                    
+      </div>
+
                     {eventDetails?.filter(event => event.attendees > 0).length === 0 ? (
                       <div className="text-center py-4 bg-muted rounded-lg">
                         <div className="text-muted-foreground mb-1 text-xl">📅</div>
                         <p className="text-sm text-muted-foreground">No event data</p>
-                      </div>
+        </div>
                     ) : (
                       <div className="space-y-2">
                         {eventDetails
@@ -1769,29 +1833,29 @@ export function Dashboard() {
                               <div className="font-medium text-foreground text-base truncate">{event.title}</div>
                               <div className="text-sm text-muted-foreground mt-0.5">
                                 {new Date(event.date).toLocaleDateString()} • {event.attendees} attendees
-                              </div>
-                            </div>
-                          </div>
+              </div>
+            </div>
+            </div>
                         ))}
-                      </div>
+          </div>
                     )}
-                  </div>
-                </div>
+              </div>
+            </div>
 
                 {/* Top Attendees */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 bg-muted rounded-lg flex items-center justify-center">
                       <Trophy className="w-4 h-4 text-primary" />
-                    </div>
+            </div>
                     <h4 className="font-semibold text-base text-foreground">Top Attendees</h4>
-                  </div>
-                  
+          </div>
+
                   {memberStats.length === 0 ? (
                     <div className="text-center py-4 bg-muted rounded-lg">
                       <div className="text-muted-foreground mb-1 text-xl">🏆</div>
                       <p className="text-sm text-muted-foreground">No attendance data</p>
-                    </div>
+              </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       {memberStats.slice(0, 6).map((member, index) => {
@@ -1827,7 +1891,7 @@ export function Dashboard() {
                                 index === 2 ? 'bg-amber-600' : 'bg-primary'
                               }`}>
                                 {index + 1}
-                              </div>
+            </div>
                               <div className="flex items-center gap-3">
                                 <Avatar className="h-8 w-8">
                                   {memberData?.image_url ? (
@@ -1848,9 +1912,9 @@ export function Dashboard() {
                                 <div className="min-w-0">
                                   <div className="font-medium text-foreground text-sm truncate">{member.name}</div>
                                   <div className="text-xs text-muted-foreground">{member.count} events</div>
-                                </div>
-                              </div>
-                            </div>
+            </div>
+          </div>
+        </div>
                             <div className="text-sm font-bold text-primary">{member.count}</div>
                           </div>
                         );
@@ -1863,17 +1927,17 @@ export function Dashboard() {
           </CardContent>
         </Card>
       </motion.div>
-      
+
       {/* Donation Statistics Section */}
-      <motion.div variants={itemVariants}>
+        <motion.div variants={itemVariants}>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center text-xl">
               <DollarSign className="mr-2 h-6 w-6" />
               Donation Statistics
-            </CardTitle>
+              </CardTitle>
             <CardDescription className="text-base">Financial overview of your organization</CardDescription>
-          </CardHeader>
+            </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-3">
               {/* Monthly Donations */}
@@ -1881,9 +1945,9 @@ export function Dashboard() {
                 <div className="flex-shrink-0">
                   <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
                     <DollarSign className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
+                      </div>
+                    </div>
+                      <div className="flex-1 min-w-0">
                   <p className="text-base font-medium text-foreground">This Month</p>
                   <p className="text-2xl font-bold text-green-600 dark:text-green-400">${(stats.monthlyDonations || 0).toFixed(2)}</p>
                   <p className="text-sm text-muted-foreground">
@@ -1894,16 +1958,16 @@ export function Dashboard() {
                       const monthProgress = ((dayOfMonth / daysInMonth) * 100).toFixed(1);
                       return `${monthProgress}% of month completed`;
                     })()}
-                  </p>
-                </div>
-              </div>
+                        </p>
+                      </div>
+                    </div>
               {/* Last Month's Donations */}
               <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
                 <div className="flex-shrink-0">
                   <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
                     <DollarSign className="h-6 w-6 text-white" />
-                  </div>
                 </div>
+                  </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-base font-medium text-foreground">Last Month</p>
                   <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">${(stats.lastMonthDonations || 0).toFixed(2)}</p>
@@ -1954,25 +2018,25 @@ export function Dashboard() {
                 </div>
               </div>
             </div>
-          </CardContent>
+            </CardContent>
           <CardFooter>
             <Button variant="outline" className="w-full" asChild>
               <a href="/donations">View All Donations</a>
             </Button>
           </CardFooter>
-        </Card>
-      </motion.div>
+          </Card>
+        </motion.div>
 
       {/* Event Statistics Section */}
-      <motion.div variants={itemVariants}>
+        <motion.div variants={itemVariants}>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center text-xl">
               <Calendar className="mr-2 h-6 w-6" />
               Event Statistics
-            </CardTitle>
+              </CardTitle>
             <CardDescription className="text-base">Overview of your organization's events</CardDescription>
-          </CardHeader>
+            </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-3">
               {/* Average Events Per Month */}
@@ -1980,8 +2044,8 @@ export function Dashboard() {
                 <div className="flex-shrink-0">
                   <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center">
                     <Calendar className="h-6 w-6 text-white" />
-                  </div>
-                </div>
+                      </div>
+                    </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-base font-medium text-foreground">Average Per Month</p>
                   <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{stats.averageEventsPerMonth}</p>
@@ -1995,21 +2059,21 @@ export function Dashboard() {
                   <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
                     <Calendar className="h-6 w-6 text-primary-foreground" />
                   </div>
-                </div>
-                <div className="flex-1 min-w-0">
+                      </div>
+                      <div className="flex-1 min-w-0">
                   <p className="text-base font-medium text-foreground">This Week</p>
                   <p className="text-2xl font-bold text-primary">{stats.eventsThisWeek}</p>
                   <p className="text-sm text-muted-foreground">Next 7 days</p>
-                </div>
-              </div>
+                      </div>
+                    </div>
 
               {/* This Month */}
               <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
                 <div className="flex-shrink-0">
                   <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
                     <Calendar className="h-6 w-6 text-white" />
-                  </div>
                 </div>
+                  </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-base font-medium text-foreground">This Month</p>
                   <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.eventsThisMonth}</p>
@@ -2017,14 +2081,14 @@ export function Dashboard() {
                 </div>
               </div>
             </div>
-          </CardContent>
+            </CardContent>
           <CardFooter>
             <Button variant="outline" className="w-full" asChild>
               <a href="/events">View Events</a>
             </Button>
           </CardFooter>
-        </Card>
-      </motion.div>
+          </Card>
+        </motion.div>
       {/* Member Statistics Section */}
       <motion.div variants={itemVariants}>
         <Card>
@@ -2042,16 +2106,16 @@ export function Dashboard() {
                 <div className="flex-shrink-0">
                   <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
                     <Users2 className="h-6 w-6 text-white" />
-                  </div>
-                </div>
+              </div>
+                    </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-base font-medium text-foreground">Active Members</p>
                   <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.activeMembers}</p>
                   <p className="text-sm text-muted-foreground">
                     {stats.totalPeople > 0 ? `${((stats.activeMembers / stats.totalPeople) * 100).toFixed(1)}%` : '0%'} of total
                   </p>
-                </div>
-              </div>
+                    </div>
+                    </div>
 
               {/* Inactive Members */}
               <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
@@ -2066,25 +2130,25 @@ export function Dashboard() {
                   <p className="text-sm text-muted-foreground">
                     {stats.totalPeople > 0 ? `${((stats.inactiveMembers / stats.totalPeople) * 100).toFixed(1)}%` : '0%'} of total
                   </p>
+                  </div>
                 </div>
-              </div>
 
               {/* Visitors */}
               <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
                 <div className="flex-shrink-0">
                   <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
                     <UserPlus className="h-6 w-6 text-primary-foreground" />
-                  </div>
-                </div>
+                    </div>
+                    </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-base font-medium text-foreground">Visitors</p>
                   <p className="text-2xl font-bold text-primary">{stats.visitors}</p>
                   <p className="text-sm text-muted-foreground">
                     <span className="text-primary font-medium">Visitors</span>
                   </p>
+                  </div>
                 </div>
               </div>
-            </div>
 
             {/* Summary Stats */}
             <div className="mt-6 grid gap-4 md:grid-cols-1">
@@ -2119,16 +2183,16 @@ export function Dashboard() {
                 <div className="flex-shrink-0">
                   <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center">
                     <Home className="h-6 w-6 text-white" />
+                    </div>
                   </div>
-                </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-base font-medium text-foreground">Total Families</p>
                   <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{stats.totalFamilies}</p>
                   <p className="text-sm text-muted-foreground">
                     Organized family units
                   </p>
-                </div>
               </div>
+                      </div>
 
               {/* Members in Families */}
               <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
@@ -2158,9 +2222,9 @@ export function Dashboard() {
                   <p className="text-2xl font-bold text-gray-600 dark:text-gray-400">{stats.membersWithoutFamilies}</p>
                   <p className="text-sm text-muted-foreground">
                     Need family assignment
-                  </p>
-                </div>
-              </div>
+                        </p>
+                      </div>
+                    </div>
             </div>
 
             {/* Age Distribution */}
@@ -2193,15 +2257,15 @@ export function Dashboard() {
                   <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{stats.children}</p>
                   <p className="text-sm text-muted-foreground">
                     {stats.totalPeople > 0 ? `${((stats.children / stats.totalPeople) * 100).toFixed(1)}%` : '0%'} of total
-                  </p>
-                </div>
+                      </p>
+                    </div>
+                  </div>
               </div>
-            </div>
           </CardContent>
           <CardFooter>
             <Button variant="outline" className="w-full" asChild>
               <a href="/members">Manage Families</a>
-            </Button>
+                  </Button>
           </CardFooter>
         </Card>
       </motion.div>
@@ -2224,7 +2288,7 @@ export function Dashboard() {
                           <AvatarFallback>{getInitials(person.firstName, person.lastName)}</AvatarFallback>
                         </Avatar>
                         <div className="text-base">{formatName(person.firstName, person.lastName)}</div>
-                      </div>
+                </div>
                       <Button 
                         variant="outline" 
                         size="sm"
@@ -2232,20 +2296,20 @@ export function Dashboard() {
                       >
                         View
                       </Button>
-                    </div>
+              </div>
                   ))
                 ) : (
                   <p className="text-muted-foreground text-base">No recent people to display.</p>
-                )}
+            )}
               </div>
-            </CardContent>
+          </CardContent>
             <CardFooter>
               <Button variant="outline" className="w-full" asChild>
                 <a href="/members">View All People</a>
               </Button>
             </CardFooter>
-          </Card>
-        </motion.div>
+        </Card>
+      </motion.div>
 
         <motion.div variants={itemVariants}>
           <Card>
@@ -2290,7 +2354,7 @@ export function Dashboard() {
               </Button>
             </CardFooter>
           </Card>
-        </motion.div>
+    </motion.div>
       </div>
 
       {/* Person Selection Dialog */}
