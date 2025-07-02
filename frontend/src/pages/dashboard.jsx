@@ -23,7 +23,10 @@ import {
   BarChart3,
   Trophy,
   FileText,
-  Home
+  Home,
+  CheckSquare,
+  Bell,
+
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,6 +39,8 @@ import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import { Input } from '@/components/ui/input';
 import { getMembers, getEvents, getDonations, getRecentDonationsForDashboard, getAllEvents, addMember, updateMember, deleteMember, getMemberAttendance, updateDonation, deleteDonation, addEventAttendance, getEventAttendance, getVolunteerStats } from '../lib/data';
+import { getAlertStats } from '../lib/alertsService';
+
 import { familyService } from '../lib/familyService';
 import {
   Dialog,
@@ -107,7 +112,14 @@ export function Dashboard() {
     lastMonthDonations: 0,
     twoMonthsAgoDonations: 0,
     lastWeekDonations: 0,
-    lastSundayDonations: 0
+    lastSundayDonations: 0,
+    totalTasks: 0,
+    pendingTasks: 0,
+    completedTasks: 0,
+    overdueTasks: 0,
+
+    upcomingBirthdays: 0,
+    upcomingAnniversaries: 0
   });
   const [recentPeople, setRecentPeople] = useState([]);
   const [people, setPeople] = useState([]);
@@ -157,11 +169,11 @@ export function Dashboard() {
       // Transform snake_case to camelCase
       const transformedPeople = people?.map(person => ({
         ...person,
-        firstName: person.firstName || person.firstname || '',
-        lastName: person.lastName || person.lastname || '',
-        joinDate: person.joinDate || person.joindate,
-        createdAt: person.createdAt || person.created_at,
-        updatedAt: person.updatedAt || person.updated_at
+        firstName: person.firstname || '',
+        lastName: person.lastname || '',
+        joinDate: person.join_date || '',
+        createdAt: person.created_at,
+        updatedAt: person.updated_at
       })) || [];
 
       // Calculate member counts by status
@@ -177,6 +189,14 @@ export function Dashboard() {
 
       // Fetch donations using the optimized function for dashboard
       const donations = await getRecentDonationsForDashboard();
+
+      // Debug: Log a few sample donations to see the data structure
+      console.log('Sample donations:', donations.slice(0, 3).map(d => ({
+        id: d.id,
+        date: d.date,
+        amount: d.amount,
+        dateType: typeof d.date
+      })));
 
       // Calculate total donations
       const totalDonations = donations?.reduce((sum, donation) => {
@@ -516,22 +536,65 @@ export function Dashboard() {
       // Calculate last month's donations
       const lastMonth = new Date(currentYear, currentMonth - 1, 1);
       const lastMonthEnd = new Date(currentYear, currentMonth, 0);
+      
+      console.log('Last month calculation:', {
+        currentYear,
+        currentMonth,
+        lastMonth: lastMonth.toISOString(),
+        lastMonthEnd: lastMonthEnd.toISOString(),
+        totalDonations: donations.length
+      });
+      
       const lastMonthDonations = donations
         .filter(donation => {
-          const date = new Date(donation.date);
-          return date >= lastMonth && date <= lastMonthEnd;
+          // Handle date string comparison instead of Date object comparison
+          const donationDateStr = donation.date; // This is likely "YYYY-MM-DD"
+          const lastMonthStr = lastMonth.toISOString().split('T')[0]; // "YYYY-MM-DD"
+          const lastMonthEndStr = lastMonthEnd.toISOString().split('T')[0]; // "YYYY-MM-DD"
+          
+          const isInLastMonth = donationDateStr >= lastMonthStr && donationDateStr <= lastMonthEndStr;
+          
+          if (isInLastMonth) {
+            console.log('Found last month donation:', {
+              date: donation.date,
+              amount: donation.amount,
+              lastMonthStr,
+              lastMonthEndStr
+            });
+          }
+          
+          return isInLastMonth;
         })
         .reduce((sum, donation) => sum + (parseFloat(donation.amount) || 0), 0);
+      
+      console.log('Last month donations total:', lastMonthDonations);
 
       // Calculate two months ago donations for comparison
       const twoMonthsAgo = new Date(currentYear, currentMonth - 2, 1);
       const twoMonthsAgoEnd = new Date(currentYear, currentMonth - 1, 0);
       const twoMonthsAgoDonations = donations
         .filter(donation => {
-          const date = new Date(donation.date);
-          return date >= twoMonthsAgo && date <= twoMonthsAgoEnd;
+          // Handle date string comparison instead of Date object comparison
+          const donationDateStr = donation.date; // This is likely "YYYY-MM-DD"
+          const twoMonthsAgoStr = twoMonthsAgo.toISOString().split('T')[0]; // "YYYY-MM-DD"
+          const twoMonthsAgoEndStr = twoMonthsAgoEnd.toISOString().split('T')[0]; // "YYYY-MM-DD"
+          
+          const isInTwoMonthsAgo = donationDateStr >= twoMonthsAgoStr && donationDateStr <= twoMonthsAgoEndStr;
+          
+          if (isInTwoMonthsAgo) {
+            console.log('Found two months ago donation:', {
+              date: donation.date,
+              amount: donation.amount,
+              twoMonthsAgoStr,
+              twoMonthsAgoEndStr
+            });
+          }
+          
+          return isInTwoMonthsAgo;
         })
         .reduce((sum, donation) => sum + (parseFloat(donation.amount) || 0), 0);
+      
+      console.log('Two months ago donations total:', twoMonthsAgoDonations);
 
       // Calculate last Sunday's donations
       const lastSunday = new Date();
@@ -581,6 +644,74 @@ export function Dashboard() {
       // Calculate events needing volunteers (events with needs_volunteers = true)
       const eventsNeedingVolunteers = upcomingEvents.filter(event => event.needs_volunteers === true).length;
 
+      // Fetch task statistics
+      let taskStats = {
+        totalTasks: 0,
+        pendingTasks: 0,
+        completedTasks: 0,
+        overdueTasks: 0
+      };
+
+      try {
+        // Get current user's organization ID
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        let organizationId = null;
+        
+        if (currentUser) {
+          const { data: orgUser, error: orgError } = await supabase
+            .from('organization_users')
+            .select('organization_id')
+            .eq('user_id', currentUser.id)
+            .eq('status', 'active')
+            .eq('approval_status', 'approved')
+            .single();
+          
+          if (!orgError && orgUser) {
+            organizationId = orgUser.organization_id;
+          }
+        }
+
+        if (organizationId) {
+          // Fetch all tasks for the organization
+          const { data: tasks, error: tasksError } = await supabase
+            .from('tasks')
+            .select('*')
+            .eq('organization_id', organizationId);
+
+          if (!tasksError && tasks) {
+            const now = new Date();
+            taskStats = {
+              totalTasks: tasks.length,
+              pendingTasks: tasks.filter(task => task.status === 'pending').length,
+              completedTasks: tasks.filter(task => task.status === 'completed').length,
+              overdueTasks: tasks.filter(task => 
+                task.status !== 'completed' && 
+                task.due_date && 
+                new Date(task.due_date) < now
+              ).length
+            };
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching task statistics:', error);
+      }
+
+      // Load alerts statistics
+      let alertsStats = {
+        totalUpcoming: 0,
+        birthdays: 0,
+        anniversaries: 0,
+        memberships: 0,
+        thisWeek: 0,
+        today: 0,
+        tomorrow: 0
+      };
+      try {
+        alertsStats = await getAlertStats();
+      } catch (error) {
+        console.error('Error fetching alerts statistics:', error);
+      }
+
       setStats({
         totalPeople,
         activeMembers: activeMembers.length,
@@ -619,7 +750,15 @@ export function Dashboard() {
         lastMonthDonations,
         twoMonthsAgoDonations,
         lastWeekDonations: weeklyTotals[weeklyTotals.length - 1] || 0,
-        lastSundayDonations
+        lastSundayDonations,
+        totalTasks: taskStats.totalTasks,
+        pendingTasks: taskStats.pendingTasks,
+        completedTasks: taskStats.completedTasks,
+        overdueTasks: taskStats.overdueTasks,
+        upcomingBirthdays: alertsStats.birthdays || 0,
+        upcomingAnniversaries: alertsStats.anniversaries || 0,
+        upcomingMemberships: alertsStats.memberships || 0,
+        totalUpcoming: alertsStats.totalUpcoming || 0
       });
       setRecentPeople(recentPeople);
       setPeople(transformedPeople);
@@ -697,7 +836,7 @@ export function Dashboard() {
 
   // Filter people based on search query and exclude already RSVP'd people
   const filteredPeople = people.filter(person => {
-    const fullName = `${person.firstName} ${person.lastName}`.toLowerCase();
+    const fullName = `${person.firstname} ${person.lastname}`.toLowerCase();
     const query = personSearchQuery.toLowerCase();
     const isSelected = selectedPeople.includes(person.id);
     return fullName.includes(query) && !isSelected;
@@ -822,11 +961,11 @@ export function Dashboard() {
     <div className="space-y-6">
           <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Command Center</h1>
-            </div>
-
+        </div>
+        
       {/* Leadership Verse - Inspirational component */}
       <motion.div variants={itemVariants}>
-        <LeadershipVerse />
+          <LeadershipVerse />
       </motion.div>
 
       <div className="grid gap-4 tablet-portrait:grid-cols-2 tablet-landscape:grid-cols-2 md:grid-cols-2 lg:grid-cols-5">
@@ -855,7 +994,7 @@ export function Dashboard() {
                   ) : (
                     <span className="text-sm font-semibold">{stats.activeMembers}</span>
                   )}
-              </div>
+                </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-orange-600 font-medium">Inactive</span>
                   {isLoading ? (
@@ -863,7 +1002,7 @@ export function Dashboard() {
                   ) : (
                     <span className="text-sm font-semibold">{stats.inactiveMembers}</span>
                   )}
-              </div>
+                  </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-blue-600 font-medium">Visitors</span>
                   {isLoading ? (
@@ -871,8 +1010,8 @@ export function Dashboard() {
                   ) : (
                     <span className="text-sm font-semibold">{stats.visitors}</span>
                   )}
-            </div>
-          </div>
+                </div>
+              </div>
             </CardContent>
             <CardFooter className="bg-muted py-2 px-6 border-t">
               <Button variant="outline" className="w-full" asChild>
@@ -894,9 +1033,16 @@ export function Dashboard() {
               {isLoading ? (
                 <Skeleton className="h-8 w-20 mb-1" />
               ) : (
-                <div className="text-3xl font-bold">${(stats.monthlyDonations || 0).toFixed(2)}</div>
+                <div className="text-3xl font-bold">
+                  {stats.monthlyDonations > 0 ?
+                    `$${(stats.monthlyDonations || 0).toFixed(2)}` :
+                    `$${(stats.lastMonthDonations || 0).toFixed(2)}`
+                  }
+                </div>
               )}
-              <p className="text-sm text-muted-foreground mt-1">This month</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {stats.monthlyDonations > 0 ? 'This month' : 'Last month'}
+              </p>
               
               {/* Donation breakdown */}
               <div className="mt-4 space-y-2">
@@ -907,7 +1053,7 @@ export function Dashboard() {
                   ) : (
                     <span className="text-sm font-semibold">${(stats.monthlyAverage || 0).toFixed(2)}</span>
                   )}
-        </div>
+                </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-green-600 font-medium">Weekly Average</span>
                   {isLoading ? (
@@ -923,8 +1069,8 @@ export function Dashboard() {
                   ) : (
                     <span className="text-sm font-semibold">${(stats.lastSundayDonations || 0).toFixed(2)}</span>
                   )}
-                </div>
               </div>
+            </div>
             </CardContent>
             <CardFooter className="bg-muted py-2 px-6 border-t">
               <Button variant="outline" className="w-full" asChild>
@@ -967,7 +1113,7 @@ export function Dashboard() {
                   ) : (
                     <span className="text-sm font-semibold">{stats.eventsThisWeek}</span>
                   )}
-                </div>
+                  </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-purple-600 font-medium">Most Common</span>
                   {isLoading ? (
@@ -995,108 +1141,110 @@ export function Dashboard() {
 
       <motion.div variants={itemVariants}>
           <Card className="overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-teal-500 to-teal-600 text-white">
+            <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <CardTitle className="flex items-center text-xl">
-                <Handshake className="mr-2 h-5 w-5" />
-                Volunteers
+                <Bell className="mr-2 h-5 w-5" />
+                Celebrations
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
               {isLoading ? (
                 <Skeleton className="h-8 w-16 mb-1" />
               ) : (
-                <div className="text-3xl font-bold">{stats.eventsWithVolunteersEnabled || 0}</div>
+                <div className="text-3xl font-bold">{stats.totalUpcoming || 0}</div>
               )}
-              <p className="text-sm text-muted-foreground mt-1">Events with volunteers</p>
+              <p className="text-sm text-muted-foreground mt-1">Upcoming celebrations</p>
               
-              {/* Volunteers breakdown */}
+              {/* Celebrations breakdown */}
               <div className="mt-4 space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-teal-600 font-medium">Volunteers Signed Up</span>
+                  <span className="text-sm text-blue-600 font-medium">Birthdays</span>
                   {isLoading ? (
                     <Skeleton className="h-4 w-8" />
                   ) : (
-                    <span className="text-sm font-semibold">{stats.totalVolunteersSignedUp || 0}</span>
-                  )}
-        </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-teal-600 font-medium">Events Still Needing Help</span>
-                  {isLoading ? (
-                    <Skeleton className="h-4 w-8" />
-                  ) : (
-                    <span className="text-sm font-semibold">{stats.eventsStillNeedingVolunteers || 0}</span>
+                    <span className="text-sm font-semibold">{stats.upcomingBirthdays || 0}</span>
                   )}
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-teal-600 font-medium">Active Volunteers</span>
+                  <span className="text-sm text-blue-600 font-medium">Anniversaries</span>
                   {isLoading ? (
                     <Skeleton className="h-4 w-8" />
                   ) : (
-                    <span className="text-sm font-semibold">{stats.totalVolunteers || 0}</span>
+                    <span className="text-sm font-semibold">{stats.upcomingAnniversaries || 0}</span>
+                  )}
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-blue-600 font-medium">Memberships</span>
+                  {isLoading ? (
+                    <Skeleton className="h-4 w-8" />
+                  ) : (
+                    <span className="text-sm font-semibold">{stats.upcomingMemberships || 0}</span>
                   )}
                 </div>
               </div>
             </CardContent>
             <CardFooter className="bg-muted py-2 px-6 border-t">
               <Button variant="outline" className="w-full" asChild>
-                <a href="/events">Manage Volunteers</a>
+                <a href="/alerts">View All Celebrations</a>
               </Button>
             </CardFooter>
           </Card>
-      </motion.div>
+        </motion.div>
 
         <motion.div variants={itemVariants}>
           <Card className="overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
               <CardTitle className="flex items-center text-xl">
-                <Home className="mr-2 h-5 w-5" />
-                Families
+                <CheckSquare className="mr-2 h-5 w-5" />
+                Tasks
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
               {isLoading ? (
                 <Skeleton className="h-8 w-16 mb-1" />
               ) : (
-                <div className="text-3xl font-bold">{stats.totalFamilies}</div>
+                <div className="text-3xl font-bold">{stats.pendingTasks || 0}</div>
               )}
-              <p className="text-sm text-muted-foreground mt-1">Total Families</p>
+              <p className="text-sm text-muted-foreground mt-1">Pending tasks</p>
               
-              {/* Family breakdown */}
+              {/* Tasks breakdown */}
               <div className="mt-4 space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-orange-600 font-medium">Members in Families</span>
+                  <span className="text-sm text-orange-600 font-medium">Total Tasks</span>
                   {isLoading ? (
                     <Skeleton className="h-4 w-8" />
                   ) : (
-                    <span className="text-sm font-semibold">{stats.membersInFamilies}</span>
+                    <span className="text-sm font-semibold">{stats.totalTasks || 0}</span>
                   )}
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-orange-600 font-medium">Adults</span>
+                  <span className="text-sm text-orange-600 font-medium">Completed</span>
                   {isLoading ? (
                     <Skeleton className="h-4 w-8" />
                   ) : (
-                    <span className="text-sm font-semibold">{stats.adults}</span>
+                    <span className="text-sm font-semibold">{stats.completedTasks || 0}</span>
                   )}
                   </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-orange-600 font-medium">Children</span>
+                  <span className="text-sm text-orange-600 font-medium">Overdue</span>
                   {isLoading ? (
                     <Skeleton className="h-4 w-8" />
                   ) : (
-                    <span className="text-sm font-semibold">{stats.children}</span>
+                    <span className="text-sm font-semibold">{stats.overdueTasks || 0}</span>
                   )}
                 </div>
               </div>
             </CardContent>
             <CardFooter className="bg-muted py-2 px-6 border-t">
               <Button variant="outline" className="w-full" asChild>
-                <a href="/members">Manage Families</a>
+                <a href="/tasks">View All Tasks</a>
               </Button>
             </CardFooter>
           </Card>
         </motion.div>
-              </div>
+
+
+                </div>
               
       {/* Insights Section */}
       <motion.div variants={itemVariants}>
@@ -1205,46 +1353,8 @@ export function Dashboard() {
                     trendDescription
                   }
                 </p>
-                </div>
-{/* Volunteer Engagement */}
-<div className={`p-4 rounded-lg border ${
-                stats.eventsStillNeedingVolunteers === 0 ? 
-                  'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800' :
-                stats.eventsStillNeedingVolunteers <= 2 ? 
-                  'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-yellow-200 dark:border-yellow-800' :
-                  'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800'
-              }`}>
-                <div className="flex items-center gap-2 mb-2">
-                  <Handshake className={`h-5 w-5 ${
-                    stats.eventsStillNeedingVolunteers === 0 ? 'text-green-600' :
-                    stats.eventsStillNeedingVolunteers <= 2 ? 'text-yellow-600' :
-                    'text-red-600'
-                  }`} />
-                  <h4 className={`font-semibold ${
-                    stats.eventsStillNeedingVolunteers === 0 ? 'text-green-900 dark:text-green-100' :
-                    stats.eventsStillNeedingVolunteers <= 2 ? 'text-yellow-900 dark:text-yellow-100' :
-                    'text-red-900 dark:text-red-100'
-                  }`}>Volunteer Need</h4>
-                </div>
-                {isLoading ? (
-                  <Skeleton className="h-4 w-32 mb-2" />
-                ) : (
-                  <p className={`text-2xl font-bold mb-1 ${
-                    stats.eventsStillNeedingVolunteers === 0 ? 'text-green-700 dark:text-green-300' :
-                    stats.eventsStillNeedingVolunteers <= 2 ? 'text-yellow-700 dark:text-yellow-300' :
-                    'text-red-700 dark:text-red-300'
-                  }`}>
-                    {stats.eventsStillNeedingVolunteers}
-                  </p>
-                )}
-                <p className={`text-sm ${
-                  stats.eventsStillNeedingVolunteers === 0 ? 'text-green-600 dark:text-green-400' :
-                  stats.eventsStillNeedingVolunteers <= 2 ? 'text-yellow-600 dark:text-yellow-400' :
-                  'text-red-600 dark:text-red-400'
-                }`}>
-                  Events still need volunteers
-                </p>
               </div>
+              
               {/* Event Activity */}
               <div className={`p-4 rounded-lg border ${
                 stats.eventsThisMonth > stats.averageEventsPerMonth * 1.2 ? 
@@ -1264,7 +1374,7 @@ export function Dashboard() {
                     stats.eventsThisMonth > stats.averageEventsPerMonth ? 'text-yellow-900 dark:text-yellow-100' :
                     'text-red-900 dark:text-red-100'
                   }`}>Event Activity</h4>
-                </div>
+            </div>
                 {isLoading ? (
                   <Skeleton className="h-4 w-32 mb-2" />
                 ) : (
@@ -1283,50 +1393,88 @@ export function Dashboard() {
                 }`}>
                   {stats.eventsThisMonth} events this month vs {stats.averageEventsPerMonth} average
                 </p>
-              </div>
+          </div>
               
- {/* Member Engagement */}
+ {/* Task Management */}
  <div className={`p-4 rounded-lg border ${
-                stats.totalPeople > 0 ? 
-                  (stats.activeMembers / stats.totalPeople) >= 0.8 ? 
+                stats.totalTasks > 0 ? 
+                  (stats.overdueTasks / stats.totalTasks) <= 0.1 ? 
                     'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800' :
-                  (stats.activeMembers / stats.totalPeople) >= 0.6 ? 
+                  (stats.overdueTasks / stats.totalTasks) <= 0.3 ? 
                     'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-yellow-200 dark:border-yellow-800' :
                     'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800'
                 : 'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800'
               }`}>
                 <div className="flex items-center gap-2 mb-2">
-                  <Users2 className={`h-5 w-5 ${
-                    stats.totalPeople > 0 ? 
-                      (stats.activeMembers / stats.totalPeople) >= 0.8 ? 'text-green-600' :
-                      (stats.activeMembers / stats.totalPeople) >= 0.6 ? 'text-yellow-600' :
+                  <CheckSquare className={`h-5 w-5 ${
+                    stats.totalTasks > 0 ? 
+                      (stats.overdueTasks / stats.totalTasks) <= 0.1 ? 'text-green-600' :
+                      (stats.overdueTasks / stats.totalTasks) <= 0.3 ? 'text-yellow-600' :
                       'text-red-600'
                     : 'text-blue-600'
                   }`} />
                   <h4 className={`font-semibold ${
-                    stats.totalPeople > 0 ? 
-                      (stats.activeMembers / stats.totalPeople) >= 0.8 ? 'text-green-900 dark:text-green-100' :
-                      (stats.activeMembers / stats.totalPeople) >= 0.6 ? 'text-yellow-900 dark:text-yellow-100' :
+                    stats.totalTasks > 0 ? 
+                      (stats.overdueTasks / stats.totalTasks) <= 0.1 ? 'text-green-900 dark:text-green-100' :
+                      (stats.overdueTasks / stats.totalTasks) <= 0.3 ? 'text-yellow-900 dark:text-yellow-100' :
                       'text-red-900 dark:text-red-100'
                     : 'text-blue-900 dark:text-blue-100'
-                  }`}>Member Engagement</h4>
-            </div>
+                  }`}>On-Time Completion</h4>
+                </div>
                 {isLoading ? (
                   <Skeleton className="h-4 w-32 mb-2" />
                 ) : (
                   <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 mb-1">
-                    {stats.totalPeople > 0 ? `${((stats.activeMembers / stats.totalPeople) * 100).toFixed(0)}%` : '0%'}
+                    {stats.totalTasks > 0 ? `${((stats.totalTasks - stats.overdueTasks) / stats.totalTasks * 100).toFixed(0)}%` : '0%'}
                   </p>
                 )}
                 <p className="text-sm text-blue-600 dark:text-blue-400">
-                  {stats.activeMembers} of {stats.totalPeople} people are active members
+                  {stats.overdueTasks} overdue tasks need attention
                 </p>
-          </div>
+                  </div>
 
-             
-
+              {/* Volunteer Engagement */}
+              <div className={`p-4 rounded-lg border ${
+                stats.eventsStillNeedingVolunteers === 0 ? 
+                  'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800' :
+                stats.eventsStillNeedingVolunteers <= stats.eventsWithVolunteersEnabled * 0.3 ? 
+                  'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-yellow-200 dark:border-yellow-800' :
+                  'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800'
+              }`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Users2 className={`h-5 w-5 ${
+                    stats.eventsStillNeedingVolunteers === 0 ? 'text-green-600' :
+                    stats.eventsStillNeedingVolunteers <= stats.eventsWithVolunteersEnabled * 0.3 ? 'text-yellow-600' :
+                    'text-red-600'
+                  }`} />
+                  <h4 className={`font-semibold ${
+                    stats.eventsStillNeedingVolunteers === 0 ? 'text-green-900 dark:text-green-100' :
+                    stats.eventsStillNeedingVolunteers <= stats.eventsWithVolunteersEnabled * 0.3 ? 'text-yellow-900 dark:text-yellow-100' :
+                    'text-red-900 dark:text-red-100'
+                  }`}>Volunteer Engagement</h4>
+                </div>
+                {isLoading ? (
+                  <Skeleton className="h-4 w-32 mb-2" />
+                ) : (
+                  <p className={`text-2xl font-bold mb-1 ${
+                    stats.eventsStillNeedingVolunteers === 0 ? 'text-green-700 dark:text-green-300' :
+                    stats.eventsStillNeedingVolunteers <= stats.eventsWithVolunteersEnabled * 0.3 ? 'text-yellow-700 dark:text-yellow-300' :
+                    'text-red-700 dark:text-red-300'
+                  }`}>
+                    {stats.eventsStillNeedingVolunteers === 0 ? 'Fully Staffed' :
+                     stats.eventsStillNeedingVolunteers <= stats.eventsWithVolunteersEnabled * 0.3 ? 'Good Coverage' :
+                     'Needs Volunteers'}
+                  </p>
+                )}
+                <p className={`text-sm ${
+                  stats.eventsStillNeedingVolunteers === 0 ? 'text-green-600 dark:text-green-400' :
+                  stats.eventsStillNeedingVolunteers <= stats.eventsWithVolunteersEnabled * 0.3 ? 'text-yellow-600 dark:text-yellow-400' :
+                  'text-red-600 dark:text-red-400'
+                }`}>
+                  {stats.eventsStillNeedingVolunteers} events need volunteers
+                </p>
+              </div>
               
-
               {/* Recent Visitors */}
               <div className={`p-4 rounded-lg border ${
                 (() => {
@@ -1416,7 +1564,7 @@ export function Dashboard() {
                 }`}>
                   New visitors added in the last 30 days
                 </p>
-                  </div>
+                </div>
                 </div>
 
             {/* Additional Insights Row */}
@@ -1484,6 +1632,12 @@ export function Dashboard() {
                               ).length > 0;
                             })(),
                             recommendation: 'Great visitor attraction - focus on follow-up and integration.'
+                          },
+                          { 
+                            name: 'Task Management', 
+                            value: stats.totalTasks > 0 ? ((stats.totalTasks - stats.overdueTasks) / stats.totalTasks) * 100 : 0,
+                            condition: stats.totalTasks > 0 && (stats.totalTasks - stats.overdueTasks) / stats.totalTasks >= 0.8,
+                            recommendation: 'Excellent task management - maintain this strong organizational discipline.'
                           }
                         ].filter(m => m.condition && !isNaN(m.value) && isFinite(m.value));
                         
@@ -1549,6 +1703,12 @@ export function Dashboard() {
                               ).length > 0;
                             })(),
                             recommendation: 'Great visitor attraction - focus on follow-up and integration.'
+                          },
+                          { 
+                            name: 'Task Management', 
+                            value: stats.totalTasks > 0 ? ((stats.totalTasks - stats.overdueTasks) / stats.totalTasks) * 100 : 0,
+                            condition: stats.totalTasks > 0 && (stats.totalTasks - stats.overdueTasks) / stats.totalTasks >= 0.8,
+                            recommendation: 'Excellent task management - maintain this strong organizational discipline.'
                           }
                         ].filter(m => m.condition && !isNaN(m.value) && isFinite(m.value));
                         
@@ -1561,16 +1721,16 @@ export function Dashboard() {
                         return topMetric.recommendation;
                       })()}
                     </p>
-                </div>
+            </div>
                 )}
-                </div>
+          </div>
 
               {/* Growth Opportunity */}
               <div className="p-4 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 rounded-lg border border-amber-200 dark:border-amber-800">
                 <div className="flex items-center gap-2 mb-3">
                   <Activity className="h-5 w-5 text-amber-600" />
                   <h4 className="font-semibold text-amber-900 dark:text-amber-100">Growth Opportunity</h4>
-                </div>
+      </div>
                 {isLoading ? (
                   <Skeleton className="h-4 w-48 mb-2" />
                 ) : (
@@ -1636,13 +1796,13 @@ export function Dashboard() {
                         return 'Focus on maintaining strong relationships and preventing member turnover.';
                       })()}
                     </p>
-            </div>
+        </div>
                 )}
           </div>
             </div>
           </CardContent>
         </Card>
-        </motion.div>
+      </motion.div>
 
       {/* Average Attendance by Event Type Section */}
         <motion.div variants={itemVariants}>
@@ -1661,8 +1821,8 @@ export function Dashboard() {
                 <div className="flex-shrink-0">
                   <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
                     <BookOpen className="h-6 w-6 text-primary-foreground" />
-                </div>
-                  </div>
+              </div>
+            </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-base font-medium text-foreground">Sunday Service</p>
                   {isLoading ? (
@@ -1680,16 +1840,16 @@ export function Dashboard() {
                       {stats.sundayServiceEvents} events • {stats.sundayServiceAttendance} total
                     </p>
                   )}
-                </div>
-              </div>
-              
+            </div>
+          </div>
+
               {/* Bible Study */}
               <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
                 <div className="flex-shrink-0">
                   <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
                     <FileText className="h-6 w-6 text-primary-foreground" />
-                </div>
-                </div>
+              </div>
+            </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-base font-medium text-foreground">Bible Study</p>
                   {isLoading ? (
@@ -1707,16 +1867,16 @@ export function Dashboard() {
                       {stats.bibleStudyEvents} events • {stats.bibleStudyAttendance} total
                     </p>
                   )}
-                </div>
-              </div>
-              
+            </div>
+          </div>
+
               {/* Fellowship */}
               <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
                 <div className="flex-shrink-0">
                   <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
                     <Users2 className="h-6 w-6 text-primary-foreground" />
+              </div>
             </div>
-          </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-base font-medium text-foreground">Fellowship</p>
                   {isLoading ? (
@@ -1734,9 +1894,9 @@ export function Dashboard() {
                       {stats.fellowshipEvents} events • {stats.fellowshipAttendance} total
                     </p>
                   )}
-                </div>
-              </div>
             </div>
+          </div>
+        </div>
           </CardContent>
           <CardFooter>
             <Button variant="outline" className="w-full" asChild>
@@ -1744,7 +1904,7 @@ export function Dashboard() {
             </Button>
           </CardFooter>
         </Card>
-        </motion.div>
+      </motion.div>
 
       {/* Attendance Statistics Section */}
         <motion.div variants={itemVariants}>
@@ -1753,9 +1913,9 @@ export function Dashboard() {
             <CardTitle className="flex items-center text-xl">
               <Users className="mr-2 h-6 w-6" />
               Attendance Statistics
-            </CardTitle>
+              </CardTitle>
             <CardDescription className="text-base">Last 30 days overview</CardDescription>
-          </CardHeader>
+            </CardHeader>
           
           <CardContent>
             {attendanceLoading ? (
@@ -1775,7 +1935,7 @@ export function Dashboard() {
                 {/* Service Breakdown and Event Attendance Side by Side */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Service Breakdown */}
-                  <div className="space-y-4">
+                <div className="space-y-4">
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 bg-muted rounded-lg flex items-center justify-center">
                         <BarChart3 className="w-4 h-4 text-primary" />
@@ -1800,20 +1960,20 @@ export function Dashboard() {
                               }`}></div>
                               <div className="font-medium text-foreground text-base truncate">{service.name}</div>
                               <div className="text-sm text-muted-foreground">{service.value} attendees</div>
-                </div>
-                            <div className="text-base font-bold text-primary">{service.value}</div>
-                </div>
-                        ))}
                       </div>
+                            <div className="text-base font-bold text-primary">{service.value}</div>
+                    </div>
+                  ))}
+                </div>
                     )}
               </div>
               
                   {/* Event Attendance */}
-                  <div className="space-y-4">
+                <div className="space-y-4">
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 bg-muted rounded-lg flex items-center justify-center">
                         <Calendar className="w-4 h-4 text-primary" />
-            </div>
+                      </div>
                       <h4 className="font-semibold text-base text-foreground">Event Attendance</h4>
       </div>
 
@@ -1836,8 +1996,8 @@ export function Dashboard() {
                                 {new Date(event.date).toLocaleDateString()} • {event.attendees} attendees
               </div>
             </div>
-            </div>
-                        ))}
+                    </div>
+                  ))}
           </div>
                     )}
               </div>
@@ -1856,13 +2016,13 @@ export function Dashboard() {
                     <div className="text-center py-4 bg-muted rounded-lg">
                       <div className="text-muted-foreground mb-1 text-xl">🏆</div>
                       <p className="text-sm text-muted-foreground">No attendance data</p>
-              </div>
-                  ) : (
+                </div>
+              ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       {memberStats.slice(0, 6).map((member, index) => {
                         // Find the member data to get their image - improved lookup
                         const memberData = people.find(p => {
-                          const fullName = `${p.firstName} ${p.lastName}`.trim();
+                          const fullName = `${p.firstname} ${p.lastname}`.trim();
                           const memberName = member.name.trim();
                           
                           // Try exact match first
@@ -1906,7 +2066,7 @@ export function Dashboard() {
                                     />
                                   ) : null}
                                   <AvatarFallback className="bg-gray-200 text-gray-700">
-                                    {memberData ? getInitials(memberData.firstName || '', memberData.lastName || '') : 
+                                    {memberData ? getInitials(memberData.firstname || '', memberData.lastname || '') : 
                                      getInitials(member.name.split(' ')[0] || '', member.name.split(' ')[1] || '')}
                                   </AvatarFallback>
                                 </Avatar>
@@ -1922,12 +2082,12 @@ export function Dashboard() {
                       })}
                     </div>
                   )}
+                  </div>
                 </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
 
       {/* Donation Statistics Section */}
         <motion.div variants={itemVariants}>
@@ -1960,7 +2120,7 @@ export function Dashboard() {
                       return `${monthProgress}% of month completed`;
                     })()}
                         </p>
-                      </div>
+                </div>
                     </div>
               {/* Last Month's Donations */}
               <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
@@ -1968,20 +2128,20 @@ export function Dashboard() {
                   <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
                     <DollarSign className="h-6 w-6 text-white" />
                 </div>
-                  </div>
-                <div className="flex-1 min-w-0">
+                      </div>
+                      <div className="flex-1 min-w-0">
                   <p className="text-base font-medium text-foreground">Last Month</p>
                   <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">${(stats.lastMonthDonations || 0).toFixed(2)}</p>
                   <p className="text-sm text-muted-foreground">Previous month's total</p>
-                </div>
-              </div>
+                      </div>
+                    </div>
               {/* Monthly Average */}
               <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
                 <div className="flex-shrink-0">
                   <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center">
                     <TrendingUp className="h-6 w-6 text-white" />
-                  </div>
                 </div>
+                  </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-base font-medium text-foreground">Monthly Average</p>
                   <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">${(stats.monthlyAverage || 0).toFixed(2)}</p>
@@ -2052,7 +2212,7 @@ export function Dashboard() {
                   <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{stats.averageEventsPerMonth}</p>
                   <p className="text-sm text-muted-foreground">Last 6 months average</p>
                 </div>
-              </div>
+      </div>
 
               {/* This Week */}
               <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
@@ -2286,9 +2446,9 @@ export function Dashboard() {
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10">
                           <AvatarImage src={person.image_url} />
-                          <AvatarFallback>{getInitials(person.firstName, person.lastName)}</AvatarFallback>
+                          <AvatarFallback>{getInitials(person.firstname, person.lastname)}</AvatarFallback>
                         </Avatar>
-                        <div className="text-base">{formatName(person.firstName, person.lastName)}</div>
+                        <div className="text-base">{formatName(person.firstname, person.lastname)}</div>
                 </div>
                       <Button 
                         variant="outline" 
@@ -2386,9 +2546,9 @@ export function Dashboard() {
                 >
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={person.image_url} />
-                    <AvatarFallback>{getInitials(person.firstName, person.lastName)}</AvatarFallback>
+                    <AvatarFallback>{getInitials(person.firstname, person.lastname)}</AvatarFallback>
                   </Avatar>
-                  <span>{formatName(person.firstName, person.lastName)}</span>
+                  <span>{formatName(person.firstname, person.lastname)}</span>
                 </div>
               ))
             ) : (
@@ -2410,9 +2570,9 @@ export function Dashboard() {
                   >
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={person.image_url} />
-                      <AvatarFallback>{getInitials(person.firstName, person.lastName)}</AvatarFallback>
+                      <AvatarFallback>{getInitials(person.firstname, person.lastname)}</AvatarFallback>
                     </Avatar>
-                    <span>{formatName(person.firstName, person.lastName)}</span>
+                    <span>{formatName(person.firstname, person.lastname)}</span>
                     <CheckCircle2 className="ml-auto h-4 w-4 text-green-500" />
                   </div>
                 ))}

@@ -55,26 +55,12 @@ export function People() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [ageFilter, setAgeFilter] = useState('adults'); // Default to adults
   const [viewMode, setViewMode] = useState('grid');
-  const [sortField, setSortField] = useState('lastName');
+  const [sortField, setSortField] = useState('lastname');
   const [sortDirection, setSortDirection] = useState('asc');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
-  const [newMember, setNewMember] = useState({
-    firstname: '',
-    lastname: '',
-    email: '',
-    phone: '',
-    address: {
-      street: '',
-      city: '',
-      state: '',
-      zip: ''
-    },
-    status: 'active',
-    notes: '',
-    joinDate: new Date().toISOString().split('T')[0]
-  });
+
   const [isLoading, setIsLoading] = useState(true);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isFamilyDialogOpen, setIsFamilyDialogOpen] = useState(false);
@@ -102,9 +88,9 @@ export function People() {
       const data = await getMembers();
       // Sort the data by last name and first name
       const sortedData = data.sort((a, b) => {
-        const lastNameCompare = (a.lastName || '').localeCompare(b.lastName || '');
+        const lastNameCompare = (a.lastname || '').localeCompare(b.lastname || '');
         if (lastNameCompare !== 0) return lastNameCompare;
-        return (a.firstName || '').localeCompare(b.firstName || '');
+        return (a.firstname || '').localeCompare(b.firstname || '');
       });
       
 
@@ -340,84 +326,9 @@ export function People() {
     setFilteredMembers(filtered);
   }, [searchQuery, statusFilter, ageFilter, members, sortField, sortDirection]);
   
-  const handleAddMember = async () => {
-    try {
-      // Only include address if at least one field is filled
-      const hasAddress = newMember.address.street || newMember.address.city || newMember.address.state || newMember.address.zip;
-      const memberData = {
-        ...newMember,
-        firstname: newMember.firstname.trim(),
-        lastname: newMember.lastname.trim(),
-        email: newMember.email.trim() || null,
-        phone: newMember.phone.trim() || null,
-        address: hasAddress ? {
-          street: newMember.address.street || '',
-          city: newMember.address.city || '',
-          state: newMember.address.state || '',
-          zip: newMember.address.zip || ''
-        } : null
-      };
-      const addedMember = await addMember(memberData);
-      setMembers(prev => [addedMember, ...prev]);
-      setIsAddDialogOpen(false);
-      setNewMember({
-        firstname: '',
-        lastname: '',
-        email: '',
-        phone: '',
-        address: {
-          street: '',
-          city: '',
-          state: '',
-          zip: ''
-        },
-        status: 'active',
-        notes: '',
-        joinDate: new Date().toISOString().split('T')[0]
-      });
-      toast({
-        title: "Success",
-        description: "Person added successfully"
-      });
-    } catch (error) {
-      console.error('Error adding person:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add person",
-        variant: "destructive",
-      });
-    }
-  };
+
   
-  const handleUpdateMember = async () => {
-    try {
-      const memberData = {
-        ...selectedMember,
-        firstName: selectedMember.firstName.trim(),
-        lastName: selectedMember.lastName.trim(),
-        email: selectedMember.email.trim() || null,
-        phone: selectedMember.phone.trim() || null,
-        address: selectedMember.address.street.trim() ? selectedMember.address : null
-      };
-      const updatedMember = await updateMember(selectedMember.id, memberData);
-      setMembers(prev => prev.map(m => m.id === updatedMember.id ? updatedMember : m));
-      setIsEditDialogOpen(false);
-      setSelectedMember(null);
-      toast({
-        title: "Success",
-        description: "Person updated successfully"
-      });
-    } catch (error) {
-      console.error('Error updating person:', error);
-      toast({
-        title: "Error",
-        description: error.message === 'A member with this email already exists' 
-          ? "A person with this email already exists. Please use a different email."
-          : "Failed to update person",
-        variant: "destructive",
-      });
-    }
-  };
+
   
   const handleDeleteMember = async () => {
     try {
@@ -644,38 +555,40 @@ export function People() {
                 {filteredMembers.map((member) => (
                   <motion.div key={member.id} variants={itemVariants}>
                     <Card 
-                      className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
-                      onClick={() => handleMemberClick(member.id)}
+                      className="overflow-hidden hover:shadow-md transition-shadow"
                     >
                       <CardHeader className="pb-2">
-                        <div className="flex items-center space-x-4">
-                          <Avatar className="h-12 w-12">
-                            <AvatarImage src={member.image_url} />
-                            <AvatarFallback>
-                              {member.firstname.charAt(0)}{member.lastname.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <CardTitle className="text-xl">{formatName(member.firstname, member.lastname)}</CardTitle>
-                            <CardDescription>
-                              {member.status === 'active' ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                                  Active
-                                </span>
-                              ) : member.status === 'visitor' ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                  Visitor
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                                  Inactive
-                                </span>
-                              )}
-                            </CardDescription>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4">
+                            <Avatar className="h-12 w-12">
+                              <AvatarImage src={member.image_url} />
+                              <AvatarFallback>
+                                {member.firstname.charAt(0)}{member.lastname.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <CardTitle className="text-xl">{formatName(member.firstname, member.lastname)}</CardTitle>
+                              <CardDescription>
+                                {member.status === 'active' ? (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                    Active
+                                  </span>
+                                ) : member.status === 'visitor' ? (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                    Visitor
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                    Inactive
+                                  </span>
+                                )}
+                              </CardDescription>
+                            </div>
                           </div>
+
                         </div>
                       </CardHeader>
-                      <CardContent className="pb-3">
+                      <CardContent className="pb-3 cursor-pointer" onClick={() => handleMemberClick(member.id)}>
                         <div className="space-y-2">
                           <div className="flex items-center text-sm">
                             <Mail className="mr-2 h-4 w-4 text-muted-foreground" />
@@ -734,10 +647,10 @@ export function People() {
                           <Button 
                             variant="ghost" 
                             className="flex items-center gap-1 touch-target"
-                            onClick={() => handleSort('lastName')}
-                          >
-                            Name
-                            {sortField === 'lastName' && (
+                                                    onClick={() => handleSort('lastname')}
+                      >
+                        Name
+                        {sortField === 'lastname' && (
                               sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
                             )}
                           </Button>
@@ -793,9 +706,7 @@ export function People() {
                         <th className="h-16 px-4 text-left align-middle font-medium">
                           Status
                         </th>
-                        <th className="h-16 px-4 text-left align-middle font-medium">
-                          Actions
-                        </th>
+
 
                       </tr>
                     </thead>
@@ -855,8 +766,7 @@ export function People() {
                               </span>
                             )}
                           </td>
-                                                      <td className="h-16 px-4 align-middle">
-                            </td>
+
                           </tr>
                       ))}
                     </tbody>
@@ -1030,70 +940,15 @@ export function People() {
       
       {/* Add Person Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle>Add New Member</DialogTitle>
             <DialogDescription>
               Enter the member's information below.
             </DialogDescription>
           </DialogHeader>
-          <MemberForm
-            initialData={{
-              firstname: '',
-              lastname: '',
-              email: '',
-              phone: '',
-              status: 'active',
-              image_url: '',
-              gender: 'prefer_not_to_say',
-              member_type: 'adult',
-              birth_date: '',
-              anniversary_date: '',
-              spouse_name: '',
-              has_children: false,
-              marital_status: 'single',
-              occupation: '',
-              notes: '',
-              attendance_frequency: 'regular',
-              ministry_involvement: [],
-              communication_preferences: { sms: true, email: true, mail: false },
-              tags: []
-            }}
-            onSave={async (memberData) => {
-              try {
-                const addedMember = await addMember(memberData);
-                setMembers(prev => [addedMember, ...prev]);
-                setIsAddDialogOpen(false);
-                toast({
-                  title: "Success",
-                  description: "Member added successfully"
-                });
-              } catch (error) {
-                console.error('Error adding member:', error);
-                toast({
-                  title: "Error",
-                  description: "Failed to add member",
-                  variant: "destructive",
-                });
-              }
-            }}
-            onCancel={() => setIsAddDialogOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
-      
-      {/* Edit Member Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Edit Member</DialogTitle>
-            <DialogDescription>
-              Update the member's information below.
-            </DialogDescription>
-          </DialogHeader>
-          {selectedMember && (
+          <div className="overflow-y-auto max-h-[70vh] pr-2">
             <MemberForm
-              key={selectedMember.id}
               initialData={{
                 firstname: '',
                 lastname: '',
@@ -1101,45 +956,139 @@ export function People() {
                 phone: '',
                 status: 'active',
                 image_url: '',
-                gender: 'prefer_not_to_say',
+                gender: 'male',
                 member_type: 'adult',
+                role: 'member',
                 birth_date: '',
+                join_date: new Date().toISOString().split('T')[0],
                 anniversary_date: '',
                 spouse_name: '',
                 has_children: false,
                 marital_status: 'single',
                 occupation: '',
+                address: {
+                  street: '',
+                  city: '',
+                  state: '',
+                  zip: '',
+                  country: ''
+                },
+                emergency_contact: {
+                  name: '',
+                  phone: '',
+                  relationship: ''
+                },
                 notes: '',
+                last_attendance_date: '',
                 attendance_frequency: 'regular',
                 ministry_involvement: [],
                 communication_preferences: { sms: true, email: true, mail: false },
-                tags: [],
-                ...selectedMember
+                tags: []
               }}
               onSave={async (memberData) => {
                 try {
-                  const updatedMember = await updateMember(selectedMember.id, memberData);
-                  setMembers(prev => prev.map(m => m.id === updatedMember.id ? updatedMember : m));
-                  setIsEditDialogOpen(false);
-                  setSelectedMember(null);
+                  const addedMember = await addMember(memberData);
+                  setMembers(prev => [addedMember, ...prev]);
+                  setIsAddDialogOpen(false);
                   toast({
                     title: "Success",
-                    description: "Member updated successfully"
+                    description: "Member added successfully"
                   });
                 } catch (error) {
-                  console.error('Error updating member:', error);
+                  console.error('Error adding member:', error);
                   toast({
                     title: "Error",
-                    description: "Failed to update member",
+                    description: "Failed to add member",
                     variant: "destructive",
                   });
                 }
               }}
-              onCancel={() => {
-                setIsEditDialogOpen(false);
-                setSelectedMember(null);
-              }}
+              onCancel={() => setIsAddDialogOpen(false)}
             />
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Edit Member Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Edit Member</DialogTitle>
+            <DialogDescription>
+              Update the member's information below.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedMember && (
+            <div className="overflow-y-auto max-h-[70vh] pr-2">
+              <MemberForm
+                key={selectedMember.id}
+                initialData={{
+                  // Basic fields (these should exist in the database)
+                  id: selectedMember.id,
+                  firstname: selectedMember.firstname || '',
+                  lastname: selectedMember.lastname || '',
+                  email: selectedMember.email || '',
+                  phone: selectedMember.phone || '',
+                  status: selectedMember.status || 'active',
+                  image_url: selectedMember.image_url || '',
+                  
+                  // New schema fields (may not exist in older records)
+                  gender: selectedMember.gender || 'male',
+                  member_type: selectedMember.member_type || 'adult',
+                  role: selectedMember.role || 'member',
+                  birth_date: selectedMember.birth_date || '',
+                  join_date: selectedMember.join_date || '',
+                  anniversary_date: selectedMember.anniversary_date || '',
+                  spouse_name: selectedMember.spouse_name || '',
+                  has_children: selectedMember.has_children || false,
+                  marital_status: selectedMember.marital_status || 'single',
+                  occupation: selectedMember.occupation || '',
+                  
+                  // Complex fields with proper defaults
+                  address: selectedMember.address || {
+                    street: '',
+                    city: '',
+                    state: '',
+                    zip: '',
+                    country: ''
+                  },
+                  emergency_contact: selectedMember.emergency_contact || {
+                    name: '',
+                    phone: '',
+                    relationship: ''
+                  },
+                  notes: selectedMember.notes || '',
+                  last_attendance_date: selectedMember.last_attendance_date || '',
+                  attendance_frequency: selectedMember.attendance_frequency || 'regular',
+                  ministry_involvement: selectedMember.ministry_involvement || [],
+                  communication_preferences: selectedMember.communication_preferences || { sms: true, email: true, mail: false },
+                  tags: selectedMember.tags || []
+                }}
+                onSave={async (memberData) => {
+                  try {
+                    const updatedMember = await updateMember(selectedMember.id, memberData);
+                    setMembers(prev => prev.map(m => m.id === updatedMember.id ? updatedMember : m));
+                    setIsEditDialogOpen(false);
+                    setSelectedMember(null);
+                    toast({
+                      title: "Success",
+                      description: "Member updated successfully"
+                    });
+                  } catch (error) {
+                    console.error('Error updating member:', error);
+                    toast({
+                      title: "Error",
+                      description: "Failed to update member",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+                onCancel={() => {
+                  setIsEditDialogOpen(false);
+                  setSelectedMember(null);
+                }}
+              />
+            </div>
           )}
         </DialogContent>
       </Dialog>

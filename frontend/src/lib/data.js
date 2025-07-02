@@ -145,58 +145,105 @@ export async function getMembers() {
 
     if (error) throw error;
 
-    // Parse address JSON for each member and transform to camelCase
+    // Parse JSON fields for each member
     const parsedData = data.map(member => {
       try {
-        // Transform snake_case to camelCase
+        // Keep original field names but ensure JSON fields are properly parsed
         const transformedMember = {
-          ...member,
-          firstName: member.firstname || '',
-          lastName: member.lastname || '',
-          joinDate: member.join_date,
-          createdAt: member.created_at,
-          updatedAt: member.updated_at
+          ...member
         };
 
-        // If address is already an object, use it directly
+        // Parse address field
         if (typeof member.address === 'object' && member.address !== null) {
-          return {
-            ...transformedMember,
-            address: member.address
-          };
-        }
-        
-        // If address is a string, check if it's already a valid object
-        if (typeof member.address === 'string') {
+          transformedMember.address = member.address;
+        } else if (typeof member.address === 'string') {
           const cleanAddress = member.address.trim();
           if (!cleanAddress) {
-            return { 
-              ...transformedMember,
-              address: null 
-            };
+            transformedMember.address = null;
+          } else {
+            try {
+              transformedMember.address = JSON.parse(cleanAddress);
+            } catch (parseError) {
+              transformedMember.address = cleanAddress;
+            }
           }
-          
-          // Try to parse as JSON, but if it fails, use the string as is
-          try {
-            const parsed = JSON.parse(cleanAddress);
-            return {
-              ...transformedMember,
-              address: parsed
-            };
-          } catch (parseError) {
-            // If parsing fails, use the string as is
-            return {
-              ...transformedMember,
-              address: cleanAddress
-            };
-          }
+        } else {
+          transformedMember.address = null;
         }
-        
-        // If address is null or undefined, return null
-        return {
-          ...transformedMember,
-          address: null
-        };
+
+        // Parse emergency_contact field
+        if (typeof member.emergency_contact === 'object' && member.emergency_contact !== null) {
+          transformedMember.emergency_contact = member.emergency_contact;
+        } else if (typeof member.emergency_contact === 'string') {
+          const cleanEmergencyContact = member.emergency_contact.trim();
+          if (!cleanEmergencyContact) {
+            transformedMember.emergency_contact = null;
+          } else {
+            try {
+              transformedMember.emergency_contact = JSON.parse(cleanEmergencyContact);
+            } catch (parseError) {
+              transformedMember.emergency_contact = cleanEmergencyContact;
+            }
+          }
+        } else {
+          transformedMember.emergency_contact = null;
+        }
+
+        // Parse communication_preferences field
+        if (typeof member.communication_preferences === 'object' && member.communication_preferences !== null) {
+          transformedMember.communication_preferences = member.communication_preferences;
+        } else if (typeof member.communication_preferences === 'string') {
+          const cleanCommPrefs = member.communication_preferences.trim();
+          if (!cleanCommPrefs) {
+            transformedMember.communication_preferences = { sms: true, email: true, mail: false };
+          } else {
+            try {
+              transformedMember.communication_preferences = JSON.parse(cleanCommPrefs);
+            } catch (parseError) {
+              transformedMember.communication_preferences = { sms: true, email: true, mail: false };
+            }
+          }
+        } else {
+          transformedMember.communication_preferences = { sms: true, email: true, mail: false };
+        }
+
+        // Parse ministry_involvement field
+        if (Array.isArray(member.ministry_involvement)) {
+          transformedMember.ministry_involvement = member.ministry_involvement;
+        } else if (typeof member.ministry_involvement === 'string') {
+          const cleanMinistry = member.ministry_involvement.trim();
+          if (!cleanMinistry) {
+            transformedMember.ministry_involvement = [];
+          } else {
+            try {
+              transformedMember.ministry_involvement = JSON.parse(cleanMinistry);
+            } catch (parseError) {
+              transformedMember.ministry_involvement = [];
+            }
+          }
+        } else {
+          transformedMember.ministry_involvement = [];
+        }
+
+        // Parse tags field
+        if (Array.isArray(member.tags)) {
+          transformedMember.tags = member.tags;
+        } else if (typeof member.tags === 'string') {
+          const cleanTags = member.tags.trim();
+          if (!cleanTags) {
+            transformedMember.tags = [];
+          } else {
+            try {
+              transformedMember.tags = JSON.parse(cleanTags);
+            } catch (parseError) {
+              transformedMember.tags = [];
+            }
+          }
+        } else {
+          transformedMember.tags = [];
+        }
+
+        return transformedMember;
       } catch (error) {
         console.error('Error parsing member data:', error);
         return member;
@@ -217,17 +264,42 @@ export const addMember = async (memberData) => {
       throw new Error('User not associated with any organization');
     }
 
+    // Prepare the data with all schema fields
+    const memberToInsert = {
+      firstname: memberData.firstname,
+      lastname: memberData.lastname,
+      email: memberData.email,
+      phone: memberData.phone,
+      status: memberData.status || 'active',
+      image_url: memberData.image_url,
+      member_type: memberData.member_type || 'adult',
+      birth_date: memberData.birth_date,
+      gender: memberData.gender,
+      role: memberData.role || 'member',
+      join_date: memberData.join_date,
+      anniversary_date: memberData.anniversary_date,
+      spouse_name: memberData.spouse_name,
+      has_children: memberData.has_children || false,
+      marital_status: memberData.marital_status,
+      occupation: memberData.occupation,
+      address: memberData.address,
+      emergency_contact: memberData.emergency_contact,
+      notes: memberData.notes,
+      last_attendance_date: memberData.last_attendance_date,
+      attendance_frequency: memberData.attendance_frequency || 'regular',
+      ministry_involvement: memberData.ministry_involvement || [],
+      communication_preferences: memberData.communication_preferences || {
+        sms: true,
+        email: true,
+        mail: false
+      },
+      tags: memberData.tags || [],
+      organization_id: organizationId
+    };
+
     const { data, error } = await supabase
       .from('members')
-      .insert([{
-        firstname: memberData.firstname,
-        lastname: memberData.lastname,
-        email: memberData.email,
-        phone: memberData.phone,
-        status: memberData.status || 'active',
-        image_url: memberData.image_url,
-        organization_id: organizationId
-      }])
+      .insert([memberToInsert])
       .select()
       .single();
 
@@ -245,17 +317,37 @@ export const updateMember = async (id, memberData) => {
       throw new Error('User not associated with any organization');
     }
 
+    // Prepare the data with all schema fields
+    const memberToUpdate = {
+      firstname: memberData.firstname,
+      lastname: memberData.lastname,
+      email: memberData.email,
+      phone: memberData.phone,
+      status: memberData.status,
+      image_url: memberData.image_url,
+      member_type: memberData.member_type,
+      birth_date: memberData.birth_date,
+      gender: memberData.gender,
+      role: memberData.role,
+      join_date: memberData.join_date,
+      anniversary_date: memberData.anniversary_date,
+      spouse_name: memberData.spouse_name,
+      has_children: memberData.has_children,
+      marital_status: memberData.marital_status,
+      occupation: memberData.occupation,
+      address: memberData.address,
+      emergency_contact: memberData.emergency_contact,
+      notes: memberData.notes,
+      last_attendance_date: memberData.last_attendance_date,
+      attendance_frequency: memberData.attendance_frequency,
+      ministry_involvement: memberData.ministry_involvement,
+      communication_preferences: memberData.communication_preferences,
+      tags: memberData.tags
+    };
+
     const { data, error } = await supabase
       .from('members')
-      .update({
-        firstname: memberData.firstname,
-        lastname: memberData.lastname,
-        email: memberData.email,
-        phone: memberData.phone,
-        status: memberData.status,
-        image_url: memberData.image_url,
-        gender: memberData.gender
-      })
+      .update(memberToUpdate)
       .eq('id', id)
       .eq('organization_id', organizationId)
       .select()
@@ -886,7 +978,8 @@ export const getMemberAttendance = async (memberId) => {
           title,
           start_date,
           end_date,
-          location
+          location,
+          event_type
         )
       `)
       .eq('member_id', memberId)
@@ -983,6 +1076,31 @@ export const getMemberGroups = async (memberId) => {
         } : null
       }
     }));
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getMemberVolunteers = async (memberId) => {
+  try {
+    const { data, error } = await supabase
+      .from('event_volunteers')
+      .select(`
+        *,
+        events (
+          id,
+          title,
+          start_date,
+          end_date,
+          location,
+          event_type
+        )
+      `)
+      .eq('member_id', memberId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
   } catch (error) {
     throw error;
   }

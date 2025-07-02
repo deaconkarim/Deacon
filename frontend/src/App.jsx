@@ -16,7 +16,8 @@ import { Login } from './pages/login';
 import { Register } from './pages/register';
 import { Invite } from './pages/invite';
 import { SMS } from './pages/sms';
-import { Alerts } from './pages/alerts';
+import AlertsPage from './pages/alerts';
+
 import { ProtectedRoute } from './components/ProtectedRoute';
 import ApprovalStatus from './components/ApprovalStatus';
 import PrivacyPolicy from './pages/privacy-policy';
@@ -50,10 +51,11 @@ function App() {
         <Route path="/children-check-in" element={<ChildrenCheckin />} />
         <Route path="/children-check-in/add" element={<AddChild />} />
         <Route path="/reports" element={<Reports />} />
-        <Route path="/settings" element={<Settings />} />
+                <Route path="/settings" element={<Settings />} />
         <Route path="/sms" element={<SMS />} />
-        <Route path="/alerts" element={<Alerts />} />
-      </Route>
+        <Route path="/alerts" element={<AlertsPage />} />
+
+        </Route>
     </Routes>
   );
 }

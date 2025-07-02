@@ -63,10 +63,11 @@ export function Layout() {
     { name: 'People', href: '/members', icon: Users },
     { name: 'Donations', href: '/donations', icon: DollarSign },
     { name: 'Groups', href: '/groups', icon: UserPlus },
-    { name: 'Tasks', href: '/tasks', icon: ClipboardList },
-    { name: 'SMS', href: '/sms', icon: MessageSquare },
-    { name: 'Alerts', href: '/alerts', icon: Bell },
-    { name: 'Reports', href: '/reports', icon: BarChart2 },
+          { name: 'Tasks', href: '/tasks', icon: ClipboardList },
+      { name: 'SMS', href: '/sms', icon: MessageSquare },
+      { name: 'Alerts', href: '/alerts', icon: Bell },
+
+      { name: 'Reports', href: '/reports', icon: BarChart2 },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
 
