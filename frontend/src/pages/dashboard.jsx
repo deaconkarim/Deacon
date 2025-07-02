@@ -132,13 +132,14 @@ export function Dashboard() {
   // Memoize the date objects to prevent infinite re-renders
   const attendanceDateRange = useMemo(() => {
     const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
     return {
-      startDate: startOfMonth(now),
-      endDate: endOfMonth(now)
+      startDate: thirtyDaysAgo,
+      endDate: now
     };
   }, []); // Empty dependency array - only calculate once
 
-  // Attendance stats for current month
+  // Attendance stats for last 30 days
   const { isLoading: attendanceLoading, serviceBreakdown, memberStats, dailyData, eventDetails, error } = useAttendanceStats(
     attendanceDateRange.startDate, 
     attendanceDateRange.endDate
