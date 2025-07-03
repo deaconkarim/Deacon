@@ -51,6 +51,8 @@ export function SMS() {
     template_text: '',
     variables: []
   });
+  const [replyMessage, setReplyMessage] = useState('');
+  const [isSendingReply, setIsSendingReply] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -229,6 +231,64 @@ export function SMS() {
         description: `Failed to send message: ${error.message}`,
         variant: 'destructive'
       });
+    }
+  };
+
+  const handleSendReply = async () => {
+    if (!replyMessage.trim()) {
+      toast({
+        title: 'Missing Message',
+        description: 'Please enter a reply message.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!selectedConversation) {
+      toast({
+        title: 'Error',
+        description: 'No conversation selected.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsSendingReply(true);
+    try {
+      // Find the phone number to reply to from the conversation
+      const inboundMessage = selectedConversation.sms_messages?.find(m => m.direction === 'inbound');
+      if (!inboundMessage) {
+        throw new Error('No inbound message found to reply to');
+      }
+
+      await smsService.sendMessage({
+        conversation_id: selectedConversation.id,
+        to_number: inboundMessage.from_number,
+        body: replyMessage,
+        member_id: inboundMessage.member_id
+      });
+
+      toast({
+        title: 'Success',
+        description: 'Reply sent successfully'
+      });
+
+      setReplyMessage('');
+      
+      // Refresh the conversation
+      const updatedConversation = await smsService.getConversation(selectedConversation.id);
+      setSelectedConversation(updatedConversation);
+      
+      // Refresh conversations list
+      await loadData();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: `Failed to send reply: ${error.message}`,
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSendingReply(false);
     }
   };
 
@@ -580,6 +640,47 @@ export function SMS() {
                 </div>
               ))}
             </div>
+            
+            {/* Reply Section */}
+            {selectedConversation.sms_messages?.some(m => m.direction === 'inbound') && (
+              <div className="border-t pt-4 space-y-3">
+                <div className="flex items-center space-x-2">
+                  <Send className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Send Reply</span>
+                </div>
+                <div className="space-y-2">
+                  <Textarea
+                    value={replyMessage}
+                    onChange={(e) => setReplyMessage(e.target.value)}
+                    placeholder="Type your reply..."
+                    rows={3}
+                    className="resize-none"
+                  />
+                  <div className="flex justify-between items-center">
+                    <div className="text-xs text-muted-foreground">
+                      Characters: {replyMessage.length} • Messages: {Math.ceil(replyMessage.length / 160)}
+                    </div>
+                    <Button 
+                      onClick={handleSendReply}
+                      disabled={!replyMessage.trim() || isSendingReply}
+                      size="sm"
+                    >
+                      {isSendingReply ? (
+                        <>
+                          <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="mr-2 h-4 w-4" />
+                          Send Reply
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       )}

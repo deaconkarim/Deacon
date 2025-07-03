@@ -47,18 +47,17 @@ serve(async (req) => {
     // Create or find conversation
     let conversationId = null
     if (member) {
-      // Look for existing conversation with this member
-      const { data: existingConversation } = await supabaseClient
-        .from('sms_conversations')
-        .select('id')
-        .eq('conversation_type', 'general')
-        .eq('status', 'active')
+      // Look for existing conversation with this member by checking messages
+      const { data: existingMessages } = await supabaseClient
+        .from('sms_messages')
+        .select('conversation_id')
+        .eq('member_id', member.id)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
 
-      if (existingConversation) {
-        conversationId = existingConversation.id
+      if (existingMessages?.conversation_id) {
+        conversationId = existingMessages.conversation_id
         console.log('✅ Using existing conversation:', conversationId)
       } else {
         // Create new conversation
@@ -77,6 +76,38 @@ serve(async (req) => {
         } else {
           conversationId = newConversation?.id
           console.log('✅ Created new conversation:', conversationId)
+        }
+      }
+    } else {
+      // For non-members, try to find conversation by phone number
+      const { data: existingMessages } = await supabaseClient
+        .from('sms_messages')
+        .select('conversation_id')
+        .eq('from_number', from)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (existingMessages?.conversation_id) {
+        conversationId = existingMessages.conversation_id
+        console.log('✅ Using existing conversation for non-member:', conversationId)
+      } else {
+        // Create new conversation for non-member
+        const { data: newConversation, error: convError } = await supabaseClient
+          .from('sms_conversations')
+          .insert({
+            title: `SMS with ${from}`,
+            conversation_type: 'general',
+            status: 'active'
+          })
+          .select('id')
+          .single()
+
+        if (convError) {
+          console.error('❌ Conversation creation error:', convError)
+        } else {
+          conversationId = newConversation?.id
+          console.log('✅ Created new conversation for non-member:', conversationId)
         }
       }
     }
@@ -104,6 +135,16 @@ serve(async (req) => {
     }
 
     console.log('✅ Message stored successfully:', message.id)
+
+    // Update conversation's updated_at timestamp
+    if (conversationId) {
+      await supabaseClient
+        .from('sms_conversations')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', conversationId)
+      
+      console.log('✅ Conversation updated timestamp')
+    }
 
     // Return TwiML response (optional auto-reply)
     const twimlResponse = `<?xml version="1.0" encoding="UTF-8"?>
