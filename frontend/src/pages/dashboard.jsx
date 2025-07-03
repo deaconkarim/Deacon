@@ -26,7 +26,8 @@ import {
   Home,
   CheckSquare,
   Bell,
-
+  MessageSquare,
+  ArrowDownLeft,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,6 +41,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Input } from '@/components/ui/input';
 import { getMembers, getEvents, getDonations, getRecentDonationsForDashboard, getAllEvents, addMember, updateMember, deleteMember, getMemberAttendance, updateDonation, deleteDonation, addEventAttendance, getEventAttendance, getVolunteerStats } from '../lib/data';
 import { getAlertStats } from '../lib/alertsService';
+import { smsService } from '../lib/smsService';
 
 import { familyService } from '../lib/familyService';
 import {
@@ -119,7 +121,14 @@ export function Dashboard() {
     overdueTasks: 0,
 
     upcomingBirthdays: 0,
-    upcomingAnniversaries: 0
+    upcomingAnniversaries: 0,
+    // SMS Statistics
+    totalSMSMessages: 0,
+    recentSMSMessages: 0,
+    totalSMSConversations: 0,
+    activeSMSConversations: 0,
+    outboundSMSMessages: 0,
+    inboundSMSMessages: 0
   });
   const [recentPeople, setRecentPeople] = useState([]);
   const [people, setPeople] = useState([]);
@@ -140,6 +149,7 @@ export function Dashboard() {
   const [selectedDonation, setSelectedDonation] = useState(null);
   const [isDeleteDonationOpen, setIsDeleteDonationOpen] = useState(false);
   const [attendanceTimeRange, setAttendanceTimeRange] = useState('week'); // 'week' or 'month'
+  const [recentSMSConversations, setRecentSMSConversations] = useState([]);
 
   // Memoize the date objects to prevent infinite re-renders
   const attendanceDateRange = useMemo(() => {
@@ -712,6 +722,22 @@ export function Dashboard() {
         console.error('Error fetching alerts statistics:', error);
       }
 
+      // Load SMS statistics
+      let smsStats = {
+        totalMessages: 0,
+        recentMessages: 0,
+        totalConversations: 0,
+        activeConversations: 0,
+        outboundMessages: 0,
+        inboundMessages: 0
+      };
+      
+      try {
+        smsStats = await smsService.getSMSStats();
+      } catch (error) {
+        console.error('Error fetching SMS statistics:', error);
+      }
+
       setStats({
         totalPeople,
         activeMembers: activeMembers.length,
@@ -758,13 +784,20 @@ export function Dashboard() {
         upcomingBirthdays: alertsStats.birthdays || 0,
         upcomingAnniversaries: alertsStats.anniversaries || 0,
         upcomingMemberships: alertsStats.memberships || 0,
-        totalUpcoming: alertsStats.totalUpcoming || 0
+        totalUpcoming: alertsStats.totalUpcoming || 0,
+        totalSMSMessages: smsStats.totalMessages,
+        recentSMSMessages: smsStats.recentMessages,
+        totalSMSConversations: smsStats.totalConversations,
+        activeSMSConversations: smsStats.activeConversations,
+        outboundSMSMessages: smsStats.outboundMessages,
+        inboundSMSMessages: smsStats.inboundMessages
       });
       setRecentPeople(recentPeople);
       setPeople(transformedPeople);
       setUpcomingEvents(upcomingEvents);
       setWeeklyDonations(weeklyDonations);
       setDonations(donations || []);
+      setRecentSMSConversations(smsStats.recentConversations || []);
 
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -968,7 +1001,7 @@ export function Dashboard() {
           <LeadershipVerse />
       </motion.div>
 
-      <div className="grid gap-4 tablet-portrait:grid-cols-2 tablet-landscape:grid-cols-2 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 tablet-portrait:grid-cols-2 tablet-landscape:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <motion.div variants={itemVariants}>
           <Card className="overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
@@ -1243,6 +1276,57 @@ export function Dashboard() {
           </Card>
         </motion.div>
 
+        <motion.div variants={itemVariants}>
+          <Card className="overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-teal-500 to-teal-600 text-white">
+              <CardTitle className="flex items-center text-xl">
+                <MessageSquare className="mr-2 h-5 w-5" />
+                SMS
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              {isLoading ? (
+                <Skeleton className="h-8 w-16 mb-1" />
+              ) : (
+                <div className="text-3xl font-bold">{stats.recentSMSMessages || 0}</div>
+              )}
+              <p className="text-sm text-muted-foreground mt-1">Recent (30 days)</p>
+              
+              {/* SMS breakdown */}
+              <div className="mt-4 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-teal-600 font-medium">Active Conversations</span>
+                  {isLoading ? (
+                    <Skeleton className="h-4 w-8" />
+                  ) : (
+                    <span className="text-sm font-semibold">{stats.activeSMSConversations || 0}</span>
+                  )}
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-teal-600 font-medium">Outbound</span>
+                  {isLoading ? (
+                    <Skeleton className="h-4 w-8" />
+                  ) : (
+                    <span className="text-sm font-semibold">{stats.outboundSMSMessages || 0}</span>
+                  )}
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-teal-600 font-medium">Inbound</span>
+                  {isLoading ? (
+                    <Skeleton className="h-4 w-8" />
+                  ) : (
+                    <span className="text-sm font-semibold">{stats.inboundSMSMessages || 0}</span>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="bg-muted py-2 px-6 border-t">
+              <Button variant="outline" className="w-full" asChild>
+                <a href="/sms">View SMS Management</a>
+              </Button>
+            </CardFooter>
+          </Card>
+        </motion.div>
 
                 </div>
               
@@ -2702,6 +2786,123 @@ export function Dashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* SMS Statistics Section */}
+      <motion.div variants={itemVariants}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center text-xl">
+              <MessageSquare className="mr-2 h-6 w-6" />
+              SMS Statistics
+            </CardTitle>
+            <CardDescription className="text-base">Overview of your organization's SMS communication</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-3">
+              {/* Total Messages */}
+              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                    <MessageSquare className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-base font-medium text-foreground">Total Messages</p>
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.totalSMSMessages}</p>
+                  <p className="text-sm text-muted-foreground">All time</p>
+                </div>
+              </div>
+
+              {/* Recent Messages */}
+              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+                    <Clock className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-base font-medium text-foreground">Recent Messages</p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.recentSMSMessages}</p>
+                  <p className="text-sm text-muted-foreground">Last 30 days</p>
+                </div>
+              </div>
+
+              {/* Active Conversations */}
+              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center">
+                    <Users className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-base font-medium text-foreground">Active Conversations</p>
+                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{stats.activeSMSConversations}</p>
+                  <p className="text-sm text-muted-foreground">Last 7 days</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Message Direction Breakdown */}
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              {/* Outbound Messages */}
+              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-teal-500 rounded-full flex items-center justify-center">
+                    <ArrowUpRight className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-base font-medium text-foreground">Outbound Messages</p>
+                  <p className="text-2xl font-bold text-teal-600 dark:text-teal-400">{stats.outboundSMSMessages}</p>
+                  <p className="text-sm text-muted-foreground">Sent by your organization</p>
+                </div>
+              </div>
+
+              {/* Inbound Messages */}
+              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center">
+                    <ArrowDownLeft className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-base font-medium text-foreground">Inbound Messages</p>
+                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{stats.inboundSMSMessages}</p>
+                  <p className="text-sm text-muted-foreground">Received from members</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Recent Conversations */}
+            {recentSMSConversations.length > 0 && (
+              <div className="mt-6">
+                <h4 className="font-semibold text-base mb-3">Recent Conversations</h4>
+                <div className="space-y-2">
+                  {recentSMSConversations.slice(0, 3).map((conversation) => (
+                    <div key={conversation.id} className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-gray-50 transition-colors">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-foreground text-sm truncate">{conversation.title}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          {format(new Date(conversation.updated_at), 'MMM d, yyyy')} • 
+                          {conversation.sms_messages?.length || 0} messages
+                        </div>
+                      </div>
+                      <Badge variant="secondary" className="ml-2">
+                        {conversation.conversation_type.replace('_', ' ')}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+          <CardFooter>
+            <Button variant="outline" className="w-full" asChild>
+              <a href="/sms">View SMS Management</a>
+            </Button>
+          </CardFooter>
+        </Card>
+      </motion.div>
     </div>
   );
 }

@@ -1,5 +1,26 @@
 import { supabase } from './supabaseClient';
 
+// Import the function to get current user's organization ID
+const getCurrentUserOrganizationId = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const { data: userProfile } = await supabase
+      .from('organization_users')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .eq('approval_status', 'approved')
+      .single();
+
+    return userProfile?.organization_id || null;
+  } catch (error) {
+    console.error('Error getting user organization ID:', error);
+    return null;
+  }
+};
+
 export const smsService = {
   // Conversation Management
   async getConversations(conversationType = null) {
@@ -159,9 +180,142 @@ export const smsService = {
       console.log('✅ Template rendered:', finalMessageBody);
     }
 
-    // Create or find conversation for this message
-    let conversationId = messageData.conversation_id;
-    if (!conversationId) {
+    // Handle group messaging - if group_id is provided, use existing conversation
+    if (messageData.group_id && !messageData.conversation_id) {
+      console.log('👥 Group message detected, looking for existing group conversation...');
+      
+      // Look for existing conversation for this group
+      const { data: existingConversation, error: conversationError } = await supabase
+        .from('sms_conversations')
+        .select('id')
+        .eq('group_id', messageData.group_id)
+        .eq('status', 'active')
+        .maybeSingle(); // Use maybeSingle() to handle no results gracefully
+
+      if (conversationError) {
+        console.error('❌ Error looking for group conversation:', conversationError);
+      }
+
+      if (existingConversation) {
+        messageData.conversation_id = existingConversation.id;
+        console.log('✅ Found existing group conversation:', messageData.conversation_id);
+      } else {
+        console.log('📝 Creating new group conversation...');
+        
+        // Get group name for conversation title
+        const { data: group } = await supabase
+          .from('groups')
+          .select('name')
+          .eq('id', messageData.group_id)
+          .single();
+
+        const groupName = group?.name || 'Group';
+        const truncatedMessage = finalMessageBody.length > 30 
+          ? finalMessageBody.substring(0, 27) + '...' 
+          : finalMessageBody;
+        
+        const conversationTitle = `Group: ${groupName} - ${truncatedMessage}`;
+        
+        // Determine conversation type based on message content or template
+        let conversationType = 'general';
+        if (messageData.template_id) {
+          const template = await supabase
+            .from('sms_templates')
+            .select('name')
+            .eq('id', messageData.template_id)
+            .single();
+          
+          if (template?.data?.name) {
+            const templateName = template.data.name.toLowerCase();
+            if (templateName.includes('prayer')) {
+              conversationType = 'prayer_request';
+            } else if (templateName.includes('event') || templateName.includes('reminder')) {
+              conversationType = 'event_reminder';
+            } else if (templateName.includes('emergency')) {
+              conversationType = 'emergency';
+            } else if (templateName.includes('pastoral') || templateName.includes('care')) {
+              conversationType = 'pastoral_care';
+            }
+          }
+        }
+        
+
+        
+        const { data: newConversation, error: createError } = await supabase
+          .from('sms_conversations')
+          .insert({
+            title: conversationTitle,
+            conversation_type: conversationType,
+            group_id: messageData.group_id,
+            status: 'active'
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('❌ Group conversation creation error:', createError);
+          throw createError;
+        }
+
+        messageData.conversation_id = newConversation.id;
+        console.log('✅ New group conversation created:', messageData.conversation_id);
+      }
+    }
+    
+    // Handle multi-recipient messaging (individual recipients, not groups)
+    if (messageData.multiple_recipients && !messageData.conversation_id) {
+      console.log('👥 Multi-recipient message detected, creating conversation...');
+      
+      const truncatedMessage = finalMessageBody.length > 30 
+        ? finalMessageBody.substring(0, 27) + '...' 
+        : finalMessageBody;
+      
+      const conversationTitle = `Multiple Recipients - ${truncatedMessage}`;
+      
+      // Determine conversation type based on message content or template
+      let conversationType = 'general';
+      if (messageData.template_id) {
+        const template = await supabase
+          .from('sms_templates')
+          .select('name')
+          .eq('id', messageData.template_id)
+          .single();
+        
+        if (template?.data?.name) {
+          const templateName = template.data.name.toLowerCase();
+          if (templateName.includes('prayer')) {
+            conversationType = 'prayer_request';
+          } else if (templateName.includes('event') || templateName.includes('reminder')) {
+            conversationType = 'event_reminder';
+          } else if (templateName.includes('emergency')) {
+            conversationType = 'emergency';
+          } else if (templateName.includes('pastoral') || templateName.includes('care')) {
+            conversationType = 'pastoral_care';
+          }
+        }
+      }
+      
+      const { data: newConversation, error: createError } = await supabase
+        .from('sms_conversations')
+        .insert({
+          title: conversationTitle,
+          conversation_type: conversationType,
+          status: 'active'
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('❌ Multi-recipient conversation creation error:', createError);
+        throw createError;
+      }
+
+      messageData.conversation_id = newConversation.id;
+      console.log('✅ New multi-recipient conversation created:', messageData.conversation_id);
+    }
+
+    // Create or find conversation for this message (only if not already set by group logic)
+    if (!messageData.conversation_id) {
       console.log('💬 Creating new conversation for message...');
       
       // Try to find member by phone number
@@ -213,11 +367,36 @@ export const smsService = {
       
       const conversationTitle = createTitle(messageData.body, memberName, messageData.to_number);
       
+      // Determine conversation type based on message content or template
+      let conversationType = 'general';
+      if (messageData.template_id) {
+        const template = await supabase
+          .from('sms_templates')
+          .select('name')
+          .eq('id', messageData.template_id)
+          .single();
+        
+        if (template?.data?.name) {
+          const templateName = template.data.name.toLowerCase();
+          if (templateName.includes('prayer')) {
+            conversationType = 'prayer_request';
+          } else if (templateName.includes('event') || templateName.includes('reminder')) {
+            conversationType = 'event_reminder';
+          } else if (templateName.includes('emergency')) {
+            conversationType = 'emergency';
+          } else if (templateName.includes('pastoral') || templateName.includes('care')) {
+            conversationType = 'pastoral_care';
+          }
+        }
+      }
+      
+
+      
       const { data: conversation, error: conversationError } = await supabase
         .from('sms_conversations')
         .insert({
           title: conversationTitle,
-          conversation_type: 'general',
+          conversation_type: conversationType,
           status: 'active'
         })
         .select()
@@ -228,22 +407,22 @@ export const smsService = {
         throw conversationError;
       }
 
-      conversationId = conversation.id;
-      console.log('✅ Conversation created:', conversationId);
+      messageData.conversation_id = conversation.id;
+      console.log('✅ Conversation created:', messageData.conversation_id);
     }
 
     // Create the message record with conversation_id
     console.log('💾 Creating message record in database...');
     
-    // Remove template_id and variables from messageData for database insert
-    const { template_id, variables, ...messageDataForDb } = messageData;
+    // Remove template_id, variables, group_id, and multiple_recipients from messageData for database insert
+    const { template_id, variables, group_id, multiple_recipients, ...messageDataForDb } = messageData;
     
     const { data: message, error: messageError } = await supabase
       .from('sms_messages')
       .insert({
         ...messageDataForDb,
         body: finalMessageBody, // Use the rendered template body
-        conversation_id: conversationId,
+        conversation_id: messageData.conversation_id,
         from_number: twilioPhoneNumber,
         direction: 'outbound',
         status: 'queued'
@@ -508,5 +687,122 @@ export const smsService = {
     });
 
     return renderedText;
+  },
+
+  // Dashboard Statistics
+  async getSMSStats() {
+    try {
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User not associated with any organization');
+      }
+
+      // Get total messages count for this organization (including messages without organization_id)
+      const { count: totalMessages, error: messagesError } = await supabase
+        .from('sms_messages')
+        .select('*', { count: 'exact', head: true })
+        .or(`organization_id.eq.${organizationId},organization_id.is.null`);
+
+      if (messagesError) throw messagesError;
+
+      // Get messages in last 30 days for this organization (including messages without organization_id)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const { count: recentMessages, error: recentError } = await supabase
+        .from('sms_messages')
+        .select('*', { count: 'exact', head: true })
+        .or(`organization_id.eq.${organizationId},organization_id.is.null`)
+        .gte('sent_at', thirtyDaysAgo.toISOString());
+
+      if (recentError) throw recentError;
+
+      // Get total conversations count for this organization (including conversations without organization_id)
+      const { count: totalConversations, error: conversationsError } = await supabase
+        .from('sms_conversations')
+        .select('*', { count: 'exact', head: true })
+        .or(`organization_id.eq.${organizationId},organization_id.is.null`);
+
+      if (conversationsError) throw conversationsError;
+
+      // Get active conversations (updated in last 7 days) for this organization (including conversations without organization_id)
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
+      const { count: activeConversations, error: activeError } = await supabase
+        .from('sms_conversations')
+        .select('*', { count: 'exact', head: true })
+        .or(`organization_id.eq.${organizationId},organization_id.is.null`)
+        .gte('updated_at', sevenDaysAgo.toISOString());
+
+      if (activeError) throw activeError;
+
+      // Get messages by direction for this organization (including messages without organization_id)
+      const { count: outboundMessages, error: outboundError } = await supabase
+        .from('sms_messages')
+        .select('*', { count: 'exact', head: true })
+        .or(`organization_id.eq.${organizationId},organization_id.is.null`)
+        .eq('direction', 'outbound');
+
+      if (outboundError) throw outboundError;
+
+      const { count: inboundMessages, error: inboundError } = await supabase
+        .from('sms_messages')
+        .select('*', { count: 'exact', head: true })
+        .or(`organization_id.eq.${organizationId},organization_id.is.null`)
+        .eq('direction', 'inbound');
+
+      if (inboundError) throw inboundError;
+
+      // Get conversations by type for this organization (including conversations without organization_id)
+      const { data: conversationTypes, error: typesError } = await supabase
+        .from('sms_conversations')
+        .select('conversation_type')
+        .or(`organization_id.eq.${organizationId},organization_id.is.null`)
+        .eq('status', 'active');
+
+      if (typesError) throw typesError;
+
+      const typeBreakdown = conversationTypes.reduce((acc, conv) => {
+        const type = conv.conversation_type || 'general';
+        acc[type] = (acc[type] || 0) + 1;
+        return acc;
+      }, {});
+
+      // Get recent conversations for this organization (including conversations without organization_id)
+      const { data: recentConversations, error: recentConvError } = await supabase
+        .from('sms_conversations')
+        .select(`
+          id,
+          title,
+          conversation_type,
+          updated_at,
+          sms_messages (
+            id,
+            direction,
+            body,
+            sent_at
+          )
+        `)
+        .or(`organization_id.eq.${organizationId},organization_id.is.null`)
+        .order('updated_at', { ascending: false })
+        .limit(5);
+
+      if (recentConvError) throw recentConvError;
+
+      return {
+        totalMessages: totalMessages || 0,
+        recentMessages: recentMessages || 0,
+        totalConversations: totalConversations || 0,
+        activeConversations: activeConversations || 0,
+        outboundMessages: outboundMessages || 0,
+        inboundMessages: inboundMessages || 0,
+        typeBreakdown,
+        recentConversations: recentConversations || []
+      };
+    } catch (error) {
+      console.error('Error getting SMS stats:', error);
+      throw error;
+    }
   }
 }; 

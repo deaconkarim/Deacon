@@ -217,18 +217,75 @@ export function SMS() {
 
     try {
       if (recipients.length > 0) {
-        // Send to multiple recipients
-        const messagePromises = recipients.map(recipient => 
-          smsService.sendMessage({
-            to_number: recipient.phone,
+        // Check if this is a group message
+        const isGroupMessage = selectedGroups.length > 0;
+        
+        if (isGroupMessage) {
+          // Send group message - create one conversation for the group
+          const groupId = selectedGroups[0]; // Use the first selected group
+          
+          // Send the first message to create the conversation, then reuse the conversation ID
+          const firstMessage = await smsService.sendMessage({
+            to_number: recipients[0].phone,
             body: newMessage.body,
-            member_id: recipient.id,
+            member_id: recipients[0].id,
             template_id: newMessage.template_id,
-            variables: variables
-          })
-        );
+            variables: variables,
+            group_id: groupId
+          });
+          
+          // Send remaining messages using the same conversation
+          if (recipients.length > 1) {
+            const remainingMessagePromises = recipients.slice(1).map(recipient => 
+              smsService.sendMessage({
+                to_number: recipient.phone,
+                body: newMessage.body,
+                member_id: recipient.id,
+                template_id: newMessage.template_id,
+                variables: variables,
+                conversation_id: firstMessage.conversation_id // Reuse the conversation ID
+              })
+            );
 
-        await Promise.all(messagePromises);
+            await Promise.all(remainingMessagePromises);
+          }
+        } else {
+          // Send to multiple individual recipients - create one conversation for all
+          if (recipients.length > 1) {
+            // Send the first message to create the conversation, then reuse the conversation ID
+            const firstMessage = await smsService.sendMessage({
+              to_number: recipients[0].phone,
+              body: newMessage.body,
+              member_id: recipients[0].id,
+              template_id: newMessage.template_id,
+              variables: variables,
+              multiple_recipients: true // Flag to indicate this is a multi-recipient message
+            });
+            
+            // Send remaining messages using the same conversation
+            const remainingMessagePromises = recipients.slice(1).map(recipient => 
+              smsService.sendMessage({
+                to_number: recipient.phone,
+                body: newMessage.body,
+                member_id: recipient.id,
+                template_id: newMessage.template_id,
+                variables: variables,
+                conversation_id: firstMessage.conversation_id // Reuse the conversation ID
+              })
+            );
+
+            await Promise.all(remainingMessagePromises);
+          } else {
+            // Single recipient - normal individual conversation
+            await smsService.sendMessage({
+              to_number: recipients[0].phone,
+              body: newMessage.body,
+              member_id: recipients[0].id,
+              template_id: newMessage.template_id,
+              variables: variables
+            });
+          }
+        }
         
         toast({
           title: 'Success',
@@ -571,6 +628,28 @@ export function SMS() {
     return members.filter(member => selectedMemberIds.has(member.id));
   };
 
+  const getUniqueMessageCount = (messages) => {
+    if (!messages || messages.length === 0) return 0;
+    
+    const seenMessages = new Set();
+    let uniqueCount = 0;
+    
+    messages.forEach((message) => {
+      // For outbound messages, group by content only (ignore timestamp for grouping)
+      // For inbound messages, keep them separate since they're from different people
+      const messageKey = message.direction === 'outbound' 
+        ? `${message.direction}-${message.body}`
+        : `${message.direction}-${message.body}-${message.sent_at}-${message.member?.id || 'unknown'}`;
+      
+      if (!seenMessages.has(messageKey)) {
+        seenMessages.add(messageKey);
+        uniqueCount++;
+      }
+    });
+    
+    return uniqueCount;
+  };
+
   const clearRecipientSelection = () => {
     setSelectedMembers([]);
     setSelectedGroups([]);
@@ -647,17 +726,17 @@ export function SMS() {
                 <h3 className="text-lg font-semibold mb-2">No SMS Conversations Yet</h3>
                 <p className="text-muted-foreground mb-4">
                   {conversations.length === 0 
-                    ? "SMS functionality needs to be configured. Please ensure your database tables are set up and Twilio is configured."
+                    ? "Start sending SMS messages to your church members and groups. Create conversations by sending your first message."
                     : "No conversations match your current filters."
                   }
                 </p>
                 {conversations.length === 0 && (
                   <div className="text-sm text-muted-foreground space-y-1">
-                    <p>To get started:</p>
+                    <p>Ready to get started?</p>
                     <ul className="list-disc list-inside space-y-1">
-                      <li>Deploy the SMS Edge Functions to Supabase</li>
-                      <li>Configure Twilio environment variables</li>
-                      <li>Set up your Twilio webhook URL</li>
+                      <li>Select members or groups from your church directory</li>
+                      <li>Write your message or use a template</li>
+                      <li>Send and start conversations with your congregation</li>
                     </ul>
                   </div>
                 )}
@@ -676,7 +755,7 @@ export function SMS() {
                       <div>
                         <CardTitle className="text-lg">{conversation.title}</CardTitle>
                         <CardDescription>
-                          {conversation.sms_messages?.length || 0} messages • 
+                          {getUniqueMessageCount(conversation.sms_messages)} messages • 
                           Last updated {format(new Date(conversation.updated_at), 'MMM d, yyyy')}
                         </CardDescription>
                       </div>
@@ -821,73 +900,130 @@ export function SMS() {
                 </div>
               </DialogTitle>
               <DialogDescription>
-                {selectedConversation.sms_messages?.length || 0} messages • Last updated {format(new Date(selectedConversation.updated_at), 'MMM d, yyyy HH:mm')}
+                {getUniqueMessageCount(selectedConversation.sms_messages)} messages • Last updated {format(new Date(selectedConversation.updated_at), 'MMM d, yyyy HH:mm')}
               </DialogDescription>
             </DialogHeader>
             
             {/* Messages Container */}
             <div className="flex-1 overflow-y-auto space-y-4 p-4 border-t">
-              {selectedConversation.sms_messages?.sort((a, b) => new Date(a.sent_at) - new Date(b.sent_at)).map((message) => (
-                <div key={message.id} className={`flex ${message.direction === 'inbound' ? 'justify-start' : 'justify-end'}`}>
-                  <div className={`flex max-w-[80%] ${message.direction === 'inbound' ? 'flex-row' : 'flex-row-reverse'}`}>
-                    {/* Avatar */}
-                    <div className={`flex-shrink-0 ${message.direction === 'inbound' ? 'mr-3' : 'ml-3'}`}>
-                      {message.direction === 'inbound' ? (
-                        message.member ? (
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={message.member.image_url} />
-                            <AvatarFallback className="text-sm">
-                              {getInitials(message.member.firstname, message.member.lastname)}
-                            </AvatarFallback>
-                          </Avatar>
+              {(() => {
+                // Group messages by content and direction to avoid duplicates
+                const groupedMessages = [];
+                const seenMessages = new Set();
+                
+                selectedConversation.sms_messages
+                  ?.sort((a, b) => new Date(a.sent_at) - new Date(b.sent_at))
+                  .forEach((message) => {
+                    // For outbound messages, group by content only (ignore timestamp for grouping)
+                    // For inbound messages, keep them separate since they're from different people
+                    const messageKey = message.direction === 'outbound' 
+                      ? `${message.direction}-${message.body}`
+                      : `${message.direction}-${message.body}-${message.sent_at}-${message.member?.id || 'unknown'}`;
+                    
+                    if (!seenMessages.has(messageKey)) {
+                      seenMessages.add(messageKey);
+                      
+                      if (message.direction === 'outbound') {
+                        // Find all outbound messages with the same content
+                        const similarMessages = selectedConversation.sms_messages.filter(m => 
+                          m.direction === 'outbound' && 
+                          m.body === message.body
+                        );
+                        
+                        // Get unique recipients for this message
+                        const recipients = similarMessages
+                          .filter(m => m.member)
+                          .map(m => m.member)
+                          .filter((member, index, arr) => 
+                            arr.findIndex(m => m.id === member.id) === index
+                          );
+                        
+                        // Use the earliest timestamp for display
+                        const earliestMessage = similarMessages.reduce((earliest, current) => 
+                          new Date(current.sent_at) < new Date(earliest.sent_at) ? current : earliest
+                        );
+                        
+                        groupedMessages.push({
+                          ...earliestMessage,
+                          recipients,
+                          recipientCount: recipients.length
+                        });
+                      } else {
+                        // For inbound messages, just add them as-is
+                        groupedMessages.push(message);
+                      }
+                    }
+                  });
+                
+                return groupedMessages.map((message) => (
+                  <div key={`${message.direction}-${message.body}-${message.sent_at}-${message.member?.id || 'unknown'}`} className={`flex ${message.direction === 'inbound' ? 'justify-start' : 'justify-end'}`}>
+                    <div className={`flex max-w-[80%] ${message.direction === 'inbound' ? 'flex-row' : 'flex-row-reverse'}`}>
+                      {/* Avatar */}
+                      <div className={`flex-shrink-0 ${message.direction === 'inbound' ? 'mr-3' : 'ml-3'}`}>
+                        {message.direction === 'inbound' ? (
+                          message.member ? (
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={message.member.image_url} />
+                              <AvatarFallback className="text-sm">
+                                {getInitials(message.member.firstname, message.member.lastname)}
+                              </AvatarFallback>
+                            </Avatar>
+                          ) : (
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="text-sm">
+                                <Phone className="h-4 w-4" />
+                              </AvatarFallback>
+                            </Avatar>
+                          )
                         ) : (
                           <Avatar className="h-8 w-8">
-                            <AvatarFallback className="text-sm">
-                              <Phone className="h-4 w-4" />
+                            <AvatarFallback className="text-sm bg-primary text-primary-foreground">
+                              <User className="h-4 w-4" />
                             </AvatarFallback>
                           </Avatar>
-                        )
-                      ) : (
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="text-sm bg-primary text-primary-foreground">
-                            <User className="h-4 w-4" />
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
-                    </div>
-                    
-                    {/* Message Bubble */}
-                    <div className={`flex flex-col ${message.direction === 'inbound' ? 'items-start' : 'items-end'}`}>
-                      <div className={`px-4 py-2 rounded-lg max-w-full ${
-                        message.direction === 'inbound' 
-                          ? 'bg-muted text-foreground' 
-                          : 'bg-primary text-primary-foreground'
-                      }`}>
-                        <div className="text-sm whitespace-pre-wrap">{message.body}</div>
-                      </div>
-                      
-                      {/* Message Info */}
-                      <div className={`flex items-center space-x-2 mt-1 text-xs text-muted-foreground ${
-                        message.direction === 'inbound' ? 'justify-start' : 'justify-end'
-                      }`}>
-                        <span>{format(new Date(message.sent_at), 'MMM d, HH:mm')}</span>
-                        {message.direction === 'outbound' && (
-                          <Badge variant="outline" className="text-xs">
-                            {message.status}
-                          </Badge>
                         )}
                       </div>
                       
-                      {/* Member Name (for inbound messages) */}
-                      {message.direction === 'inbound' && message.member && (
-                        <div className="text-xs text-muted-foreground mt-1">
-                          {message.member.firstname} {message.member.lastname}
+                      {/* Message Bubble */}
+                      <div className={`flex flex-col ${message.direction === 'inbound' ? 'items-start' : 'items-end'}`}>
+                        <div className={`px-4 py-2 rounded-lg max-w-full ${
+                          message.direction === 'inbound' 
+                            ? 'bg-muted text-foreground' 
+                            : 'bg-primary text-primary-foreground'
+                        }`}>
+                          <div className="text-sm whitespace-pre-wrap">{message.body}</div>
                         </div>
-                      )}
+                        
+                        {/* Message Info */}
+                        <div className={`flex items-center space-x-2 mt-1 text-xs text-muted-foreground ${
+                          message.direction === 'inbound' ? 'justify-start' : 'justify-end'
+                        }`}>
+                          <span>{format(new Date(message.sent_at), 'MMM d, HH:mm')}</span>
+                          {message.direction === 'outbound' && (
+                            <Badge variant="outline" className="text-xs">
+                              {message.status}
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        {/* Recipients Info (for outbound messages with multiple recipients) */}
+                        {message.direction === 'outbound' && message.recipientCount > 1 && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Sent to {message.recipientCount} recipient{message.recipientCount > 1 ? 's' : ''}
+                          </div>
+                        )}
+                        
+                        {/* Member Name (for inbound messages) */}
+                        {message.direction === 'inbound' && message.member && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {message.member.firstname} {message.member.lastname}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ));
+              })()}
             </div>
             
             {/* Reply Section */}
@@ -1304,7 +1440,7 @@ export function SMS() {
                       </div>
                       <div>
                         <div className="font-medium">
-                          {member.firstname} {member.lastname}
+                          {member.firstname || member.firstName || 'Unknown'} {member.lastname || member.lastName || 'Unknown'}
                         </div>
                         <div className="text-sm text-muted-foreground">
                           {member.phone}
