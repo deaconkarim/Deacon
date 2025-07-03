@@ -23,18 +23,61 @@ serve(async (req) => {
 
     console.log('📨 SMS data:', { from, to, body, messageSid })
 
+    // Normalize phone number by removing + prefix and converting to database format
+    const removePlus = (phone) => phone.startsWith('+') ? phone.substring(1) : phone
+    const cleanDigits = (phone) => removePlus(phone).replace(/\D/g, '') // Remove all non-digits
+    
+    const formatForDB = (phone) => {
+      const clean = cleanDigits(phone)
+      if (clean.length === 10) {
+        return `${clean.substring(0, 3)}-${clean.substring(3, 6)}-${clean.substring(6)}`
+      } else if (clean.length === 11 && clean.startsWith('1')) {
+        return `${clean.substring(1, 4)}-${clean.substring(4, 7)}-${clean.substring(7)}`
+      }
+      return clean // Return as-is if it doesn't match expected formats
+    }
+    
+    const normalizedFrom = formatForDB(from)
+    const normalizedTo = formatForDB(to)
+    const cleanFromDigits = cleanDigits(from) // Just the digits for flexible matching
+
+    console.log('📱 Normalized phone numbers:', { 
+      original: from, 
+      normalized: normalizedFrom,
+      cleanDigits: cleanFromDigits,
+      originalTo: to,
+      normalizedTo: normalizedTo 
+    })
+
     // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') || '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
     )
 
-    // Find member by phone number
-    const { data: member, error: memberError } = await supabaseClient
+    // Find member by phone number using flexible matching
+    // First try exact match with normalized format
+    let { data: member, error: memberError } = await supabaseClient
       .from('members')
       .select('id, firstname, lastname')
-      .eq('phone', from)
+      .eq('phone', normalizedFrom)
       .maybeSingle()
+    
+    // If not found, try to find by matching just the digits
+    if (!member) {
+      const { data: members } = await supabaseClient
+        .from('members')
+        .select('id, firstname, lastname, phone')
+        .not('phone', 'is', null)
+      
+      if (members) {
+        member = members.find(m => {
+          if (!m.phone) return false
+          const memberDigits = m.phone.replace(/\D/g, '')
+          return memberDigits === cleanFromDigits
+        })
+      }
+    }
 
     if (memberError) {
       console.error('❌ Member lookup error:', memberError)
@@ -46,69 +89,73 @@ serve(async (req) => {
 
     // Create or find conversation
     let conversationId = null
-    if (member) {
-      // Look for existing conversation with this member by checking messages
-      const { data: existingMessages } = await supabaseClient
+    
+    // First, try to find existing conversation by looking for any messages with this phone number
+    // Try both original and normalized formats
+    let { data: existingMessages } = await supabaseClient
+      .from('sms_messages')
+      .select('conversation_id')
+      .or(`from_number.eq.${from},to_number.eq.${from},from_number.eq.${normalizedFrom},to_number.eq.${normalizedFrom}`)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    
+    // If not found, try flexible digit matching
+    if (!existingMessages) {
+      const { data: allMessages } = await supabaseClient
         .from('sms_messages')
-        .select('conversation_id')
-        .eq('member_id', member.id)
+        .select('conversation_id, from_number, to_number')
         .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
-      if (existingMessages?.conversation_id) {
-        conversationId = existingMessages.conversation_id
-        console.log('✅ Using existing conversation:', conversationId)
-      } else {
-        // Create new conversation
-        const { data: newConversation, error: convError } = await supabaseClient
-          .from('sms_conversations')
-          .insert({
-            title: `SMS with ${member.firstname} ${member.lastname}`,
-            conversation_type: 'general',
-            status: 'active'
-          })
-          .select('id')
-          .single()
-
-        if (convError) {
-          console.error('❌ Conversation creation error:', convError)
-        } else {
-          conversationId = newConversation?.id
-          console.log('✅ Created new conversation:', conversationId)
+      
+      if (allMessages) {
+        const matchingMessage = allMessages.find(msg => {
+          const fromDigits = msg.from_number?.replace(/\D/g, '') || ''
+          const toDigits = msg.to_number?.replace(/\D/g, '') || ''
+          return fromDigits === cleanFromDigits || toDigits === cleanFromDigits
+        })
+        
+        if (matchingMessage) {
+          existingMessages = { conversation_id: matchingMessage.conversation_id }
         }
       }
+    }
+
+    if (existingMessages?.conversation_id) {
+      conversationId = existingMessages.conversation_id
+      console.log('✅ Found existing conversation:', conversationId)
     } else {
-      // For non-members, try to find conversation by phone number
-      const { data: existingMessages } = await supabaseClient
-        .from('sms_messages')
-        .select('conversation_id')
-        .eq('from_number', from)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
-      if (existingMessages?.conversation_id) {
-        conversationId = existingMessages.conversation_id
-        console.log('✅ Using existing conversation for non-member:', conversationId)
-      } else {
-        // Create new conversation for non-member
-        const { data: newConversation, error: convError } = await supabaseClient
-          .from('sms_conversations')
-          .insert({
-            title: `SMS with ${from}`,
-            conversation_type: 'general',
-            status: 'active'
-          })
-          .select('id')
-          .single()
-
-        if (convError) {
-          console.error('❌ Conversation creation error:', convError)
+      // Create new conversation with first message as title
+      const createTitle = (messageBody, memberName, phoneNumber) => {
+        // Truncate message to 50 characters for title
+        const truncatedMessage = messageBody.length > 50 
+          ? messageBody.substring(0, 47) + '...' 
+          : messageBody
+        
+        if (memberName) {
+          return `${memberName}: ${truncatedMessage}`
         } else {
-          conversationId = newConversation?.id
-          console.log('✅ Created new conversation for non-member:', conversationId)
+          return `${phoneNumber}: ${truncatedMessage}`
         }
+      }
+      
+      const memberName = member ? `${member.firstname} ${member.lastname}` : null
+      const conversationTitle = createTitle(body, memberName, normalizedFrom)
+        
+      const { data: newConversation, error: convError } = await supabaseClient
+        .from('sms_conversations')
+        .insert({
+          title: conversationTitle,
+          conversation_type: 'general',
+          status: 'active'
+        })
+        .select('id')
+        .single()
+
+      if (convError) {
+        console.error('❌ Conversation creation error:', convError)
+      } else {
+        conversationId = newConversation?.id
+        console.log('✅ Created new conversation:', conversationId)
       }
     }
 
@@ -146,13 +193,12 @@ serve(async (req) => {
       console.log('✅ Conversation updated timestamp')
     }
 
-    // Return TwiML response (optional auto-reply)
+    // Return empty TwiML response (no auto-reply)
     const twimlResponse = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Message>Thank you for your message. We'll get back to you soon.</Message>
 </Response>`
 
-    console.log('📤 Sending TwiML response')
+    console.log('📤 Sending empty TwiML response (no auto-reply)')
     return new Response(twimlResponse, {
       headers: { 
         ...corsHeaders, 

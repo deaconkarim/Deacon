@@ -13,11 +13,12 @@ export const smsService = {
           body,
           status,
           sent_at,
-          member:members (
-            id,
+                  member:members (
+          id,
           firstname,
-          lastname
-          )
+          lastname,
+          image_url
+        )
         )
       `)
       .order('updated_at', { ascending: false });
@@ -48,7 +49,8 @@ export const smsService = {
           member:members (
             id,
             firstname,
-            lastname
+            lastname,
+            image_url
           )
         )
       `)
@@ -91,7 +93,8 @@ export const smsService = {
         member:members (
           id,
           firstname,
-          lastname
+          lastname,
+          image_url
         ),
         conversation:sms_conversations (
           id,
@@ -126,6 +129,36 @@ export const smsService = {
       throw new Error('Twilio phone number not configured. Please set VITE_TWILIO_PHONE_NUMBER in your environment variables.');
     }
 
+    // Render template if template_id is provided
+    let finalMessageBody = messageData.body;
+    if (messageData.template_id) {
+      console.log('📝 Rendering template with ID:', messageData.template_id);
+      
+      // Get the template
+      const { data: template, error: templateError } = await supabase
+        .from('sms_templates')
+        .select('*')
+        .eq('id', messageData.template_id)
+        .single();
+      
+      if (templateError) {
+        console.error('❌ Template lookup error:', templateError);
+        throw new Error(`Template not found: ${templateError.message}`);
+      }
+      
+      // Extract variables from the message body (user-entered values)
+      const variableValues = {};
+      if (messageData.variables) {
+        Object.entries(messageData.variables).forEach(([key, value]) => {
+          variableValues[key] = value;
+        });
+      }
+      
+      // Render the template
+      finalMessageBody = await this.renderTemplate(template, variableValues);
+      console.log('✅ Template rendered:', finalMessageBody);
+    }
+
     // Create or find conversation for this message
     let conversationId = messageData.conversation_id;
     if (!conversationId) {
@@ -150,10 +183,35 @@ export const smsService = {
         }
       }
 
-      // Create conversation
-      const conversationTitle = memberId 
-        ? `SMS with ${messageData.to_number}`
-        : `SMS to ${messageData.to_number}`;
+      // Create conversation with message content as title
+      const createTitle = (messageBody, memberName, phoneNumber) => {
+        // Truncate message to 50 characters for title
+        const truncatedMessage = messageBody.length > 50 
+          ? messageBody.substring(0, 47) + '...' 
+          : messageBody
+        
+        if (memberName) {
+          return `${memberName}: ${truncatedMessage}`
+        } else {
+          return `${phoneNumber}: ${truncatedMessage}`
+        }
+      }
+      
+      // Get member name if we have memberId
+      let memberName = null;
+      if (memberId) {
+        const { data: member } = await supabase
+          .from('members')
+          .select('firstname, lastname')
+          .eq('id', memberId)
+          .single();
+        
+        if (member) {
+          memberName = `${member.firstname} ${member.lastname}`;
+        }
+      }
+      
+      const conversationTitle = createTitle(messageData.body, memberName, messageData.to_number);
       
       const { data: conversation, error: conversationError } = await supabase
         .from('sms_conversations')
@@ -176,10 +234,15 @@ export const smsService = {
 
     // Create the message record with conversation_id
     console.log('💾 Creating message record in database...');
+    
+    // Remove template_id and variables from messageData for database insert
+    const { template_id, variables, ...messageDataForDb } = messageData;
+    
     const { data: message, error: messageError } = await supabase
       .from('sms_messages')
       .insert({
-        ...messageData,
+        ...messageDataForDb,
+        body: finalMessageBody, // Use the rendered template body
         conversation_id: conversationId,
         from_number: twilioPhoneNumber,
         direction: 'outbound',
@@ -200,7 +263,7 @@ export const smsService = {
     try {
       const functionPayload = {
         to: messageData.to_number,
-        body: messageData.body,
+        body: finalMessageBody, // Use the rendered template body
         messageId: message.id
       };
       
@@ -410,14 +473,38 @@ export const smsService = {
     return conversation;
   },
 
-  // Template rendering
-  renderTemplate(template, variables = {}) {
+  // Get church settings
+  async getChurchSettings() {
+    const { data, error } = await supabase
+      .from('church_settings')
+      .select('*')
+      .single();
+
+    if (error) {
+      console.warn('Could not fetch church settings:', error);
+      return { church_name: 'Our Church' }; // Default fallback
+    }
+
+    return data || { church_name: 'Our Church' };
+  },
+
+  // Template rendering with automatic church_name
+  async renderTemplate(template, variables = {}) {
     let renderedText = template.template_text;
     
+    // Get church settings for automatic variables
+    const churchSettings = await this.getChurchSettings();
+    
+    // Combine user variables with system variables
+    const allVariables = {
+      ...variables,
+      church_name: churchSettings.church_name || 'Our Church'
+    };
+    
     // Replace variables in template
-    Object.keys(variables).forEach(key => {
+    Object.keys(allVariables).forEach(key => {
       const regex = new RegExp(`\\{${key}\\}`, 'g');
-      renderedText = renderedText.replace(regex, variables[key]);
+      renderedText = renderedText.replace(regex, allVariables[key]);
     });
 
     return renderedText;
