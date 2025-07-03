@@ -363,7 +363,8 @@ serve(async (req) => {
         .insert({
           title: conversationTitle,
           conversation_type: 'general',
-          status: 'active'
+          status: 'active',
+          organization_id: organizationId
         })
         .select('id')
         .single()
@@ -375,6 +376,62 @@ serve(async (req) => {
         console.log('✅ Created new conversation:', conversationId)
       }
     }
+
+    // Get organization_id from member or conversation
+    let organizationId = null
+    
+    if (member) {
+      // Get organization_id from member's organization_users relationship
+      const { data: orgUser } = await supabaseClient
+        .from('organization_users')
+        .select('organization_id')
+        .eq('user_id', member.user_id)
+        .eq('status', 'approved')
+        .maybeSingle()
+      
+      if (orgUser) {
+        organizationId = orgUser.organization_id
+        console.log('✅ Found organization_id from member:', organizationId)
+      }
+    }
+    
+    // If no organization_id from member, try to get it from the conversation
+    if (!organizationId && conversationId) {
+      const { data: conversation } = await supabaseClient
+        .from('sms_conversations')
+        .select('organization_id')
+        .eq('id', conversationId)
+        .maybeSingle()
+      
+      if (conversation?.organization_id) {
+        organizationId = conversation.organization_id
+        console.log('✅ Found organization_id from conversation:', organizationId)
+      }
+    }
+    
+    // If still no organization_id, try to get it from the group if this is a group conversation
+    if (!organizationId && conversationId) {
+      const { data: groupConversation } = await supabaseClient
+        .from('sms_conversations')
+        .select('group_id')
+        .eq('id', conversationId)
+        .maybeSingle()
+      
+      if (groupConversation?.group_id) {
+        const { data: group } = await supabaseClient
+          .from('groups')
+          .select('organization_id')
+          .eq('id', groupConversation.group_id)
+          .maybeSingle()
+        
+        if (group?.organization_id) {
+          organizationId = group.organization_id
+          console.log('✅ Found organization_id from group:', organizationId)
+        }
+      }
+    }
+    
+    console.log('📝 Using organization_id for message:', organizationId)
 
     // Store incoming message
     const { data: message, error: messageError } = await supabaseClient
@@ -388,6 +445,7 @@ serve(async (req) => {
         status: 'delivered',
         member_id: member?.id || null,
         conversation_id: conversationId,
+        organization_id: organizationId,
         delivered_at: new Date().toISOString()
       })
       .select()

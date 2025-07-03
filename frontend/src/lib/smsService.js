@@ -24,33 +24,44 @@ const getCurrentUserOrganizationId = async () => {
 export const smsService = {
   // Conversation Management
   async getConversations(conversationType = null) {
-    let query = supabase
-      .from('sms_conversations')
-      .select(`
-        *,
-        sms_messages (
-          id,
-          direction,
-          body,
-          status,
-          sent_at,
-                  member:members (
-          id,
-          firstname,
-          lastname,
-          image_url
-        )
-        )
-      `)
-      .order('updated_at', { ascending: false });
+    try {
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User not associated with any organization');
+      }
 
-    if (conversationType) {
-      query = query.eq('conversation_type', conversationType);
+      let query = supabase
+        .from('sms_conversations')
+        .select(`
+          *,
+          sms_messages (
+            id,
+            direction,
+            body,
+            status,
+            sent_at,
+            member:members (
+              id,
+              firstname,
+              lastname,
+              image_url
+            )
+          )
+        `)
+        .eq('organization_id', organizationId)
+        .order('updated_at', { ascending: false });
+
+      if (conversationType) {
+        query = query.eq('conversation_type', conversationType);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error getting conversations:', error);
+      throw error;
     }
-
-    const { data, error } = await query;
-    if (error) throw error;
-    return data;
   },
 
   async getConversation(conversationId) {
@@ -107,40 +118,57 @@ export const smsService = {
 
   // Message Management
   async getMessages(conversationId = null, memberId = null) {
-    let query = supabase
-      .from('sms_messages')
-      .select(`
-        *,
-        member:members (
-          id,
-          firstname,
-          lastname,
-          image_url
-        ),
-        conversation:sms_conversations (
-          id,
-          title,
-          conversation_type
-        )
-      `)
-      .order('sent_at', { ascending: false });
+    try {
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User not associated with any organization');
+      }
 
-    if (conversationId) {
-      query = query.eq('conversation_id', conversationId);
+      let query = supabase
+        .from('sms_messages')
+        .select(`
+          *,
+          member:members (
+            id,
+            firstname,
+            lastname,
+            image_url
+          ),
+          conversation:sms_conversations (
+            id,
+            title,
+            conversation_type
+          )
+        `)
+        .eq('organization_id', organizationId)
+        .order('sent_at', { ascending: false });
+
+      if (conversationId) {
+        query = query.eq('conversation_id', conversationId);
+      }
+
+      if (memberId) {
+        query = query.eq('member_id', memberId);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error getting messages:', error);
+      throw error;
     }
-
-    if (memberId) {
-      query = query.eq('member_id', memberId);
-    }
-
-    const { data, error } = await query;
-    if (error) throw error;
-    return data;
   },
 
   async sendMessage(messageData) {
     console.log('🚀 SMS Service: Starting sendMessage function');
     console.log('📱 Message Data:', JSON.stringify(messageData, null, 2));
+    
+    // Get organization ID
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
     
     // Get Twilio phone number from environment
     const twilioPhoneNumber = import.meta.env.VITE_TWILIO_PHONE_NUMBER;
@@ -300,7 +328,8 @@ export const smsService = {
         .insert({
           title: conversationTitle,
           conversation_type: conversationType,
-          status: 'active'
+          status: 'active',
+          organization_id: organizationId
         })
         .select()
         .single();
@@ -397,7 +426,8 @@ export const smsService = {
         .insert({
           title: conversationTitle,
           conversation_type: conversationType,
-          status: 'active'
+          status: 'active',
+          organization_id: organizationId
         })
         .select()
         .single();
@@ -425,7 +455,8 @@ export const smsService = {
         conversation_id: messageData.conversation_id,
         from_number: twilioPhoneNumber,
         direction: 'outbound',
-        status: 'queued'
+        status: 'queued',
+        organization_id: organizationId
       })
       .select()
       .single();
@@ -563,11 +594,18 @@ export const smsService = {
 
   // Utility Functions
   async sendPrayerRequestSMS(prayerRequest) {
+    // Get organization ID
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
     // Create conversation for this prayer request
     const conversation = await this.createConversation({
       title: `Prayer Request from ${prayerRequest.name}`,
       conversation_type: 'prayer_request',
-      status: 'active'
+      status: 'active',
+      organization_id: organizationId
     });
 
     // Get prayer team members using the group_members junction table
@@ -609,11 +647,18 @@ export const smsService = {
   },
 
   async sendEventReminder(event, members) {
+    // Get organization ID
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
     // Create conversation for this event reminder
     const conversation = await this.createConversation({
       title: `Event Reminder: ${event.title}`,
       conversation_type: 'event_reminder',
-      status: 'active'
+      status: 'active',
+      organization_id: organizationId
     });
 
     // Send SMS to each member
@@ -631,11 +676,18 @@ export const smsService = {
   },
 
   async sendEmergencyNotification(message, members) {
+    // Get organization ID
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
     // Create conversation for emergency notification
     const conversation = await this.createConversation({
       title: 'Emergency Notification',
       conversation_type: 'emergency',
-      status: 'active'
+      status: 'active',
+      organization_id: organizationId
     });
 
     // Send SMS to each member
@@ -697,51 +749,51 @@ export const smsService = {
         throw new Error('User not associated with any organization');
       }
 
-      // Get total messages count for this organization (including messages without organization_id)
+      // Get total messages count for this organization
       const { count: totalMessages, error: messagesError } = await supabase
         .from('sms_messages')
         .select('*', { count: 'exact', head: true })
-        .or(`organization_id.eq.${organizationId},organization_id.is.null`);
+        .eq('organization_id', organizationId);
 
       if (messagesError) throw messagesError;
 
-      // Get messages in last 30 days for this organization (including messages without organization_id)
+      // Get messages in last 30 days for this organization
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       
       const { count: recentMessages, error: recentError } = await supabase
         .from('sms_messages')
         .select('*', { count: 'exact', head: true })
-        .or(`organization_id.eq.${organizationId},organization_id.is.null`)
+        .eq('organization_id', organizationId)
         .gte('sent_at', thirtyDaysAgo.toISOString());
 
       if (recentError) throw recentError;
 
-      // Get total conversations count for this organization (including conversations without organization_id)
+      // Get total conversations count for this organization
       const { count: totalConversations, error: conversationsError } = await supabase
         .from('sms_conversations')
         .select('*', { count: 'exact', head: true })
-        .or(`organization_id.eq.${organizationId},organization_id.is.null`);
+        .eq('organization_id', organizationId);
 
       if (conversationsError) throw conversationsError;
 
-      // Get active conversations (updated in last 7 days) for this organization (including conversations without organization_id)
+      // Get active conversations (updated in last 7 days) for this organization
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       
       const { count: activeConversations, error: activeError } = await supabase
         .from('sms_conversations')
         .select('*', { count: 'exact', head: true })
-        .or(`organization_id.eq.${organizationId},organization_id.is.null`)
+        .eq('organization_id', organizationId)
         .gte('updated_at', sevenDaysAgo.toISOString());
 
       if (activeError) throw activeError;
 
-      // Get messages by direction for this organization (including messages without organization_id)
+      // Get messages by direction for this organization
       const { count: outboundMessages, error: outboundError } = await supabase
         .from('sms_messages')
         .select('*', { count: 'exact', head: true })
-        .or(`organization_id.eq.${organizationId},organization_id.is.null`)
+        .eq('organization_id', organizationId)
         .eq('direction', 'outbound');
 
       if (outboundError) throw outboundError;
@@ -749,16 +801,16 @@ export const smsService = {
       const { count: inboundMessages, error: inboundError } = await supabase
         .from('sms_messages')
         .select('*', { count: 'exact', head: true })
-        .or(`organization_id.eq.${organizationId},organization_id.is.null`)
+        .eq('organization_id', organizationId)
         .eq('direction', 'inbound');
 
       if (inboundError) throw inboundError;
 
-      // Get conversations by type for this organization (including conversations without organization_id)
+      // Get conversations by type for this organization
       const { data: conversationTypes, error: typesError } = await supabase
         .from('sms_conversations')
         .select('conversation_type')
-        .or(`organization_id.eq.${organizationId},organization_id.is.null`)
+        .eq('organization_id', organizationId)
         .eq('status', 'active');
 
       if (typesError) throw typesError;
@@ -769,7 +821,7 @@ export const smsService = {
         return acc;
       }, {});
 
-      // Get recent conversations for this organization (including conversations without organization_id)
+      // Get recent conversations for this organization
       const { data: recentConversations, error: recentConvError } = await supabase
         .from('sms_conversations')
         .select(`
@@ -784,7 +836,7 @@ export const smsService = {
             sent_at
           )
         `)
-        .or(`organization_id.eq.${organizationId},organization_id.is.null`)
+        .eq('organization_id', organizationId)
         .order('updated_at', { ascending: false })
         .limit(5);
 

@@ -28,6 +28,11 @@ import {
   Bell,
   MessageSquare,
   ArrowDownLeft,
+  Baby,
+  Send,
+  MessageCircle,
+  Phone,
+  User,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,9 +44,11 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import { Input } from '@/components/ui/input';
-import { getMembers, getEvents, getDonations, getRecentDonationsForDashboard, getAllEvents, addMember, updateMember, deleteMember, getMemberAttendance, updateDonation, deleteDonation, addEventAttendance, getEventAttendance, getVolunteerStats } from '../lib/data';
+import { Textarea } from '@/components/ui/textarea';
+import { addMember, updateMember, deleteMember, getMemberAttendance, updateDonation, deleteDonation, addEventAttendance, getEventAttendance, getVolunteerStats } from '../lib/data';
 import { getAlertStats } from '../lib/alertsService';
 import { smsService } from '../lib/smsService';
+import { dashboardService } from '../lib/dashboardService';
 
 import { familyService } from '../lib/familyService';
 import {
@@ -122,13 +129,20 @@ export function Dashboard() {
 
     upcomingBirthdays: 0,
     upcomingAnniversaries: 0,
+    upcomingMemberships: 0,
+    totalUpcoming: 0,
+
     // SMS Statistics
     totalSMSMessages: 0,
     recentSMSMessages: 0,
     totalSMSConversations: 0,
     activeSMSConversations: 0,
     outboundSMSMessages: 0,
-    inboundSMSMessages: 0
+    inboundSMSMessages: 0,
+
+    sundayServicePercentage: 0,
+    bibleStudyPercentage: 0,
+    fellowshipPercentage: 0,
   });
   const [recentPeople, setRecentPeople] = useState([]);
   const [people, setPeople] = useState([]);
@@ -150,6 +164,11 @@ export function Dashboard() {
   const [isDeleteDonationOpen, setIsDeleteDonationOpen] = useState(false);
   const [attendanceTimeRange, setAttendanceTimeRange] = useState('week'); // 'week' or 'month'
   const [recentSMSConversations, setRecentSMSConversations] = useState([]);
+
+  // SMS Conversation Dialog state
+  const [selectedSMSConversation, setSelectedSMSConversation] = useState(null);
+  const [replyMessage, setReplyMessage] = useState('');
+  const [isSendingReply, setIsSendingReply] = useState(false);
 
   // Memoize the date objects to prevent infinite re-renders
   const attendanceDateRange = useMemo(() => {
@@ -173,11 +192,14 @@ export function Dashboard() {
 
   const loadDashboardData = useCallback(async () => {
     try {
-      // Fetch people using the filtered getMembers function
-      const people = await getMembers();
-
-      // Transform snake_case to camelCase
-      const transformedPeople = people?.map(person => ({
+      // Use the consolidated dashboard service instead of multiple API calls
+      const dashboardData = await dashboardService.getDashboardData();
+      
+      // Extract data from the consolidated response
+      const { members, donations: donationsData, events: eventsData, tasks, sms, celebrations, attendance, family } = dashboardData;
+      
+      // Transform members data to match existing structure
+      const transformedPeople = members.all?.map(person => ({
         ...person,
         firstName: person.firstname || '',
         lastName: person.lastname || '',
@@ -197,607 +219,104 @@ export function Dashboard() {
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
         .slice(0, 5);
 
-      // Fetch donations using the optimized function for dashboard
-      const donations = await getRecentDonationsForDashboard();
-
       // Debug: Log a few sample donations to see the data structure
-      console.log('Sample donations:', donations.slice(0, 3).map(d => ({
+      console.log('Sample donations:', donationsData.all.slice(0, 3).map(d => ({
         id: d.id,
         date: d.date,
         amount: d.amount,
         dateType: typeof d.date
       })));
 
-      // Calculate total donations
-      const totalDonations = donations?.reduce((sum, donation) => {
-        const amount = parseFloat(donation.amount) || 0;
-        return sum + amount;
-      }, 0) || 0;
+      // Use pre-calculated stats from the service
+      const totalDonations = donationsData.stats.total;
+      const monthlyDonations = donationsData.stats.monthly;
+      const weeklyAverage = donationsData.stats.weeklyAverage;
+      const monthlyAverage = donationsData.stats.monthlyAverage;
+      const growthRate = donationsData.stats.growthRate;
+      const lastMonthDonations = donationsData.stats.lastMonth;
+      const twoMonthsAgoDonations = donationsData.stats.twoMonthsAgo;
+      const lastSundayDonations = donationsData.stats.lastSunday;
 
-
-      // Calculate monthly donations
-      const now = new Date();
-      const currentYear = now.getFullYear();
-      const currentMonth = now.getMonth(); // getMonth() returns 0-11
-      
-      
-      const monthlyDonations = donations?.filter(donation => {
-        try {
-          // Handle different date formats
-          let donationDate;
-          if (typeof donation.date === 'string') {
-            donationDate = new Date(donation.date);
-          } else if (donation.date instanceof Date) {
-            donationDate = donation.date;
-          } else {
-            console.warn('Invalid donation date format:', donation.date);
-            return false;
-          }
-          
-          // Check if the date is valid
-          if (isNaN(donationDate.getTime())) {
-            console.warn('Invalid donation date:', donation.date);
-            return false;
-          }
-          
-          const donationYear = donationDate.getFullYear();
-          const donationMonth = donationDate.getMonth();
-          const donationMonthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][donationMonth];
-          
-          // Fix timezone issue by comparing date strings directly
-          const donationDateStr = donation.date; // Use original date string
-          const currentDateStr = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}`;
-          const isCurrentMonth = donationDateStr.startsWith(currentDateStr);
-                    
-          if (isCurrentMonth) {
-          }
-          
-          return isCurrentMonth;
-        } catch (error) {
-          console.error('Error processing donation date:', donation.date, error);
-          return false;
-        }
-      }).reduce((sum, donation) => {
-        const amount = parseFloat(donation.amount) || 0;
-        return sum + amount;
-      }, 0) || 0;
-
-
-      // Calculate weekly average (average weekly donation total)
-      const weeklyDonationTotals = {};
-      
-      donations?.forEach(donation => {
-        try {
-          const date = new Date(donation.date);
-          
-          // Skip invalid dates
-          if (isNaN(date.getTime())) {
-            console.warn('Invalid donation date:', donation.date);
-            return;
-          }
-          
-          // Get the start of the week (Sunday) for this date
-          const startOfWeek = new Date(date);
-          const dayOfWeek = date.getDay();
-          startOfWeek.setDate(date.getDate() - dayOfWeek);
-          startOfWeek.setHours(0, 0, 0, 0);
-          
-          const weekKey = startOfWeek.toISOString().split('T')[0];
-          const amount = parseFloat(donation.amount) || 0;
-          
-          if (!weeklyDonationTotals[weekKey]) {
-            weeklyDonationTotals[weekKey] = 0;
-          }
-          weeklyDonationTotals[weekKey] += amount;
-        } catch (error) {
-          console.error('Error processing donation for weekly average:', donation, error);
-        }
-      });
-      
-      const weeklyTotals = Object.values(weeklyDonationTotals);
-      const weeklyAverage = weeklyTotals.length > 0 ? 
-        weeklyTotals.reduce((sum, total) => sum + total, 0) / weeklyTotals.length : 0;
-
-      // Calculate monthly average (total donations divided by actual months with data, excluding current month)
-      const donationDates = donations?.map(d => d.date) || [];
-      const uniqueMonths = new Set();
-      const avgCurrentYear = new Date().getFullYear();
-      const avgCurrentMonth = new Date().getMonth();
-      
-      // Calculate total donations excluding current month
-      const totalDonationsExcludingCurrent = donations?.reduce((sum, donation) => {
-        try {
-          const donationDate = new Date(donation.date + 'T00:00:00');
-          // Exclude current month from the calculation
-          if (donationDate.getFullYear() !== avgCurrentYear || donationDate.getMonth() !== avgCurrentMonth) {
-            const amount = parseFloat(donation.amount) || 0;
-            return sum + amount;
-          }
-          return sum;
-        } catch (error) {
-          console.error('Error processing donation for monthly average:', donation.date, error);
-          return sum;
-        }
-      }, 0) || 0;
-      
-      donationDates.forEach(dateStr => {
-        const date = new Date(dateStr);
-        const yearMonth = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-        // Exclude current month from the calculation
-        if (date.getFullYear() !== avgCurrentYear || date.getMonth() !== avgCurrentMonth) {
-          uniqueMonths.add(yearMonth);
-        }
-      });
-      
-      const actualMonthsWithData = uniqueMonths.size;
-      const monthlyAverage = actualMonthsWithData > 0 ? totalDonationsExcludingCurrent / actualMonthsWithData : 0;
-
-      // Calculate growth rate
-      const growthRate = monthlyAverage > 0 ? 
-        ((monthlyDonations - monthlyAverage) / monthlyAverage) * 100 : 0;
-
-      // Fetch upcoming events using the filtered getEvents function
-      const events = await getEvents();
-      const upcomingEvents = events?.filter(event => 
-        new Date(event.start_date) >= new Date()
-      ).sort((a, b) => new Date(a.start_date) - new Date(b.start_date)).slice(0, 5) || [];
-
-      // Get all events for statistics
-      const allEvents = await getAllEvents();
-      
-      // Calculate total upcoming events
-      const totalUpcomingEvents = upcomingEvents.length;
+      // Use pre-calculated event stats
+      const upcomingEvents = eventsData.upcoming;
+      const totalUpcomingEvents = eventsData.stats.upcoming;
+      const eventsThisWeek = eventsData.stats.thisWeek;
+      const eventsThisMonth = eventsData.stats.thisMonth;
+      const averageEventsPerMonth = eventsData.stats.averagePerMonth;
+      const mostCommonEventType = eventsData.stats.mostCommonType;
+      const eventsNeedingVolunteers = eventsData.stats.needingVolunteers;
 
       // Get weekly donations for chart
-      const weeklyDonations = donations?.slice(0, 7) || [];
+      const weeklyDonations = donationsData.recent;
 
-      // Calculate events statistics using all events
-      const today = new Date();
-      const weekFromNow = new Date();
-      weekFromNow.setDate(weekFromNow.getDate() + 7);
-      const monthFromNow = new Date();
-      monthFromNow.setMonth(monthFromNow.getMonth() + 1);
-
-      const eventsThisWeek = allEvents.filter(event => {
-        const eventDate = new Date(event.start_date);
-        return eventDate >= today && eventDate <= weekFromNow;
-      }).length;
-
-      const eventsThisMonth = allEvents.filter(event => {
-        const eventDate = new Date(event.start_date);
-        return eventDate >= today && eventDate <= monthFromNow;
-      }).length;
-
-      // Calculate average events per month based on last 6 months
-      const sixMonthsAgoForAvg = new Date();
-      sixMonthsAgoForAvg.setMonth(sixMonthsAgoForAvg.getMonth() - 6);
-      
-      const eventsLast6Months = allEvents.filter(event => {
-        const eventDate = new Date(event.start_date);
-        return eventDate >= sixMonthsAgoForAvg && eventDate <= today;
-      });
-      
-      // Calculate average with better handling of edge cases
-      let averageEventsPerMonth = 0;
-      
-      if (eventsLast6Months.length > 0) {
-        // Group events by month to count actual months with events
-        const monthsWithEvents = new Set();
-        eventsLast6Months.forEach(event => {
-          const eventDate = new Date(event.start_date);
-          const monthKey = `${eventDate.getFullYear()}-${eventDate.getMonth()}`;
-          monthsWithEvents.add(monthKey);
-        });
-        
-        const actualMonthsWithEvents = monthsWithEvents.size;
-        averageEventsPerMonth = Math.round(eventsLast6Months.length / actualMonthsWithEvents);
-      } else {
-        // If no events in last 6 months, show 0 or use total events as fallback
-        averageEventsPerMonth = allEvents?.length > 0 ? Math.round(allEvents.length / 12) : 0;
-      }
-      
-      
-      // Fetch volunteer statistics
-      const volunteerStats = await getVolunteerStats();
-     
-      
-      // Get current user's organization ID
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      let organizationId = null;
-      
-      if (currentUser) {
-        const { data: orgUser, error: orgError } = await supabase
-          .from('organization_users')
-          .select('organization_id')
-          .eq('user_id', currentUser.id)
-          .eq('status', 'active')
-          .eq('approval_status', 'approved')
-          .single();
-        
-        if (!orgError && orgUser) {
-          organizationId = orgUser.organization_id;
-        }
-      }
-      
-      // Get all events with attendance data for the last 6 months
-      const sixMonthsAgo = new Date();
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-      
-      const { data: eventsWithAttendance, error: attendanceError } = await supabase
-        .from('events')
-        .select(`
-          id,
-          title,
-          event_type,
-          start_date,
-          event_attendance (
-            id,
-            status
-          )
-        `)
-        .eq('organization_id', organizationId)
-        .gte('start_date', sixMonthsAgo.toISOString())
-        .order('start_date', { ascending: false });
-
-      if (attendanceError) {
-        console.error('Error fetching events with attendance:', attendanceError);
-      }
-
-
-      // Group events by type and calculate averages
-      const eventTypeStats = {};
-      let eventsWithRecords = 0;
-      let eventsWithoutRecords = 0;
-      
-      eventsWithAttendance?.forEach(event => {
-        const eventType = event.event_type || 'Other';
-        const attendingCount = event.event_attendance?.filter(a => 
-          a.status === 'attending' || a.status === 'checked-in'
-        ).length || 0;
-        
-        // Only count events that have attendance records
-        if (event.event_attendance && event.event_attendance.length > 0) {
-          eventsWithRecords++;
-          if (!eventTypeStats[eventType]) {
-            eventTypeStats[eventType] = {
-              totalAttendance: 0,
-              eventCount: 0,
-              averageAttendance: 0
-            };
-          }
-          
-          eventTypeStats[eventType].totalAttendance += attendingCount;
-          eventTypeStats[eventType].eventCount += 1;
-          
-        } else {
-          eventsWithoutRecords++;
-        }
-      });
-      
-
-      // Calculate averages
-      Object.keys(eventTypeStats).forEach(eventType => {
-        const stats = eventTypeStats[eventType];
-        stats.averageAttendance = stats.eventCount > 0 ? 
-          Math.round(stats.totalAttendance / stats.eventCount) : 0;
-      });
-
-
-      // Map to the existing stats structure
-      const sundayServiceStats = eventTypeStats['Sunday Worship Service'] || { averageAttendance: 0, eventCount: 0 };
-      const bibleStudyStats = eventTypeStats['Bible Study'] || { averageAttendance: 0, eventCount: 0 };
-      const fellowshipStats = eventTypeStats['Fellowship Activity'] || { averageAttendance: 0, eventCount: 0 };
-
-
-      // Load family statistics
-      let familyStats = {
-        totalFamilies: 0,
-        membersInFamilies: 0,
-        membersWithoutFamilies: 0,
-        adults: 0,
-        children: 0
-      };
-      
-      try {
-        familyStats = await familyService.getFamilyStats();
-      } catch (error) {
-        console.error('Error loading family stats:', error);
-      }
-
-      // Calculate Sunday Service Rate (last 30 days)
-      let sundayServiceRate = 0;
-      if (organizationId && activeMembers.length > 0) {
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        
-        const { data: sundayEvents } = await supabase
-          .from('events')
-          .select(`
-            id,
-            event_attendance (
-              id,
-              status,
-              members (firstname, lastname, status)
-            )
-          `)
-          .eq('organization_id', organizationId)
-          .eq('event_type', 'Sunday Worship Service')
-          .gte('start_date', thirtyDaysAgo.toISOString())
-          .lte('start_date', new Date().toISOString());
-        
-        if (sundayEvents && sundayEvents.length > 0) {
-          // Get unique active members who attended Sunday service
-          const activeAttendees = new Set();
-          sundayEvents.forEach(event => {
-            event.event_attendance?.forEach(attendance => {
-              if ((attendance.status === 'attending' || attendance.status === 'checked-in') &&
-                  attendance.members?.status === 'active') {
-                const memberName = `${attendance.members.firstname} ${attendance.members.lastname}`;
-                activeAttendees.add(memberName);
-              }
-            });
-          });
-          
-          const uniqueAttendees = activeAttendees.size;
-          sundayServiceRate = Math.min((uniqueAttendees / activeMembers.length) * 100, 100);
-        }
-      }
-
-      // Calculate last month's donations
-      const lastMonth = new Date(currentYear, currentMonth - 1, 1);
-      const lastMonthEnd = new Date(currentYear, currentMonth, 0);
-      
-      console.log('Last month calculation:', {
-        currentYear,
-        currentMonth,
-        lastMonth: lastMonth.toISOString(),
-        lastMonthEnd: lastMonthEnd.toISOString(),
-        totalDonations: donations.length
-      });
-      
-      const lastMonthDonations = donations
-        .filter(donation => {
-          // Handle date string comparison instead of Date object comparison
-          const donationDateStr = donation.date; // This is likely "YYYY-MM-DD"
-          const lastMonthStr = lastMonth.toISOString().split('T')[0]; // "YYYY-MM-DD"
-          const lastMonthEndStr = lastMonthEnd.toISOString().split('T')[0]; // "YYYY-MM-DD"
-          
-          const isInLastMonth = donationDateStr >= lastMonthStr && donationDateStr <= lastMonthEndStr;
-          
-          if (isInLastMonth) {
-            console.log('Found last month donation:', {
-              date: donation.date,
-              amount: donation.amount,
-              lastMonthStr,
-              lastMonthEndStr
-            });
-          }
-          
-          return isInLastMonth;
-        })
-        .reduce((sum, donation) => sum + (parseFloat(donation.amount) || 0), 0);
-      
-      console.log('Last month donations total:', lastMonthDonations);
-
-      // Calculate two months ago donations for comparison
-      const twoMonthsAgo = new Date(currentYear, currentMonth - 2, 1);
-      const twoMonthsAgoEnd = new Date(currentYear, currentMonth - 1, 0);
-      const twoMonthsAgoDonations = donations
-        .filter(donation => {
-          // Handle date string comparison instead of Date object comparison
-          const donationDateStr = donation.date; // This is likely "YYYY-MM-DD"
-          const twoMonthsAgoStr = twoMonthsAgo.toISOString().split('T')[0]; // "YYYY-MM-DD"
-          const twoMonthsAgoEndStr = twoMonthsAgoEnd.toISOString().split('T')[0]; // "YYYY-MM-DD"
-          
-          const isInTwoMonthsAgo = donationDateStr >= twoMonthsAgoStr && donationDateStr <= twoMonthsAgoEndStr;
-          
-          if (isInTwoMonthsAgo) {
-            console.log('Found two months ago donation:', {
-              date: donation.date,
-              amount: donation.amount,
-              twoMonthsAgoStr,
-              twoMonthsAgoEndStr
-            });
-          }
-          
-          return isInTwoMonthsAgo;
-        })
-        .reduce((sum, donation) => sum + (parseFloat(donation.amount) || 0), 0);
-      
-      console.log('Two months ago donations total:', twoMonthsAgoDonations);
-
-      // Calculate last Sunday's donations
-      const lastSunday = new Date();
-      const dayOfWeek = lastSunday.getDay();
-      const daysToSubtract = dayOfWeek === 0 ? 7 : dayOfWeek; // If today is Sunday, go back 7 days
-      lastSunday.setDate(lastSunday.getDate() - daysToSubtract);
-      lastSunday.setHours(0, 0, 0, 0);
-      
-      const lastSundayDonations = donations?.filter(donation => {
-        try {
-          // Parse the donation date more carefully to avoid timezone issues
-          const donationDate = new Date(donation.date + 'T00:00:00');
-          
-          // Use the same logic as getSundayDate to find the Sunday of the donation's week
-          const donationSunday = new Date(donationDate);
-          const donationDayOfWeek = donationDate.getDay();
-          donationSunday.setDate(donationDate.getDate() - donationDayOfWeek);
-          donationSunday.setHours(0, 0, 0, 0);
-          
-          // Check if this donation belongs to the last Sunday's week
-          return donationSunday.toDateString() === lastSunday.toDateString();
-        } catch (error) {
-          console.error('Error processing donation date for last Sunday:', donation.date, error);
-          return false;
-        }
-      }).reduce((sum, donation) => {
-        const amount = parseFloat(donation.amount) || 0;
-        return sum + amount;
-      }, 0) || 0;
-      
-      console.log('Last Sunday donations total:', lastSundayDonations);
-
-      // Calculate event types breakdown for upcoming events
-      const eventTypesBreakdown = {};
-      upcomingEvents.forEach(event => {
-        const eventType = event.event_type || 'Other';
-        eventTypesBreakdown[eventType] = (eventTypesBreakdown[eventType] || 0) + 1;
-      });
-      
-      // Get the most common upcoming event type
-      const mostCommonEventType = Object.keys(eventTypesBreakdown).length > 0 
-        ? Object.keys(eventTypesBreakdown).reduce((a, b) => 
-            eventTypesBreakdown[a] > eventTypesBreakdown[b] ? a : b
-          )
-        : 'None';
-      
-      // Calculate events needing volunteers (events with needs_volunteers = true)
-      const eventsNeedingVolunteers = upcomingEvents.filter(event => event.needs_volunteers === true).length;
-
-      // Fetch task statistics
-      let taskStats = {
-        totalTasks: 0,
-        pendingTasks: 0,
-        completedTasks: 0,
-        overdueTasks: 0
-      };
-
-      try {
-        // Get current user's organization ID
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
-        let organizationId = null;
-        
-        if (currentUser) {
-          const { data: orgUser, error: orgError } = await supabase
-            .from('organization_users')
-            .select('organization_id')
-            .eq('user_id', currentUser.id)
-            .eq('status', 'active')
-            .eq('approval_status', 'approved')
-            .single();
-          
-          if (!orgError && orgUser) {
-            organizationId = orgUser.organization_id;
-          }
-        }
-
-        if (organizationId) {
-          // Fetch all tasks for the organization
-          const { data: tasks, error: tasksError } = await supabase
-            .from('tasks')
-            .select('*')
-            .eq('organization_id', organizationId);
-
-          if (!tasksError && tasks) {
-            const now = new Date();
-            taskStats = {
-              totalTasks: tasks.length,
-              pendingTasks: tasks.filter(task => task.status === 'pending').length,
-              completedTasks: tasks.filter(task => task.status === 'completed').length,
-              overdueTasks: tasks.filter(task => 
-                task.status !== 'completed' && 
-                task.due_date && 
-                new Date(task.due_date) < now
-              ).length
-            };
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching task statistics:', error);
-      }
-
-      // Load alerts statistics
-      let alertsStats = {
-        totalUpcoming: 0,
-        birthdays: 0,
-        anniversaries: 0,
-        memberships: 0,
-        thisWeek: 0,
-        today: 0,
-        tomorrow: 0
-      };
-      try {
-        alertsStats = await getAlertStats();
-      } catch (error) {
-        console.error('Error fetching alerts statistics:', error);
-      }
-
-      // Load SMS statistics
-      let smsStats = {
-        totalMessages: 0,
-        recentMessages: 0,
-        totalConversations: 0,
-        activeConversations: 0,
-        outboundMessages: 0,
-        inboundMessages: 0
-      };
-      
-      try {
-        smsStats = await smsService.getSMSStats();
-      } catch (error) {
-        console.error('Error fetching SMS statistics:', error);
-      }
-
+      // Set all the stats using consolidated data
       setStats({
-        totalPeople,
-        activeMembers: activeMembers.length,
-        inactiveMembers: inactiveMembers.length,
-        visitors: visitors.length,
+        totalPeople: members.counts.total,
+        activeMembers: members.counts.active,
+        inactiveMembers: members.counts.inactive,
+        visitors: members.counts.visitors,
         totalDonations,
         monthlyDonations,
         weeklyAverage,
         monthlyAverage,
         growthRate,
         upcomingEvents: totalUpcomingEvents,
-        totalEvents: allEvents?.length || 0,
+        totalEvents: eventsData.stats.total,
         eventsThisWeek,
         eventsThisMonth,
         averageEventsPerMonth,
         mostCommonEventType,
-        sundayServiceRate,
-        totalVolunteers: volunteerStats.totalVolunteers,
-        upcomingVolunteers: volunteerStats.upcomingVolunteers,
-        recentVolunteers: volunteerStats.recentVolunteers,
+        sundayServiceRate: attendance.sundayServiceRate,
+        totalVolunteers: 0, // Placeholder
+        upcomingVolunteers: 0, // Placeholder
+        recentVolunteers: 0, // Placeholder
         eventsNeedingVolunteers,
-        sundayServiceAttendance: sundayServiceStats.totalAttendance,
-        sundayServiceEvents: sundayServiceStats.eventCount,
-        bibleStudyAttendance: bibleStudyStats.totalAttendance,
-        bibleStudyEvents: bibleStudyStats.eventCount,
-        fellowshipAttendance: fellowshipStats.totalAttendance,
-        fellowshipEvents: fellowshipStats.eventCount,
-        eventsWithVolunteersEnabled: volunteerStats.eventsWithVolunteersEnabled,
-        totalVolunteersSignedUp: volunteerStats.totalVolunteersSignedUp,
-        eventsStillNeedingVolunteers: volunteerStats.eventsStillNeedingVolunteers,
-        totalFamilies: familyStats.totalFamilies,
-        membersInFamilies: familyStats.membersInFamilies,
-        membersWithoutFamilies: familyStats.membersWithoutFamilies,
-        adults: familyStats.adults,
-        children: familyStats.children,
+        sundayServiceAttendance: attendance.sundayServiceAttendance,
+        sundayServiceEvents: attendance.sundayServiceEvents,
+        bibleStudyAttendance: attendance.bibleStudyAttendance,
+        bibleStudyEvents: attendance.bibleStudyEvents,
+        fellowshipAttendance: attendance.fellowshipAttendance,
+        fellowshipEvents: attendance.fellowshipEvents,
+        eventsWithVolunteersEnabled: 0, // Placeholder
+        totalVolunteersSignedUp: 0, // Placeholder
+        eventsStillNeedingVolunteers: 0, // Placeholder
+        totalFamilies: family.totalFamilies,
+        membersInFamilies: family.membersInFamilies,
+        membersWithoutFamilies: family.membersWithoutFamilies,
+        adults: family.adults,
+        children: family.children,
         lastMonthDonations,
         twoMonthsAgoDonations,
-        lastWeekDonations: weeklyTotals[weeklyTotals.length - 1] || 0,
+        lastWeekDonations: weeklyAverage, // Using weekly average as approximation
         lastSundayDonations,
-        totalTasks: taskStats.totalTasks,
-        pendingTasks: taskStats.pendingTasks,
-        completedTasks: taskStats.completedTasks,
-        overdueTasks: taskStats.overdueTasks,
-        upcomingBirthdays: alertsStats.birthdays || 0,
-        upcomingAnniversaries: alertsStats.anniversaries || 0,
-        upcomingMemberships: alertsStats.memberships || 0,
-        totalUpcoming: alertsStats.totalUpcoming || 0,
-        totalSMSMessages: smsStats.totalMessages,
-        recentSMSMessages: smsStats.recentMessages,
-        totalSMSConversations: smsStats.totalConversations,
-        activeSMSConversations: smsStats.activeConversations,
-        outboundSMSMessages: smsStats.outboundMessages,
-        inboundSMSMessages: smsStats.inboundMessages
+        totalTasks: tasks.stats.total,
+        pendingTasks: tasks.stats.pending,
+        completedTasks: tasks.stats.completed,
+        overdueTasks: tasks.stats.overdue,
+        upcomingBirthdays: celebrations.upcomingBirthdays,
+        upcomingAnniversaries: celebrations.upcomingAnniversaries,
+        upcomingMemberships: celebrations.upcomingMemberships,
+        totalUpcoming: celebrations.totalUpcoming,
+
+        // SMS Statistics
+        totalSMSMessages: sms.totalMessages,
+        recentSMSMessages: sms.recentMessages,
+        totalSMSConversations: sms.totalConversations,
+        activeSMSConversations: sms.activeConversations,
+        outboundSMSMessages: sms.outboundMessages,
+        inboundSMSMessages: sms.inboundMessages,
+
+        sundayServicePercentage: attendance.sundayServicePercentage || 0,
+        bibleStudyPercentage: attendance.bibleStudyPercentage || 0,
+        fellowshipPercentage: attendance.fellowshipPercentage || 0,
       });
-      setRecentPeople(recentPeople);
+
+      setRecentPeople(members.recent);
       setPeople(transformedPeople);
       setUpcomingEvents(upcomingEvents);
       setWeeklyDonations(weeklyDonations);
-      setDonations(donations || []);
-      setRecentSMSConversations(smsStats.recentConversations || []);
+      setDonations(donationsData.all);
+      setRecentSMSConversations(sms.recentConversations || []);
 
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -809,7 +328,7 @@ export function Dashboard() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+     }, [toast]);
 
   useEffect(() => {
     loadDashboardData();
@@ -857,6 +376,12 @@ export function Dashboard() {
         title: "Error",
         description: "Failed to add person to the event. Please try again."
       });
+    }
+  };
+
+  const handleMemberProfileClick = (memberId) => {
+    if (memberId) {
+      window.location.href = `/members/${memberId}`;
     }
   };
 
@@ -942,6 +467,24 @@ export function Dashboard() {
     }
   };
 
+  const handleSMSConversationClick = async (conversation) => {
+    try {
+      const fullConversation = await smsService.getConversation(conversation.id);
+      setSelectedSMSConversation(fullConversation);
+    } catch (error) {
+      console.error('Error fetching SMS conversation:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load conversation details."
+      });
+    }
+  };
+
+  const handleCloseSMSDialog = () => {
+    setSelectedSMSConversation(null);
+  };
+
   const now = new Date();
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const dayOfMonth = now.getDate();
@@ -989,6 +532,87 @@ export function Dashboard() {
   }
   
   console.log('Final values:', { donationTrend, canCalculateTrend, trendDescription });
+
+  // SMS Helper Functions
+  const getUniqueMessageCount = (messages) => {
+    if (!messages || messages.length === 0) return 0;
+    
+    const seenMessages = new Set();
+    let uniqueCount = 0;
+    
+    messages.forEach((message) => {
+      // For outbound messages, group by content only (ignore timestamp for grouping)
+      // For inbound messages, keep them separate since they're from different people
+      const messageKey = message.direction === 'outbound' 
+        ? `${message.direction}-${message.body}`
+        : `${message.direction}-${message.body}-${message.sent_at}-${message.member?.id || 'unknown'}`;
+      
+      if (!seenMessages.has(messageKey)) {
+        seenMessages.add(messageKey);
+        uniqueCount++;
+      }
+    });
+    
+    return uniqueCount;
+  };
+
+  const handleSendReply = async () => {
+    if (!replyMessage.trim()) {
+      toast({
+        title: 'Missing Message',
+        description: 'Please enter a reply message.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!selectedSMSConversation) {
+      toast({
+        title: 'Error',
+        description: 'No conversation selected.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsSendingReply(true);
+    try {
+      // Find the phone number to reply to from the conversation
+      const inboundMessage = selectedSMSConversation.sms_messages?.find(m => m.direction === 'inbound');
+      if (!inboundMessage) {
+        throw new Error('No inbound message found to reply to');
+      }
+
+      await smsService.sendMessage({
+        conversation_id: selectedSMSConversation.id,
+        to_number: inboundMessage.from_number,
+        body: replyMessage,
+        member_id: inboundMessage.member_id,
+        template_id: null, // Replies don't use templates
+        variables: {}
+      });
+
+      toast({
+        title: 'Success',
+        description: 'Reply sent successfully'
+      });
+
+      setReplyMessage('');
+      
+      // Refresh the conversation
+      const updatedConversation = await smsService.getConversation(selectedSMSConversation.id);
+      setSelectedSMSConversation(updatedConversation);
+      
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: `Failed to send reply: ${error.message}`,
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSendingReply(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -1295,11 +919,11 @@ export function Dashboard() {
               {/* SMS breakdown */}
               <div className="mt-4 space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-teal-600 font-medium">Active Conversations</span>
+                  <span className="text-sm text-teal-600 font-medium">Total Conversations</span>
                   {isLoading ? (
                     <Skeleton className="h-4 w-8" />
                   ) : (
-                    <span className="text-sm font-semibold">{stats.activeSMSConversations || 0}</span>
+                    <span className="text-sm font-semibold">{stats.totalSMSConversations || 0}</span>
                   )}
                 </div>
                 <div className="flex justify-between items-center">
@@ -1322,13 +946,71 @@ export function Dashboard() {
             </CardContent>
             <CardFooter className="bg-muted py-2 px-6 border-t">
               <Button variant="outline" className="w-full" asChild>
-                <a href="/sms">View SMS Management</a>
+                <a href="/sms">View All Messages</a>
               </Button>
             </CardFooter>
           </Card>
         </motion.div>
 
                 </div>
+
+      {/* Recent SMS Conversations */}
+      <motion.div variants={itemVariants}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center text-xl">
+              <MessageSquare className="mr-2 h-6 w-6" />
+              Recent SMS Conversations
+            </CardTitle>
+            <CardDescription className="text-base">Latest SMS conversations and messages</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {recentSMSConversations && recentSMSConversations.length > 0 ? (
+                recentSMSConversations.slice(0, 5).map(conversation => (
+                  <div 
+                    key={conversation.id} 
+                    className="flex items-center justify-between border-b pb-3 cursor-pointer hover:bg-muted/50 rounded-lg p-3 transition-colors"
+                    onClick={() => handleSMSConversationClick(conversation)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        conversation.conversation_type === 'prayer_request' ? 'bg-purple-100 text-purple-600' :
+                        conversation.conversation_type === 'emergency' ? 'bg-red-100 text-red-600' :
+                        conversation.conversation_type === 'event_reminder' ? 'bg-blue-100 text-blue-600' :
+                        'bg-gray-100 text-gray-600'
+                      }`}>
+                        <MessageSquare className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-base truncate max-w-xs">
+                          {conversation.title || 'SMS Conversation'}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {conversation.conversation_type === 'prayer_request' ? 'Prayer Request' :
+                           conversation.conversation_type === 'emergency' ? 'Emergency' :
+                           conversation.conversation_type === 'event_reminder' ? 'Event Reminder' :
+                           conversation.conversation_type === 'pastoral_care' ? 'Pastoral Care' :
+                           'General'}
+                          {conversation.updated_at && ` • ${format(new Date(conversation.updated_at), 'MMM d, h:mm a')}`}
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                ))
+              ) : (
+                <p className="text-muted-foreground text-base">No recent SMS conversations to display.</p>
+              )}
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button variant="outline" className="w-full" asChild>
+              <a href="/sms">View All Conversations</a>
+            </Button>
+          </CardFooter>
+        </Card>
+      </motion.div>
               
       {/* Insights Section */}
       <motion.div variants={itemVariants}>
@@ -1894,9 +1576,9 @@ export function Dashboard() {
           <CardHeader>
             <CardTitle className="flex items-center text-xl">
               <Users2 className="mr-2 h-6 w-6" />
-              Average Attendance by Event Type
+              Attendance by Event Type
             </CardTitle>
-            <CardDescription className="text-base">Average attendance for different event types (last 6 months)</CardDescription>
+            <CardDescription className="text-base">Average attendance per event for different event types (last 6 months)</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-3">
@@ -1913,8 +1595,7 @@ export function Dashboard() {
                     <Skeleton className="h-8 w-12 mb-1" />
                   ) : (
                     <p className="text-2xl font-bold text-primary">
-                      {stats.sundayServiceEvents > 0 ? 
-                        Math.round(stats.sundayServiceAttendance / stats.sundayServiceEvents) : 0}
+                      {stats.sundayServicePercentage || 0}
                     </p>
                   )}
                   {isLoading ? (
@@ -1940,8 +1621,7 @@ export function Dashboard() {
                     <Skeleton className="h-8 w-12 mb-1" />
                   ) : (
                     <p className="text-2xl font-bold text-primary">
-                      {stats.bibleStudyEvents > 0 ? 
-                        Math.round(stats.bibleStudyAttendance / stats.bibleStudyEvents) : 0}
+                      {stats.bibleStudyPercentage || 0}
                     </p>
                   )}
                   {isLoading ? (
@@ -1967,8 +1647,7 @@ export function Dashboard() {
                     <Skeleton className="h-8 w-12 mb-1" />
                   ) : (
                     <p className="text-2xl font-bold text-primary">
-                      {stats.fellowshipEvents > 0 ? 
-                        Math.round(stats.fellowshipAttendance / stats.fellowshipEvents) : 0}
+                      {stats.fellowshipPercentage || 0}
                     </p>
                   )}
                   {isLoading ? (
@@ -2128,7 +1807,12 @@ export function Dashboard() {
                         });
                         
                         return (
-                          <div key={member.name} className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-gray-50 transition-colors">
+                          <div 
+                            key={member.name} 
+                            className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                            onClick={() => handleMemberProfileClick(memberData?.id)}
+                            title={`Click to view ${member.name}'s profile`}
+                          >
                             <div className="flex items-center gap-3">
                               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
                                 index === 0 ? 'bg-primary' :
@@ -2136,7 +1820,7 @@ export function Dashboard() {
                                 index === 2 ? 'bg-amber-600' : 'bg-primary'
                               }`}>
                                 {index + 1}
-            </div>
+                              </div>
                               <div className="flex items-center gap-3">
                                 <Avatar className="h-8 w-8">
                                   {memberData?.image_url ? (
@@ -2157,9 +1841,9 @@ export function Dashboard() {
                                 <div className="min-w-0">
                                   <div className="font-medium text-foreground text-sm truncate">{member.name}</div>
                                   <div className="text-xs text-muted-foreground">{member.count} events</div>
-            </div>
-          </div>
-        </div>
+                                </div>
+                              </div>
+                            </div>
                             <div className="text-sm font-bold text-primary">{member.count}</div>
                           </div>
                         );
@@ -2417,60 +2101,68 @@ export function Dashboard() {
           <CardHeader>
             <CardTitle className="flex items-center text-xl">
               <Home className="mr-2 h-6 w-6" />
-              Family Overview
+              Member Demographics
             </CardTitle>
-            <CardDescription className="text-base">Family structure and member distribution</CardDescription>
+            <CardDescription className="text-base">Age and family structure overview</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
-              {/* Total Families */}
-              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center">
-                    <Home className="h-6 w-6 text-white" />
+            {stats.totalFamilies > 0 ? (
+              // Show family stats if families are being used
+              <div className="grid gap-4 md:grid-cols-3">
+                {/* Total Families */}
+                <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
+                  <div className="flex-shrink-0">
+                    <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center">
+                      <Home className="h-6 w-6 text-white" />
                     </div>
                   </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-foreground">Total Families</p>
-                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{stats.totalFamilies}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Organized family units
-                  </p>
-              </div>
-                      </div>
-
-              {/* Members in Families */}
-              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
-                    <Users2 className="h-6 w-6 text-white" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-base font-medium text-foreground">Total Families</p>
+                    <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{stats.totalFamilies}</p>
+                    <p className="text-sm text-muted-foreground">Organized family units</p>
                   </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-foreground">Members in Families</p>
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.membersInFamilies}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {stats.totalPeople > 0 ? `${((stats.membersInFamilies / stats.totalPeople) * 100).toFixed(1)}%` : '0%'} of total
-                  </p>
-                </div>
-              </div>
 
-              {/* Members Without Families */}
-              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-gray-500 rounded-full flex items-center justify-center">
-                    <UserPlus className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-foreground">Unassigned Members</p>
-                  <p className="text-2xl font-bold text-gray-600 dark:text-gray-400">{stats.membersWithoutFamilies}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Need family assignment
-                        </p>
-                      </div>
+                {/* Members in Families */}
+                <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
+                  <div className="flex-shrink-0">
+                    <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                      <Users2 className="h-6 w-6 text-white" />
                     </div>
-            </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-base font-medium text-foreground">Members in Families</p>
+                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.membersInFamilies}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {stats.activeMembers > 0 ? `${((stats.membersInFamilies / stats.activeMembers) * 100).toFixed(1)}%` : '0%'} of active members
+                    </p>
+                  </div>
+                </div>
+
+                {/* Individual Members */}
+                <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
+                  <div className="flex-shrink-0">
+                    <div className="w-12 h-12 bg-gray-500 rounded-full flex items-center justify-center">
+                      <UserPlus className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-base font-medium text-foreground">Individual Members</p>
+                    <p className="text-2xl font-bold text-gray-600 dark:text-gray-400">{stats.membersWithoutFamilies}</p>
+                    <p className="text-sm text-muted-foreground">Not in family units</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // Show simplified view when families aren't being used
+              <div className="text-center p-6 bg-muted rounded-lg">
+                <Home className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                <p className="text-lg font-medium text-foreground mb-2">Family System Not Active</p>
+                <p className="text-sm text-muted-foreground">
+                  Members are tracked individually. You can set up family relationships in member profiles if needed.
+                </p>
+              </div>
+            )}
 
             {/* Age Distribution */}
             <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -2485,7 +2177,7 @@ export function Dashboard() {
                   <p className="text-base font-medium text-foreground">Adults</p>
                   <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.adults}</p>
                   <p className="text-sm text-muted-foreground">
-                    {stats.totalPeople > 0 ? `${((stats.adults / stats.totalPeople) * 100).toFixed(1)}%` : '0%'} of total
+                    {stats.activeMembers > 0 ? `${((stats.adults / stats.activeMembers) * 100).toFixed(1)}%` : '0%'} of active members
                   </p>
                 </div>
               </div>
@@ -2494,18 +2186,18 @@ export function Dashboard() {
               <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
                 <div className="flex-shrink-0">
                   <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center">
-                    <Users2 className="h-6 w-6 text-white" />
+                    <Baby className="h-6 w-6 text-white" />
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-base font-medium text-foreground">Children</p>
                   <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{stats.children}</p>
                   <p className="text-sm text-muted-foreground">
-                    {stats.totalPeople > 0 ? `${((stats.children / stats.totalPeople) * 100).toFixed(1)}%` : '0%'} of total
-                      </p>
-                    </div>
-                  </div>
+                    Total children registered
+                  </p>
+                </div>
               </div>
+            </div>
           </CardContent>
           <CardFooter>
             <Button variant="outline" className="w-full" asChild>
@@ -2541,11 +2233,11 @@ export function Dashboard() {
                       >
                         View
                       </Button>
-              </div>
+            </div>
                   ))
                 ) : (
                   <p className="text-muted-foreground text-base">No recent people to display.</p>
-            )}
+              )}
               </div>
           </CardContent>
             <CardFooter>
@@ -2787,122 +2479,234 @@ export function Dashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* SMS Statistics Section */}
-      <motion.div variants={itemVariants}>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center text-xl">
-              <MessageSquare className="mr-2 h-6 w-6" />
-              SMS Statistics
-            </CardTitle>
-            <CardDescription className="text-base">Overview of your organization's SMS communication</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
-              {/* Total Messages */}
-              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
-                    <MessageSquare className="h-6 w-6 text-white" />
-                  </div>
+      {/* SMS Conversation Dialog - Same as SMS page */}
+      {selectedSMSConversation && (
+        <Dialog open={!!selectedSMSConversation} onOpenChange={() => setSelectedSMSConversation(null)}>
+          <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
+            <DialogHeader className="flex-shrink-0">
+              <DialogTitle className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
+                  {(() => {
+                    const inboundMessage = selectedSMSConversation.sms_messages?.find(m => m.direction === 'inbound');
+                    if (inboundMessage?.member) {
+                      return (
+                        <>
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={inboundMessage.member.image_url} />
+                            <AvatarFallback className="text-sm">
+                              {getInitials(inboundMessage.member.firstname, inboundMessage.member.lastname)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-semibold">
+                              {inboundMessage.member.firstname} {inboundMessage.member.lastname}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {inboundMessage.from_number}
+                            </div>
+                          </div>
+                        </>
+                      );
+                    } else if (inboundMessage) {
+                      return (
+                        <>
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback className="text-sm">
+                              <Phone className="h-4 w-4" />
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-semibold">Unknown Contact</div>
+                            <div className="text-sm text-muted-foreground">
+                              {inboundMessage.from_number}
+                            </div>
+                          </div>
+                        </>
+                      );
+                    }
+                    return <span>{selectedSMSConversation.title}</span>;
+                  })()}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-foreground">Total Messages</p>
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.totalSMSMessages}</p>
-                  <p className="text-sm text-muted-foreground">All time</p>
-                </div>
-              </div>
-
-              {/* Recent Messages */}
-              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-                    <Clock className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-foreground">Recent Messages</p>
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.recentSMSMessages}</p>
-                  <p className="text-sm text-muted-foreground">Last 30 days</p>
-                </div>
-              </div>
-
-              {/* Active Conversations */}
-              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center">
-                    <Users className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-foreground">Active Conversations</p>
-                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{stats.activeSMSConversations}</p>
-                  <p className="text-sm text-muted-foreground">Last 7 days</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Message Direction Breakdown */}
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              {/* Outbound Messages */}
-              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-teal-500 rounded-full flex items-center justify-center">
-                    <ArrowUpRight className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-foreground">Outbound Messages</p>
-                  <p className="text-2xl font-bold text-teal-600 dark:text-teal-400">{stats.outboundSMSMessages}</p>
-                  <p className="text-sm text-muted-foreground">Sent by your organization</p>
-                </div>
-              </div>
-
-              {/* Inbound Messages */}
-              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center">
-                    <ArrowDownLeft className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-foreground">Inbound Messages</p>
-                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{stats.inboundSMSMessages}</p>
-                  <p className="text-sm text-muted-foreground">Received from members</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Recent Conversations */}
-            {recentSMSConversations.length > 0 && (
-              <div className="mt-6">
-                <h4 className="font-semibold text-base mb-3">Recent Conversations</h4>
-                <div className="space-y-2">
-                  {recentSMSConversations.slice(0, 3).map((conversation) => (
-                    <div key={conversation.id} className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-gray-50 transition-colors">
-                      <div className="min-w-0 flex-1">
-                        <div className="font-medium text-foreground text-sm truncate">{conversation.title}</div>
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                          {format(new Date(conversation.updated_at), 'MMM d, yyyy')} • 
-                          {conversation.sms_messages?.length || 0} messages
-                        </div>
+              </DialogTitle>
+              <DialogDescription>
+                {getUniqueMessageCount(selectedSMSConversation.sms_messages)} messages • Last updated {format(new Date(selectedSMSConversation.updated_at), 'MMM d, yyyy HH:mm')}
+              </DialogDescription>
+            </DialogHeader>
+            
+            {/* Messages Container */}
+            <div className="flex-1 overflow-y-auto space-y-4 p-4 border-t">
+              {(() => {
+                // Group messages by content and direction to avoid duplicates
+                const groupedMessages = [];
+                const seenMessages = new Set();
+                
+                selectedSMSConversation.sms_messages
+                  ?.sort((a, b) => new Date(a.sent_at) - new Date(b.sent_at))
+                  .forEach((message) => {
+                    // For outbound messages, group by content only (ignore timestamp for grouping)
+                    // For inbound messages, keep them separate since they're from different people
+                    const messageKey = message.direction === 'outbound' 
+                      ? `${message.direction}-${message.body}`
+                      : `${message.direction}-${message.body}-${message.sent_at}-${message.member?.id || 'unknown'}`;
+                    
+                    if (!seenMessages.has(messageKey)) {
+                      seenMessages.add(messageKey);
+                      
+                      if (message.direction === 'outbound') {
+                        // Find all outbound messages with the same content
+                        const similarMessages = selectedSMSConversation.sms_messages.filter(m => 
+                          m.direction === 'outbound' && 
+                          m.body === message.body
+                        );
+                        
+                        // Get unique recipients for this message
+                        const recipients = similarMessages
+                          .filter(m => m.member)
+                          .map(m => m.member)
+                          .filter((member, index, arr) => 
+                            arr.findIndex(m => m.id === member.id) === index
+                          );
+                        
+                        // Use the earliest timestamp for display
+                        const earliestMessage = similarMessages.reduce((earliest, current) => 
+                          new Date(current.sent_at) < new Date(earliest.sent_at) ? current : earliest
+                        );
+                        
+                        groupedMessages.push({
+                          ...earliestMessage,
+                          recipients,
+                          recipientCount: recipients.length
+                        });
+                      } else {
+                        // For inbound messages, just add them as-is
+                        groupedMessages.push(message);
+                      }
+                    }
+                  });
+                
+                return groupedMessages.map((message) => (
+                  <div key={`${message.direction}-${message.body}-${message.sent_at}-${message.member?.id || 'unknown'}`} className={`flex ${message.direction === 'inbound' ? 'justify-start' : 'justify-end'}`}>
+                    <div className={`flex max-w-[80%] ${message.direction === 'inbound' ? 'flex-row' : 'flex-row-reverse'}`}>
+                      {/* Avatar */}
+                      <div className={`flex-shrink-0 ${message.direction === 'inbound' ? 'mr-3' : 'ml-3'}`}>
+                        {message.direction === 'inbound' ? (
+                          message.member ? (
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={message.member.image_url} />
+                              <AvatarFallback className="text-sm">
+                                {getInitials(message.member.firstname, message.member.lastname)}
+                              </AvatarFallback>
+                            </Avatar>
+                          ) : (
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="text-sm">
+                                <Phone className="h-4 w-4" />
+                              </AvatarFallback>
+                            </Avatar>
+                          )
+                        ) : (
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback className="text-sm bg-primary text-primary-foreground">
+                              <User className="h-4 w-4" />
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
                       </div>
-                      <Badge variant="secondary" className="ml-2">
-                        {conversation.conversation_type.replace('_', ' ')}
-                      </Badge>
+                      
+                      {/* Message Bubble */}
+                      <div className={`flex flex-col ${message.direction === 'inbound' ? 'items-start' : 'items-end'}`}>
+                        <div className={`px-4 py-2 rounded-lg max-w-full ${
+                          message.direction === 'inbound' 
+                            ? 'bg-muted text-foreground' 
+                            : 'bg-primary text-primary-foreground'
+                        }`}>
+                          <div className="text-sm whitespace-pre-wrap">{message.body}</div>
+                        </div>
+                        
+                        {/* Message Info */}
+                        <div className={`flex items-center space-x-2 mt-1 text-xs text-muted-foreground ${
+                          message.direction === 'inbound' ? 'justify-start' : 'justify-end'
+                        }`}>
+                          <span>{format(new Date(message.sent_at), 'MMM d, HH:mm')}</span>
+                          {message.direction === 'outbound' && (
+                            <Badge variant="outline" className="text-xs">
+                              {message.status}
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        {/* Recipients Info (for outbound messages with multiple recipients) */}
+                        {message.direction === 'outbound' && message.recipientCount > 1 && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Sent to {message.recipientCount} recipient{message.recipientCount > 1 ? 's' : ''}
+                          </div>
+                        )}
+                        
+                        {/* Member Name (for inbound messages) */}
+                        {message.direction === 'inbound' && message.member && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {message.member.firstname} {message.member.lastname}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  ))}
+                  </div>
+                ));
+              })()}
+            </div>
+            
+            {/* Reply Section */}
+            {selectedSMSConversation.sms_messages?.some(m => m.direction === 'inbound') && (
+              <div className="flex-shrink-0 border-t p-4 space-y-3">
+                <div className="flex items-center space-x-2">
+                  <Send className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Send Reply</span>
+                </div>
+                <div className="space-y-2">
+                  <Textarea
+                    value={replyMessage}
+                    onChange={(e) => setReplyMessage(e.target.value)}
+                    placeholder="Type your reply..."
+                    rows={3}
+                    className="resize-none"
+                    autoComplete="new-password"
+                    data-lpignore="true"
+                    data-1p-ignore="true"
+                    data-form-type="other"
+                    name="sms-reply-text"
+                    id="sms-reply-text"
+                  />
+                  <div className="flex justify-between items-center">
+                    <div className="text-xs text-muted-foreground">
+                      Characters: {replyMessage.length} • Messages: {Math.ceil(replyMessage.length / 160)}
+                    </div>
+                    <Button 
+                      onClick={handleSendReply}
+                      disabled={!replyMessage.trim() || isSendingReply}
+                      size="sm"
+                    >
+                      {isSendingReply ? (
+                        <>
+                          <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="mr-2 h-4 w-4" />
+                          Send Reply
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
-          </CardContent>
-          <CardFooter>
-            <Button variant="outline" className="w-full" asChild>
-              <a href="/sms">View SMS Management</a>
-            </Button>
-          </CardFooter>
-        </Card>
-      </motion.div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+
+
     </div>
   );
 }

@@ -57,18 +57,17 @@ export function Layout() {
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
 
   const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: Home },
-    { name: 'Events', href: '/events', icon: Calendar },
-    { name: 'Children Check-In', href: '/children-check-in', icon: Baby },
-    { name: 'People', href: '/members', icon: Users },
-    { name: 'Donations', href: '/donations', icon: DollarSign },
-    { name: 'Groups', href: '/groups', icon: UserPlus },
-          { name: 'Tasks', href: '/tasks', icon: ClipboardList },
-      { name: 'SMS', href: '/sms', icon: MessageSquare },
-      { name: 'Alerts', href: '/alerts', icon: Bell },
-
-      { name: 'Reports', href: '/reports', icon: BarChart2 },
-    { name: 'Settings', href: '/settings', icon: Settings },
+    { name: 'Dashboard', href: '/dashboard', icon: Home, color: 'text-blue-500' },
+    { name: 'Events', href: '/events', icon: Calendar, color: 'text-green-500' },
+    { name: 'Children Check-In', href: '/children-check-in', icon: Baby, color: 'text-pink-500' },
+    { name: 'People', href: '/members', icon: Users, color: 'text-purple-500' },
+    { name: 'Donations', href: '/donations', icon: DollarSign, color: 'text-yellow-500' },
+    { name: 'Groups', href: '/groups', icon: UserPlus, color: 'text-indigo-500' },
+    { name: 'Tasks', href: '/tasks', icon: ClipboardList, color: 'text-orange-500' },
+    { name: 'SMS', href: '/sms', icon: MessageSquare, color: 'text-teal-500' },
+    { name: 'Alerts', href: '/alerts', icon: Bell, color: 'text-red-500' },
+    { name: 'Reports', href: '/reports', icon: BarChart2, color: 'text-emerald-500' },
+    { name: 'Settings', href: '/settings', icon: Settings, color: 'text-gray-500' },
   ];
 
   const mainNavItems = navigation.slice(0, 5); // Show 5 main items on tablet
@@ -166,7 +165,7 @@ export function Layout() {
               )}
               title={item.name}
             >
-              <item.icon className={cn("h-6 w-6 flex-shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
+              <item.icon className={cn("h-6 w-6 flex-shrink-0", isActive ? "text-primary" : item.color)} />
               {sidebarExpanded && <span className="truncate text-base font-medium">{item.name}</span>}
               {item.name === 'Settings' && isAdmin && pendingApprovals > 0 && (
                 <span className="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center flex-shrink-0">
@@ -242,7 +241,7 @@ export function Layout() {
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  <item.icon className={cn("h-4 w-4 mb-0.5", isActive ? "text-primary" : "text-muted-foreground")} />
+                  <item.icon className={cn("h-4 w-4 mb-0.5", isActive ? "text-primary" : item.color)} />
                   <span>{item.name}</span>
                   {item.name === 'Settings' && isAdmin && pendingApprovals > 0 && (
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
@@ -269,7 +268,7 @@ export function Layout() {
                         location.pathname === item.href ? "text-primary" : ""
                       )}
                     >
-                      <item.icon className="h-4 w-4" />
+                      <item.icon className={cn("h-4 w-4", location.pathname === item.href ? "text-primary" : item.color)} />
                       <span>{item.name}</span>
                       {item.name === 'Settings' && isAdmin && pendingApprovals > 0 && (
                         <span className="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
