@@ -44,6 +44,8 @@ import {
   ArrowLeft,
   Star,
   Church,
+  Reply,
+  CheckCircle,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -1052,94 +1054,593 @@ export function Dashboard() {
         </motion.div>
       </div>
 
+      {/* People Intelligence */}
+      <motion.div variants={itemVariants} className="mb-12">
+        <div className="group relative">
+          <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center shadow-lg">
+                  <Users className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">People Intelligence</h3>
+                  <p className="text-slate-600 dark:text-slate-400">Smart member insights and engagement</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">AI Insights</span>
+              </div>
+            </div>
+            
+            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              {/* Engagement Score */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                      <Activity className="h-4 w-4 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Engagement</h4>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-blue-600 mb-2">
+                      {isLoading ? '...' : Math.round((stats.activeMembers / Math.max(stats.totalPeople, 1)) * 100)}%
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      Active engagement rate
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Growth Trajectory */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-green-500/20 to-green-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
+                      <TrendingUp className="h-4 w-4 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Growth</h4>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-green-600 mb-2">
+                      {isLoading ? '...' : stats.newMembersThisMonth}
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      New members this month
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Pastoral Care */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-orange-500/20 to-orange-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center">
+                      <Heart className="h-4 w-4 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Care Needs</h4>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-orange-600 mb-2">
+                      {isLoading ? '...' : stats.inactiveMembers}
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      Members needing follow-up
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Financial Intelligence */}
+      <motion.div variants={itemVariants} className="mb-12">
+        <div className="group relative">
+          <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center shadow-lg">
+                  <DollarSign className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Financial Intelligence</h3>
+                  <p className="text-slate-600 dark:text-slate-400">Smart financial insights and trends</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">AI Insights</span>
+              </div>
+            </div>
+            
+            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              {/* Giving Health */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-green-500/20 to-green-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
+                      <BarChart3 className="h-4 w-4 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Giving Health</h4>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-green-600 mb-2">
+                      {isLoading ? '...' : donationTrend > 0 ? 'Healthy' : 'Declining'}
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      {isLoading ? '...' : `${donationTrend > 0 ? '+' : ''}${donationTrend.toFixed(1)}% trend`}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Donor Engagement */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                      <Users className="h-4 w-4 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Donor Engagement</h4>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-blue-600 mb-2">
+                      {isLoading ? '...' : Math.round((stats.uniqueDonors / Math.max(stats.totalPeople, 1)) * 100)}%
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      {isLoading ? '...' : `${stats.uniqueDonors} of ${stats.totalPeople} members give`}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Giving Consistency */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-indigo-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                      <Calendar className="h-4 w-4 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Consistency</h4>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-indigo-600 mb-2">
+                      {isLoading ? '...' : stats.averageDonationFrequency > 0 ? 'Regular' : 'Irregular'}
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      Giving pattern analysis
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Events Intelligence */}
+      <motion.div variants={itemVariants} className="mb-12">
+        <div className="group relative">
+          <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-2xl flex items-center justify-center shadow-lg">
+                  <Calendar className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Events Intelligence</h3>
+                  <p className="text-slate-600 dark:text-slate-400">Smart event insights and optimization</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-indigo-500 rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">AI Insights</span>
+              </div>
+            </div>
+            
+            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              {/* Event Success Rate */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-indigo-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                      <Activity className="h-4 w-4 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Success Rate</h4>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-indigo-600 mb-2">
+                      {isLoading ? '...' : stats.eventsThisMonth > stats.averageEventsPerMonth ? 'High' : 'Moderate'}
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      Event engagement level
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Volunteer Fulfillment */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center">
+                      <Users2 className="h-4 w-4 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Volunteer Rate</h4>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-emerald-600 mb-2">
+                      {isLoading ? '...' : Math.round(((stats.eventsWithVolunteersEnabled - stats.eventsStillNeedingVolunteers) / Math.max(stats.eventsWithVolunteersEnabled, 1)) * 100)}%
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      Events fully staffed
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Event Frequency */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                      <BarChart3 className="h-4 w-4 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Activity Level</h4>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-blue-600 mb-2">
+                      {isLoading ? '...' : stats.eventsThisMonth}
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      Events this month
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Communications Intelligence */}
+      <motion.div variants={itemVariants} className="mb-12">
+        <div className="group relative">
+          <div className="absolute -inset-1 bg-gradient-to-r from-violet-500 to-purple-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg">
+                  <MessageSquare className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Communications Intelligence</h3>
+                  <p className="text-slate-600 dark:text-slate-400">Smart messaging insights and engagement</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-violet-500 rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">AI Insights</span>
+              </div>
+            </div>
+            
+            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              {/* Response Rate */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500/20 to-violet-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-violet-600 rounded-xl flex items-center justify-center">
+                      <Reply className="h-4 w-4 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Response Rate</h4>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-violet-600 mb-2">
+                      {isLoading ? '...' : recentSMSConversations && recentSMSConversations.length > 0 ? 'High' : 'Low'}
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      Message engagement
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Prayer Requests */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                      <Heart className="h-4 w-4 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Prayer Volume</h4>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-blue-600 mb-2">
+                      {isLoading ? '...' : recentSMSConversations ? recentSMSConversations.filter(c => c.conversation_type === 'prayer_request').length : 0}
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      Active prayer requests
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Communication Health */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-green-500/20 to-green-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
+                      <CheckCircle className="h-4 w-4 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Health Score</h4>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-green-600 mb-2">
+                      {isLoading ? '...' : recentSMSConversations && recentSMSConversations.length > 0 ? 'Excellent' : 'Good'}
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      Overall communication health
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Tasks Intelligence */}
+      <motion.div variants={itemVariants} className="mb-12">
+        <div className="group relative">
+          <div className="absolute -inset-1 bg-gradient-to-r from-orange-500 to-red-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center shadow-lg">
+                  <CheckSquare className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Tasks Intelligence</h3>
+                  <p className="text-slate-600 dark:text-slate-400">Smart task management and productivity insights</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-orange-500 rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">AI Insights</span>
+              </div>
+            </div>
+            
+            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              {/* Completion Rate */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-orange-500/20 to-orange-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center">
+                      <TrendingUp className="h-4 w-4 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Completion Rate</h4>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-orange-600 mb-2">
+                      {isLoading ? '...' : stats.totalTasks > 0 ? Math.round(((stats.totalTasks - stats.overdueTasks) / stats.totalTasks) * 100) : 0}%
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      Tasks completed on time
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Productivity Score */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-green-500/20 to-green-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
+                      <Activity className="h-4 w-4 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Productivity</h4>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-green-600 mb-2">
+                      {isLoading ? '...' : stats.overdueTasks === 0 ? 'High' : stats.overdueTasks < 3 ? 'Good' : 'Needs Focus'}
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      Overall productivity level
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Workload Balance */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                      <BarChart3 className="h-4 w-4 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Workload</h4>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-blue-600 mb-2">
+                      {isLoading ? '...' : stats.pendingTasks}
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      Pending tasks
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
       {/* Recent Activity Feed & Attendance by Event Type */}
       <motion.div variants={itemVariants} className="mb-12">
         <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
           {/* Recent Activity Feed */}
-          <div className="group relative overflow-hidden">
-            <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-4 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden">
-              <div className="flex items-center justify-between mb-4 sm:mb-6 w-full">
-                <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
-                    <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+          <div className="group relative">
+            <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+            <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg">
+                    <MessageSquare className="h-6 w-6 text-white" />
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-lg sm:text-xl lg:text-xl font-bold text-slate-900 dark:text-white truncate">Recent Activity</h3>
-                    <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base truncate">SMS Conversations</p>
+                  <div>
+                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Recent Activity Intelligence</h3>
+                    <p className="text-slate-600 dark:text-slate-400">Smart conversation tracking and engagement</p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
-                  <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400">Live</span>
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-indigo-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Live Feed</span>
                 </div>
               </div>
               
-              <div className="space-y-3 sm:space-y-4 w-full">
+              <div className="space-y-4 w-full">
                 {recentSMSConversations && recentSMSConversations.length > 0 ? (
                   recentSMSConversations.slice(0, 5).map((conversation, index) => (
-                    <div 
-                      key={conversation.id} 
-                      className="flex items-center p-3 sm:p-4 border border-slate-200 dark:border-slate-700 rounded-xl sm:rounded-2xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all duration-300 group/item w-full overflow-hidden"
-                      onClick={() => handleSMSConversationClick(conversation)}
+                    <motion.div 
+                      key={conversation.id}
+                      className="group/card relative"
+                      variants={itemVariants}
                     >
-                      <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                        <div className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-10 lg:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0 ${
-                          conversation.conversation_type === 'prayer_request' ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white' :
-                          conversation.conversation_type === 'emergency' ? 'bg-gradient-to-br from-red-500 to-red-600 text-white' :
-                          conversation.conversation_type === 'event_reminder' ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white' :
-                          'bg-gradient-to-br from-slate-500 to-slate-600 text-white'
-                        }`}>
-                          <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-slate-900 dark:text-white truncate text-sm sm:text-base lg:text-base">
-                            {conversation.title || 'SMS Conversation'}
-                          </p>
-                          <div className="flex items-center gap-1 sm:gap-2 mt-1">
-                            <span className={`text-xs font-medium px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full flex-shrink-0 ${
-                              conversation.conversation_type === 'prayer_request' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300' :
-                              conversation.conversation_type === 'emergency' ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' :
-                              conversation.conversation_type === 'event_reminder' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :
-                              'bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300'
-                            }`}>
-                              {(() => {
-                                const type = conversation.conversation_type === 'prayer_request' ? 'Prayer' :
-                                           conversation.conversation_type === 'emergency' ? 'Emergency' :
-                                           conversation.conversation_type === 'event_reminder' ? 'Event' :
-                                           conversation.conversation_type === 'pastoral_care' ? 'Pastoral' :
-                                           'General';
-                                return type;
-                              })()}
-                            </span>
-                            {conversation.updated_at && (
-                              <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                                {format(new Date(conversation.updated_at), 'MMM d')}
-                              </span>
-                            )}
+                      <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                      <div 
+                        className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer group/item w-full overflow-hidden"
+                        onClick={() => handleSMSConversationClick(conversation)}
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 ${
+                            conversation.conversation_type === 'prayer_request' ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white' :
+                            conversation.conversation_type === 'emergency' ? 'bg-gradient-to-br from-red-500 to-red-600 text-white' :
+                            conversation.conversation_type === 'event_reminder' ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white' :
+                            'bg-gradient-to-br from-slate-500 to-slate-600 text-white'
+                          }`}>
+                            <MessageSquare className="h-5 w-5" />
                           </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-slate-900 dark:text-white truncate text-base">
+                              {conversation.title || 'SMS Conversation'}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className={`text-xs font-medium px-2 py-1 rounded-full flex-shrink-0 ${
+                                conversation.conversation_type === 'prayer_request' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300' :
+                                conversation.conversation_type === 'emergency' ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' :
+                                conversation.conversation_type === 'event_reminder' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :
+                                'bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300'
+                              }`}>
+                                {(() => {
+                                  const type = conversation.conversation_type === 'prayer_request' ? 'Prayer' :
+                                             conversation.conversation_type === 'emergency' ? 'Emergency' :
+                                             conversation.conversation_type === 'event_reminder' ? 'Event' :
+                                             conversation.conversation_type === 'pastoral_care' ? 'Pastoral' :
+                                             'General';
+                                  return type;
+                                })()}
+                              </span>
+                              {conversation.updated_at && (
+                                <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                                  {format(new Date(conversation.updated_at), 'MMM d')}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-slate-400 flex-shrink-0 ml-2 group-hover/item:text-slate-600 dark:group-hover/item:text-slate-300 transition-colors" />
                         </div>
                       </div>
-                      <ChevronRight className="h-4 w-4 text-slate-400 flex-shrink-0 ml-1 sm:ml-2 group-hover/item:text-slate-600 dark:group-hover/item:text-slate-300 transition-colors" />
-                    </div>
+                    </motion.div>
                   ))
                 ) : (
-                  <div className="text-center py-6 sm:py-8">
-                    <MessageSquare className="h-12 w-12 sm:h-16 sm:w-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-                    <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg">No recent SMS conversations.</p>
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <MessageSquare className="h-8 w-8 text-slate-300 dark:text-slate-600" />
+                    </div>
+                    <p className="text-slate-500 dark:text-slate-400 text-lg font-medium">No recent conversations</p>
+                    <p className="text-slate-400 dark:text-slate-500 text-sm mt-1">SMS activity will appear here</p>
                   </div>
                 )}
               </div>
               
-              <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-200 dark:border-slate-700">
+              <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
                 <Button 
                   variant="outline" 
-                  className="w-full bg-gradient-to-r from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-900/30 border-indigo-200 dark:border-indigo-800 hover:from-indigo-100 hover:to-indigo-200 dark:hover:from-indigo-900/30 dark:hover:to-indigo-900/40 transition-all duration-300 h-10 sm:h-12 text-sm sm:text-base font-medium" 
+                  className="w-full bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/30 border-indigo-200 dark:border-indigo-800 hover:from-indigo-100 hover:to-purple-100 dark:hover:from-indigo-900/30 dark:hover:to-purple-900/40 transition-all duration-300 h-12 text-base font-medium" 
                   asChild
                 >
                   <a href="/sms" className="flex items-center justify-center space-x-2">
-                    <span className="hidden sm:inline">View All Conversations</span>
-                    <span className="sm:hidden">View All</span>
-                    <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <span>View All Conversations</span>
+                    <ArrowUpRight className="h-5 w-5" />
                   </a>
                 </Button>
               </div>
