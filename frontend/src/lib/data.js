@@ -169,8 +169,8 @@ export async function getMembers() {
           }
         } else {
           transformedMember.address = null;
-        }
-
+          }
+          
         // Parse emergency_contact field
         if (typeof member.emergency_contact === 'object' && member.emergency_contact !== null) {
           transformedMember.emergency_contact = member.emergency_contact;
@@ -181,7 +181,7 @@ export async function getMembers() {
           } else {
             try {
               transformedMember.emergency_contact = JSON.parse(cleanEmergencyContact);
-            } catch (parseError) {
+          } catch (parseError) {
               transformedMember.emergency_contact = cleanEmergencyContact;
             }
           }
@@ -206,7 +206,7 @@ export async function getMembers() {
         } else {
           transformedMember.communication_preferences = { sms: true, email: true, mail: false };
         }
-
+        
         // Parse ministry_involvement field
         if (Array.isArray(member.ministry_involvement)) {
           transformedMember.ministry_involvement = member.ministry_involvement;
@@ -266,12 +266,12 @@ export const addMember = async (memberData) => {
 
     // Prepare the data with all schema fields
     const memberToInsert = {
-      firstname: memberData.firstname,
-      lastname: memberData.lastname,
-      email: memberData.email,
-      phone: memberData.phone,
-      status: memberData.status || 'active',
-      image_url: memberData.image_url,
+        firstname: memberData.firstname,
+        lastname: memberData.lastname,
+        email: memberData.email,
+        phone: memberData.phone,
+        status: memberData.status || 'active',
+        image_url: memberData.image_url,
       member_type: memberData.member_type || 'adult',
       birth_date: memberData.birth_date,
       gender: memberData.gender,
@@ -294,7 +294,7 @@ export const addMember = async (memberData) => {
         mail: false
       },
       tags: memberData.tags || [],
-      organization_id: organizationId
+        organization_id: organizationId
     };
 
     const { data, error } = await supabase
@@ -319,12 +319,12 @@ export const updateMember = async (id, memberData) => {
 
     // Prepare the data with all schema fields
     const memberToUpdate = {
-      firstname: memberData.firstname,
-      lastname: memberData.lastname,
-      email: memberData.email,
-      phone: memberData.phone,
-      status: memberData.status,
-      image_url: memberData.image_url,
+        firstname: memberData.firstname,
+        lastname: memberData.lastname,
+        email: memberData.email,
+        phone: memberData.phone,
+        status: memberData.status,
+        image_url: memberData.image_url,
       member_type: memberData.member_type,
       birth_date: memberData.birth_date,
       gender: memberData.gender,

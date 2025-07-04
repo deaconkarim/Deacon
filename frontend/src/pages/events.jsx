@@ -1552,18 +1552,18 @@ export default function Events() {
             </div>
           ) : filteredEvents.length > 0 ? (
             <div className="space-y-4">
-              {filteredEvents.map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  onRSVP={handleOpenDialog}
-                  onPotluckRSVP={handlePotluckRSVP}
-                  onEdit={handleEditClick}
-                  onDelete={handleDeleteEvent}
-                  onManageVolunteers={handleManageVolunteers}
-                />
-              ))}
-            </div>
+        {filteredEvents.map((event) => (
+          <EventCard
+            key={event.id}
+            event={event}
+            onRSVP={handleOpenDialog}
+            onPotluckRSVP={handlePotluckRSVP}
+            onEdit={handleEditClick}
+            onDelete={handleDeleteEvent}
+            onManageVolunteers={handleManageVolunteers}
+          />
+        ))}
+      </div>
           ) : (
             <div className="text-center py-12">
               <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
@@ -1704,7 +1704,7 @@ export default function Events() {
               {isEditingPastEvent
                 ? `Edit attendance records for ${selectedEvent?.title}`
                 : selectedEvent?.attendance_type === 'check-in'
-                  ? 'Check In People for the event'
+                ? 'Check In People for the event'
                   : `Select members to RSVP for ${selectedEvent?.title}`
               }
             </DialogDescription>

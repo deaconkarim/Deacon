@@ -358,24 +358,24 @@ serve(async (req) => {
       const memberName = member ? `${member.firstname} ${member.lastname}` : null
       const conversationTitle = createTitle(body, memberName, normalizedFrom)
         
-      const { data: newConversation, error: convError } = await supabaseClient
-        .from('sms_conversations')
-        .insert({
+        const { data: newConversation, error: convError } = await supabaseClient
+          .from('sms_conversations')
+          .insert({
           title: conversationTitle,
-          conversation_type: 'general',
+            conversation_type: 'general',
           status: 'active',
           organization_id: organizationId
-        })
-        .select('id')
-        .single()
+          })
+          .select('id')
+          .single()
 
-      if (convError) {
-        console.error('❌ Conversation creation error:', convError)
-      } else {
-        conversationId = newConversation?.id
-        console.log('✅ Created new conversation:', conversationId)
+        if (convError) {
+          console.error('❌ Conversation creation error:', convError)
+        } else {
+          conversationId = newConversation?.id
+          console.log('✅ Created new conversation:', conversationId)
+        }
       }
-    }
 
     // Get organization_id from member or conversation
     let organizationId = null

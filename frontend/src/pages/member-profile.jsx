@@ -414,18 +414,18 @@ export function MemberProfile() {
                 {(member.email || member.phone) && (
                   <div className="space-y-2">
                     <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Contact Information</h4>
-                    {member.email && (
-                      <div className="flex items-center text-sm">
-                        <Mail className="mr-2 h-4 w-4 text-muted-foreground" />
-                        <span>{member.email}</span>
-                      </div>
-                    )}
-                    {member.phone && (
-                      <div className="flex items-center text-sm">
-                        <Phone className="mr-2 h-4 w-4 text-muted-foreground" />
-                        <span>{formatPhoneNumber(member.phone)}</span>
-                      </div>
-                    )}
+                {member.email && (
+                  <div className="flex items-center text-sm">
+                    <Mail className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <span>{member.email}</span>
+                  </div>
+                )}
+                {member.phone && (
+                  <div className="flex items-center text-sm">
+                    <Phone className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <span>{formatPhoneNumber(member.phone)}</span>
+                  </div>
+                )}
                   </div>
                 )}
 
@@ -433,7 +433,7 @@ export function MemberProfile() {
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Personal Information</h4>
                   {member.gender && (
-                    <div className="flex items-center text-sm">
+                  <div className="flex items-center text-sm">
                       <User className="mr-2 h-4 w-4 text-muted-foreground" />
                       <span className="capitalize">{member.gender}</span>
                     </div>
@@ -462,16 +462,16 @@ export function MemberProfile() {
                         <div>{member.address.street}</div>
                         <div className="text-muted-foreground">
                           {[
-                            member.address.city,
-                            member.address.state,
-                            member.address.zip
-                          ].filter(Boolean).join(', ')}
-                        </div>
+                        member.address.city,
+                        member.address.state,
+                        member.address.zip
+                      ].filter(Boolean).join(', ')}
+                  </div>
                         {member.address.country && (
                           <div className="text-muted-foreground">{member.address.country}</div>
-                        )}
-                      </div>
-                    </div>
+                )}
+                </div>
+              </div>
                   </div>
                 )}
 
@@ -792,34 +792,34 @@ export function MemberProfile() {
                       {/* Recent Attendance */}
                       <div>
                         <h3 className="text-lg font-semibold mb-4">Recent Attendance</h3>
-                        <div className="space-y-4">
+                    <div className="space-y-4">
                           {attendance.slice(0, 10).map((record) => (
-                            <Card key={record.id}>
-                              <CardContent className="p-4">
-                                <div className="flex items-center justify-between">
-                                  <div className="space-y-1">
-                                    <p className="font-medium">{record.events.title}</p>
-                                    <div className="flex items-center text-sm text-muted-foreground">
-                                      <Calendar className="h-4 w-4 mr-2" />
-                                      {format(new Date(record.events.start_date), 'MMM d, yyyy • h:mm a')}
-                                    </div>
-                                    {record.events.location && (
-                                      <div className="flex items-center text-sm text-muted-foreground">
-                                        <MapPin className="h-4 w-4 mr-2" />
-                                        {record.events.location}
-                                      </div>
-                                    )}
+                        <Card key={record.id}>
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="space-y-1">
+                                <p className="font-medium">{record.events.title}</p>
+                                <div className="flex items-center text-sm text-muted-foreground">
+                                  <Calendar className="h-4 w-4 mr-2" />
+                                  {format(new Date(record.events.start_date), 'MMM d, yyyy • h:mm a')}
+                                </div>
+                                {record.events.location && (
+                                  <div className="flex items-center text-sm text-muted-foreground">
+                                    <MapPin className="h-4 w-4 mr-2" />
+                                    {record.events.location}
                                   </div>
+                                )}
+                              </div>
                                   {volunteers.some(v => v.event_id === record.events.id) && (
                                     <Badge variant="destructive" className="ml-2">
                                       <Heart className="h-3 w-3 mr-1" />
                                       Volunteered
-                                    </Badge>
+                              </Badge>
                                   )}
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
                         </div>
                         {attendance.length > 10 && (
                           <div className="text-center mt-4">
@@ -1320,14 +1320,14 @@ export function MemberProfile() {
             </DialogDescription>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[70vh] pr-2">
-            <MemberForm
-              initialData={{
+          <MemberForm
+            initialData={{
                 id: member.id,
-                firstname: member.firstname,
-                lastname: member.lastname,
-                email: member.email,
-                phone: member.phone,
-                status: member.status,
+              firstname: member.firstname,
+              lastname: member.lastname,
+              email: member.email,
+              phone: member.phone,
+              status: member.status,
                 image_url: member.image_url,
                 member_type: member.member_type,
                 birth_date: member.birth_date,
@@ -1346,10 +1346,10 @@ export function MemberProfile() {
                 ministry_involvement: member.ministry_involvement,
                 communication_preferences: member.communication_preferences,
                 tags: member.tags
-              }}
-              onSave={handleEditMember}
-              onCancel={() => setIsEditDialogOpen(false)}
-            />
+            }}
+            onSave={handleEditMember}
+            onCancel={() => setIsEditDialogOpen(false)}
+          />
           </div>
         </DialogContent>
       </Dialog>

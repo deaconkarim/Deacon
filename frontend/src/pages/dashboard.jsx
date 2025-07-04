@@ -615,63 +615,64 @@ export function Dashboard() {
   };
 
   return (
-    <div className="space-y-6">
-          <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Command Center</h1>
-        </div>
-        
+    <div className="space-y-6 sm:space-y-8 px-4 sm:px-0 w-full max-w-full overflow-x-hidden">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Command Center</h1>
+      </div>
+      
       {/* Leadership Verse - Inspirational component */}
       <motion.div variants={itemVariants}>
-          <LeadershipVerse />
+        <LeadershipVerse />
       </motion.div>
 
-      <div className="grid gap-4 tablet-portrait:grid-cols-2 tablet-landscape:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      {/* Main Stats Grid - Optimized for Mobile */}
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <motion.div variants={itemVariants}>
           <Card className="overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-              <CardTitle className="flex items-center text-xl">
-                <Users2 className="mr-2 h-5 w-5" />
+            <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-5 sm:p-6">
+              <CardTitle className="flex items-center text-xl sm:text-2xl">
+                <Users2 className="mr-3 h-6 w-6 sm:h-7 sm:w-7" />
                 People
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
+            <CardContent className="p-5 sm:p-6">
               {isLoading ? (
-                <Skeleton className="h-8 w-16 mb-1" />
+                <Skeleton className="h-10 w-20 mb-2" />
               ) : (
-                <div className="text-3xl font-bold">{stats.totalPeople}</div>
+                <div className="text-3xl sm:text-4xl font-bold">{stats.totalPeople}</div>
               )}
-              <p className="text-sm text-muted-foreground mt-1">Total People</p>
+              <p className="text-base sm:text-lg text-muted-foreground mt-2">Total People</p>
               
               {/* Member type breakdown */}
-              <div className="mt-4 space-y-2">
+              <div className="mt-4 sm:mt-5 space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-green-600 font-medium">Active</span>
+                  <span className="text-sm sm:text-base text-green-600 font-medium">Active</span>
                   {isLoading ? (
-                    <Skeleton className="h-4 w-8" />
+                    <Skeleton className="h-5 w-10" />
                   ) : (
-                    <span className="text-sm font-semibold">{stats.activeMembers}</span>
+                    <span className="text-sm sm:text-base font-semibold">{stats.activeMembers}</span>
                   )}
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-orange-600 font-medium">Inactive</span>
+                  <span className="text-sm sm:text-base text-orange-600 font-medium">Inactive</span>
                   {isLoading ? (
-                    <Skeleton className="h-4 w-8" />
+                    <Skeleton className="h-5 w-10" />
                   ) : (
-                    <span className="text-sm font-semibold">{stats.inactiveMembers}</span>
+                    <span className="text-sm sm:text-base font-semibold">{stats.inactiveMembers}</span>
                   )}
-                  </div>
+                </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-blue-600 font-medium">Visitors</span>
+                  <span className="text-sm sm:text-base text-blue-600 font-medium">Visitors</span>
                   {isLoading ? (
-                    <Skeleton className="h-4 w-8" />
+                    <Skeleton className="h-5 w-10" />
                   ) : (
-                    <span className="text-sm font-semibold">{stats.visitors}</span>
+                    <span className="text-sm sm:text-base font-semibold">{stats.visitors}</span>
                   )}
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="bg-muted py-2 px-6 border-t">
-              <Button variant="outline" className="w-full" asChild>
+            <CardFooter className="bg-muted py-3 px-5 sm:px-6 border-t">
+              <Button variant="outline" className="w-full text-sm sm:text-base h-10 sm:h-11" asChild>
                 <a href="/members">View All People</a>
               </Button>
             </CardFooter>
@@ -680,57 +681,57 @@ export function Dashboard() {
 
         <motion.div variants={itemVariants}>
           <Card className="overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-green-500 to-green-600 text-white">
-              <CardTitle className="flex items-center text-xl">
-                <DollarSign className="mr-2 h-5 w-5" />
+            <CardHeader className="bg-gradient-to-r from-green-500 to-green-600 text-white p-5 sm:p-6">
+              <CardTitle className="flex items-center text-xl sm:text-2xl">
+                <DollarSign className="mr-3 h-6 w-6 sm:h-7 sm:w-7" />
                 Donations
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
+            <CardContent className="p-5 sm:p-6">
               {isLoading ? (
-                <Skeleton className="h-8 w-20 mb-1" />
+                <Skeleton className="h-10 w-24 mb-2" />
               ) : (
-                <div className="text-3xl font-bold">
+                <div className="text-3xl sm:text-4xl font-bold">
                   {stats.monthlyDonations > 0 ?
-                    `$${(stats.monthlyDonations || 0).toFixed(2)}` :
-                    `$${(stats.lastMonthDonations || 0).toFixed(2)}`
+                    `$${(stats.monthlyDonations || 0).toFixed(0)}` :
+                    `$${(stats.lastMonthDonations || 0).toFixed(0)}`
                   }
                 </div>
               )}
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-base sm:text-lg text-muted-foreground mt-2">
                 {stats.monthlyDonations > 0 ? 'This month' : 'Last month'}
               </p>
               
               {/* Donation breakdown */}
-              <div className="mt-4 space-y-2">
+              <div className="mt-4 sm:mt-5 space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-green-600 font-medium">Monthly Average</span>
+                  <span className="text-sm sm:text-base text-green-600 font-medium">Monthly Avg</span>
                   {isLoading ? (
-                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-5 w-16" />
                   ) : (
-                    <span className="text-sm font-semibold">${(stats.monthlyAverage || 0).toFixed(2)}</span>
+                    <span className="text-sm sm:text-base font-semibold">${(stats.monthlyAverage || 0).toFixed(0)}</span>
                   )}
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-green-600 font-medium">Weekly Average</span>
+                  <span className="text-sm sm:text-base text-green-600 font-medium">Weekly Avg</span>
                   {isLoading ? (
-                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-5 w-16" />
                   ) : (
-                    <span className="text-sm font-semibold">${(stats.weeklyAverage || 0).toFixed(2)}</span>
+                    <span className="text-sm sm:text-base font-semibold">${(stats.weeklyAverage || 0).toFixed(0)}</span>
                   )}
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-green-600 font-medium">Last Week's Donations</span>
+                  <span className="text-sm sm:text-base text-green-600 font-medium">Last Week</span>
                   {isLoading ? (
-                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-5 w-16" />
                   ) : (
-                    <span className="text-sm font-semibold">${(stats.lastSundayDonations || 0).toFixed(2)}</span>
+                    <span className="text-sm sm:text-base font-semibold">${(stats.lastSundayDonations || 0).toFixed(0)}</span>
                   )}
+                </div>
               </div>
-            </div>
             </CardContent>
-            <CardFooter className="bg-muted py-2 px-6 border-t">
-              <Button variant="outline" className="w-full" asChild>
+            <CardFooter className="bg-muted py-3 px-5 sm:px-6 border-t">
+              <Button variant="outline" className="w-full text-sm sm:text-base h-10 sm:h-11" asChild>
                 <a href="/donations">View All Donations</a>
               </Button>
             </CardFooter>
@@ -739,45 +740,45 @@ export function Dashboard() {
 
         <motion.div variants={itemVariants}>
           <Card className="overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
-              <CardTitle className="flex items-center text-xl">
-                <Calendar className="mr-2 h-5 w-5" />
+            <CardHeader className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-5 sm:p-6">
+              <CardTitle className="flex items-center text-xl sm:text-2xl">
+                <Calendar className="mr-3 h-6 w-6 sm:h-7 sm:w-7" />
                 Events
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
+            <CardContent className="p-5 sm:p-6">
               {isLoading ? (
-                <Skeleton className="h-8 w-16 mb-1" />
+                <Skeleton className="h-10 w-20 mb-2" />
               ) : (
-                <div className="text-3xl font-bold">{stats.upcomingEvents || 0}</div>
+                <div className="text-3xl sm:text-4xl font-bold">{stats.upcomingEvents || 0}</div>
               )}
-              <p className="text-sm text-muted-foreground mt-1">Upcoming events</p>
+              <p className="text-base sm:text-lg text-muted-foreground mt-2">Upcoming events</p>
               
               {/* Events breakdown */}
-              <div className="mt-4 space-y-2">
+              <div className="mt-4 sm:mt-5 space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-purple-600 font-medium">Need Volunteers</span>
+                  <span className="text-sm sm:text-base text-purple-600 font-medium">Need Volunteers</span>
                   {isLoading ? (
-                    <Skeleton className="h-4 w-8" />
+                    <Skeleton className="h-5 w-10" />
                   ) : (
-                    <span className="text-sm font-semibold">{stats.eventsNeedingVolunteers || 0}</span>
+                    <span className="text-sm sm:text-base font-semibold">{stats.eventsNeedingVolunteers || 0}</span>
                   )}
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-purple-600 font-medium">This Week</span>
+                  <span className="text-sm sm:text-base text-purple-600 font-medium">This Week</span>
                   {isLoading ? (
-                    <Skeleton className="h-4 w-8" />
+                    <Skeleton className="h-5 w-10" />
                   ) : (
-                    <span className="text-sm font-semibold">{stats.eventsThisWeek}</span>
+                    <span className="text-sm sm:text-base font-semibold">{stats.eventsThisWeek}</span>
                   )}
-                  </div>
+                </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-purple-600 font-medium">Most Common</span>
+                  <span className="text-sm sm:text-base text-purple-600 font-medium">Most Common</span>
                   {isLoading ? (
-                    <Skeleton className="h-4 w-8" />
+                    <Skeleton className="h-5 w-16" />
                   ) : (
-                    <span className="text-sm font-semibold">
-                      {stats.mostCommonEventType === 'Sunday Worship Service' ? 'Sunday Service' :
+                    <span className="text-sm sm:text-base font-semibold truncate max-w-[120px]">
+                      {stats.mostCommonEventType === 'Sunday Worship Service' ? 'Sunday' :
                        stats.mostCommonEventType === 'Bible Study' ? 'Bible Study' :
                        stats.mostCommonEventType === 'Fellowship' ? 'Fellowship' :
                        stats.mostCommonEventType === 'Other' ? 'Other' :
@@ -788,60 +789,60 @@ export function Dashboard() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="bg-muted py-2 px-6 border-t">
-              <Button variant="outline" className="w-full" asChild>
+            <CardFooter className="bg-muted py-3 px-5 sm:px-6 border-t">
+              <Button variant="outline" className="w-full text-sm sm:text-base h-10 sm:h-11" asChild>
                 <a href="/events">View All Events</a>
               </Button>
             </CardFooter>
           </Card>
-      </motion.div>
+        </motion.div>
 
-      <motion.div variants={itemVariants}>
+        <motion.div variants={itemVariants}>
           <Card className="overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-              <CardTitle className="flex items-center text-xl">
-                <Bell className="mr-2 h-5 w-5" />
+            <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-5 sm:p-6">
+              <CardTitle className="flex items-center text-xl sm:text-2xl">
+                <Bell className="mr-3 h-6 w-6 sm:h-7 sm:w-7" />
                 Celebrations
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
+            <CardContent className="p-5 sm:p-6">
               {isLoading ? (
-                <Skeleton className="h-8 w-16 mb-1" />
+                <Skeleton className="h-10 w-20 mb-2" />
               ) : (
-                <div className="text-3xl font-bold">{stats.totalUpcoming || 0}</div>
+                <div className="text-3xl sm:text-4xl font-bold">{stats.totalUpcoming || 0}</div>
               )}
-              <p className="text-sm text-muted-foreground mt-1">Upcoming celebrations</p>
+              <p className="text-base sm:text-lg text-muted-foreground mt-2">Upcoming celebrations</p>
               
               {/* Celebrations breakdown */}
-              <div className="mt-4 space-y-2">
+              <div className="mt-4 sm:mt-5 space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-blue-600 font-medium">Birthdays</span>
+                  <span className="text-sm sm:text-base text-blue-600 font-medium">Birthdays</span>
                   {isLoading ? (
-                    <Skeleton className="h-4 w-8" />
+                    <Skeleton className="h-5 w-10" />
                   ) : (
-                    <span className="text-sm font-semibold">{stats.upcomingBirthdays || 0}</span>
+                    <span className="text-sm sm:text-base font-semibold">{stats.upcomingBirthdays || 0}</span>
                   )}
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-blue-600 font-medium">Anniversaries</span>
+                  <span className="text-sm sm:text-base text-blue-600 font-medium">Anniversaries</span>
                   {isLoading ? (
-                    <Skeleton className="h-4 w-8" />
+                    <Skeleton className="h-5 w-10" />
                   ) : (
-                    <span className="text-sm font-semibold">{stats.upcomingAnniversaries || 0}</span>
+                    <span className="text-sm sm:text-base font-semibold">{stats.upcomingAnniversaries || 0}</span>
                   )}
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-blue-600 font-medium">Memberships</span>
+                  <span className="text-sm sm:text-base text-blue-600 font-medium">Memberships</span>
                   {isLoading ? (
-                    <Skeleton className="h-4 w-8" />
+                    <Skeleton className="h-5 w-10" />
                   ) : (
-                    <span className="text-sm font-semibold">{stats.upcomingMemberships || 0}</span>
+                    <span className="text-sm sm:text-base font-semibold">{stats.upcomingMemberships || 0}</span>
                   )}
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="bg-muted py-2 px-6 border-t">
-              <Button variant="outline" className="w-full" asChild>
+            <CardFooter className="bg-muted py-3 px-5 sm:px-6 border-t">
+              <Button variant="outline" className="w-full text-sm sm:text-base h-10 sm:h-11" asChild>
                 <a href="/alerts">View All Celebrations</a>
               </Button>
             </CardFooter>
@@ -850,50 +851,50 @@ export function Dashboard() {
 
         <motion.div variants={itemVariants}>
           <Card className="overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
-              <CardTitle className="flex items-center text-xl">
-                <CheckSquare className="mr-2 h-5 w-5" />
+            <CardHeader className="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-5 sm:p-6">
+              <CardTitle className="flex items-center text-xl sm:text-2xl">
+                <CheckSquare className="mr-3 h-6 w-6 sm:h-7 sm:w-7" />
                 Tasks
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
+            <CardContent className="p-5 sm:p-6">
               {isLoading ? (
-                <Skeleton className="h-8 w-16 mb-1" />
+                <Skeleton className="h-10 w-20 mb-2" />
               ) : (
-                <div className="text-3xl font-bold">{stats.pendingTasks || 0}</div>
+                <div className="text-3xl sm:text-4xl font-bold">{stats.pendingTasks || 0}</div>
               )}
-              <p className="text-sm text-muted-foreground mt-1">Pending tasks</p>
+              <p className="text-base sm:text-lg text-muted-foreground mt-2">Pending tasks</p>
               
               {/* Tasks breakdown */}
-              <div className="mt-4 space-y-2">
+              <div className="mt-4 sm:mt-5 space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-orange-600 font-medium">Total Tasks</span>
+                  <span className="text-sm sm:text-base text-orange-600 font-medium">Total Tasks</span>
                   {isLoading ? (
-                    <Skeleton className="h-4 w-8" />
+                    <Skeleton className="h-5 w-10" />
                   ) : (
-                    <span className="text-sm font-semibold">{stats.totalTasks || 0}</span>
+                    <span className="text-sm sm:text-base font-semibold">{stats.totalTasks || 0}</span>
                   )}
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-orange-600 font-medium">Completed</span>
+                  <span className="text-sm sm:text-base text-orange-600 font-medium">Completed</span>
                   {isLoading ? (
-                    <Skeleton className="h-4 w-8" />
+                    <Skeleton className="h-5 w-10" />
                   ) : (
-                    <span className="text-sm font-semibold">{stats.completedTasks || 0}</span>
+                    <span className="text-sm sm:text-base font-semibold">{stats.completedTasks || 0}</span>
                   )}
-                  </div>
+                </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-orange-600 font-medium">Overdue</span>
+                  <span className="text-sm sm:text-base text-orange-600 font-medium">Overdue</span>
                   {isLoading ? (
-                    <Skeleton className="h-4 w-8" />
+                    <Skeleton className="h-5 w-10" />
                   ) : (
-                    <span className="text-sm font-semibold">{stats.overdueTasks || 0}</span>
+                    <span className="text-sm sm:text-base font-semibold">{stats.overdueTasks || 0}</span>
                   )}
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="bg-muted py-2 px-6 border-t">
-              <Button variant="outline" className="w-full" asChild>
+            <CardFooter className="bg-muted py-3 px-5 sm:px-6 border-t">
+              <Button variant="outline" className="w-full text-sm sm:text-base h-10 sm:h-11" asChild>
                 <a href="/tasks">View All Tasks</a>
               </Button>
             </CardFooter>
@@ -902,111 +903,121 @@ export function Dashboard() {
 
         <motion.div variants={itemVariants}>
           <Card className="overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-teal-500 to-teal-600 text-white">
-              <CardTitle className="flex items-center text-xl">
-                <MessageSquare className="mr-2 h-5 w-5" />
+            <CardHeader className="bg-gradient-to-r from-teal-500 to-teal-600 text-white p-5 sm:p-6">
+              <CardTitle className="flex items-center text-xl sm:text-2xl">
+                <MessageSquare className="mr-3 h-6 w-6 sm:h-7 sm:w-7" />
                 SMS
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
+            <CardContent className="p-5 sm:p-6">
               {isLoading ? (
-                <Skeleton className="h-8 w-16 mb-1" />
+                <Skeleton className="h-10 w-20 mb-2" />
               ) : (
-                <div className="text-3xl font-bold">{stats.recentSMSMessages || 0}</div>
+                <div className="text-3xl sm:text-4xl font-bold">{stats.recentSMSMessages || 0}</div>
               )}
-              <p className="text-sm text-muted-foreground mt-1">Recent (30 days)</p>
+              <p className="text-base sm:text-lg text-muted-foreground mt-2">Recent (30 days)</p>
               
               {/* SMS breakdown */}
-              <div className="mt-4 space-y-2">
+              <div className="mt-4 sm:mt-5 space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-teal-600 font-medium">Total Conversations</span>
+                  <span className="text-sm sm:text-base text-teal-600 font-medium">Total Conversations</span>
                   {isLoading ? (
-                    <Skeleton className="h-4 w-8" />
+                    <Skeleton className="h-5 w-10" />
                   ) : (
-                    <span className="text-sm font-semibold">{stats.totalSMSConversations || 0}</span>
+                    <span className="text-sm sm:text-base font-semibold">{stats.totalSMSConversations || 0}</span>
                   )}
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-teal-600 font-medium">Outbound</span>
+                  <span className="text-sm sm:text-base text-teal-600 font-medium">Outbound</span>
                   {isLoading ? (
-                    <Skeleton className="h-4 w-8" />
+                    <Skeleton className="h-5 w-10" />
                   ) : (
-                    <span className="text-sm font-semibold">{stats.outboundSMSMessages || 0}</span>
+                    <span className="text-sm sm:text-base font-semibold">{stats.outboundSMSMessages || 0}</span>
                   )}
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-teal-600 font-medium">Inbound</span>
+                  <span className="text-sm sm:text-base text-teal-600 font-medium">Inbound</span>
                   {isLoading ? (
-                    <Skeleton className="h-4 w-8" />
+                    <Skeleton className="h-5 w-10" />
                   ) : (
-                    <span className="text-sm font-semibold">{stats.inboundSMSMessages || 0}</span>
+                    <span className="text-sm sm:text-base font-semibold">{stats.inboundSMSMessages || 0}</span>
                   )}
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="bg-muted py-2 px-6 border-t">
-              <Button variant="outline" className="w-full" asChild>
+            <CardFooter className="bg-muted py-3 px-5 sm:px-6 border-t">
+              <Button variant="outline" className="w-full text-sm sm:text-base h-10 sm:h-11" asChild>
                 <a href="/sms">View All Messages</a>
               </Button>
             </CardFooter>
           </Card>
         </motion.div>
-
-                </div>
+      </div>
 
       {/* Recent SMS Conversations */}
-      <motion.div variants={itemVariants}>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center text-xl">
-              <MessageSquare className="mr-2 h-6 w-6" />
-              Recent SMS Conversations
+      <motion.div variants={itemVariants} className="w-full max-w-full">
+        <Card className="w-full max-w-full overflow-hidden">
+          <CardHeader className="p-5 sm:p-6">
+            <CardTitle className="flex items-center text-xl sm:text-2xl">
+              <MessageSquare className="mr-3 h-6 w-6 sm:h-7 sm:w-7 flex-shrink-0" />
+              <span className="truncate">Recent SMS</span>
             </CardTitle>
-            <CardDescription className="text-base">Latest SMS conversations and messages</CardDescription>
+            <CardDescription className="text-base sm:text-lg">Latest conversations</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="p-5 sm:p-6 w-full max-w-full">
+            <div className="space-y-4 sm:space-y-5 w-full max-w-full">
               {recentSMSConversations && recentSMSConversations.length > 0 ? (
                 recentSMSConversations.slice(0, 5).map(conversation => (
                   <div 
                     key={conversation.id} 
-                    className="flex items-center justify-between border-b pb-3 cursor-pointer hover:bg-muted/50 rounded-lg p-3 transition-colors"
+                    className="flex items-center border-b pb-3 sm:pb-4 cursor-pointer hover:bg-muted/50 rounded-lg p-3 sm:p-4 transition-colors w-full max-w-full overflow-hidden"
                     onClick={() => handleSMSConversationClick(conversation)}
+                    style={{ maxWidth: '100%' }}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    <div className="flex items-center gap-3 flex-1 min-w-0 overflow-hidden" style={{ maxWidth: '100%' }}>
+                      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
                         conversation.conversation_type === 'prayer_request' ? 'bg-purple-100 text-purple-600' :
                         conversation.conversation_type === 'emergency' ? 'bg-red-100 text-red-600' :
                         conversation.conversation_type === 'event_reminder' ? 'bg-blue-100 text-blue-600' :
                         'bg-gray-100 text-gray-600'
                       }`}>
-                        <MessageSquare className="h-5 w-5" />
+                        <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6" />
                       </div>
-                      <div>
-                        <p className="font-medium text-base truncate max-w-xs">
-                          {conversation.title || 'SMS Conversation'}
+                      <div className="min-w-0 flex-1 overflow-hidden" style={{ maxWidth: 'calc(100% - 4rem)' }}>
+                        <p className="font-medium text-base sm:text-lg truncate" style={{ maxWidth: '100%', wordBreak: 'break-all' }}>
+                          {(conversation.title || 'SMS Conversation').substring(0, 25)}
+                          {(conversation.title || 'SMS Conversation').length > 25 ? '...' : ''}
                         </p>
-                        <p className="text-sm text-muted-foreground">
-                          {conversation.conversation_type === 'prayer_request' ? 'Prayer Request' :
-                           conversation.conversation_type === 'emergency' ? 'Emergency' :
-                           conversation.conversation_type === 'event_reminder' ? 'Event Reminder' :
-                           conversation.conversation_type === 'pastoral_care' ? 'Pastoral Care' :
-                           'General'}
-                          {conversation.updated_at && ` • ${format(new Date(conversation.updated_at), 'MMM d, h:mm a')}`}
-                        </p>
+                        <div className="space-y-1 w-full">
+                          <p className="text-sm sm:text-base text-muted-foreground truncate" style={{ maxWidth: '100%' }}>
+                            {(() => {
+                              const type = conversation.conversation_type === 'prayer_request' ? 'Prayer' :
+                                         conversation.conversation_type === 'emergency' ? 'Emergency' :
+                                         conversation.conversation_type === 'event_reminder' ? 'Event' :
+                                         conversation.conversation_type === 'pastoral_care' ? 'Pastoral' :
+                                         'General';
+                              return type;
+                            })()}
+                          </p>
+                          {conversation.updated_at && (
+                            <p className="text-sm text-muted-foreground truncate" style={{ maxWidth: '100%' }}>
+                              {format(new Date(conversation.updated_at), 'MMM d')}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                    <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground flex-shrink-0 ml-2" />
                   </div>
                 ))
               ) : (
-                <p className="text-muted-foreground text-base">No recent SMS conversations to display.</p>
+                <p className="text-muted-foreground text-base sm:text-lg w-full">No recent SMS conversations.</p>
               )}
             </div>
           </CardContent>
-          <CardFooter>
-            <Button variant="outline" className="w-full" asChild>
-              <a href="/sms">View All Conversations</a>
+          <CardFooter className="p-5 sm:p-6">
+            <Button variant="outline" className="w-full text-sm sm:text-base h-10 sm:h-11" asChild>
+              <a href="/sms">View All</a>
             </Button>
           </CardFooter>
         </Card>
@@ -1015,17 +1026,17 @@ export function Dashboard() {
       {/* Insights Section */}
       <motion.div variants={itemVariants}>
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center text-xl">
-              <BarChart3 className="mr-2 h-6 w-6" />
+          <CardHeader className="p-5 sm:p-6">
+            <CardTitle className="flex items-center text-xl sm:text-2xl">
+              <BarChart3 className="mr-3 h-6 w-6 sm:h-7 sm:w-7" />
               Key Insights
             </CardTitle>
-            <CardDescription className="text-base">Interesting patterns and trends from your data</CardDescription>
+            <CardDescription className="text-base sm:text-lg">Interesting patterns and trends from your data</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <CardContent className="p-4 sm:p-6">
+            <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                {/* Sunday Service Attendance Rate */}
-               <div className={`p-4 rounded-lg border ${
+               <div className={`p-3 sm:p-4 rounded-lg border ${
                 stats.sundayServiceRate >= 70 ? 
                   'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800' :
                 stats.sundayServiceRate >= 50 ? 
@@ -1033,12 +1044,12 @@ export function Dashboard() {
                   'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800'
               }`}>
                 <div className="flex items-center gap-2 mb-2">
-                  <BookOpen className={`h-5 w-5 ${
+                  <BookOpen className={`h-4 w-4 sm:h-5 sm:w-5 ${
                     stats.sundayServiceRate >= 70 ? 'text-green-600' :
                     stats.sundayServiceRate >= 50 ? 'text-yellow-600' :
                     'text-red-600'
                   }`} />
-                  <h4 className={`font-semibold ${
+                  <h4 className={`font-semibold text-sm sm:text-base ${
                     stats.sundayServiceRate >= 70 ? 'text-green-900 dark:text-green-100' :
                     stats.sundayServiceRate >= 50 ? 'text-yellow-900 dark:text-yellow-100' :
                     'text-red-900 dark:text-red-100'
@@ -1047,7 +1058,7 @@ export function Dashboard() {
                 {isLoading ? (
                   <Skeleton className="h-4 w-32 mb-2" />
                 ) : (
-                  <p className={`text-2xl font-bold mb-1 ${
+                  <p className={`text-xl sm:text-2xl font-bold mb-1 ${
                     stats.sundayServiceRate >= 70 ? 'text-green-700 dark:text-green-300' :
                     stats.sundayServiceRate >= 50 ? 'text-yellow-700 dark:text-yellow-300' :
                     'text-red-700 dark:text-red-300'
@@ -1055,7 +1066,7 @@ export function Dashboard() {
                     {stats.sundayServiceRate.toFixed(0)}%
                   </p>
                 )}
-                <p className={`text-sm ${
+                <p className={`text-xs sm:text-sm ${
                   stats.sundayServiceRate >= 70 ? 'text-green-600 dark:text-green-400' :
                   stats.sundayServiceRate >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
                   'text-red-600 dark:text-red-400'
@@ -1065,7 +1076,7 @@ export function Dashboard() {
                 </div>
                 
               {/* Donation Growth */}
-              <div className={`p-4 rounded-lg border ${
+              <div className={`p-3 sm:p-4 rounded-lg border ${
                 !canCalculateTrend ? 
                   'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800' :
                 donationTrend > 5 ? 
@@ -1075,13 +1086,13 @@ export function Dashboard() {
                   'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800'
               }`}>
                 <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className={`h-5 w-5 ${
+                  <TrendingUp className={`h-4 w-4 sm:h-5 sm:w-5 ${
                     !canCalculateTrend ? 'text-blue-600' :
                     donationTrend > 5 ? 'text-green-600' :
                     donationTrend > 0 ? 'text-yellow-600' :
                     'text-red-600'
                   }`} />
-                  <h4 className={`font-semibold ${
+                  <h4 className={`font-semibold text-sm sm:text-base ${
                     !canCalculateTrend ? 'text-blue-900 dark:text-blue-100' :
                     donationTrend > 5 ? 'text-green-900 dark:text-green-100' :
                     donationTrend > 0 ? 'text-yellow-900 dark:text-yellow-100' :
@@ -1091,11 +1102,11 @@ export function Dashboard() {
                 {isLoading ? (
                   <Skeleton className="h-4 w-32 mb-2" />
                 ) : !canCalculateTrend ? (
-                  <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 mb-1">
+                  <p className="text-xl sm:text-2xl font-bold text-blue-700 dark:text-blue-300 mb-1">
                     Waiting for data
                   </p>
                 ) : (
-                  <p className={`text-2xl font-bold mb-1 ${
+                  <p className={`text-xl sm:text-2xl font-bold mb-1 ${
                     donationTrend > 5 ? 'text-green-700 dark:text-green-300' :
                     donationTrend > 0 ? 'text-yellow-700 dark:text-yellow-300' :
                     'text-red-700 dark:text-red-300'
@@ -1108,7 +1119,7 @@ export function Dashboard() {
                     )}
                   </p>
                 )}
-                <p className={`text-sm ${
+                <p className={`text-xs sm:text-sm ${
                   !canCalculateTrend ? 'text-blue-600 dark:text-blue-400' :
                   donationTrend > 5 ? 'text-green-600 dark:text-green-400' :
                   donationTrend > 0 ? 'text-yellow-600 dark:text-yellow-400' :
@@ -1122,7 +1133,7 @@ export function Dashboard() {
               </div>
               
               {/* Event Activity */}
-              <div className={`p-4 rounded-lg border ${
+              <div className={`p-3 sm:p-4 rounded-lg border ${
                 stats.eventsThisMonth > stats.averageEventsPerMonth * 1.2 ? 
                   'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800' :
                 stats.eventsThisMonth > stats.averageEventsPerMonth ? 
@@ -1130,12 +1141,12 @@ export function Dashboard() {
                   'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800'
               }`}>
                 <div className="flex items-center gap-2 mb-2">
-                  <Calendar className={`h-5 w-5 ${
+                  <Calendar className={`h-4 w-4 sm:h-5 sm:w-5 ${
                     stats.eventsThisMonth > stats.averageEventsPerMonth * 1.2 ? 'text-green-600' :
                     stats.eventsThisMonth > stats.averageEventsPerMonth ? 'text-yellow-600' :
                     'text-red-600'
                   }`} />
-                  <h4 className={`font-semibold ${
+                  <h4 className={`font-semibold text-sm sm:text-base ${
                     stats.eventsThisMonth > stats.averageEventsPerMonth * 1.2 ? 'text-green-900 dark:text-green-100' :
                     stats.eventsThisMonth > stats.averageEventsPerMonth ? 'text-yellow-900 dark:text-yellow-100' :
                     'text-red-900 dark:text-red-100'
@@ -1144,7 +1155,7 @@ export function Dashboard() {
                 {isLoading ? (
                   <Skeleton className="h-4 w-32 mb-2" />
                 ) : (
-                  <p className={`text-2xl font-bold mb-1 ${
+                  <p className={`text-xl sm:text-2xl font-bold mb-1 ${
                     stats.eventsThisMonth > stats.averageEventsPerMonth * 1.2 ? 'text-green-700 dark:text-green-300' :
                     stats.eventsThisMonth > stats.averageEventsPerMonth ? 'text-yellow-700 dark:text-yellow-300' :
                     'text-red-700 dark:text-red-300'
@@ -1152,7 +1163,7 @@ export function Dashboard() {
                     {stats.eventsThisMonth > stats.averageEventsPerMonth ? 'Above' : 'Below'} Average
                   </p>
                 )}
-                <p className={`text-sm ${
+                <p className={`text-xs sm:text-sm ${
                   stats.eventsThisMonth > stats.averageEventsPerMonth * 1.2 ? 'text-green-600 dark:text-green-400' :
                   stats.eventsThisMonth > stats.averageEventsPerMonth ? 'text-yellow-600 dark:text-yellow-400' :
                   'text-red-600 dark:text-red-400'
@@ -1162,7 +1173,7 @@ export function Dashboard() {
           </div>
               
  {/* Task Management */}
- <div className={`p-4 rounded-lg border ${
+ <div className={`p-3 sm:p-4 rounded-lg border ${
                 stats.totalTasks > 0 ? 
                   (stats.overdueTasks / stats.totalTasks) <= 0.1 ? 
                     'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800' :
@@ -1172,14 +1183,14 @@ export function Dashboard() {
                 : 'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800'
               }`}>
                 <div className="flex items-center gap-2 mb-2">
-                  <CheckSquare className={`h-5 w-5 ${
+                  <CheckSquare className={`h-4 w-4 sm:h-5 sm:w-5 ${
                     stats.totalTasks > 0 ? 
                       (stats.overdueTasks / stats.totalTasks) <= 0.1 ? 'text-green-600' :
                       (stats.overdueTasks / stats.totalTasks) <= 0.3 ? 'text-yellow-600' :
                       'text-red-600'
                     : 'text-blue-600'
                   }`} />
-                  <h4 className={`font-semibold ${
+                  <h4 className={`font-semibold text-sm sm:text-base ${
                     stats.totalTasks > 0 ? 
                       (stats.overdueTasks / stats.totalTasks) <= 0.1 ? 'text-green-900 dark:text-green-100' :
                       (stats.overdueTasks / stats.totalTasks) <= 0.3 ? 'text-yellow-900 dark:text-yellow-100' :
@@ -1190,17 +1201,17 @@ export function Dashboard() {
                 {isLoading ? (
                   <Skeleton className="h-4 w-32 mb-2" />
                 ) : (
-                  <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 mb-1">
+                  <p className="text-xl sm:text-2xl font-bold text-blue-700 dark:text-blue-300 mb-1">
                     {stats.totalTasks > 0 ? `${((stats.totalTasks - stats.overdueTasks) / stats.totalTasks * 100).toFixed(0)}%` : '0%'}
                   </p>
                 )}
-                <p className="text-sm text-blue-600 dark:text-blue-400">
+                <p className="text-xs sm:text-sm text-blue-600 dark:text-blue-400">
                   {stats.overdueTasks} overdue tasks need attention
                 </p>
                   </div>
 
               {/* Volunteer Engagement */}
-              <div className={`p-4 rounded-lg border ${
+              <div className={`p-3 sm:p-4 rounded-lg border ${
                 stats.eventsStillNeedingVolunteers === 0 ? 
                   'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800' :
                 stats.eventsStillNeedingVolunteers <= stats.eventsWithVolunteersEnabled * 0.3 ? 
@@ -1208,12 +1219,12 @@ export function Dashboard() {
                   'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800'
               }`}>
                 <div className="flex items-center gap-2 mb-2">
-                  <Users2 className={`h-5 w-5 ${
+                  <Users2 className={`h-4 w-4 sm:h-5 sm:w-5 ${
                     stats.eventsStillNeedingVolunteers === 0 ? 'text-green-600' :
                     stats.eventsStillNeedingVolunteers <= stats.eventsWithVolunteersEnabled * 0.3 ? 'text-yellow-600' :
                     'text-red-600'
                   }`} />
-                  <h4 className={`font-semibold ${
+                  <h4 className={`font-semibold text-sm sm:text-base ${
                     stats.eventsStillNeedingVolunteers === 0 ? 'text-green-900 dark:text-green-100' :
                     stats.eventsStillNeedingVolunteers <= stats.eventsWithVolunteersEnabled * 0.3 ? 'text-yellow-900 dark:text-yellow-100' :
                     'text-red-900 dark:text-red-100'
@@ -1222,7 +1233,7 @@ export function Dashboard() {
                 {isLoading ? (
                   <Skeleton className="h-4 w-32 mb-2" />
                 ) : (
-                  <p className={`text-2xl font-bold mb-1 ${
+                  <p className={`text-xl sm:text-2xl font-bold mb-1 ${
                     stats.eventsStillNeedingVolunteers === 0 ? 'text-green-700 dark:text-green-300' :
                     stats.eventsStillNeedingVolunteers <= stats.eventsWithVolunteersEnabled * 0.3 ? 'text-yellow-700 dark:text-yellow-300' :
                     'text-red-700 dark:text-red-300'
@@ -1232,7 +1243,7 @@ export function Dashboard() {
                      'Needs Volunteers'}
                   </p>
                 )}
-                <p className={`text-sm ${
+                <p className={`text-xs sm:text-sm ${
                   stats.eventsStillNeedingVolunteers === 0 ? 'text-green-600 dark:text-green-400' :
                   stats.eventsStillNeedingVolunteers <= stats.eventsWithVolunteersEnabled * 0.3 ? 'text-yellow-600 dark:text-yellow-400' :
                   'text-red-600 dark:text-red-400'
@@ -1242,7 +1253,7 @@ export function Dashboard() {
               </div>
               
               {/* Recent Visitors */}
-              <div className={`p-4 rounded-lg border ${
+              <div className={`p-3 sm:p-4 rounded-lg border ${
                 (() => {
                   const thirtyDaysAgo = new Date();
                   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -1258,7 +1269,7 @@ export function Dashboard() {
                 })()
               }`}>
                 <div className="flex items-center gap-2 mb-2">
-                  <UserPlus className={`h-5 w-5 ${
+                  <UserPlus className={`h-4 w-4 sm:h-5 sm:w-5 ${
                     (() => {
                       const thirtyDaysAgo = new Date();
                       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -1271,7 +1282,7 @@ export function Dashboard() {
                              'text-red-600';
                     })()
                   }`} />
-                  <h4 className={`font-semibold ${
+                  <h4 className={`font-semibold text-sm sm:text-base ${
                     (() => {
                       const thirtyDaysAgo = new Date();
                       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -1288,7 +1299,7 @@ export function Dashboard() {
                 {isLoading ? (
                   <Skeleton className="h-4 w-32 mb-2" />
                 ) : (
-                  <p className={`text-2xl font-bold mb-1 ${
+                  <p className={`text-xl sm:text-2xl font-bold mb-1 ${
                     (() => {
                       const thirtyDaysAgo = new Date();
                       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -1315,7 +1326,7 @@ export function Dashboard() {
                     })()}
                   </p>
                 )}
-                <p className={`text-sm ${
+                <p className={`text-xs sm:text-sm ${
                   (() => {
                     const thirtyDaysAgo = new Date();
                     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -1334,11 +1345,11 @@ export function Dashboard() {
                 </div>
 
             {/* Additional Insights Row */}
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
+            <div className="mt-6 grid gap-3 sm:gap-4 md:grid-cols-2">
               {/* Top Performing Metric */}
-              <div className="p-4 bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-950 dark:to-emerald-900 rounded-lg border border-emerald-200 dark:border-emerald-800">
+              <div className="p-3 sm:p-4 bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-950 dark:to-emerald-900 rounded-lg border border-emerald-200 dark:border-emerald-800">
                 <div className="flex items-center gap-2 mb-3">
-                  <Trophy className="h-5 w-5 text-emerald-600" />
+                  <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-600" />
                   <h4 className="font-semibold text-emerald-900 dark:text-emerald-100">Top Performing Area</h4>
               </div>
                 {isLoading ? (
@@ -1416,38 +1427,38 @@ export function Dashboard() {
                         return topMetric.name;
                       })()}
                     </p>
-                    <p className="text-sm text-emerald-600 dark:text-emerald-400">
+                    <p className="text-sm text-emerald-600 dark:text-emerald-400 break-words">
                       {(() => {
                         const metrics = [
                           { 
                             name: 'Member Engagement', 
                             value: stats.totalPeople > 0 ? (stats.activeMembers / stats.totalPeople) * 100 : 0,
                             condition: stats.totalPeople > 0,
-                            recommendation: 'Keep fostering community connections and involvement.'
+                            recommendation: 'Keep fostering community connections.'
                           },
                           { 
                             name: 'Sunday Service Rate', 
                             value: stats.sundayServiceRate,
                             condition: stats.sundayServiceRate > 0,
-                            recommendation: 'Continue building meaningful Sunday experiences.'
+                            recommendation: 'Continue building Sunday experiences.'
                           },
                           { 
                             name: 'Event Activity', 
                             value: stats.eventsThisMonth > stats.averageEventsPerMonth ? 100 : 50,
                             condition: stats.eventsThisMonth > 0,
-                            recommendation: 'Maintain this strong event planning momentum.'
+                            recommendation: 'Maintain event planning momentum.'
                           },
                           { 
                             name: 'Donation Growth', 
                             value: stats.growthRate > 0 ? Math.abs(stats.growthRate) : 0,
                             condition: stats.growthRate > 0,
-                            recommendation: 'Keep communicating the impact of giving.'
+                            recommendation: 'Keep communicating giving impact.'
                           },
                           { 
                             name: 'Volunteer Coverage', 
                             value: stats.eventsStillNeedingVolunteers === 0 ? 100 : 0,
                             condition: stats.eventsStillNeedingVolunteers === 0,
-                            recommendation: 'Excellent volunteer engagement - keep recognizing their efforts.'
+                            recommendation: 'Great volunteer engagement.'
                           },
                           { 
                             name: 'Visitor Growth', 
@@ -1468,17 +1479,17 @@ export function Dashboard() {
                                 new Date(person.createdAt) >= thirtyDaysAgo
                               ).length > 0;
                             })(),
-                            recommendation: 'Great visitor attraction - focus on follow-up and integration.'
+                            recommendation: 'Focus on visitor follow-up.'
                           },
                           { 
                             name: 'Task Management', 
                             value: stats.totalTasks > 0 ? ((stats.totalTasks - stats.overdueTasks) / stats.totalTasks) * 100 : 0,
                             condition: stats.totalTasks > 0 && (stats.totalTasks - stats.overdueTasks) / stats.totalTasks >= 0.8,
-                            recommendation: 'Excellent task management - maintain this strong organizational discipline.'
+                            recommendation: 'Maintain organizational discipline.'
                           }
                         ].filter(m => m.condition && !isNaN(m.value) && isFinite(m.value));
                         
-                        if (metrics.length === 0) return 'Your strongest organizational metric';
+                        if (metrics.length === 0) return 'Your strongest metric';
                         
                         const topMetric = metrics.reduce((max, current) => 
                           current.value > max.value ? current : max
@@ -1492,9 +1503,9 @@ export function Dashboard() {
           </div>
 
               {/* Growth Opportunity */}
-              <div className="p-4 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 rounded-lg border border-amber-200 dark:border-amber-800">
+              <div className="p-3 sm:p-4 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 rounded-lg border border-amber-200 dark:border-amber-800">
                 <div className="flex items-center gap-2 mb-3">
-                  <Activity className="h-5 w-5 text-amber-600" />
+                  <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600" />
                   <h4 className="font-semibold text-amber-900 dark:text-amber-100">Growth Opportunity</h4>
       </div>
                 {isLoading ? (
@@ -1531,22 +1542,22 @@ export function Dashboard() {
                         return 'Member Retention';
                       })()}
                     </p>
-                    <p className="text-sm text-amber-600 dark:text-amber-400">
+                    <p className="text-sm text-amber-600 dark:text-amber-400 break-words">
                       {(() => {
                         // Priority 1: Immediate needs
-                        if (stats.eventsStillNeedingVolunteers > 0) return 'Reach out to members and encourage volunteer sign-ups for upcoming events.';
+                        if (stats.eventsStillNeedingVolunteers > 0) return 'Reach out for volunteer sign-ups.';
                    
                         // Priority 2: Donation trends
-                        if (stats.growthRate < 0) return 'Share stories of impact and consider different giving opportunities to encourage donations.';
+                        if (stats.growthRate < 0) return 'Share impact stories to encourage giving.';
 
                         // Priority 3: Member engagement issues
-                        if (stats.totalPeople > 0 && (stats.activeMembers / stats.totalPeople) < 0.7) return 'Focus on engaging visitors and inactive members through personal outreach and meaningful activities.';
+                        if (stats.totalPeople > 0 && (stats.activeMembers / stats.totalPeople) < 0.7) return 'Focus on engaging inactive members.';
                         
                         // Priority 4: Sunday service attendance
-                        if (stats.sundayServiceRate < 50) return 'Consider what might be preventing members from attending and address those barriers.';
+                        if (stats.sundayServiceRate < 50) return 'Address attendance barriers.';
                         
                         // Priority 5: Event activity
-                        if (stats.eventsThisMonth < stats.averageEventsPerMonth) return 'Plan more events or activities to increase member engagement and community building.';
+                        if (stats.eventsThisMonth < stats.averageEventsPerMonth) return 'Plan more events for engagement.';
                         
                         // Priority 6: Visitor follow-up
                         const thirtyDaysAgo = new Date();
@@ -1556,10 +1567,10 @@ export function Dashboard() {
                           new Date(person.createdAt) >= thirtyDaysAgo
                         ).length;
                         
-                        if (recentVisitors > 0) return 'Follow up with recent visitors to help them feel welcome and connected.';
+                        if (recentVisitors > 0) return 'Follow up with recent visitors.';
                         
                         // Default: Member retention
-                        return 'Focus on maintaining strong relationships and preventing member turnover.';
+                        return 'Focus on member relationships.';
                       })()}
                     </p>
         </div>
@@ -1573,12 +1584,12 @@ export function Dashboard() {
       {/* Average Attendance by Event Type Section */}
         <motion.div variants={itemVariants}>
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center text-xl">
-              <Users2 className="mr-2 h-6 w-6" />
+          <CardHeader className="p-5 sm:p-6">
+            <CardTitle className="flex items-center text-xl sm:text-2xl">
+              <Users2 className="mr-3 h-6 w-6 sm:h-7 sm:w-7" />
               Attendance by Event Type
             </CardTitle>
-            <CardDescription className="text-base">Average attendance per event for different event types (last 6 months)</CardDescription>
+            <CardDescription className="text-base sm:text-lg">Average attendance per event for different event types (last 6 months)</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-3">
@@ -1672,12 +1683,12 @@ export function Dashboard() {
       {/* Attendance Statistics Section */}
         <motion.div variants={itemVariants}>
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center text-xl">
-              <Users className="mr-2 h-6 w-6" />
+          <CardHeader className="p-5 sm:p-6">
+            <CardTitle className="flex items-center text-xl sm:text-2xl">
+              <Users className="mr-3 h-6 w-6 sm:h-7 sm:w-7" />
               Attendance Statistics
               </CardTitle>
-            <CardDescription className="text-base">Last 30 days overview</CardDescription>
+            <CardDescription className="text-base sm:text-lg">Last 30 days overview</CardDescription>
             </CardHeader>
           
           <CardContent>
@@ -1809,20 +1820,20 @@ export function Dashboard() {
                         return (
                           <div 
                             key={member.name} 
-                            className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                            className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-gray-50 transition-colors cursor-pointer w-full max-w-full overflow-hidden"
                             onClick={() => handleMemberProfileClick(memberData?.id)}
                             title={`Click to view ${member.name}'s profile`}
                           >
-                            <div className="flex items-center gap-3">
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
+                            <div className="flex items-center gap-3 flex-1 min-w-0 overflow-hidden">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 ${
                                 index === 0 ? 'bg-primary' :
                                 index === 1 ? 'bg-muted-foreground' :
                                 index === 2 ? 'bg-amber-600' : 'bg-primary'
                               }`}>
                                 {index + 1}
                               </div>
-                              <div className="flex items-center gap-3">
-                                <Avatar className="h-8 w-8">
+                              <div className="flex items-center gap-3 flex-1 min-w-0 overflow-hidden">
+                                <Avatar className="h-8 w-8 flex-shrink-0">
                                   {memberData?.image_url ? (
                                     <AvatarImage 
                                       src={memberData.image_url} 
@@ -1838,13 +1849,13 @@ export function Dashboard() {
                                      getInitials(member.name.split(' ')[0] || '', member.name.split(' ')[1] || '')}
                                   </AvatarFallback>
                                 </Avatar>
-                                <div className="min-w-0">
+                                <div className="min-w-0 flex-1 overflow-hidden">
                                   <div className="font-medium text-foreground text-sm truncate">{member.name}</div>
                                   <div className="text-xs text-muted-foreground">{member.count} events</div>
                                 </div>
                               </div>
                             </div>
-                            <div className="text-sm font-bold text-primary">{member.count}</div>
+                            <div className="text-sm font-bold text-primary flex-shrink-0">{member.count}</div>
                           </div>
                         );
                       })}
@@ -1860,12 +1871,12 @@ export function Dashboard() {
       {/* Donation Statistics Section */}
         <motion.div variants={itemVariants}>
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center text-xl">
-              <DollarSign className="mr-2 h-6 w-6" />
+          <CardHeader className="p-5 sm:p-6">
+            <CardTitle className="flex items-center text-xl sm:text-2xl">
+              <DollarSign className="mr-3 h-6 w-6 sm:h-7 sm:w-7" />
               Donation Statistics
               </CardTitle>
-            <CardDescription className="text-base">Financial overview of your organization</CardDescription>
+            <CardDescription className="text-base sm:text-lg">Financial overview of your organization</CardDescription>
             </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-3">
@@ -1959,12 +1970,12 @@ export function Dashboard() {
       {/* Event Statistics Section */}
         <motion.div variants={itemVariants}>
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center text-xl">
-              <Calendar className="mr-2 h-6 w-6" />
+          <CardHeader className="p-5 sm:p-6">
+            <CardTitle className="flex items-center text-xl sm:text-2xl">
+              <Calendar className="mr-3 h-6 w-6 sm:h-7 sm:w-7" />
               Event Statistics
               </CardTitle>
-            <CardDescription className="text-base">Overview of your organization's events</CardDescription>
+            <CardDescription className="text-base sm:text-lg">Overview of your organization's events</CardDescription>
             </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-3">
@@ -2021,12 +2032,12 @@ export function Dashboard() {
       {/* Member Statistics Section */}
       <motion.div variants={itemVariants}>
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center text-xl">
-              <Users2 className="mr-2 h-6 w-6" />
+          <CardHeader className="p-5 sm:p-6">
+            <CardTitle className="flex items-center text-xl sm:text-2xl">
+              <Users2 className="mr-3 h-6 w-6 sm:h-7 sm:w-7" />
               Member Statistics
             </CardTitle>
-            <CardDescription className="text-base">Detailed breakdown of your organization's membership</CardDescription>
+            <CardDescription className="text-base sm:text-lg">Detailed breakdown of your organization's membership</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-3">
@@ -2098,12 +2109,12 @@ export function Dashboard() {
       {/* Family Overview Section */}
       <motion.div variants={itemVariants}>
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center text-xl">
-              <Home className="mr-2 h-6 w-6" />
+          <CardHeader className="p-5 sm:p-6">
+            <CardTitle className="flex items-center text-xl sm:text-2xl">
+              <Home className="mr-3 h-6 w-6 sm:h-7 sm:w-7" />
               Member Demographics
             </CardTitle>
-            <CardDescription className="text-base">Age and family structure overview</CardDescription>
+            <CardDescription className="text-base sm:text-lg">Age and family structure overview</CardDescription>
           </CardHeader>
           <CardContent>
             {stats.totalFamilies > 0 ? (
@@ -2207,7 +2218,7 @@ export function Dashboard() {
         </Card>
       </motion.div>
 
-      <div className="grid gap-6 tablet:grid-cols-2 md:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
         <motion.div variants={itemVariants}>
           <Card>
             <CardHeader>
@@ -2257,18 +2268,19 @@ export function Dashboard() {
             <CardContent>
               <div className="space-y-4">
                 {donations.slice(0, 5).map(donation => (
-                  <div key={donation.id} className="flex items-center justify-between border-b pb-3">
-                    <div>
+                  <div key={donation.id} className="flex items-start justify-between border-b pb-3 gap-3">
+                    <div className="flex-1 min-w-0">
                       <p className="font-medium text-base">${parseFloat(donation.amount).toFixed(2)}</p>
                       <p className="text-sm text-muted-foreground">
                         {format(new Date(donation.date + 'T12:00:00'), 'MMM d, yyyy')}
                         {donation.attendance && ` • ${donation.attendance} people`}
                       </p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-1 sm:gap-2 flex-shrink-0">
                       <Button 
                         variant="outline" 
                         size="sm"
+                        className="text-xs sm:text-sm px-2 sm:px-3"
                         onClick={() => handleEditDonation(donation)}
                       >
                         Edit
@@ -2276,6 +2288,7 @@ export function Dashboard() {
                       <Button 
                         variant="outline" 
                         size="sm"
+                        className="text-xs sm:text-sm px-2 sm:px-3"
                         onClick={() => handleDeleteDonation(donation)}
                       >
                         Delete
@@ -2374,7 +2387,7 @@ export function Dashboard() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="edit-amount">Amount ($) *</Label>
                 <Input
@@ -2404,7 +2417,7 @@ export function Dashboard() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="edit-type">Type</Label>
                 <select
@@ -2482,7 +2495,7 @@ export function Dashboard() {
       {/* SMS Conversation Dialog - Same as SMS page */}
       {selectedSMSConversation && (
         <Dialog open={!!selectedSMSConversation} onOpenChange={() => setSelectedSMSConversation(null)}>
-          <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
+          <DialogContent className="w-full max-w-4xl sm:max-w-4xl max-h-[80vh] flex flex-col mx-2 sm:mx-auto">
             <DialogHeader className="flex-shrink-0">
               <DialogTitle className="flex items-center space-x-3">
                 <div className="flex items-center space-x-2">

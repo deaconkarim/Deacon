@@ -559,31 +559,31 @@ export function People() {
                     >
                       <CardHeader className="pb-2">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-4">
-                            <Avatar className="h-12 w-12">
-                              <AvatarImage src={member.image_url} />
-                              <AvatarFallback>
-                                {member.firstname.charAt(0)}{member.lastname.charAt(0)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <CardTitle className="text-xl">{formatName(member.firstname, member.lastname)}</CardTitle>
-                              <CardDescription>
-                                {member.status === 'active' ? (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                                    Active
-                                  </span>
-                                ) : member.status === 'visitor' ? (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                    Visitor
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                                    Inactive
-                                  </span>
-                                )}
-                              </CardDescription>
-                            </div>
+                        <div className="flex items-center space-x-4">
+                          <Avatar className="h-12 w-12">
+                            <AvatarImage src={member.image_url} />
+                            <AvatarFallback>
+                              {member.firstname.charAt(0)}{member.lastname.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <CardTitle className="text-xl">{formatName(member.firstname, member.lastname)}</CardTitle>
+                            <CardDescription>
+                              {member.status === 'active' ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                  Active
+                                </span>
+                              ) : member.status === 'visitor' ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                  Visitor
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                  Inactive
+                                </span>
+                              )}
+                            </CardDescription>
+                          </div>
                           </div>
 
                         </div>
@@ -644,16 +644,16 @@ export function People() {
                     <thead className="[&_tr]:border-b">
                       <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                         <th className="h-16 px-4 text-left align-middle font-medium">
-                          <Button 
-                            variant="ghost" 
-                            className="flex items-center gap-1 touch-target"
+                            <Button 
+                              variant="ghost" 
+                              className="flex items-center gap-1 touch-target"
                                                     onClick={() => handleSort('lastname')}
-                      >
-                        Name
+                            >
+                              Name
                         {sortField === 'lastname' && (
-                              sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                            )}
-                          </Button>
+                                sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                              )}
+                            </Button>
                         </th>
                         <th className="h-16 px-4 text-left align-middle font-medium hidden sm:table-cell">
                           <Button 
@@ -720,12 +720,12 @@ export function People() {
                           <td className="h-16 px-4 align-middle">
                             <div className="flex items-center space-x-3">
                               <Avatar className="h-12 w-12">
-                                <AvatarImage src={member.image_url} />
+                                  <AvatarImage src={member.image_url} />
                                 <AvatarFallback className="text-sm font-medium">
-                                  {getInitials(member.firstname, member.lastname)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
+                                    {getInitials(member.firstname, member.lastname)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
                                 <div className="font-semibold text-base">{formatName(member.firstname, member.lastname)}</div>
                               </div>
                             </div>
@@ -767,7 +767,7 @@ export function People() {
                             )}
                           </td>
 
-                          </tr>
+                        </tr>
                       ))}
                     </tbody>
                   </table>
@@ -948,14 +948,14 @@ export function People() {
             </DialogDescription>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[70vh] pr-2">
-            <MemberForm
-              initialData={{
-                firstname: '',
-                lastname: '',
-                email: '',
-                phone: '',
-                status: 'active',
-                image_url: '',
+          <MemberForm
+            initialData={{
+              firstname: '',
+              lastname: '',
+              email: '',
+              phone: '',
+              status: 'active',
+              image_url: '',
                 gender: 'male',
                 member_type: 'adult',
                 role: 'member',
@@ -984,27 +984,27 @@ export function People() {
                 ministry_involvement: [],
                 communication_preferences: { sms: true, email: true, mail: false },
                 tags: []
-              }}
-              onSave={async (memberData) => {
-                try {
+            }}
+            onSave={async (memberData) => {
+              try {
                   const addedMember = await addMember(memberData);
-                  setMembers(prev => [addedMember, ...prev]);
-                  setIsAddDialogOpen(false);
-                  toast({
-                    title: "Success",
-                    description: "Member added successfully"
-                  });
-                } catch (error) {
-                  console.error('Error adding member:', error);
-                  toast({
-                    title: "Error",
-                    description: "Failed to add member",
-                    variant: "destructive",
-                  });
-                }
-              }}
-              onCancel={() => setIsAddDialogOpen(false)}
-            />
+                setMembers(prev => [addedMember, ...prev]);
+                setIsAddDialogOpen(false);
+                toast({
+                  title: "Success",
+                  description: "Member added successfully"
+                });
+              } catch (error) {
+                console.error('Error adding member:', error);
+                toast({
+                  title: "Error",
+                  description: "Failed to add member",
+                  variant: "destructive",
+                });
+              }
+            }}
+            onCancel={() => setIsAddDialogOpen(false)}
+          />
           </div>
         </DialogContent>
       </Dialog>
@@ -1020,9 +1020,9 @@ export function People() {
           </DialogHeader>
           {selectedMember && (
             <div className="overflow-y-auto max-h-[70vh] pr-2">
-              <MemberForm
+            <MemberForm
                 key={selectedMember.id}
-                initialData={{
+              initialData={{
                   // Basic fields (these should exist in the database)
                   id: selectedMember.id,
                   firstname: selectedMember.firstname || '',
@@ -1063,31 +1063,31 @@ export function People() {
                   ministry_involvement: selectedMember.ministry_involvement || [],
                   communication_preferences: selectedMember.communication_preferences || { sms: true, email: true, mail: false },
                   tags: selectedMember.tags || []
-                }}
-                onSave={async (memberData) => {
-                  try {
+              }}
+              onSave={async (memberData) => {
+                try {
                     const updatedMember = await updateMember(selectedMember.id, memberData);
-                    setMembers(prev => prev.map(m => m.id === updatedMember.id ? updatedMember : m));
-                    setIsEditDialogOpen(false);
-                    setSelectedMember(null);
-                    toast({
-                      title: "Success",
-                      description: "Member updated successfully"
-                    });
-                  } catch (error) {
-                    console.error('Error updating member:', error);
-                    toast({
-                      title: "Error",
-                      description: "Failed to update member",
-                      variant: "destructive",
-                    });
-                  }
-                }}
-                onCancel={() => {
+                  setMembers(prev => prev.map(m => m.id === updatedMember.id ? updatedMember : m));
                   setIsEditDialogOpen(false);
                   setSelectedMember(null);
-                }}
-              />
+                  toast({
+                    title: "Success",
+                    description: "Member updated successfully"
+                  });
+                } catch (error) {
+                  console.error('Error updating member:', error);
+                  toast({
+                    title: "Error",
+                    description: "Failed to update member",
+                    variant: "destructive",
+                  });
+                }
+              }}
+              onCancel={() => {
+                setIsEditDialogOpen(false);
+                setSelectedMember(null);
+              }}
+            />
             </div>
           )}
         </DialogContent>

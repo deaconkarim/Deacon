@@ -30,34 +30,34 @@ export const smsService = {
         throw new Error('User not associated with any organization');
       }
 
-      let query = supabase
-        .from('sms_conversations')
-        .select(`
-          *,
-          sms_messages (
+    let query = supabase
+      .from('sms_conversations')
+      .select(`
+        *,
+        sms_messages (
+          id,
+          direction,
+          body,
+          status,
+          sent_at,
+          member:members (
             id,
-            direction,
-            body,
-            status,
-            sent_at,
-            member:members (
-              id,
-              firstname,
+          firstname,
               lastname,
               image_url
-            )
           )
-        `)
+        )
+      `)
         .eq('organization_id', organizationId)
-        .order('updated_at', { ascending: false });
+      .order('updated_at', { ascending: false });
 
-      if (conversationType) {
-        query = query.eq('conversation_type', conversationType);
-      }
+    if (conversationType) {
+      query = query.eq('conversation_type', conversationType);
+    }
 
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
+    const { data, error } = await query;
+    if (error) throw error;
+    return data;
     } catch (error) {
       console.error('Error getting conversations:', error);
       throw error;
@@ -124,36 +124,36 @@ export const smsService = {
         throw new Error('User not associated with any organization');
       }
 
-      let query = supabase
-        .from('sms_messages')
-        .select(`
-          *,
-          member:members (
-            id,
-            firstname,
+    let query = supabase
+      .from('sms_messages')
+      .select(`
+        *,
+        member:members (
+          id,
+          firstname,
             lastname,
             image_url
-          ),
-          conversation:sms_conversations (
-            id,
-            title,
-            conversation_type
-          )
-        `)
+        ),
+        conversation:sms_conversations (
+          id,
+          title,
+          conversation_type
+        )
+      `)
         .eq('organization_id', organizationId)
-        .order('sent_at', { ascending: false });
+      .order('sent_at', { ascending: false });
 
-      if (conversationId) {
-        query = query.eq('conversation_id', conversationId);
-      }
+    if (conversationId) {
+      query = query.eq('conversation_id', conversationId);
+    }
 
-      if (memberId) {
-        query = query.eq('member_id', memberId);
-      }
+    if (memberId) {
+      query = query.eq('member_id', memberId);
+    }
 
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
+    const { data, error } = await query;
+    if (error) throw error;
+    return data;
     } catch (error) {
       console.error('Error getting messages:', error);
       throw error;

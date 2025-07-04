@@ -51,11 +51,11 @@ function App() {
         <Route path="/children-check-in" element={<ChildrenCheckin />} />
         <Route path="/children-check-in/add" element={<AddChild />} />
         <Route path="/reports" element={<Reports />} />
-                <Route path="/settings" element={<Settings />} />
+        <Route path="/settings" element={<Settings />} />
         <Route path="/sms" element={<SMS />} />
         <Route path="/alerts" element={<AlertsPage />} />
 
-        </Route>
+      </Route>
     </Routes>
   );
 }
