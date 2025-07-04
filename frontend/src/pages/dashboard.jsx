@@ -615,7 +615,7 @@ export function Dashboard() {
   };
 
   return (
-    <div className="space-y-6 sm:space-y-8 px-4 sm:px-0 w-full max-w-full overflow-x-hidden">
+    <div className="space-y-6 sm:space-y-8 w-full max-w-full overflow-x-hidden">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Command Center</h1>
       </div>
@@ -1733,7 +1733,6 @@ export function Dashboard() {
                                 index === 2 ? 'bg-amber-600' : 'bg-primary'
                               }`}></div>
                               <div className="font-medium text-foreground text-base truncate">{service.name}</div>
-                              <div className="text-sm text-muted-foreground">{service.value} attendees</div>
                       </div>
                             <div className="text-base font-bold text-primary">{service.value}</div>
                     </div>
