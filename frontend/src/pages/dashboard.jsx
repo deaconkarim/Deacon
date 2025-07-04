@@ -20,6 +20,7 @@ import {
   Trash2,
   Handshake,
   BookOpen,
+  Book,
   BarChart3,
   Trophy,
   FileText,
@@ -33,6 +34,14 @@ import {
   MessageCircle,
   Phone,
   User,
+  Sparkles,
+  Cake,
+  Heart,
+  Crown,
+  UserCheck,
+  UserX,
+  Hash,
+  ArrowLeft,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -615,381 +624,483 @@ export function Dashboard() {
   };
 
   return (
-    <div className="space-y-6 sm:space-y-8 w-full max-w-full overflow-x-hidden">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Command Center</h1>
+    <motion.div 
+      className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900/30 w-full max-w-full overflow-x-hidden"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header - Next-Gen Design */}
+        <motion.div className="mb-8 relative" variants={itemVariants}>
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-indigo-600/5 blur-3xl rounded-3xl"></div>
+          <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-900/60 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 shadow-xl">
+            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between space-y-6 lg:space-y-0">
+              <div className="flex-1">
+                <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 bg-clip-text text-transparent mb-2">
+                  Command Center
+                </h1>
+                <p className="text-slate-600 dark:text-slate-300 text-lg font-medium">
+                  Intelligent Church Management System
+                </p>
+                <div className="flex items-center space-x-6 mt-4">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm text-slate-600 dark:text-slate-400">Live Data</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                    <span className="text-sm text-slate-600 dark:text-slate-400">Analytics Active</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex-shrink-0 max-w-md">
+                <div className="relative backdrop-blur-sm bg-white/40 dark:bg-slate-800/40 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg">
+                  <LeadershipVerse />
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+
+
+        {/* Main Analytics Grid - Next-Gen Design */}
+        <div className="grid gap-6 sm:gap-8 grid-cols-1 lg:grid-cols-3 mb-12">
+          {/* People Analytics */}
+          <motion.div variants={itemVariants}>
+            <div className="group relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+              <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                      <Users2 className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-900 dark:text-white">People</h3>
+                      <p className="text-slate-600 dark:text-slate-400 text-sm">Community Analytics</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-3xl font-bold text-blue-600 mb-1">
+                      {isLoading ? '---' : stats.totalPeople}
+                    </div>
+                    <div className="flex items-center text-sm text-blue-600">
+                      <TrendingUp className="h-4 w-4 mr-1" />
+                      Growing
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Active Members</span>
+                    <span className="text-sm font-semibold text-slate-900 dark:text-white">{stats.activeMembers}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Visitors</span>
+                    <span className="text-sm font-semibold text-slate-900 dark:text-white">{stats.visitors}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Engagement Rate</span>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-20 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-700"
+                          style={{ width: `${Math.round((stats.activeMembers / Math.max(stats.totalPeople, 1)) * 100)}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-sm font-semibold text-blue-600">{Math.round((stats.activeMembers / Math.max(stats.totalPeople, 1)) * 100)}%</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+                  <Button 
+                    variant="outline" 
+                    className="w-full bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800 hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30 transition-all duration-300" 
+                    asChild
+                  >
+                    <a href="/members" className="flex items-center justify-center space-x-2">
+                      <span>View All People</span>
+                      <ChevronRight className="h-4 w-4" />
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Financial Analytics */}
+          <motion.div variants={itemVariants}>
+            <div className="group relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+              <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
+                      <DollarSign className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-900 dark:text-white">Donations</h3>
+                      <p className="text-slate-600 dark:text-slate-400 text-sm">Financial Health</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-3xl font-bold text-emerald-600 mb-1">
+                      {isLoading ? '---' : `$${(stats.monthlyDonations || stats.lastMonthDonations || 0).toLocaleString()}`}
+                    </div>
+                    <div className="flex items-center text-sm text-emerald-600">
+                      <TrendingUp className="h-4 w-4 mr-1" />
+                      Monthly
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Monthly Avg</span>
+                    <span className="text-sm font-semibold text-slate-900 dark:text-white">${(stats.monthlyAverage || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Weekly Avg</span>
+                    <span className="text-sm font-semibold text-slate-900 dark:text-white">${(stats.weeklyAverage || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Last Week</span>
+                    <span className="text-sm font-semibold text-slate-900 dark:text-white">${(stats.lastWeekDonations || 0).toLocaleString()}</span>
+                  </div>
+                </div>
+                
+                <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+                  <Button 
+                    variant="outline" 
+                    className="w-full bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-emerald-200 dark:border-emerald-800 hover:from-emerald-100 hover:to-teal-100 dark:hover:from-emerald-900/30 dark:hover:to-teal-900/30 transition-all duration-300" 
+                    asChild
+                  >
+                    <a href="/donations" className="flex items-center justify-center space-x-2">
+                      <span>View All Donations</span>
+                      <ChevronRight className="h-4 w-4" />
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
+        {/* Events & Activities */}
+        <motion.div variants={itemVariants}>
+          <div className="group relative">
+            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+            <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                    <Calendar className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">Events</h3>
+                    <p className="text-slate-600 dark:text-slate-400 text-sm">Activities & Engagement</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-3xl font-bold text-blue-600 mb-1">
+                    {isLoading ? '---' : stats.upcomingEvents || 0}
+                  </div>
+                  <div className="flex items-center text-sm text-blue-600">
+                    <Clock className="h-4 w-4 mr-1" />
+                    Upcoming
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600 dark:text-slate-400">Need Volunteers</span>
+                  <div className="flex items-center space-x-1">
+                    <Users className="h-4 w-4 text-orange-600" />
+                    <span className="text-sm font-semibold text-orange-600">{stats.eventsNeedingVolunteers || 0}</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600 dark:text-slate-400">This Week</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">{stats.eventsThisWeek}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600 dark:text-slate-400">Most Common</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white truncate max-w-[120px]">
+                    {stats.mostCommonEventType === 'Sunday Worship Service' ? 'Sunday' :
+                     stats.mostCommonEventType === 'Bible Study' ? 'Bible Study' :
+                     stats.mostCommonEventType === 'Fellowship' ? 'Fellowship' :
+                     stats.mostCommonEventType === 'Other' ? 'Other' :
+                     stats.mostCommonEventType === 'None' ? 'None' :
+                     stats.mostCommonEventType}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+                <Button 
+                  variant="outline" 
+                  className="w-full bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800 hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30 transition-all duration-300" 
+                  asChild
+                >
+                  <a href="/events" className="flex items-center justify-center space-x-2">
+                    <span>View All Events</span>
+                    <ChevronRight className="h-4 w-4" />
+                  </a>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Celebrations */}
+        <motion.div variants={itemVariants}>
+          <div className="group relative">
+            <div className="absolute -inset-1 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+            <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg">
+                    <Bell className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">Celebrations</h3>
+                    <p className="text-slate-600 dark:text-slate-400 text-sm">Special Occasions</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-3xl font-bold text-yellow-600 mb-1">
+                    {isLoading ? '---' : stats.totalUpcoming || 0}
+                  </div>
+                  <div className="flex items-center text-sm text-yellow-600">
+                    <Sparkles className="h-4 w-4 mr-1" />
+                    Upcoming
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600 dark:text-slate-400">Birthdays</span>
+                  <div className="flex items-center space-x-1">
+                    <Cake className="h-4 w-4 text-yellow-600" />
+                    <span className="text-sm font-semibold text-yellow-600">{stats.upcomingBirthdays || 0}</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600 dark:text-slate-400">Anniversaries</span>
+                  <div className="flex items-center space-x-1">
+                    <Heart className="h-4 w-4 text-red-600" />
+                    <span className="text-sm font-semibold text-red-600">{stats.upcomingAnniversaries || 0}</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600 dark:text-slate-400">Memberships</span>
+                  <div className="flex items-center space-x-1">
+                    <Crown className="h-4 w-4 text-orange-600" />
+                    <span className="text-sm font-semibold text-orange-600">{stats.upcomingMemberships || 0}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+                <Button 
+                  variant="outline" 
+                  className="w-full bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border-yellow-200 dark:border-yellow-800 hover:from-yellow-100 hover:to-orange-100 dark:hover:from-yellow-900/30 dark:hover:to-orange-900/30 transition-all duration-300" 
+                  asChild
+                >
+                  <a href="/alerts" className="flex items-center justify-center space-x-2">
+                    <span>View All Celebrations</span>
+                    <ChevronRight className="h-4 w-4" />
+                  </a>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Tasks & Productivity */}
+        <motion.div variants={itemVariants}>
+          <div className="group relative">
+            <div className="absolute -inset-1 bg-gradient-to-r from-orange-500 to-red-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+            <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center shadow-lg">
+                    <CheckSquare className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">Tasks</h3>
+                    <p className="text-slate-600 dark:text-slate-400 text-sm">Progress & Completion</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-3xl font-bold text-orange-600 mb-1">
+                    {isLoading ? '---' : stats.pendingTasks || 0}
+                  </div>
+                  <div className="flex items-center text-sm text-orange-600">
+                    <Activity className="h-4 w-4 mr-1" />
+                    Pending
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600 dark:text-slate-400">Total Tasks</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">{stats.totalTasks || 0}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600 dark:text-slate-400">Completed</span>
+                  <div className="flex items-center space-x-1">
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-semibold text-green-600">{stats.completedTasks || 0}</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600 dark:text-slate-400">Overdue</span>
+                  <div className="flex items-center space-x-1">
+                    <Clock className="h-4 w-4 text-red-600" />
+                    <span className="text-sm font-semibold text-red-600">{stats.overdueTasks || 0}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+                <Button 
+                  variant="outline" 
+                  className="w-full bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 border-orange-200 dark:border-orange-800 hover:from-orange-100 hover:to-red-100 dark:hover:from-orange-900/30 dark:hover:to-red-900/30 transition-all duration-300" 
+                  asChild
+                >
+                  <a href="/tasks" className="flex items-center justify-center space-x-2">
+                    <span>View All Tasks</span>
+                    <ChevronRight className="h-4 w-4" />
+                  </a>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Communications */}
+        <motion.div variants={itemVariants}>
+          <div className="group relative">
+            <div className="absolute -inset-1 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+            <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg">
+                    <MessageSquare className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">SMS</h3>
+                    <p className="text-slate-600 dark:text-slate-400 text-sm">Communication Hub</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-3xl font-bold text-teal-600 mb-1">
+                    {isLoading ? '---' : stats.recentSMSMessages || 0}
+                  </div>
+                  <div className="flex items-center text-sm text-teal-600">
+                    <MessageCircle className="h-4 w-4 mr-1" />
+                    Recent
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600 dark:text-slate-400">Total Conversations</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">{stats.totalSMSConversations || 0}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600 dark:text-slate-400">Outbound</span>
+                  <div className="flex items-center space-x-1">
+                    <Send className="h-4 w-4 text-teal-600" />
+                    <span className="text-sm font-semibold text-teal-600">{stats.outboundSMSMessages || 0}</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600 dark:text-slate-400">Inbound</span>
+                  <div className="flex items-center space-x-1">
+                    <ArrowDownLeft className="h-4 w-4 text-cyan-600" />
+                    <span className="text-sm font-semibold text-cyan-600">{stats.inboundSMSMessages || 0}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+                <Button 
+                  variant="outline" 
+                  className="w-full bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 border-teal-200 dark:border-teal-800 hover:from-teal-100 hover:to-cyan-100 dark:hover:from-teal-900/30 dark:hover:to-cyan-900/30 transition-all duration-300" 
+                  asChild
+                >
+                  <a href="/sms" className="flex items-center justify-center space-x-2">
+                    <span>View All Messages</span>
+                    <ChevronRight className="h-4 w-4" />
+                  </a>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </motion.div>
       </div>
-      
-      {/* Leadership Verse - Inspirational component */}
-      <motion.div variants={itemVariants}>
-        <LeadershipVerse />
-      </motion.div>
 
-      {/* Main Stats Grid - Optimized for Mobile */}
-      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        <motion.div variants={itemVariants}>
-          <Card className="overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-5 sm:p-6">
-              <CardTitle className="flex items-center text-xl sm:text-2xl">
-                <Users2 className="mr-3 h-6 w-6 sm:h-7 sm:w-7" />
-                People
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-5 sm:p-6">
-              {isLoading ? (
-                <Skeleton className="h-10 w-20 mb-2" />
-              ) : (
-                <div className="text-3xl sm:text-4xl font-bold">{stats.totalPeople}</div>
-              )}
-              <p className="text-base sm:text-lg text-muted-foreground mt-2">Total People</p>
-              
-              {/* Member type breakdown */}
-              <div className="mt-4 sm:mt-5 space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm sm:text-base text-green-600 font-medium">Active</span>
-                  {isLoading ? (
-                    <Skeleton className="h-5 w-10" />
-                  ) : (
-                    <span className="text-sm sm:text-base font-semibold">{stats.activeMembers}</span>
-                  )}
+      {/* Recent Activity Feed */}
+      <motion.div variants={itemVariants} className="w-full mb-12">
+        <div className="group relative overflow-hidden">
+          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-4 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300 w-full overflow-hidden">
+            <div className="flex items-center justify-between mb-4 sm:mb-6 w-full">
+              <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
+                  <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm sm:text-base text-orange-600 font-medium">Inactive</span>
-                  {isLoading ? (
-                    <Skeleton className="h-5 w-10" />
-                  ) : (
-                    <span className="text-sm sm:text-base font-semibold">{stats.inactiveMembers}</span>
-                  )}
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm sm:text-base text-blue-600 font-medium">Visitors</span>
-                  {isLoading ? (
-                    <Skeleton className="h-5 w-10" />
-                  ) : (
-                    <span className="text-sm sm:text-base font-semibold">{stats.visitors}</span>
-                  )}
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900 dark:text-white truncate">Recent Activity</h3>
+                  <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base truncate">SMS Conversations</p>
                 </div>
               </div>
-            </CardContent>
-            <CardFooter className="bg-muted py-3 px-5 sm:px-6 border-t">
-              <Button variant="outline" className="w-full text-sm sm:text-base h-10 sm:h-11" asChild>
-                <a href="/members">View All People</a>
-              </Button>
-            </CardFooter>
-          </Card>
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
-          <Card className="overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-green-500 to-green-600 text-white p-5 sm:p-6">
-              <CardTitle className="flex items-center text-xl sm:text-2xl">
-                <DollarSign className="mr-3 h-6 w-6 sm:h-7 sm:w-7" />
-                Donations
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-5 sm:p-6">
-              {isLoading ? (
-                <Skeleton className="h-10 w-24 mb-2" />
-              ) : (
-                <div className="text-3xl sm:text-4xl font-bold">
-                  {stats.monthlyDonations > 0 ?
-                    `$${(stats.monthlyDonations || 0).toFixed(0)}` :
-                    `$${(stats.lastMonthDonations || 0).toFixed(0)}`
-                  }
-                </div>
-              )}
-              <p className="text-base sm:text-lg text-muted-foreground mt-2">
-                {stats.monthlyDonations > 0 ? 'This month' : 'Last month'}
-              </p>
-              
-              {/* Donation breakdown */}
-              <div className="mt-4 sm:mt-5 space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm sm:text-base text-green-600 font-medium">Monthly Avg</span>
-                  {isLoading ? (
-                    <Skeleton className="h-5 w-16" />
-                  ) : (
-                    <span className="text-sm sm:text-base font-semibold">${(stats.monthlyAverage || 0).toFixed(0)}</span>
-                  )}
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm sm:text-base text-green-600 font-medium">Weekly Avg</span>
-                  {isLoading ? (
-                    <Skeleton className="h-5 w-16" />
-                  ) : (
-                    <span className="text-sm sm:text-base font-semibold">${(stats.weeklyAverage || 0).toFixed(0)}</span>
-                  )}
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm sm:text-base text-green-600 font-medium">Last Week</span>
-                  {isLoading ? (
-                    <Skeleton className="h-5 w-16" />
-                  ) : (
-                    <span className="text-sm sm:text-base font-semibold">${(stats.lastSundayDonations || 0).toFixed(0)}</span>
-                  )}
-                </div>
+              <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
+                <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400">Live</span>
               </div>
-            </CardContent>
-            <CardFooter className="bg-muted py-3 px-5 sm:px-6 border-t">
-              <Button variant="outline" className="w-full text-sm sm:text-base h-10 sm:h-11" asChild>
-                <a href="/donations">View All Donations</a>
-              </Button>
-            </CardFooter>
-          </Card>
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
-          <Card className="overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-5 sm:p-6">
-              <CardTitle className="flex items-center text-xl sm:text-2xl">
-                <Calendar className="mr-3 h-6 w-6 sm:h-7 sm:w-7" />
-                Events
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-5 sm:p-6">
-              {isLoading ? (
-                <Skeleton className="h-10 w-20 mb-2" />
-              ) : (
-                <div className="text-3xl sm:text-4xl font-bold">{stats.upcomingEvents || 0}</div>
-              )}
-              <p className="text-base sm:text-lg text-muted-foreground mt-2">Upcoming events</p>
-              
-              {/* Events breakdown */}
-              <div className="mt-4 sm:mt-5 space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm sm:text-base text-purple-600 font-medium">Need Volunteers</span>
-                  {isLoading ? (
-                    <Skeleton className="h-5 w-10" />
-                  ) : (
-                    <span className="text-sm sm:text-base font-semibold">{stats.eventsNeedingVolunteers || 0}</span>
-                  )}
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm sm:text-base text-purple-600 font-medium">This Week</span>
-                  {isLoading ? (
-                    <Skeleton className="h-5 w-10" />
-                  ) : (
-                    <span className="text-sm sm:text-base font-semibold">{stats.eventsThisWeek}</span>
-                  )}
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm sm:text-base text-purple-600 font-medium">Most Common</span>
-                  {isLoading ? (
-                    <Skeleton className="h-5 w-16" />
-                  ) : (
-                    <span className="text-sm sm:text-base font-semibold truncate max-w-[120px]">
-                      {stats.mostCommonEventType === 'Sunday Worship Service' ? 'Sunday' :
-                       stats.mostCommonEventType === 'Bible Study' ? 'Bible Study' :
-                       stats.mostCommonEventType === 'Fellowship' ? 'Fellowship' :
-                       stats.mostCommonEventType === 'Other' ? 'Other' :
-                       stats.mostCommonEventType === 'None' ? 'None' :
-                       stats.mostCommonEventType}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="bg-muted py-3 px-5 sm:px-6 border-t">
-              <Button variant="outline" className="w-full text-sm sm:text-base h-10 sm:h-11" asChild>
-                <a href="/events">View All Events</a>
-              </Button>
-            </CardFooter>
-          </Card>
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
-          <Card className="overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-5 sm:p-6">
-              <CardTitle className="flex items-center text-xl sm:text-2xl">
-                <Bell className="mr-3 h-6 w-6 sm:h-7 sm:w-7" />
-                Celebrations
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-5 sm:p-6">
-              {isLoading ? (
-                <Skeleton className="h-10 w-20 mb-2" />
-              ) : (
-                <div className="text-3xl sm:text-4xl font-bold">{stats.totalUpcoming || 0}</div>
-              )}
-              <p className="text-base sm:text-lg text-muted-foreground mt-2">Upcoming celebrations</p>
-              
-              {/* Celebrations breakdown */}
-              <div className="mt-4 sm:mt-5 space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm sm:text-base text-blue-600 font-medium">Birthdays</span>
-                  {isLoading ? (
-                    <Skeleton className="h-5 w-10" />
-                  ) : (
-                    <span className="text-sm sm:text-base font-semibold">{stats.upcomingBirthdays || 0}</span>
-                  )}
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm sm:text-base text-blue-600 font-medium">Anniversaries</span>
-                  {isLoading ? (
-                    <Skeleton className="h-5 w-10" />
-                  ) : (
-                    <span className="text-sm sm:text-base font-semibold">{stats.upcomingAnniversaries || 0}</span>
-                  )}
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm sm:text-base text-blue-600 font-medium">Memberships</span>
-                  {isLoading ? (
-                    <Skeleton className="h-5 w-10" />
-                  ) : (
-                    <span className="text-sm sm:text-base font-semibold">{stats.upcomingMemberships || 0}</span>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="bg-muted py-3 px-5 sm:px-6 border-t">
-              <Button variant="outline" className="w-full text-sm sm:text-base h-10 sm:h-11" asChild>
-                <a href="/alerts">View All Celebrations</a>
-              </Button>
-            </CardFooter>
-          </Card>
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
-          <Card className="overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-5 sm:p-6">
-              <CardTitle className="flex items-center text-xl sm:text-2xl">
-                <CheckSquare className="mr-3 h-6 w-6 sm:h-7 sm:w-7" />
-                Tasks
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-5 sm:p-6">
-              {isLoading ? (
-                <Skeleton className="h-10 w-20 mb-2" />
-              ) : (
-                <div className="text-3xl sm:text-4xl font-bold">{stats.pendingTasks || 0}</div>
-              )}
-              <p className="text-base sm:text-lg text-muted-foreground mt-2">Pending tasks</p>
-              
-              {/* Tasks breakdown */}
-              <div className="mt-4 sm:mt-5 space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm sm:text-base text-orange-600 font-medium">Total Tasks</span>
-                  {isLoading ? (
-                    <Skeleton className="h-5 w-10" />
-                  ) : (
-                    <span className="text-sm sm:text-base font-semibold">{stats.totalTasks || 0}</span>
-                  )}
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm sm:text-base text-orange-600 font-medium">Completed</span>
-                  {isLoading ? (
-                    <Skeleton className="h-5 w-10" />
-                  ) : (
-                    <span className="text-sm sm:text-base font-semibold">{stats.completedTasks || 0}</span>
-                  )}
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm sm:text-base text-orange-600 font-medium">Overdue</span>
-                  {isLoading ? (
-                    <Skeleton className="h-5 w-10" />
-                  ) : (
-                    <span className="text-sm sm:text-base font-semibold">{stats.overdueTasks || 0}</span>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="bg-muted py-3 px-5 sm:px-6 border-t">
-              <Button variant="outline" className="w-full text-sm sm:text-base h-10 sm:h-11" asChild>
-                <a href="/tasks">View All Tasks</a>
-              </Button>
-            </CardFooter>
-          </Card>
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
-          <Card className="overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-teal-500 to-teal-600 text-white p-5 sm:p-6">
-              <CardTitle className="flex items-center text-xl sm:text-2xl">
-                <MessageSquare className="mr-3 h-6 w-6 sm:h-7 sm:w-7" />
-                SMS
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-5 sm:p-6">
-              {isLoading ? (
-                <Skeleton className="h-10 w-20 mb-2" />
-              ) : (
-                <div className="text-3xl sm:text-4xl font-bold">{stats.recentSMSMessages || 0}</div>
-              )}
-              <p className="text-base sm:text-lg text-muted-foreground mt-2">Recent (30 days)</p>
-              
-              {/* SMS breakdown */}
-              <div className="mt-4 sm:mt-5 space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm sm:text-base text-teal-600 font-medium">Total Conversations</span>
-                  {isLoading ? (
-                    <Skeleton className="h-5 w-10" />
-                  ) : (
-                    <span className="text-sm sm:text-base font-semibold">{stats.totalSMSConversations || 0}</span>
-                  )}
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm sm:text-base text-teal-600 font-medium">Outbound</span>
-                  {isLoading ? (
-                    <Skeleton className="h-5 w-10" />
-                  ) : (
-                    <span className="text-sm sm:text-base font-semibold">{stats.outboundSMSMessages || 0}</span>
-                  )}
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm sm:text-base text-teal-600 font-medium">Inbound</span>
-                  {isLoading ? (
-                    <Skeleton className="h-5 w-10" />
-                  ) : (
-                    <span className="text-sm sm:text-base font-semibold">{stats.inboundSMSMessages || 0}</span>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="bg-muted py-3 px-5 sm:px-6 border-t">
-              <Button variant="outline" className="w-full text-sm sm:text-base h-10 sm:h-11" asChild>
-                <a href="/sms">View All Messages</a>
-              </Button>
-            </CardFooter>
-          </Card>
-        </motion.div>
-      </div>
-
-      {/* Recent SMS Conversations */}
-      <motion.div variants={itemVariants} className="w-full max-w-full">
-        <Card className="w-full max-w-full overflow-hidden">
-          <CardHeader className="p-5 sm:p-6">
-            <CardTitle className="flex items-center text-xl sm:text-2xl">
-              <MessageSquare className="mr-3 h-6 w-6 sm:h-7 sm:w-7 flex-shrink-0" />
-              <span className="truncate">Recent SMS</span>
-            </CardTitle>
-            <CardDescription className="text-base sm:text-lg">Latest conversations</CardDescription>
-          </CardHeader>
-          <CardContent className="p-5 sm:p-6 w-full max-w-full">
-            <div className="space-y-4 sm:space-y-5 w-full max-w-full">
+            </div>
+            
+            <div className="space-y-3 sm:space-y-4 w-full">
               {recentSMSConversations && recentSMSConversations.length > 0 ? (
-                recentSMSConversations.slice(0, 5).map(conversation => (
+                recentSMSConversations.slice(0, 5).map((conversation, index) => (
                   <div 
                     key={conversation.id} 
-                    className="flex items-center border-b pb-3 sm:pb-4 cursor-pointer hover:bg-muted/50 rounded-lg p-3 sm:p-4 transition-colors w-full max-w-full overflow-hidden"
+                    className="flex items-center p-3 sm:p-4 border border-slate-200 dark:border-slate-700 rounded-xl sm:rounded-2xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all duration-300 group/item w-full overflow-hidden"
                     onClick={() => handleSMSConversationClick(conversation)}
-                    style={{ maxWidth: '100%' }}
                   >
-                    <div className="flex items-center gap-3 flex-1 min-w-0 overflow-hidden" style={{ maxWidth: '100%' }}>
-                      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        conversation.conversation_type === 'prayer_request' ? 'bg-purple-100 text-purple-600' :
-                        conversation.conversation_type === 'emergency' ? 'bg-red-100 text-red-600' :
-                        conversation.conversation_type === 'event_reminder' ? 'bg-blue-100 text-blue-600' :
-                        'bg-gray-100 text-gray-600'
+                    <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                      <div className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0 ${
+                        conversation.conversation_type === 'prayer_request' ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white' :
+                        conversation.conversation_type === 'emergency' ? 'bg-gradient-to-br from-red-500 to-red-600 text-white' :
+                        conversation.conversation_type === 'event_reminder' ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white' :
+                        'bg-gradient-to-br from-slate-500 to-slate-600 text-white'
                       }`}>
-                        <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6" />
+                        <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6" />
                       </div>
-                      <div className="min-w-0 flex-1 overflow-hidden" style={{ maxWidth: 'calc(100% - 4rem)' }}>
-                        <p className="font-medium text-base sm:text-lg truncate" style={{ maxWidth: '100%', wordBreak: 'break-all' }}>
-                          {(conversation.title || 'SMS Conversation').substring(0, 25)}
-                          {(conversation.title || 'SMS Conversation').length > 25 ? '...' : ''}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-slate-900 dark:text-white truncate text-sm sm:text-base lg:text-lg">
+                          {(conversation.title || 'SMS Conversation').length > 25 ? 
+                            `${(conversation.title || 'SMS Conversation').substring(0, 25)}...` :
+                            (conversation.title || 'SMS Conversation')
+                          }
                         </p>
-                        <div className="space-y-1 w-full">
-                          <p className="text-sm sm:text-base text-muted-foreground truncate" style={{ maxWidth: '100%' }}>
+                        <div className="flex items-center gap-1 sm:gap-2 mt-1">
+                          <span className={`text-xs font-medium px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full flex-shrink-0 ${
+                            conversation.conversation_type === 'prayer_request' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300' :
+                            conversation.conversation_type === 'emergency' ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' :
+                            conversation.conversation_type === 'event_reminder' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :
+                            'bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300'
+                          }`}>
                             {(() => {
                               const type = conversation.conversation_type === 'prayer_request' ? 'Prayer' :
                                          conversation.conversation_type === 'emergency' ? 'Emergency' :
@@ -998,43 +1109,65 @@ export function Dashboard() {
                                          'General';
                               return type;
                             })()}
-                          </p>
+                          </span>
                           {conversation.updated_at && (
-                            <p className="text-sm text-muted-foreground truncate" style={{ maxWidth: '100%' }}>
+                            <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
                               {format(new Date(conversation.updated_at), 'MMM d')}
-                            </p>
+                            </span>
                           )}
                         </div>
                       </div>
                     </div>
-                    <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground flex-shrink-0 ml-2" />
+                    <ChevronRight className="h-4 w-4 text-slate-400 flex-shrink-0 ml-1 sm:ml-2 group-hover/item:text-slate-600 dark:group-hover/item:text-slate-300 transition-colors" />
                   </div>
                 ))
               ) : (
-                <p className="text-muted-foreground text-base sm:text-lg w-full">No recent SMS conversations.</p>
+                <div className="text-center py-6 sm:py-8">
+                  <MessageSquare className="h-12 w-12 sm:h-16 sm:w-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+                  <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg">No recent SMS conversations.</p>
+                </div>
               )}
             </div>
-          </CardContent>
-          <CardFooter className="p-5 sm:p-6">
-            <Button variant="outline" className="w-full text-sm sm:text-base h-10 sm:h-11" asChild>
-              <a href="/sms">View All</a>
-            </Button>
-          </CardFooter>
-        </Card>
+            
+            <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-200 dark:border-slate-700">
+              <Button 
+                variant="outline" 
+                className="w-full bg-gradient-to-r from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-900/30 border-indigo-200 dark:border-indigo-800 hover:from-indigo-100 hover:to-indigo-200 dark:hover:from-indigo-900/30 dark:hover:to-indigo-900/40 transition-all duration-300 h-10 sm:h-12 text-sm sm:text-base lg:text-lg font-medium" 
+                asChild
+              >
+                <a href="/sms" className="flex items-center justify-center space-x-2">
+                  <span className="hidden sm:inline">View All Conversations</span>
+                  <span className="sm:hidden">View All</span>
+                  <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5" />
+                </a>
+              </Button>
+            </div>
+          </div>
+        </div>
       </motion.div>
               
-      {/* Insights Section */}
-      <motion.div variants={itemVariants}>
-        <Card>
-          <CardHeader className="p-5 sm:p-6">
-            <CardTitle className="flex items-center text-xl sm:text-2xl">
-              <BarChart3 className="mr-3 h-6 w-6 sm:h-7 sm:w-7" />
-              Key Insights
-            </CardTitle>
-            <CardDescription className="text-base sm:text-lg">Interesting patterns and trends from your data</CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6">
-            <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+      {/* Advanced Analytics Section */}
+      <motion.div variants={itemVariants} className="mb-12">
+        <div className="group relative">
+          <div className="absolute -inset-1 bg-gradient-to-r from-slate-500 to-slate-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-slate-500 to-slate-600 rounded-2xl flex items-center justify-center shadow-lg">
+                  <BarChart3 className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Advanced Analytics</h3>
+                  <p className="text-slate-600 dark:text-slate-400">Intelligent insights and performance metrics</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Real-time</span>
+              </div>
+            </div>
+            
+            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                {/* Sunday Service Attendance Rate */}
                <div className={`p-3 sm:p-4 rounded-lg border ${
                 stats.sundayServiceRate >= 70 ? 
@@ -1573,738 +1706,524 @@ export function Dashboard() {
                         return 'Focus on member relationships.';
                       })()}
                     </p>
-        </div>
+                  </div>
                 )}
-          </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* Average Attendance by Event Type Section */}
-        <motion.div variants={itemVariants}>
-        <Card>
-          <CardHeader className="p-5 sm:p-6">
-            <CardTitle className="flex items-center text-xl sm:text-2xl">
-              <Users2 className="mr-3 h-6 w-6 sm:h-7 sm:w-7" />
-              Attendance by Event Type
-            </CardTitle>
-            <CardDescription className="text-base sm:text-lg">Average attendance per event for different event types (last 6 months)</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
-              {/* Sunday Service */}
-              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
-                    <BookOpen className="h-6 w-6 text-primary-foreground" />
               </div>
-            </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-foreground">Sunday Service</p>
-                  {isLoading ? (
-                    <Skeleton className="h-8 w-12 mb-1" />
-                  ) : (
-                    <p className="text-2xl font-bold text-primary">
-                      {stats.sundayServicePercentage || 0}
-                    </p>
-                  )}
-                  {isLoading ? (
-                    <Skeleton className="h-4 w-32" />
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      {stats.sundayServiceEvents} events • {stats.sundayServiceAttendance} total
-                    </p>
-                  )}
-            </div>
-          </div>
-
-              {/* Bible Study */}
-              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
-                    <FileText className="h-6 w-6 text-primary-foreground" />
-              </div>
-            </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-foreground">Bible Study</p>
-                  {isLoading ? (
-                    <Skeleton className="h-8 w-12 mb-1" />
-                  ) : (
-                    <p className="text-2xl font-bold text-primary">
-                      {stats.bibleStudyPercentage || 0}
-                    </p>
-                  )}
-                  {isLoading ? (
-                    <Skeleton className="h-4 w-32" />
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      {stats.bibleStudyEvents} events • {stats.bibleStudyAttendance} total
-                    </p>
-                  )}
-            </div>
-          </div>
-
-              {/* Fellowship */}
-              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
-                    <Users2 className="h-6 w-6 text-primary-foreground" />
-              </div>
-            </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-foreground">Fellowship</p>
-                  {isLoading ? (
-                    <Skeleton className="h-8 w-12 mb-1" />
-                  ) : (
-                    <p className="text-2xl font-bold text-primary">
-                      {stats.fellowshipPercentage || 0}
-                    </p>
-                  )}
-                  {isLoading ? (
-                    <Skeleton className="h-4 w-32" />
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      {stats.fellowshipEvents} events • {stats.fellowshipAttendance} total
-                    </p>
-                  )}
             </div>
           </div>
         </div>
-          </CardContent>
-          <CardFooter>
-            <Button variant="outline" className="w-full" asChild>
-              <a href="/reports">View Detailed Reports</a>
-            </Button>
-          </CardFooter>
-        </Card>
       </motion.div>
 
-      {/* Attendance Statistics Section */}
-        <motion.div variants={itemVariants}>
-        <Card>
-          <CardHeader className="p-5 sm:p-6">
-            <CardTitle className="flex items-center text-xl sm:text-2xl">
-              <Users className="mr-3 h-6 w-6 sm:h-7 sm:w-7" />
-              Attendance Statistics
-              </CardTitle>
-            <CardDescription className="text-base sm:text-lg">Last 30 days overview</CardDescription>
-            </CardHeader>
+      {/* Attendance Intelligence */}
+      <motion.div variants={itemVariants} className="mb-12">
+        <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg border border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+              <BarChart3 className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white">Attendance Intelligence</h3>
+              <p className="text-slate-600 dark:text-slate-400">Service participation rates and trends</p>
+            </div>
+          </div>
           
-          <CardContent>
-            {attendanceLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="flex items-center space-x-2">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
-                  <span className="text-muted-foreground text-base">Loading attendance data...</span>
+          <div className="grid gap-4 md:grid-cols-3">
+            {/* Sunday Service */}
+            <motion.div 
+              className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
+              variants={itemVariants}
+            >
+              <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                <BookOpen className="h-5 w-5 text-blue-600" />
+                Sunday Service
+              </h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Attendance Rate</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : `${stats.sundayServiceRate?.toFixed(0) || 0}%`}
+                  </span>
                 </div>
-                  </div>
-            ) : error ? (
-              <div className="text-center py-6">
-                <div className="text-red-500 mb-2 text-2xl">⚠️</div>
-                <p className="text-base text-muted-foreground">Failed to load attendance data</p>
+                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                  <div 
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-700"
+                    style={{ width: `${stats.sundayServiceRate || 0}%` }}
+                  ></div>
                 </div>
-            ) : (
-              <div className="space-y-6">
-                {/* Service Breakdown and Event Attendance Side by Side */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Service Breakdown */}
-                <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-muted rounded-lg flex items-center justify-center">
-                        <BarChart3 className="w-4 h-4 text-primary" />
-                      </div>
-                      <h4 className="font-semibold text-base text-foreground">Service Breakdown</h4>
-              </div>
-              
-                    {serviceBreakdown.length === 0 ? (
-                      <div className="text-center py-4 bg-muted rounded-lg">
-                        <div className="text-muted-foreground mb-1 text-xl">📊</div>
-                        <p className="text-sm text-muted-foreground">No service data</p>
-                </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {serviceBreakdown.map((service, index) => (
-                          <div key={service.name} className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-gray-50 transition-colors">
-                            <div className="flex items-center gap-3">
-                              <div className={`w-3 h-3 rounded-full ${
-                                index === 0 ? 'bg-primary' :
-                                index === 1 ? 'bg-muted-foreground' :
-                                index === 2 ? 'bg-amber-600' : 'bg-primary'
-                              }`}></div>
-                              <div className="font-medium text-foreground text-base truncate">{service.name}</div>
-                      </div>
-                            <div className="text-base font-bold text-primary">{service.value}</div>
-                    </div>
-                  ))}
-                </div>
-                    )}
-              </div>
-              
-                  {/* Event Attendance */}
-                <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-muted rounded-lg flex items-center justify-center">
-                        <Calendar className="w-4 h-4 text-primary" />
-                      </div>
-                      <h4 className="font-semibold text-base text-foreground">Event Attendance</h4>
-      </div>
-
-                    {eventDetails?.filter(event => event.attendees > 0).length === 0 ? (
-                      <div className="text-center py-4 bg-muted rounded-lg">
-                        <div className="text-muted-foreground mb-1 text-xl">📅</div>
-                        <p className="text-sm text-muted-foreground">No event data</p>
-        </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {eventDetails
-                          ?.filter(event => event.attendees > 0)
-                          .sort((a, b) => new Date(b.date) - new Date(a.date))
-                          .slice(0, 3)
-                          .map(event => (
-                          <div key={event.id} className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-gray-50 transition-colors">
-                            <div className="min-w-0">
-                              <div className="font-medium text-foreground text-base truncate">{event.title}</div>
-                              <div className="text-sm text-muted-foreground mt-0.5">
-                                {new Date(event.date).toLocaleDateString()} • {event.attendees} attendees
-              </div>
-            </div>
-                    </div>
-                  ))}
-          </div>
-                    )}
-              </div>
-            </div>
-
-                {/* Top Attendees */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-muted rounded-lg flex items-center justify-center">
-                      <Trophy className="w-4 h-4 text-primary" />
-            </div>
-                    <h4 className="font-semibold text-base text-foreground">Top Attendees</h4>
-          </div>
-
-                  {memberStats.length === 0 ? (
-                    <div className="text-center py-4 bg-muted rounded-lg">
-                      <div className="text-muted-foreground mb-1 text-xl">🏆</div>
-                      <p className="text-sm text-muted-foreground">No attendance data</p>
-                </div>
-              ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {memberStats.slice(0, 6).map((member, index) => {
-                        // Find the member data to get their image - improved lookup
-                        const memberData = people.find(p => {
-                          const fullName = `${p.firstname} ${p.lastname}`.trim();
-                          const memberName = member.name.trim();
-                          
-                          // Try exact match first
-                          if (fullName.toLowerCase() === memberName.toLowerCase()) {
-                            return true;
-                          }
-                          
-                          // Try partial match (in case of middle names, etc.)
-                          const fullNameParts = fullName.toLowerCase().split(' ');
-                          const memberNameParts = memberName.toLowerCase().split(' ');
-                          
-                          // Check if first and last names match
-                          if (fullNameParts.length >= 2 && memberNameParts.length >= 2) {
-                            return fullNameParts[0] === memberNameParts[0] && 
-                                   fullNameParts[fullNameParts.length - 1] === memberNameParts[memberNameParts.length - 1];
-                          }
-                          
-                          return false;
-                        });
-                        
-                        return (
-                          <div 
-                            key={member.name} 
-                            className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-gray-50 transition-colors cursor-pointer w-full max-w-full overflow-hidden"
-                            onClick={() => handleMemberProfileClick(memberData?.id)}
-                            title={`Click to view ${member.name}'s profile`}
-                          >
-                            <div className="flex items-center gap-3 flex-1 min-w-0 overflow-hidden">
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 ${
-                                index === 0 ? 'bg-primary' :
-                                index === 1 ? 'bg-muted-foreground' :
-                                index === 2 ? 'bg-amber-600' : 'bg-primary'
-                              }`}>
-                                {index + 1}
-                              </div>
-                              <div className="flex items-center gap-3 flex-1 min-w-0 overflow-hidden">
-                                <Avatar className="h-8 w-8 flex-shrink-0">
-                                  {memberData?.image_url ? (
-                                    <AvatarImage 
-                                      src={memberData.image_url} 
-                                      alt={`${member.name}'s profile picture`}
-                                      onError={(e) => {
-                                        console.log('Image failed to load:', memberData.image_url);
-                                        e.target.style.display = 'none';
-                                      }}
-                                    />
-                                  ) : null}
-                                  <AvatarFallback className="bg-gray-200 text-gray-700">
-                                    {memberData ? getInitials(memberData.firstname || '', memberData.lastname || '') : 
-                                     getInitials(member.name.split(' ')[0] || '', member.name.split(' ')[1] || '')}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div className="min-w-0 flex-1 overflow-hidden">
-                                  <div className="font-medium text-foreground text-sm truncate">{member.name}</div>
-                                  <div className="text-xs text-muted-foreground">{member.count} events</div>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="text-sm font-bold text-primary flex-shrink-0">{member.count}</div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
-
-      {/* Donation Statistics Section */}
-        <motion.div variants={itemVariants}>
-        <Card>
-          <CardHeader className="p-5 sm:p-6">
-            <CardTitle className="flex items-center text-xl sm:text-2xl">
-              <DollarSign className="mr-3 h-6 w-6 sm:h-7 sm:w-7" />
-              Donation Statistics
-              </CardTitle>
-            <CardDescription className="text-base sm:text-lg">Financial overview of your organization</CardDescription>
-            </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
-              {/* Monthly Donations */}
-              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-                    <DollarSign className="h-6 w-6 text-white" />
-                      </div>
-                    </div>
-                      <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-foreground">This Month</p>
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">${(stats.monthlyDonations || 0).toFixed(2)}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {(() => {
-                      const now = new Date();
-                      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-                      const dayOfMonth = now.getDate();
-                      const monthProgress = ((dayOfMonth / daysInMonth) * 100).toFixed(1);
-                      return `${monthProgress}% of month completed`;
-                    })()}
-                        </p>
-                </div>
-                    </div>
-              {/* Last Month's Donations */}
-              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
-                    <DollarSign className="h-6 w-6 text-white" />
-                </div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-foreground">Last Month</p>
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">${(stats.lastMonthDonations || 0).toFixed(2)}</p>
-                  <p className="text-sm text-muted-foreground">Previous month's total</p>
-                      </div>
-                    </div>
-              {/* Monthly Average */}
-              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center">
-                    <TrendingUp className="h-6 w-6 text-white" />
-                </div>
-                  </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-foreground">Monthly Average</p>
-                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">${(stats.monthlyAverage || 0).toFixed(2)}</p>
-                  <p className="text-sm text-muted-foreground">Per month</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Weekly Stats Row */}
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              {/* Last Week's Donations */}
-              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-teal-500 rounded-full flex items-center justify-center">
-                    <DollarSign className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-foreground">Last Week</p>
-                  <p className="text-2xl font-bold text-teal-600 dark:text-teal-400">${(stats.lastSundayDonations || 0).toFixed(2)}</p>
-                  <p className="text-sm text-muted-foreground">Previous week's total</p>
-                </div>
-              </div>
-              {/* Weekly Average */}
-              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center">
-                    <TrendingUp className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-foreground">Weekly Average</p>
-                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">${(stats.weeklyAverage || 0).toFixed(2)}</p>
-                  <p className="text-sm text-muted-foreground">Per week</p>
-                </div>
-              </div>
-            </div>
-            </CardContent>
-          <CardFooter>
-            <Button variant="outline" className="w-full" asChild>
-              <a href="/donations">View All Donations</a>
-            </Button>
-          </CardFooter>
-          </Card>
-        </motion.div>
-
-      {/* Event Statistics Section */}
-        <motion.div variants={itemVariants}>
-        <Card>
-          <CardHeader className="p-5 sm:p-6">
-            <CardTitle className="flex items-center text-xl sm:text-2xl">
-              <Calendar className="mr-3 h-6 w-6 sm:h-7 sm:w-7" />
-              Event Statistics
-              </CardTitle>
-            <CardDescription className="text-base sm:text-lg">Overview of your organization's events</CardDescription>
-            </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
-              {/* Average Events Per Month */}
-              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center">
-                    <Calendar className="h-6 w-6 text-white" />
-                      </div>
-                    </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-foreground">Average Per Month</p>
-                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{stats.averageEventsPerMonth}</p>
-                  <p className="text-sm text-muted-foreground">Last 6 months average</p>
-                </div>
-      </div>
-
-              {/* This Week */}
-              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
-                    <Calendar className="h-6 w-6 text-primary-foreground" />
-                  </div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-foreground">This Week</p>
-                  <p className="text-2xl font-bold text-primary">{stats.eventsThisWeek}</p>
-                  <p className="text-sm text-muted-foreground">Next 7 days</p>
-                      </div>
-                    </div>
-
-              {/* This Month */}
-              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-                    <Calendar className="h-6 w-6 text-white" />
-                </div>
-                  </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-foreground">This Month</p>
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.eventsThisMonth}</p>
-                  <p className="text-sm text-muted-foreground">Next 30 days</p>
-                </div>
-              </div>
-            </div>
-            </CardContent>
-          <CardFooter>
-            <Button variant="outline" className="w-full" asChild>
-              <a href="/events">View Events</a>
-            </Button>
-          </CardFooter>
-          </Card>
-        </motion.div>
-      {/* Member Statistics Section */}
-      <motion.div variants={itemVariants}>
-        <Card>
-          <CardHeader className="p-5 sm:p-6">
-            <CardTitle className="flex items-center text-xl sm:text-2xl">
-              <Users2 className="mr-3 h-6 w-6 sm:h-7 sm:w-7" />
-              Member Statistics
-            </CardTitle>
-            <CardDescription className="text-base sm:text-lg">Detailed breakdown of your organization's membership</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
-              {/* Active Members */}
-              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-                    <Users2 className="h-6 w-6 text-white" />
-              </div>
-                    </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-foreground">Active Members</p>
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.activeMembers}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {stats.totalPeople > 0 ? `${((stats.activeMembers / stats.totalPeople) * 100).toFixed(1)}%` : '0%'} of total
-                  </p>
-                    </div>
-                    </div>
-
-              {/* Inactive Members */}
-              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center">
-                    <Users2 className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-foreground">Inactive Members</p>
-                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{stats.inactiveMembers}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {stats.totalPeople > 0 ? `${((stats.inactiveMembers / stats.totalPeople) * 100).toFixed(1)}%` : '0%'} of total
-                  </p>
-                  </div>
-                </div>
-
-              {/* Visitors */}
-              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
-                    <UserPlus className="h-6 w-6 text-primary-foreground" />
-                    </div>
-                    </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-foreground">Visitors</p>
-                  <p className="text-2xl font-bold text-primary">{stats.visitors}</p>
-                  <p className="text-sm text-muted-foreground">
-                    <span className="text-primary font-medium">Visitors</span>
-                  </p>
-                  </div>
-                </div>
-              </div>
-
-            {/* Summary Stats */}
-            <div className="mt-6 grid gap-4 md:grid-cols-1">
-              <div className="text-center p-4 bg-muted rounded-lg">
-                <p className="text-base text-muted-foreground">Total People</p>
-                <p className="text-3xl font-bold text-foreground">{stats.totalPeople}</p>
-              </div>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button variant="outline" className="w-full" asChild>
-              <a href="/members">Manage Members</a>
-            </Button>
-          </CardFooter>
-        </Card>
-      </motion.div>
-
-      {/* Family Overview Section */}
-      <motion.div variants={itemVariants}>
-        <Card>
-          <CardHeader className="p-5 sm:p-6">
-            <CardTitle className="flex items-center text-xl sm:text-2xl">
-              <Home className="mr-3 h-6 w-6 sm:h-7 sm:w-7" />
-              Member Demographics
-            </CardTitle>
-            <CardDescription className="text-base sm:text-lg">Age and family structure overview</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {stats.totalFamilies > 0 ? (
-              // Show family stats if families are being used
-              <div className="grid gap-4 md:grid-cols-3">
-                {/* Total Families */}
-                <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                  <div className="flex-shrink-0">
-                    <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center">
-                      <Home className="h-6 w-6 text-white" />
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-base font-medium text-foreground">Total Families</p>
-                    <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{stats.totalFamilies}</p>
-                    <p className="text-sm text-muted-foreground">Organized family units</p>
-                  </div>
-                </div>
-
-                {/* Members in Families */}
-                <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                  <div className="flex-shrink-0">
-                    <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
-                      <Users2 className="h-6 w-6 text-white" />
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-base font-medium text-foreground">Members in Families</p>
-                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.membersInFamilies}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {stats.activeMembers > 0 ? `${((stats.membersInFamilies / stats.activeMembers) * 100).toFixed(1)}%` : '0%'} of active members
-                    </p>
-                  </div>
-                </div>
-
-                {/* Individual Members */}
-                <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                  <div className="flex-shrink-0">
-                    <div className="w-12 h-12 bg-gray-500 rounded-full flex items-center justify-center">
-                      <UserPlus className="h-6 w-6 text-white" />
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-base font-medium text-foreground">Individual Members</p>
-                    <p className="text-2xl font-bold text-gray-600 dark:text-gray-400">{stats.membersWithoutFamilies}</p>
-                    <p className="text-sm text-muted-foreground">Not in family units</p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              // Show simplified view when families aren't being used
-              <div className="text-center p-6 bg-muted rounded-lg">
-                <Home className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-lg font-medium text-foreground mb-2">Family System Not Active</p>
-                <p className="text-sm text-muted-foreground">
-                  Members are tracked individually. You can set up family relationships in member profiles if needed.
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {stats.sundayServiceAttendance || 0} out of {stats.activeMembers || 0} active members
                 </p>
               </div>
-            )}
+            </motion.div>
+
+            {/* Bible Study */}
+            <motion.div 
+              className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
+              variants={itemVariants}
+            >
+              <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                <Book className="h-5 w-5 text-emerald-600" />
+                Bible Study
+              </h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Attendance Rate</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : `${stats.bibleStudyRate?.toFixed(0) || 0}%`}
+                  </span>
+                </div>
+                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                  <div 
+                    className="bg-emerald-600 h-2 rounded-full transition-all duration-700"
+                    style={{ width: `${stats.bibleStudyRate || 0}%` }}
+                  ></div>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {stats.bibleStudyAttendance || 0} out of {stats.activeMembers || 0} active members
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Fellowship */}
+            <motion.div 
+              className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
+              variants={itemVariants}
+            >
+              <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                <Users className="h-5 w-5 text-amber-600" />
+                Fellowship
+              </h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Attendance Rate</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : `${stats.fellowshipRate?.toFixed(0) || 0}%`}
+                  </span>
+                </div>
+                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                  <div 
+                    className="bg-amber-600 h-2 rounded-full transition-all duration-700"
+                    style={{ width: `${stats.fellowshipRate || 0}%` }}
+                  ></div>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {stats.fellowshipAttendance || 0} out of {stats.activeMembers || 0} active members
+                </p>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Financial Intelligence */}
+      <motion.div variants={itemVariants} className="mb-12">
+        <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg border border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+              <TrendingUp className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white">Financial Intelligence</h3>
+              <p className="text-slate-600 dark:text-slate-400">Donation trends and giving patterns</p>
+            </div>
+          </div>
+          
+          <div className="grid gap-6 md:grid-cols-3 mb-8">
+            {/* This Month */}
+            <motion.div 
+              className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
+              variants={itemVariants}
+            >
+              <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-blue-600" />
+                This Month
+              </h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Total Donations</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : `$${(stats.thisMonthDonations || 0).toLocaleString()}`}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Number of Gifts</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : (stats.thisMonthDonationsCount || 0)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Average Gift</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : `$${stats.thisMonthDonationsCount > 0 ? ((stats.thisMonthDonations || 0) / stats.thisMonthDonationsCount).toFixed(0) : 0}`}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Last Month */}
+            <motion.div 
+              className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
+              variants={itemVariants}
+            >
+              <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                <ArrowLeft className="h-5 w-5 text-emerald-600" />
+                Last Month
+              </h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Total Donations</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : `$${(stats.lastMonthDonations || 0).toLocaleString()}`}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Number of Gifts</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : (stats.lastMonthDonationsCount || 0)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Average Gift</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : `$${stats.lastMonthDonationsCount > 0 ? ((stats.lastMonthDonations || 0) / stats.lastMonthDonationsCount).toFixed(0) : 0}`}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Monthly Average */}
+            <motion.div 
+              className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
+              variants={itemVariants}
+            >
+              <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-amber-600" />
+                Monthly Average
+              </h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Total Donations</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : `$${(stats.monthlyAverage || 0).toLocaleString()}`}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Growth Rate</span>
+                  <span className={`text-sm font-semibold ${stats.growthRate >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {isLoading ? '...' : `${stats.growthRate >= 0 ? '+' : ''}${(stats.growthRate || 0).toFixed(1)}%`}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Trend</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : (stats.growthRate >= 0 ? 'Growing' : 'Declining')}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Event Intelligence */}
+      <motion.div variants={itemVariants} className="mb-12">
+        <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg border border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+              <Calendar className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white">Event Intelligence</h3>
+              <p className="text-slate-600 dark:text-slate-400">Event planning and engagement metrics</p>
+            </div>
+          </div>
+          
+          <div className="grid gap-6 md:grid-cols-3 mb-8">
+            {/* Average Per Month */}
+            <motion.div 
+              className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
+              variants={itemVariants}
+            >
+              <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-blue-600" />
+                Average Per Month
+              </h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Total Events</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : (stats.averageEventsPerMonth || 0).toFixed(1)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Most Popular</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : (stats.mostCommonEventType || 'N/A')}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Trend</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : (stats.eventsThisMonth >= stats.averageEventsPerMonth ? 'Above' : 'Below')} Average
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* This Week */}
+            <motion.div 
+              className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
+              variants={itemVariants}
+            >
+              <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                <Clock className="h-5 w-5 text-emerald-600" />
+                This Week
+              </h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Total Events</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : (stats.eventsThisWeek || 0)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Need Volunteers</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : (stats.eventsNeedingVolunteers || 0)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Upcoming</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : (stats.upcomingEvents || 0)}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* This Month */}
+            <motion.div 
+              className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
+              variants={itemVariants}
+            >
+              <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-amber-600" />
+                This Month
+              </h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Total Events</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : (stats.eventsThisMonth || 0)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">vs Last Month</span>
+                  <span className={`text-sm font-semibold ${(stats.eventsThisMonth || 0) >= (stats.eventsLastMonth || 0) ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {isLoading ? '...' : (stats.eventsThisMonth >= stats.eventsLastMonth ? '+' : '')}
+                    {(stats.eventsThisMonth || 0) - (stats.eventsLastMonth || 0)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Engagement</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : (stats.eventsThisMonth > 0 ? 'Active' : 'Low')}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Membership Intelligence */}
+      <motion.div variants={itemVariants} className="mb-12">
+        <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg border border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+              <Users2 className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white">Membership Intelligence</h3>
+              <p className="text-slate-600 dark:text-slate-400">Member engagement and growth analysis</p>
+            </div>
+          </div>
+          
+          <div className="grid gap-6 md:grid-cols-3 mb-8">
+            {/* Active Members */}
+            <motion.div 
+              className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
+              variants={itemVariants}
+            >
+              <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                <UserCheck className="h-5 w-5 text-emerald-600" />
+                Active Members
+              </h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Total Active</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : (stats.activeMembers || 0)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">% of Total</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : `${stats.totalPeople > 0 ? ((stats.activeMembers / stats.totalPeople) * 100).toFixed(1) : 0}%`}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Engagement</span>
+                  <span className="text-sm font-semibold text-emerald-600">
+                    {isLoading ? '...' : (stats.activeMembers > stats.totalPeople * 0.7 ? 'High' : stats.activeMembers > stats.totalPeople * 0.5 ? 'Medium' : 'Low')}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Inactive Members */}
+            <motion.div 
+              className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
+              variants={itemVariants}
+            >
+              <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                <UserX className="h-5 w-5 text-amber-600" />
+                Inactive Members
+              </h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Total Inactive</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : (stats.inactiveMembers || 0)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">% of Total</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : `${stats.totalPeople > 0 ? ((stats.inactiveMembers / stats.totalPeople) * 100).toFixed(1) : 0}%`}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Need Outreach</span>
+                  <span className="text-sm font-semibold text-amber-600">
+                    {isLoading ? '...' : (stats.inactiveMembers > 0 ? 'Yes' : 'No')}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Visitors */}
+            <motion.div 
+              className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
+              variants={itemVariants}
+            >
+              <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                <UserPlus className="h-5 w-5 text-blue-600" />
+                Visitors
+              </h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Total Visitors</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : (stats.visitors || 0)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">% of Total</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : `${stats.totalPeople > 0 ? ((stats.visitors / stats.totalPeople) * 100).toFixed(1) : 0}%`}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Follow-up</span>
+                  <span className="text-sm font-semibold text-blue-600">
+                    {isLoading ? '...' : (stats.visitors > 0 ? 'Needed' : 'N/A')}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Demographics Intelligence */}
+      <motion.div variants={itemVariants} className="mb-12">
+        <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg border border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+              <BarChart3 className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white">Demographics Intelligence</h3>
+              <p className="text-slate-600 dark:text-slate-400">Family structure and age distribution</p>
+            </div>
+          </div>
+          
+          <div className="grid gap-6 md:grid-cols-2 mb-8">
+            {/* Family Statistics */}
+            <motion.div 
+              className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
+              variants={itemVariants}
+            >
+              <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                <Users className="h-5 w-5 text-blue-600" />
+                Family Statistics
+              </h4>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Total Families</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : (stats.totalFamilies || 0)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Members in Families</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : (stats.membersInFamilies || 0)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Individual Members</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : (stats.individualMembers || 0)}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
 
             {/* Age Distribution */}
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              {/* Adults */}
-              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-                    <Users className="h-6 w-6 text-white" />
-                  </div>
+            <motion.div 
+              className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
+              variants={itemVariants}
+            >
+              <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                <Hash className="h-5 w-5 text-emerald-600" />
+                Age Distribution
+              </h4>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Adults (18+)</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : (stats.adults || 0)}
+                  </span>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-foreground">Adults</p>
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.adults}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {stats.activeMembers > 0 ? `${((stats.adults / stats.activeMembers) * 100).toFixed(1)}%` : '0%'} of active members
-                  </p>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Children (Under 18)</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : (stats.children || 0)}
+                  </span>
                 </div>
-              </div>
-
-              {/* Children */}
-              <div className="flex items-center space-x-4 p-4 bg-muted rounded-lg border">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center">
-                    <Baby className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-base font-medium text-foreground">Children</p>
-                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{stats.children}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Total children registered
-                  </p>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Adult %</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {isLoading ? '...' : `${stats.totalPeople > 0 ? ((stats.adults / stats.totalPeople) * 100).toFixed(1) : 0}%`}
+                  </span>
                 </div>
               </div>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button variant="outline" className="w-full" asChild>
-              <a href="/members">Manage Families</a>
-                  </Button>
-          </CardFooter>
-        </Card>
+            </motion.div>
+          </div>
+        </div>
       </motion.div>
-
-      <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
-        <motion.div variants={itemVariants}>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl">Recent People</CardTitle>
-              <CardDescription className="text-base">Latest active members</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentPeople.length > 0 ? (
-                  recentPeople.map(person => (
-                    <div key={person.id} className="flex items-center justify-between border-b pb-3">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={person.image_url} />
-                          <AvatarFallback>{getInitials(person.firstname, person.lastname)}</AvatarFallback>
-                        </Avatar>
-                        <div className="text-base">{formatName(person.firstname, person.lastname)}</div>
-                </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => navigate(`/members/${person.id}`)}
-                      >
-                        View
-                      </Button>
-            </div>
-                  ))
-                ) : (
-                  <p className="text-muted-foreground text-base">No recent people to display.</p>
-              )}
-              </div>
-          </CardContent>
-            <CardFooter>
-              <Button variant="outline" className="w-full" asChild>
-                <a href="/members">View All People</a>
-              </Button>
-            </CardFooter>
-        </Card>
-      </motion.div>
-
-        <motion.div variants={itemVariants}>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl">Recent Donations</CardTitle>
-              <CardDescription className="text-base">Latest donations</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {donations.slice(0, 5).map(donation => (
-                  <div key={donation.id} className="flex items-start justify-between border-b pb-3 gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-base">${parseFloat(donation.amount).toFixed(2)}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {format(new Date(donation.date + 'T12:00:00'), 'MMM d, yyyy')}
-                        {donation.attendance && ` • ${donation.attendance} people`}
-                      </p>
-                    </div>
-                    <div className="flex gap-1 sm:gap-2 flex-shrink-0">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="text-xs sm:text-sm px-2 sm:px-3"
-                        onClick={() => handleEditDonation(donation)}
-                      >
-                        Edit
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="text-xs sm:text-sm px-2 sm:px-3"
-                        onClick={() => handleDeleteDonation(donation)}
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button variant="outline" className="w-full" asChild>
-                <a href="/donations">View All Donations</a>
-              </Button>
-            </CardFooter>
-          </Card>
-    </motion.div>
-      </div>
 
       {/* Person Selection Dialog */}
       <Dialog open={isPersonDialogOpen} onOpenChange={setIsPersonDialogOpen}>
@@ -2716,9 +2635,7 @@ export function Dashboard() {
           </DialogContent>
         </Dialog>
       )}
-
-
-
-    </div>
+      </div>
+    </motion.div>
   );
 }
