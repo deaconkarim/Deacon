@@ -49,7 +49,7 @@ export function useAttendanceStats(startDate, endDate) {
       // Fetch attendance records for these events
       const { data: attendance, error: attendanceError } = await supabase
         .from('event_attendance')
-        .select(`*, members (firstname, lastname)`)
+        .select(`*, members (id, firstname, lastname, image_url)`)
         .in('event_id', events.map(e => e.id));
       
       
@@ -85,15 +85,22 @@ export function useAttendanceStats(startDate, endDate) {
       // Member stats
       const memberStatsObj = attendance.reduce((acc, record) => {
         if (record.status === 'checked-in' || record.status === 'attending') {
+          const memberId = record.members.id;
           const memberName = `${record.members.firstname} ${record.members.lastname}`;
-          if (!acc[memberName]) acc[memberName] = 0;
-          acc[memberName]++;
+          if (!acc[memberId]) {
+            acc[memberId] = {
+              id: memberId,
+              name: memberName,
+              image: record.members.image_url,
+              count: 0
+            };
+          }
+          acc[memberId].count++;
         }
         return acc;
       }, {});
       
-      const memberStats = Object.entries(memberStatsObj)
-        .map(([name, count]) => ({ name, count }))
+      const memberStats = Object.values(memberStatsObj)
         .sort((a, b) => b.count - a.count)
         .slice(0, 10);
       

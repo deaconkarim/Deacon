@@ -42,6 +42,8 @@ import {
   UserX,
   Hash,
   ArrowLeft,
+  Star,
+  Church,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -625,12 +627,12 @@ export function Dashboard() {
 
   return (
     <motion.div 
-      className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900/30 w-full max-w-full overflow-x-hidden"
+      className="min-h-screen w-full max-w-full overflow-x-hidden"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
     >
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 overflow-x-hidden">
         {/* Header - Next-Gen Design */}
         <motion.div className="mb-8 relative" variants={itemVariants}>
           <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-indigo-600/5 blur-3xl rounded-3xl"></div>
@@ -1050,97 +1052,181 @@ export function Dashboard() {
         </motion.div>
       </div>
 
-      {/* Recent Activity Feed */}
-      <motion.div variants={itemVariants} className="w-full mb-12">
-        <div className="group relative overflow-hidden">
-          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-4 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300 w-full overflow-hidden">
-            <div className="flex items-center justify-between mb-4 sm:mb-6 w-full">
-              <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
-                  <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+      {/* Recent Activity Feed & Attendance by Event Type */}
+      <motion.div variants={itemVariants} className="mb-12">
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+          {/* Recent Activity Feed */}
+          <div className="group relative overflow-hidden">
+            <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-4 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden">
+              <div className="flex items-center justify-between mb-4 sm:mb-6 w-full">
+                <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
+                    <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-lg sm:text-xl lg:text-xl font-bold text-slate-900 dark:text-white truncate">Recent Activity</h3>
+                    <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base truncate">SMS Conversations</p>
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900 dark:text-white truncate">Recent Activity</h3>
-                  <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base truncate">SMS Conversations</p>
+                <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
+                  <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400">Live</span>
                 </div>
               </div>
-              <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
-                <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400">Live</span>
-              </div>
-            </div>
-            
-            <div className="space-y-3 sm:space-y-4 w-full">
-              {recentSMSConversations && recentSMSConversations.length > 0 ? (
-                recentSMSConversations.slice(0, 5).map((conversation, index) => (
-                  <div 
-                    key={conversation.id} 
-                    className="flex items-center p-3 sm:p-4 border border-slate-200 dark:border-slate-700 rounded-xl sm:rounded-2xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all duration-300 group/item w-full overflow-hidden"
-                    onClick={() => handleSMSConversationClick(conversation)}
-                  >
-                    <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                      <div className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0 ${
-                        conversation.conversation_type === 'prayer_request' ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white' :
-                        conversation.conversation_type === 'emergency' ? 'bg-gradient-to-br from-red-500 to-red-600 text-white' :
-                        conversation.conversation_type === 'event_reminder' ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white' :
-                        'bg-gradient-to-br from-slate-500 to-slate-600 text-white'
-                      }`}>
-                        <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-slate-900 dark:text-white truncate text-sm sm:text-base lg:text-lg">
-                          {(conversation.title || 'SMS Conversation').length > 25 ? 
-                            `${(conversation.title || 'SMS Conversation').substring(0, 25)}...` :
-                            (conversation.title || 'SMS Conversation')
-                          }
-                        </p>
-                        <div className="flex items-center gap-1 sm:gap-2 mt-1">
-                          <span className={`text-xs font-medium px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full flex-shrink-0 ${
-                            conversation.conversation_type === 'prayer_request' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300' :
-                            conversation.conversation_type === 'emergency' ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' :
-                            conversation.conversation_type === 'event_reminder' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :
-                            'bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300'
-                          }`}>
-                            {(() => {
-                              const type = conversation.conversation_type === 'prayer_request' ? 'Prayer' :
-                                         conversation.conversation_type === 'emergency' ? 'Emergency' :
-                                         conversation.conversation_type === 'event_reminder' ? 'Event' :
-                                         conversation.conversation_type === 'pastoral_care' ? 'Pastoral' :
-                                         'General';
-                              return type;
-                            })()}
-                          </span>
-                          {conversation.updated_at && (
-                            <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                              {format(new Date(conversation.updated_at), 'MMM d')}
+              
+              <div className="space-y-3 sm:space-y-4 w-full">
+                {recentSMSConversations && recentSMSConversations.length > 0 ? (
+                  recentSMSConversations.slice(0, 5).map((conversation, index) => (
+                    <div 
+                      key={conversation.id} 
+                      className="flex items-center p-3 sm:p-4 border border-slate-200 dark:border-slate-700 rounded-xl sm:rounded-2xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all duration-300 group/item w-full overflow-hidden"
+                      onClick={() => handleSMSConversationClick(conversation)}
+                    >
+                      <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                        <div className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-10 lg:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0 ${
+                          conversation.conversation_type === 'prayer_request' ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white' :
+                          conversation.conversation_type === 'emergency' ? 'bg-gradient-to-br from-red-500 to-red-600 text-white' :
+                          conversation.conversation_type === 'event_reminder' ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white' :
+                          'bg-gradient-to-br from-slate-500 to-slate-600 text-white'
+                        }`}>
+                          <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-slate-900 dark:text-white truncate text-sm sm:text-base lg:text-base">
+                            {conversation.title || 'SMS Conversation'}
+                          </p>
+                          <div className="flex items-center gap-1 sm:gap-2 mt-1">
+                            <span className={`text-xs font-medium px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full flex-shrink-0 ${
+                              conversation.conversation_type === 'prayer_request' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300' :
+                              conversation.conversation_type === 'emergency' ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' :
+                              conversation.conversation_type === 'event_reminder' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :
+                              'bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300'
+                            }`}>
+                              {(() => {
+                                const type = conversation.conversation_type === 'prayer_request' ? 'Prayer' :
+                                           conversation.conversation_type === 'emergency' ? 'Emergency' :
+                                           conversation.conversation_type === 'event_reminder' ? 'Event' :
+                                           conversation.conversation_type === 'pastoral_care' ? 'Pastoral' :
+                                           'General';
+                                return type;
+                              })()}
                             </span>
-                          )}
+                            {conversation.updated_at && (
+                              <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                                {format(new Date(conversation.updated_at), 'MMM d')}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
+                      <ChevronRight className="h-4 w-4 text-slate-400 flex-shrink-0 ml-1 sm:ml-2 group-hover/item:text-slate-600 dark:group-hover/item:text-slate-300 transition-colors" />
                     </div>
-                    <ChevronRight className="h-4 w-4 text-slate-400 flex-shrink-0 ml-1 sm:ml-2 group-hover/item:text-slate-600 dark:group-hover/item:text-slate-300 transition-colors" />
+                  ))
+                ) : (
+                  <div className="text-center py-6 sm:py-8">
+                    <MessageSquare className="h-12 w-12 sm:h-16 sm:w-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+                    <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg">No recent SMS conversations.</p>
                   </div>
-                ))
-              ) : (
-                <div className="text-center py-6 sm:py-8">
-                  <MessageSquare className="h-12 w-12 sm:h-16 sm:w-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-                  <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg">No recent SMS conversations.</p>
-                </div>
-              )}
+                )}
+              </div>
+              
+              <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-200 dark:border-slate-700">
+                <Button 
+                  variant="outline" 
+                  className="w-full bg-gradient-to-r from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-900/30 border-indigo-200 dark:border-indigo-800 hover:from-indigo-100 hover:to-indigo-200 dark:hover:from-indigo-900/30 dark:hover:to-indigo-900/40 transition-all duration-300 h-10 sm:h-12 text-sm sm:text-base font-medium" 
+                  asChild
+                >
+                  <a href="/sms" className="flex items-center justify-center space-x-2">
+                    <span className="hidden sm:inline">View All Conversations</span>
+                    <span className="sm:hidden">View All</span>
+                    <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5" />
+                  </a>
+                </Button>
+              </div>
             </div>
-            
-            <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-200 dark:border-slate-700">
-              <Button 
-                variant="outline" 
-                className="w-full bg-gradient-to-r from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-900/30 border-indigo-200 dark:border-indigo-800 hover:from-indigo-100 hover:to-indigo-200 dark:hover:from-indigo-900/30 dark:hover:to-indigo-900/40 transition-all duration-300 h-10 sm:h-12 text-sm sm:text-base lg:text-lg font-medium" 
-                asChild
-              >
-                <a href="/sms" className="flex items-center justify-center space-x-2">
-                  <span className="hidden sm:inline">View All Conversations</span>
-                  <span className="sm:hidden">View All</span>
-                  <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5" />
-                </a>
-              </Button>
+          </div>
+
+          {/* Attendance by Event Type */}
+          <div className="group relative">
+            <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+            <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                  <BarChart3 className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">Attendance by Event Type</h3>
+                  <p className="text-slate-600 dark:text-slate-400 text-sm">Average attendance per event (last 6 months)</p>
+                </div>
+              </div>
+              
+              <div className="grid gap-4 grid-cols-1">
+                {/* Sunday Service */}
+                <motion.div 
+                  className="group/card relative"
+                  variants={itemVariants}
+                >
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                  <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                    <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                      <BookOpen className="h-5 w-5 text-blue-600" />
+                      Sunday Service
+                    </h4>
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-blue-600 mb-2">
+                        {isLoading ? '...' : Math.round((stats.sundayServiceAttendance || 0) / Math.max(stats.sundayServiceEvents || 1, 1))}
+                      </div>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">
+                        {isLoading ? '...' : `${stats.sundayServiceEvents || 0} events • ${stats.sundayServiceAttendance || 0} total`}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Bible Study */}
+                <motion.div 
+                  className="group/card relative"
+                  variants={itemVariants}
+                >
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                  <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                    <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                      <Book className="h-5 w-5 text-emerald-600" />
+                      Bible Study
+                    </h4>
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-emerald-600 mb-2">
+                        {isLoading ? '...' : Math.round((stats.bibleStudyAttendance || 0) / Math.max(stats.bibleStudyEvents || 1, 1))}
+                      </div>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">
+                        {isLoading ? '...' : `${stats.bibleStudyEvents || 0} events • ${stats.bibleStudyAttendance || 0} total`}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Fellowship */}
+                <motion.div 
+                  className="group/card relative"
+                  variants={itemVariants}
+                >
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-500/20 to-amber-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                  <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                    <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                      <Users className="h-5 w-5 text-amber-600" />
+                      Fellowship
+                    </h4>
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-amber-600 mb-2">
+                        {isLoading ? '...' : Math.round((stats.fellowshipAttendance || 0) / Math.max(stats.fellowshipEvents || 1, 1))}
+                      </div>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">
+                        {isLoading ? '...' : `${stats.fellowshipEvents || 0} events • ${stats.fellowshipAttendance || 0} total`}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
             </div>
           </div>
         </div>
@@ -1714,101 +1800,172 @@ export function Dashboard() {
         </div>
       </motion.div>
 
-      {/* Attendance Intelligence */}
+
+
+      {/* Detailed Attendance Statistics */}
       <motion.div variants={itemVariants} className="mb-12">
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg border border-slate-200 dark:border-slate-700">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-              <BarChart3 className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white">Attendance Intelligence</h3>
-              <p className="text-slate-600 dark:text-slate-400">Service participation rates and trends</p>
-            </div>
-          </div>
-          
-          <div className="grid gap-4 md:grid-cols-3">
-            {/* Sunday Service */}
-            <motion.div 
-              className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
-              variants={itemVariants}
-            >
-              <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                <BookOpen className="h-5 w-5 text-blue-600" />
-                Sunday Service
-              </h4>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Attendance Rate</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : `${stats.sundayServiceRate?.toFixed(0) || 0}%`}
-                  </span>
-                </div>
-                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                  <div 
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-700"
-                    style={{ width: `${stats.sundayServiceRate || 0}%` }}
-                  ></div>
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {stats.sundayServiceAttendance || 0} out of {stats.activeMembers || 0} active members
-                </p>
+        <div className="group relative">
+          <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                <Users className="h-6 w-6 text-white" />
               </div>
-            </motion.div>
-
-            {/* Bible Study */}
-            <motion.div 
-              className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
-              variants={itemVariants}
-            >
-              <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                <Book className="h-5 w-5 text-emerald-600" />
-                Bible Study
-              </h4>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Attendance Rate</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : `${stats.bibleStudyRate?.toFixed(0) || 0}%`}
-                  </span>
-                </div>
-                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                  <div 
-                    className="bg-emerald-600 h-2 rounded-full transition-all duration-700"
-                    style={{ width: `${stats.bibleStudyRate || 0}%` }}
-                  ></div>
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {stats.bibleStudyAttendance || 0} out of {stats.activeMembers || 0} active members
-                </p>
+              <div>
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Attendance Statistics</h3>
+                <p className="text-slate-600 dark:text-slate-400">Last 30 days overview</p>
               </div>
-            </motion.div>
+            </div>
+            
+            <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+              {/* Service Breakdown */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <h4 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5 text-blue-600" />
+                    Service Breakdown
+                  </h4>
+                  <div className="space-y-3">
+                    {attendanceLoading ? (
+                      Array.from({ length: 3 }).map((_, i) => (
+                        <div key={i} className="animate-pulse">
+                          <div className="flex items-center justify-between">
+                            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-32"></div>
+                            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-8"></div>
+                          </div>
+                        </div>
+                      ))
+                    ) : serviceBreakdown && serviceBreakdown.length > 0 ? (
+                      serviceBreakdown.map((service, index) => (
+                        <div key={service.name} className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                            {service.name}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg font-bold text-blue-600">{service.value}</span>
+                            {index === 0 && <Trophy className="h-4 w-4 text-yellow-600" />}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">
+                        No attendance data available for the last 30 days
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
 
-            {/* Fellowship */}
+              {/* Event Attendance */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <h4 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-emerald-600" />
+                    Event Attendance
+                  </h4>
+                  <div className="space-y-3 max-h-48 overflow-y-auto">
+                    {attendanceLoading ? (
+                      Array.from({ length: 3 }).map((_, i) => (
+                        <div key={i} className="animate-pulse">
+                          <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-full mb-2"></div>
+                          <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-24"></div>
+                        </div>
+                      ))
+                    ) : eventDetails && eventDetails.length > 0 ? (
+                      eventDetails.slice(0, 5).map((event) => (
+                        <div key={event.id} className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate pr-2">
+                              {event.title}
+                            </span>
+                            <span className="text-sm font-bold text-emerald-600 flex-shrink-0">
+                              {event.attendees} attendees
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {format(parseISO(event.date), 'M/d/yyyy')}
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">
+                        No events found for the last 30 days
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Top Attendees */}
             <motion.div 
-              className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
+              className="group/card relative mt-6"
               variants={itemVariants}
             >
-              <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                <Users className="h-5 w-5 text-amber-600" />
-                Fellowship
-              </h4>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Attendance Rate</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : `${stats.fellowshipRate?.toFixed(0) || 0}%`}
-                  </span>
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-500/20 to-amber-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+              <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                <h4 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                  <Trophy className="h-5 w-5 text-amber-600" />
+                  Top Attendees
+                </h4>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {attendanceLoading ? (
+                    Array.from({ length: 6 }).map((_, i) => (
+                      <div key={i} className="animate-pulse flex items-center gap-3">
+                        <div className="w-8 h-8 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
+                        <div className="flex-1">
+                          <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-full mb-1"></div>
+                          <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-16"></div>
+                        </div>
+                      </div>
+                    ))
+                  ) : memberStats && memberStats.length > 0 ? (
+                    memberStats.slice(0, 6).map((member, index) => (
+                      <div 
+                        key={member.name} 
+                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
+                        onClick={() => handleMemberProfileClick(member.id)}
+                      >
+                        <div className="relative">
+                          <Avatar className="w-8 h-8">
+                            <AvatarImage src={member.image} alt={member.name} />
+                            <AvatarFallback className="text-xs bg-gradient-to-br from-blue-500 to-indigo-500 text-white">
+                              {getInitials(member.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                            {index + 1}
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate">
+                            {member.name}
+                          </p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {member.count} events
+                          </p>
+                        </div>
+                        <div className="flex items-center">
+                          <span className="text-sm font-bold text-amber-600">{member.count}</span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="col-span-full text-center py-4">
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                        No attendance data available for the last 30 days
+                      </p>
+                    </div>
+                  )}
                 </div>
-                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                  <div 
-                    className="bg-amber-600 h-2 rounded-full transition-all duration-700"
-                    style={{ width: `${stats.fellowshipRate || 0}%` }}
-                  ></div>
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {stats.fellowshipAttendance || 0} out of {stats.activeMembers || 0} active members
-                </p>
               </div>
             </motion.div>
           </div>
@@ -1817,410 +1974,464 @@ export function Dashboard() {
 
       {/* Financial Intelligence */}
       <motion.div variants={itemVariants} className="mb-12">
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg border border-slate-200 dark:border-slate-700">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-              <TrendingUp className="h-6 w-6 text-white" />
+        <div className="group relative">
+          <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
+                <TrendingUp className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Donation Statistics</h3>
+                <p className="text-slate-600 dark:text-slate-400">Financial overview of your organization</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white">Financial Intelligence</h3>
-              <p className="text-slate-600 dark:text-slate-400">Donation trends and giving patterns</p>
+            
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 mb-8">
+              {/* This Month */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3">
+                    This Month
+                  </h4>
+                  <div className="text-center">
+                    <div className="text-xl sm:text-2xl font-bold text-blue-600 mb-2">
+                      {isLoading ? '...' : `$${(stats.thisMonthDonations || 0).toFixed(2)}`}
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {(() => {
+                        const now = new Date();
+                        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+                        const dayOfMonth = now.getDate();
+                        const percentComplete = ((dayOfMonth / daysInMonth) * 100).toFixed(1);
+                        return `${percentComplete}% completed`;
+                      })()}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Last Month */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3">
+                    Last Month
+                  </h4>
+                  <div className="text-center">
+                    <div className="text-xl sm:text-2xl font-bold text-emerald-600 mb-2">
+                      {isLoading ? '...' : `$${(stats.lastMonthDonations || 0).toFixed(2)}`}
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Previous month
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Monthly Average */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-500/20 to-amber-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3">
+                    Monthly Average
+                  </h4>
+                  <div className="text-center">
+                    <div className="text-xl sm:text-2xl font-bold text-amber-600 mb-2">
+                      {isLoading ? '...' : `$${(stats.monthlyAverage || 0).toFixed(2)}`}
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Monthly avg
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Last Week */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-indigo-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3">
+                    Last Week
+                  </h4>
+                  <div className="text-center">
+                    <div className="text-xl sm:text-2xl font-bold text-indigo-600 mb-2">
+                      {isLoading ? '...' : `$${(stats.lastWeekDonations || 0).toFixed(2)}`}
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Previous week
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Weekly Average */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-teal-500/20 to-teal-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3">
+                    Weekly Average
+                  </h4>
+                  <div className="text-center">
+                    <div className="text-xl sm:text-2xl font-bold text-teal-600 mb-2">
+                      {isLoading ? '...' : `$${(stats.weeklyAverage || 0).toFixed(2)}`}
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Weekly avg
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
             </div>
-          </div>
-          
-          <div className="grid gap-6 md:grid-cols-3 mb-8">
-            {/* This Month */}
-            <motion.div 
-              className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
-              variants={itemVariants}
-            >
-              <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-blue-600" />
-                This Month
-              </h4>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Total Donations</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : `$${(stats.thisMonthDonations || 0).toLocaleString()}`}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Number of Gifts</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : (stats.thisMonthDonationsCount || 0)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Average Gift</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : `$${stats.thisMonthDonationsCount > 0 ? ((stats.thisMonthDonations || 0) / stats.thisMonthDonationsCount).toFixed(0) : 0}`}
-                  </span>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Last Month */}
-            <motion.div 
-              className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
-              variants={itemVariants}
-            >
-              <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                <ArrowLeft className="h-5 w-5 text-emerald-600" />
-                Last Month
-              </h4>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Total Donations</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : `$${(stats.lastMonthDonations || 0).toLocaleString()}`}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Number of Gifts</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : (stats.lastMonthDonationsCount || 0)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Average Gift</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : `$${stats.lastMonthDonationsCount > 0 ? ((stats.lastMonthDonations || 0) / stats.lastMonthDonationsCount).toFixed(0) : 0}`}
-                  </span>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Monthly Average */}
-            <motion.div 
-              className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
-              variants={itemVariants}
-            >
-              <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-amber-600" />
-                Monthly Average
-              </h4>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Total Donations</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : `$${(stats.monthlyAverage || 0).toLocaleString()}`}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Growth Rate</span>
-                  <span className={`text-sm font-semibold ${stats.growthRate >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                    {isLoading ? '...' : `${stats.growthRate >= 0 ? '+' : ''}${(stats.growthRate || 0).toFixed(1)}%`}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Trend</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : (stats.growthRate >= 0 ? 'Growing' : 'Declining')}
-                  </span>
-                </div>
-              </div>
-            </motion.div>
           </div>
         </div>
       </motion.div>
 
       {/* Event Intelligence */}
       <motion.div variants={itemVariants} className="mb-12">
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg border border-slate-200 dark:border-slate-700">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-              <Calendar className="h-6 w-6 text-white" />
+        <div className="group relative">
+          <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                <Calendar className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Event Intelligence</h3>
+                <p className="text-slate-600 dark:text-slate-400">Event planning and engagement metrics</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white">Event Intelligence</h3>
-              <p className="text-slate-600 dark:text-slate-400">Event planning and engagement metrics</p>
+            
+            <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-8">
+              {/* Average Per Month */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5 text-blue-600" />
+                    Average Per Month
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Total Events</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {isLoading ? '...' : (stats.averageEventsPerMonth || 0).toFixed(1)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Most Popular</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {isLoading ? '...' : (stats.mostCommonEventType || 'N/A')}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Trend</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {isLoading ? '...' : (stats.eventsThisMonth >= stats.averageEventsPerMonth ? 'Above' : 'Below')} Average
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* This Week */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                    <Clock className="h-5 w-5 text-emerald-600" />
+                    This Week
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Total Events</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {isLoading ? '...' : (stats.eventsThisWeek || 0)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Need Volunteers</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {isLoading ? '...' : (stats.eventsNeedingVolunteers || 0)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Upcoming</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {isLoading ? '...' : (stats.upcomingEvents || 0)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* This Month */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-500/20 to-amber-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-amber-600" />
+                    This Month
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Total Events</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {isLoading ? '...' : (stats.eventsThisMonth || 0)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">vs Last Month</span>
+                      <span className={`text-sm font-semibold ${(stats.eventsThisMonth || 0) >= (stats.eventsLastMonth || 0) ? 'text-emerald-600' : 'text-red-600'}`}>
+                        {isLoading ? '...' : (stats.eventsThisMonth >= stats.eventsLastMonth ? '+' : '')}
+                        {(stats.eventsThisMonth || 0) - (stats.eventsLastMonth || 0)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Engagement</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {isLoading ? '...' : (stats.eventsThisMonth > 0 ? 'Active' : 'Low')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
             </div>
-          </div>
-          
-          <div className="grid gap-6 md:grid-cols-3 mb-8">
-            {/* Average Per Month */}
-            <motion.div 
-              className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
-              variants={itemVariants}
-            >
-              <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-blue-600" />
-                Average Per Month
-              </h4>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Total Events</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : (stats.averageEventsPerMonth || 0).toFixed(1)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Most Popular</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : (stats.mostCommonEventType || 'N/A')}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Trend</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : (stats.eventsThisMonth >= stats.averageEventsPerMonth ? 'Above' : 'Below')} Average
-                  </span>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* This Week */}
-            <motion.div 
-              className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
-              variants={itemVariants}
-            >
-              <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                <Clock className="h-5 w-5 text-emerald-600" />
-                This Week
-              </h4>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Total Events</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : (stats.eventsThisWeek || 0)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Need Volunteers</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : (stats.eventsNeedingVolunteers || 0)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Upcoming</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : (stats.upcomingEvents || 0)}
-                  </span>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* This Month */}
-            <motion.div 
-              className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
-              variants={itemVariants}
-            >
-              <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-amber-600" />
-                This Month
-              </h4>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Total Events</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : (stats.eventsThisMonth || 0)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">vs Last Month</span>
-                  <span className={`text-sm font-semibold ${(stats.eventsThisMonth || 0) >= (stats.eventsLastMonth || 0) ? 'text-emerald-600' : 'text-red-600'}`}>
-                    {isLoading ? '...' : (stats.eventsThisMonth >= stats.eventsLastMonth ? '+' : '')}
-                    {(stats.eventsThisMonth || 0) - (stats.eventsLastMonth || 0)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Engagement</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : (stats.eventsThisMonth > 0 ? 'Active' : 'Low')}
-                  </span>
-                </div>
-              </div>
-            </motion.div>
           </div>
         </div>
       </motion.div>
 
       {/* Membership Intelligence */}
       <motion.div variants={itemVariants} className="mb-12">
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg border border-slate-200 dark:border-slate-700">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-              <Users2 className="h-6 w-6 text-white" />
+        <div className="group relative">
+          <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
+                <Users2 className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Membership Intelligence</h3>
+                <p className="text-slate-600 dark:text-slate-400">Member engagement and growth analysis</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white">Membership Intelligence</h3>
-              <p className="text-slate-600 dark:text-slate-400">Member engagement and growth analysis</p>
+            
+            <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-8">
+              {/* Active Members */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                    <UserCheck className="h-5 w-5 text-emerald-600" />
+                    Active Members
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Total Active</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {isLoading ? '...' : (stats.activeMembers || 0)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">% of Total</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {isLoading ? '...' : `${stats.totalPeople > 0 ? ((stats.activeMembers / stats.totalPeople) * 100).toFixed(1) : 0}%`}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Engagement</span>
+                      <span className="text-sm font-semibold text-emerald-600">
+                        {isLoading ? '...' : (stats.activeMembers > stats.totalPeople * 0.7 ? 'High' : stats.activeMembers > stats.totalPeople * 0.5 ? 'Medium' : 'Low')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Inactive Members */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-500/20 to-amber-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                    <UserX className="h-5 w-5 text-amber-600" />
+                    Inactive Members
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Total Inactive</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {isLoading ? '...' : (stats.inactiveMembers || 0)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">% of Total</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {isLoading ? '...' : `${stats.totalPeople > 0 ? ((stats.inactiveMembers / stats.totalPeople) * 100).toFixed(1) : 0}%`}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Need Outreach</span>
+                      <span className="text-sm font-semibold text-amber-600">
+                        {isLoading ? '...' : (stats.inactiveMembers > 0 ? 'Yes' : 'No')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Visitors */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                    <UserPlus className="h-5 w-5 text-blue-600" />
+                    Visitors
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Total Visitors</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {isLoading ? '...' : (stats.visitors || 0)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">% of Total</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {isLoading ? '...' : `${stats.totalPeople > 0 ? ((stats.visitors / stats.totalPeople) * 100).toFixed(1) : 0}%`}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Follow-up</span>
+                      <span className="text-sm font-semibold text-blue-600">
+                        {isLoading ? '...' : (stats.visitors > 0 ? 'Needed' : 'N/A')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
             </div>
-          </div>
-          
-          <div className="grid gap-6 md:grid-cols-3 mb-8">
-            {/* Active Members */}
-            <motion.div 
-              className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
-              variants={itemVariants}
-            >
-              <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                <UserCheck className="h-5 w-5 text-emerald-600" />
-                Active Members
-              </h4>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Total Active</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : (stats.activeMembers || 0)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">% of Total</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : `${stats.totalPeople > 0 ? ((stats.activeMembers / stats.totalPeople) * 100).toFixed(1) : 0}%`}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Engagement</span>
-                  <span className="text-sm font-semibold text-emerald-600">
-                    {isLoading ? '...' : (stats.activeMembers > stats.totalPeople * 0.7 ? 'High' : stats.activeMembers > stats.totalPeople * 0.5 ? 'Medium' : 'Low')}
-                  </span>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Inactive Members */}
-            <motion.div 
-              className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
-              variants={itemVariants}
-            >
-              <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                <UserX className="h-5 w-5 text-amber-600" />
-                Inactive Members
-              </h4>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Total Inactive</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : (stats.inactiveMembers || 0)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">% of Total</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : `${stats.totalPeople > 0 ? ((stats.inactiveMembers / stats.totalPeople) * 100).toFixed(1) : 0}%`}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Need Outreach</span>
-                  <span className="text-sm font-semibold text-amber-600">
-                    {isLoading ? '...' : (stats.inactiveMembers > 0 ? 'Yes' : 'No')}
-                  </span>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Visitors */}
-            <motion.div 
-              className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
-              variants={itemVariants}
-            >
-              <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                <UserPlus className="h-5 w-5 text-blue-600" />
-                Visitors
-              </h4>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Total Visitors</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : (stats.visitors || 0)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">% of Total</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : `${stats.totalPeople > 0 ? ((stats.visitors / stats.totalPeople) * 100).toFixed(1) : 0}%`}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Follow-up</span>
-                  <span className="text-sm font-semibold text-blue-600">
-                    {isLoading ? '...' : (stats.visitors > 0 ? 'Needed' : 'N/A')}
-                  </span>
-                </div>
-              </div>
-            </motion.div>
           </div>
         </div>
       </motion.div>
 
       {/* Demographics Intelligence */}
       <motion.div variants={itemVariants} className="mb-12">
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg border border-slate-200 dark:border-slate-700">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-              <BarChart3 className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white">Demographics Intelligence</h3>
-              <p className="text-slate-600 dark:text-slate-400">Family structure and age distribution</p>
-            </div>
-          </div>
-          
-          <div className="grid gap-6 md:grid-cols-2 mb-8">
-            {/* Family Statistics */}
-            <motion.div 
-              className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
-              variants={itemVariants}
-            >
-              <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                <Users className="h-5 w-5 text-blue-600" />
-                Family Statistics
-              </h4>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Total Families</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : (stats.totalFamilies || 0)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Members in Families</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : (stats.membersInFamilies || 0)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Individual Members</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : (stats.individualMembers || 0)}
-                  </span>
-                </div>
+        <div className="group relative">
+          <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-cyan-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg">
+                <BarChart3 className="h-6 w-6 text-white" />
               </div>
-            </motion.div>
+              <div>
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Demographics Intelligence</h3>
+                <p className="text-slate-600 dark:text-slate-400">Family structure and age distribution</p>
+              </div>
+            </div>
+            
+            <div className="grid gap-6 grid-cols-1 md:grid-cols-2 mb-8">
+              {/* Family Statistics */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                    <Users className="h-5 w-5 text-blue-600" />
+                    Family Statistics
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Total Families</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {isLoading ? '...' : (stats.totalFamilies || 0)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Members in Families</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {isLoading ? '...' : (stats.membersInFamilies || 0)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Individual Members</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {isLoading ? '...' : (stats.individualMembers || 0)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
 
-            {/* Age Distribution */}
-            <motion.div 
-              className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700"
-              variants={itemVariants}
-            >
-              <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                <Hash className="h-5 w-5 text-emerald-600" />
-                Age Distribution
-              </h4>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Adults (18+)</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : (stats.adults || 0)}
-                  </span>
+              {/* Age Distribution */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                    <Hash className="h-5 w-5 text-emerald-600" />
+                    Age Distribution
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Adults (18+)</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {isLoading ? '...' : (stats.adults || 0)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Children (Under 18)</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {isLoading ? '...' : (stats.children || 0)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Adult %</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {isLoading ? '...' : `${stats.totalPeople > 0 ? ((stats.adults / stats.totalPeople) * 100).toFixed(1) : 0}%`}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Children (Under 18)</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : (stats.children || 0)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Adult %</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isLoading ? '...' : `${stats.totalPeople > 0 ? ((stats.adults / stats.totalPeople) * 100).toFixed(1) : 0}%`}
-                  </span>
-                </div>
-              </div>
-            </motion.div>
+              </motion.div>
+            </div>
           </div>
         </div>
       </motion.div>
