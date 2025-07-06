@@ -447,13 +447,18 @@ export const dashboardService = {
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
     const sixMonthsAgoStr = sixMonthsAgo.toISOString().split('T')[0];
+    
+    // Get today's date to filter only past events
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
 
-    // Get events and attendance for last 6 months
+    // Get events and attendance for last 6 months - ONLY PAST EVENTS
     const { data: events, error: eventsError } = await supabase
       .from('events')
       .select('id, event_type, start_date')
       .eq('organization_id', organizationId)
       .gte('start_date', sixMonthsAgoStr)
+      .lte('start_date', todayStr) // Only include events that have already happened
       .order('start_date', { ascending: false });
 
     if (eventsError) throw eventsError;
@@ -541,9 +546,11 @@ export const dashboardService = {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
 
-    // Look for Sunday Worship Service events in the last 30 days
+    // Look for Sunday Worship Service events in the last 30 days - ONLY PAST EVENTS
     const recentSundayEvents = events.filter(e => 
-      e.event_type === 'Sunday Worship Service' && e.start_date >= thirtyDaysAgoStr
+      e.event_type === 'Sunday Worship Service' && 
+      e.start_date >= thirtyDaysAgoStr && 
+      e.start_date <= todayStr  // Only past events
     );
 
     // Get unique active members who attended Sunday services in the last 30 days
@@ -561,12 +568,13 @@ export const dashboardService = {
     const sundayServiceRate = activeMemberCount > 0 ? 
       Math.round((sundayAttendees.size / activeMemberCount) * 100) : 0;
 
-    console.log('Sunday Service Rate calculation:', {
+    console.log('Sunday Service Rate calculation (past events only):', {
       activeMemberCount,
       sundayAttendees: sundayAttendees.size,
       sundayServiceRate: `${sundayServiceRate}%`,
       sundayServiceEvents: recentSundayEvents.length,
-      activeMemberIds: activeMemberIds.size
+      activeMemberIds: activeMemberIds.size,
+      pastEventsOnly: true
     });
 
     return {

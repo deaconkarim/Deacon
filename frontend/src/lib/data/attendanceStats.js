@@ -25,18 +25,21 @@ export function useAttendanceStats(startDate, endDate) {
       const startDateStr = format(startDate, 'yyyy-MM-dd');
       const endDateStr = format(endDate, 'yyyy-MM-dd');
       
-      // Fetch events for the given range
+      // Get today's date to filter only past events
+      const today = new Date();
+      const todayStr = format(today, 'yyyy-MM-dd');
+      
+      // Fetch events for the given range - ONLY PAST EVENTS
       const { data: events, error: eventsError } = await supabase
         .from('events')
         .select('*')
         .gte('start_date', startDateStr)
-        .lte('start_date', endDateStr)
+        .lte('start_date', endDateStr <= todayStr ? endDateStr : todayStr) // Only include events up to today
         .order('start_date', { ascending: false });
-      
       
       if (eventsError) throw eventsError;
       if (!events || events.length === 0) {
-        console.log('No events found for date range');
+        console.log('No past events found for date range');
         setServiceBreakdown([]);
         setMemberStats([]);
         setDailyData([]);
@@ -49,9 +52,8 @@ export function useAttendanceStats(startDate, endDate) {
       // Fetch attendance records for these events
       const { data: attendance, error: attendanceError } = await supabase
         .from('event_attendance')
-        .select(`*, members (firstname, lastname)`)
+        .select(`*, members (id, firstname, lastname, image_url)`)
         .in('event_id', events.map(e => e.id));
-      
       
       if (attendanceError) throw attendanceError;
       
@@ -85,15 +87,24 @@ export function useAttendanceStats(startDate, endDate) {
       // Member stats
       const memberStatsObj = attendance.reduce((acc, record) => {
         if (record.status === 'checked-in' || record.status === 'attending') {
-          const memberName = `${record.members.firstname} ${record.members.lastname}`;
-          if (!acc[memberName]) acc[memberName] = 0;
-          acc[memberName]++;
+          const memberId = record.members?.id;
+          const memberName = record.members ? `${record.members.firstname} ${record.members.lastname}` : 'Unknown';
+          if (memberId && !acc[memberId]) {
+            acc[memberId] = {
+              id: memberId,
+              name: memberName,
+              image: record.members.image_url,
+              count: 0
+            };
+          }
+          if (memberId) {
+            acc[memberId].count++;
+          }
         }
         return acc;
       }, {});
       
-      const memberStats = Object.entries(memberStatsObj)
-        .map(([name, count]) => ({ name, count }))
+      const memberStats = Object.values(memberStatsObj)
         .sort((a, b) => b.count - a.count)
         .slice(0, 10);
       
@@ -102,7 +113,8 @@ export function useAttendanceStats(startDate, endDate) {
         const eventAttendance = attendance.filter(a => a.event_id === event.id);
         const attendingMembers = eventAttendance
           .filter(a => a.status === 'checked-in' || a.status === 'attending')
-          .map(a => `${a.members.firstname} ${a.members.lastname}`)
+          .map(a => a.members ? `${a.members.firstname} ${a.members.lastname}` : 'Unknown')
+          .filter(name => name !== 'Unknown')
           .sort();
         return {
           id: event.id,
