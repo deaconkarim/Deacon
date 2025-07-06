@@ -6,14 +6,17 @@ export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState('light');
 
   useEffect(() => {
-    // Check for saved theme preference in session storage or default to light mode
-    const savedTheme = sessionStorage.getItem('theme');
+    // Check for saved theme preference in localStorage first
+    const savedTheme = localStorage.getItem('theme');
     
-    if (savedTheme) {
+    if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark')) {
       setTheme(savedTheme);
     } else {
-      // Default to light mode instead of checking system preference
-      setTheme('light');
+      // Check system preference as fallback
+      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const defaultTheme = systemPrefersDark ? 'dark' : 'light';
+      setTheme(defaultTheme);
+      localStorage.setItem('theme', defaultTheme);
     }
   }, []);
 
@@ -23,9 +26,28 @@ export function ThemeProvider({ children }) {
     root.classList.remove('light', 'dark');
     root.classList.add(theme);
     
-    // Save theme preference in session storage
-    sessionStorage.setItem('theme', theme);
+    // Save theme preference in localStorage for persistence
+    localStorage.setItem('theme', theme);
   }, [theme]);
+
+  // Listen for system theme changes if user hasn't set a preference
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    
+    const handleSystemThemeChange = (e) => {
+      // Only update if no saved preference exists
+      const savedTheme = localStorage.getItem('theme');
+      if (!savedTheme) {
+        setTheme(e.matches ? 'dark' : 'light');
+      }
+    };
+
+    mediaQuery.addEventListener('change', handleSystemThemeChange);
+    
+    return () => {
+      mediaQuery.removeEventListener('change', handleSystemThemeChange);
+    };
+  }, []);
 
   const toggleTheme = () => {
     setTheme(theme === 'light' ? 'dark' : 'light');

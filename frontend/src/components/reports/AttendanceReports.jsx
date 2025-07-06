@@ -53,13 +53,18 @@ export function AttendanceReports() {
     try {
       const startDate = startOfMonth(selectedMonth);
       const endDate = endOfMonth(selectedMonth);
+      
+      // Get today's date to filter only past events
+      const today = new Date();
+      const todayStr = format(today, 'yyyy-MM-dd');
+      const endDateStr = format(endDate, 'yyyy-MM-dd');
 
-      // Fetch events for the selected month
+      // Fetch events for the selected month - ONLY PAST EVENTS
       const { data: events, error: eventsError } = await supabase
         .from('events')
         .select('*')
         .gte('start_date', format(startDate, 'yyyy-MM-dd'))
-        .lte('start_date', format(endDate, 'yyyy-MM-dd'))
+        .lte('start_date', Math.min(endDateStr, todayStr)) // Only include events up to today
         .order('start_date', { ascending: false }); // Order by date descending
 
       if (eventsError) throw eventsError;

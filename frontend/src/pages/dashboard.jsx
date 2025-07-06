@@ -634,33 +634,37 @@ export function Dashboard() {
       initial="hidden"
       animate="visible"
     >
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 overflow-x-hidden">
+      <div className="w-full max-w-7xl mx-auto min-w-0 px-2 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8 overflow-x-hidden">
         {/* Header - Next-Gen Design */}
-        <motion.div className="mb-8 relative" variants={itemVariants}>
+        <motion.div className="mb-4 sm:mb-8 relative" variants={itemVariants}>
           <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-indigo-600/5 blur-3xl rounded-3xl"></div>
-          <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-900/60 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 shadow-xl">
+          <div className="relative backdrop-blur-sm bg-white/90 dark:bg-slate-900/95 border border-white/30 dark:border-slate-700/50 rounded-2xl sm:rounded-3xl p-3 sm:p-6 shadow-xl">
             <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between space-y-6 lg:space-y-0">
               <div className="flex-1">
-                <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 bg-clip-text text-transparent mb-2">
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 bg-clip-text text-transparent mb-2">
                   Command Center
                 </h1>
                 <p className="text-slate-600 dark:text-slate-300 text-lg font-medium">
                   Intelligent Church Management System
                 </p>
-                <div className="flex items-center space-x-6 mt-4">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-4">
                   <div className="flex items-center space-x-2">
                     <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm text-slate-600 dark:text-slate-400">Live Data</span>
+                    <span className="text-sm text-slate-600 dark:text-slate-300">Live Data</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                    <span className="text-sm text-slate-600 dark:text-slate-400">Analytics Active</span>
+                    <span className="text-sm text-slate-600 dark:text-slate-300">Analytics Active</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-purple-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm text-slate-600 dark:text-slate-300">AI Intelligence</span>
                   </div>
                 </div>
               </div>
               
               <div className="flex-shrink-0 max-w-md">
-                <div className="relative backdrop-blur-sm bg-white/40 dark:bg-slate-800/40 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg">
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/90 border border-white/40 dark:border-slate-700/60 rounded-2xl p-4 shadow-lg">
                   <LeadershipVerse />
                 </div>
               </div>
@@ -671,12 +675,12 @@ export function Dashboard() {
 
 
         {/* Main Analytics Grid - Next-Gen Design */}
-        <div className="grid gap-6 sm:gap-8 grid-cols-1 lg:grid-cols-3 mb-12">
+        <div className="grid gap-3 sm:gap-6 lg:gap-8 grid-cols-1 lg:grid-cols-3 mb-6 sm:mb-12">
           {/* People Analytics */}
           <motion.div variants={itemVariants}>
             <div className="group relative">
               <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-              <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+              <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center space-x-3">
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
@@ -688,10 +692,10 @@ export function Dashboard() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-3xl font-bold text-blue-600 mb-1">
+                    <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-1">
                       {isLoading ? '---' : stats.totalPeople}
                     </div>
-                    <div className="flex items-center text-sm text-blue-600">
+                    <div className="flex items-center text-sm text-blue-600 dark:text-blue-400">
                       <TrendingUp className="h-4 w-4 mr-1" />
                       Growing
                     </div>
@@ -716,7 +720,7 @@ export function Dashboard() {
                           style={{ width: `${Math.round((stats.activeMembers / Math.max(stats.totalPeople, 1)) * 100)}%` }}
                         ></div>
                       </div>
-                      <span className="text-sm font-semibold text-blue-600">{Math.round((stats.activeMembers / Math.max(stats.totalPeople, 1)) * 100)}%</span>
+                      <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">{Math.round((stats.activeMembers / Math.max(stats.totalPeople, 1)) * 100)}%</span>
                     </div>
                   </div>
                 </div>
@@ -741,7 +745,7 @@ export function Dashboard() {
           <motion.div variants={itemVariants}>
             <div className="group relative">
               <div className="absolute -inset-1 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-              <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+              <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center space-x-3">
                     <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
@@ -754,7 +758,7 @@ export function Dashboard() {
                   </div>
                   <div className="text-right">
                     <div className="text-3xl font-bold text-emerald-600 mb-1">
-                      {isLoading ? '---' : `$${(stats.monthlyDonations || stats.lastMonthDonations || 0).toLocaleString()}`}
+                      {isLoading ? '---' : `$${Math.round(stats.monthlyDonations || stats.lastMonthDonations || 0).toLocaleString()}`}
                     </div>
                     <div className="flex items-center text-sm text-emerald-600">
                       <TrendingUp className="h-4 w-4 mr-1" />
@@ -798,7 +802,7 @@ export function Dashboard() {
         <motion.div variants={itemVariants}>
           <div className="group relative">
             <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-            <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
@@ -865,7 +869,7 @@ export function Dashboard() {
         <motion.div variants={itemVariants}>
           <div className="group relative">
             <div className="absolute -inset-1 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-            <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg">
@@ -931,7 +935,7 @@ export function Dashboard() {
         <motion.div variants={itemVariants}>
           <div className="group relative">
             <div className="absolute -inset-1 bg-gradient-to-r from-orange-500 to-red-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-            <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center shadow-lg">
@@ -994,7 +998,7 @@ export function Dashboard() {
         <motion.div variants={itemVariants}>
           <div className="group relative">
             <div className="absolute -inset-1 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-            <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg">
@@ -1054,194 +1058,170 @@ export function Dashboard() {
         </motion.div>
       </div>
 
-      {/* People Intelligence */}
-      <motion.div variants={itemVariants} className="mb-12">
+
+ {/* Church Intelligence - Deep Insights */}
+      <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
         <div className="group relative">
           <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
-            <div className="flex items-center justify-between mb-8">
+          <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center shadow-lg">
-                  <Users className="h-6 w-6 text-white" />
+                  <BarChart3 className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">People Intelligence</h3>
-                  <p className="text-slate-600 dark:text-slate-400">Smart member insights and engagement</p>
+                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Church Intelligence</h3>
+                  <p className="text-slate-600 dark:text-slate-400">AI-powered insights and recommendations</p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
-                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">AI Insights</span>
+                <div className="w-3 h-3 bg-purple-500 rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">AI Intelligence</span>
               </div>
             </div>
             
-            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-              {/* Engagement Score */}
-              <motion.div 
-                className="group/card relative"
-                variants={itemVariants}
-              >
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
-                      <Activity className="h-4 w-4 text-white" />
-                    </div>
-                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Engagement</h4>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-blue-600 mb-2">
-                      {isLoading ? '...' : Math.round((stats.activeMembers / Math.max(stats.totalPeople, 1)) * 100)}%
-                    </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
-                      Active engagement rate
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Growth Trajectory */}
-              <motion.div 
-                className="group/card relative"
-                variants={itemVariants}
-              >
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-green-500/20 to-green-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
+            {/* Deep Intelligence Grid */}
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+              {/* Growth Trajectory Analysis */}
+              <motion.div className="group/card relative" variants={itemVariants}>
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-green-500/20 to-green-600/20 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
                       <TrendingUp className="h-4 w-4 text-white" />
                     </div>
-                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Growth</h4>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Growth Trend</h4>
                   </div>
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-green-600 mb-2">
-                      {isLoading ? '...' : stats.newMembersThisMonth}
+                  <div className="space-y-2">
+                    <div className="text-2xl font-bold text-green-600">
+                      {isLoading ? '...' : stats.visitors > 0 ? 'Expanding' : 'Stable'}
                     </div>
                     <p className="text-sm text-slate-600 dark:text-slate-400">
-                      New members this month
+                      {stats.visitors > 0 ? `${stats.visitors} new visitors this month` : 'Focus on visitor outreach'}
                     </p>
+                    <div className="text-xs text-slate-500 dark:text-slate-500">
+                      Recommendation: {stats.visitors > 0 ? 'Follow up with recent visitors' : 'Launch invitation campaign'}
+                    </div>
                   </div>
                 </div>
               </motion.div>
 
-              {/* Pastoral Care */}
-              <motion.div 
-                className="group/card relative"
-                variants={itemVariants}
-              >
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-orange-500/20 to-orange-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center">
-                      <Heart className="h-4 w-4 text-white" />
+              {/* Financial Health Score */}
+              <motion.div className="group/card relative" variants={itemVariants}>
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center">
+                      <DollarSign className="h-4 w-4 text-white" />
                     </div>
-                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Care Needs</h4>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Giving Pattern</h4>
                   </div>
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-orange-600 mb-2">
-                      {isLoading ? '...' : stats.inactiveMembers}
+                  <div className="space-y-2">
+                    <div className="text-2xl font-bold text-emerald-600">
+                      {isLoading ? '...' : canCalculateTrend ? (donationTrend > 0 ? 'Improving' : 'Declining') : 'Building'}
                     </div>
                     <p className="text-sm text-slate-600 dark:text-slate-400">
-                      Members needing follow-up
+                      {canCalculateTrend ? `${Math.abs(donationTrend).toFixed(1)}% trend vs last month` : 'Establishing baseline data'}
                     </p>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Financial Intelligence */}
-      <motion.div variants={itemVariants} className="mb-12">
-        <div className="group relative">
-          <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center shadow-lg">
-                  <DollarSign className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Financial Intelligence</h3>
-                  <p className="text-slate-600 dark:text-slate-400">Smart financial insights and trends</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">AI Insights</span>
-              </div>
-            </div>
-            
-            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-              {/* Giving Health */}
-              <motion.div 
-                className="group/card relative"
-                variants={itemVariants}
-              >
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-green-500/20 to-green-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
-                      <BarChart3 className="h-4 w-4 text-white" />
+                    <div className="text-xs text-slate-500 dark:text-slate-500">
+                      Next step: {canCalculateTrend && donationTrend < 0 ? 'Share impact stories' : 'Continue steady stewardship'}
                     </div>
-                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Giving Health</h4>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-green-600 mb-2">
-                      {isLoading ? '...' : donationTrend > 0 ? 'Healthy' : 'Declining'}
-                    </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
-                      {isLoading ? '...' : `${donationTrend > 0 ? '+' : ''}${donationTrend.toFixed(1)}% trend`}
-                    </p>
                   </div>
                 </div>
               </motion.div>
 
-              {/* Donor Engagement */}
-              <motion.div 
-                className="group/card relative"
-                variants={itemVariants}
-              >
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
-                      <Users className="h-4 w-4 text-white" />
+              {/* Engagement Health */}
+              <motion.div className="group/card relative" variants={itemVariants}>
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                      <Activity className="h-4 w-4 text-white" />
                     </div>
-                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Donor Engagement</h4>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Community Health</h4>
                   </div>
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-blue-600 mb-2">
-                      {isLoading ? '...' : Math.round((stats.uniqueDonors / Math.max(stats.totalPeople, 1)) * 100)}%
+                  <div className="space-y-2">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {isLoading ? '...' : stats.inactiveMembers === 0 ? 'Excellent' : stats.inactiveMembers < 5 ? 'Good' : 'Needs Attention'}
                     </div>
                     <p className="text-sm text-slate-600 dark:text-slate-400">
-                      {isLoading ? '...' : `${stats.uniqueDonors} of ${stats.totalPeople} members give`}
+                      {stats.inactiveMembers === 0 ? 'All members engaged' : `${stats.inactiveMembers} members need pastoral care`}
                     </p>
+                    <div className="text-xs text-slate-500 dark:text-slate-500">
+                      Action: {stats.inactiveMembers > 0 ? 'Schedule follow-up visits' : 'Maintain current connection level'}
+                    </div>
                   </div>
                 </div>
               </motion.div>
 
-              {/* Giving Consistency */}
-              <motion.div 
-                className="group/card relative"
-                variants={itemVariants}
-              >
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-indigo-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center">
+              {/* Event Success Prediction */}
+              <motion.div className="group/card relative" variants={itemVariants}>
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-indigo-600/20 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center">
                       <Calendar className="h-4 w-4 text-white" />
                     </div>
-                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Consistency</h4>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Event Momentum</h4>
                   </div>
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-indigo-600 mb-2">
-                      {isLoading ? '...' : stats.averageDonationFrequency > 0 ? 'Regular' : 'Irregular'}
+                  <div className="space-y-2">
+                    <div className="text-2xl font-bold text-indigo-600">
+                      {isLoading ? '...' : stats.eventsThisMonth > stats.averageEventsPerMonth ? 'Strong' : 'Building'}
                     </div>
                     <p className="text-sm text-slate-600 dark:text-slate-400">
-                      Giving pattern analysis
+                      {stats.eventsThisMonth} events vs {stats.averageEventsPerMonth} monthly average
                     </p>
+                    <div className="text-xs text-slate-500 dark:text-slate-500">
+                      Opportunity: {stats.eventsNeedingVolunteers > 0 ? `Recruit volunteers for ${stats.eventsNeedingVolunteers} events` : 'Plan next special event'}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Communication Effectiveness */}
+              <motion.div className="group/card relative" variants={itemVariants}>
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500/20 to-violet-600/20 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-violet-600 rounded-lg flex items-center justify-center">
+                      <MessageSquare className="h-4 w-4 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Connection Quality</h4>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-2xl font-bold text-violet-600">
+                      {isLoading ? '...' : recentSMSConversations && recentSMSConversations.length > 0 ? 'Active' : 'Growing'}
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      {recentSMSConversations ? `${recentSMSConversations.filter(c => c.conversation_type === 'prayer_request').length} prayer requests` : 'Building communication channels'}
+                    </p>
+                    <div className="text-xs text-slate-500 dark:text-slate-500">
+                      Focus: {recentSMSConversations && recentSMSConversations.length > 0 ? 'Maintain pastoral responsiveness' : 'Encourage two-way communication'}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Productivity Insights */}
+              <motion.div className="group/card relative" variants={itemVariants}>
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-orange-500/20 to-orange-600/20 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+                      <CheckSquare className="h-4 w-4 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Ministry Efficiency</h4>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-2xl font-bold text-orange-600">
+                      {isLoading ? '...' : stats.overdueTasks === 0 ? 'Excellent' : stats.overdueTasks < 3 ? 'Good' : 'Needs Focus'}
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      {stats.overdueTasks === 0 ? 'All tasks on track' : `${stats.overdueTasks} overdue items need attention`}
+                    </p>
+                    <div className="text-xs text-slate-500 dark:text-slate-500">
+                      Priority: {stats.overdueTasks > 0 ? 'Address overdue tasks first' : 'Maintain current workflow'}
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -1249,315 +1229,20 @@ export function Dashboard() {
           </div>
         </div>
       </motion.div>
-
-      {/* Events Intelligence */}
-      <motion.div variants={itemVariants} className="mb-12">
-        <div className="group relative">
-          <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-2xl flex items-center justify-center shadow-lg">
-                  <Calendar className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Events Intelligence</h3>
-                  <p className="text-slate-600 dark:text-slate-400">Smart event insights and optimization</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-indigo-500 rounded-full animate-pulse"></div>
-                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">AI Insights</span>
-              </div>
-            </div>
-            
-            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-              {/* Event Success Rate */}
-              <motion.div 
-                className="group/card relative"
-                variants={itemVariants}
-              >
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-indigo-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center">
-                      <Activity className="h-4 w-4 text-white" />
-                    </div>
-                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Success Rate</h4>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-indigo-600 mb-2">
-                      {isLoading ? '...' : stats.eventsThisMonth > stats.averageEventsPerMonth ? 'High' : 'Moderate'}
-                    </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
-                      Event engagement level
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Volunteer Fulfillment */}
-              <motion.div 
-                className="group/card relative"
-                variants={itemVariants}
-              >
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center">
-                      <Users2 className="h-4 w-4 text-white" />
-                    </div>
-                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Volunteer Rate</h4>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-emerald-600 mb-2">
-                      {isLoading ? '...' : Math.round(((stats.eventsWithVolunteersEnabled - stats.eventsStillNeedingVolunteers) / Math.max(stats.eventsWithVolunteersEnabled, 1)) * 100)}%
-                    </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
-                      Events fully staffed
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Event Frequency */}
-              <motion.div 
-                className="group/card relative"
-                variants={itemVariants}
-              >
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
-                      <BarChart3 className="h-4 w-4 text-white" />
-                    </div>
-                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Activity Level</h4>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-blue-600 mb-2">
-                      {isLoading ? '...' : stats.eventsThisMonth}
-                    </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
-                      Events this month
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Communications Intelligence */}
-      <motion.div variants={itemVariants} className="mb-12">
-        <div className="group relative">
-          <div className="absolute -inset-1 bg-gradient-to-r from-violet-500 to-purple-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg">
-                  <MessageSquare className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Communications Intelligence</h3>
-                  <p className="text-slate-600 dark:text-slate-400">Smart messaging insights and engagement</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-violet-500 rounded-full animate-pulse"></div>
-                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">AI Insights</span>
-              </div>
-            </div>
-            
-            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-              {/* Response Rate */}
-              <motion.div 
-                className="group/card relative"
-                variants={itemVariants}
-              >
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500/20 to-violet-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-violet-600 rounded-xl flex items-center justify-center">
-                      <Reply className="h-4 w-4 text-white" />
-                    </div>
-                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Response Rate</h4>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-violet-600 mb-2">
-                      {isLoading ? '...' : recentSMSConversations && recentSMSConversations.length > 0 ? 'High' : 'Low'}
-                    </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
-                      Message engagement
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Prayer Requests */}
-              <motion.div 
-                className="group/card relative"
-                variants={itemVariants}
-              >
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
-                      <Heart className="h-4 w-4 text-white" />
-                    </div>
-                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Prayer Volume</h4>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-blue-600 mb-2">
-                      {isLoading ? '...' : recentSMSConversations ? recentSMSConversations.filter(c => c.conversation_type === 'prayer_request').length : 0}
-                    </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
-                      Active prayer requests
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Communication Health */}
-              <motion.div 
-                className="group/card relative"
-                variants={itemVariants}
-              >
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-green-500/20 to-green-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
-                      <CheckCircle className="h-4 w-4 text-white" />
-                    </div>
-                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Health Score</h4>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-green-600 mb-2">
-                      {isLoading ? '...' : recentSMSConversations && recentSMSConversations.length > 0 ? 'Excellent' : 'Good'}
-                    </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
-                      Overall communication health
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Tasks Intelligence */}
-      <motion.div variants={itemVariants} className="mb-12">
-        <div className="group relative">
-          <div className="absolute -inset-1 bg-gradient-to-r from-orange-500 to-red-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center shadow-lg">
-                  <CheckSquare className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Tasks Intelligence</h3>
-                  <p className="text-slate-600 dark:text-slate-400">Smart task management and productivity insights</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-orange-500 rounded-full animate-pulse"></div>
-                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">AI Insights</span>
-              </div>
-            </div>
-            
-            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-              {/* Completion Rate */}
-              <motion.div 
-                className="group/card relative"
-                variants={itemVariants}
-              >
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-orange-500/20 to-orange-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center">
-                      <TrendingUp className="h-4 w-4 text-white" />
-                    </div>
-                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Completion Rate</h4>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-orange-600 mb-2">
-                      {isLoading ? '...' : stats.totalTasks > 0 ? Math.round(((stats.totalTasks - stats.overdueTasks) / stats.totalTasks) * 100) : 0}%
-                    </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
-                      Tasks completed on time
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Productivity Score */}
-              <motion.div 
-                className="group/card relative"
-                variants={itemVariants}
-              >
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-green-500/20 to-green-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
-                      <Activity className="h-4 w-4 text-white" />
-                    </div>
-                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Productivity</h4>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-green-600 mb-2">
-                      {isLoading ? '...' : stats.overdueTasks === 0 ? 'High' : stats.overdueTasks < 3 ? 'Good' : 'Needs Focus'}
-                    </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
-                      Overall productivity level
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Workload Balance */}
-              <motion.div 
-                className="group/card relative"
-                variants={itemVariants}
-              >
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
-                      <BarChart3 className="h-4 w-4 text-white" />
-                    </div>
-                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Workload</h4>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-blue-600 mb-2">
-                      {isLoading ? '...' : stats.pendingTasks}
-                    </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
-                      Pending tasks
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-
       {/* Recent Activity Feed & Attendance by Event Type */}
-      <motion.div variants={itemVariants} className="mb-12">
-        <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+      <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
+        <div className="grid gap-3 sm:gap-6 grid-cols-1 lg:grid-cols-2">
           {/* Recent Activity Feed */}
           <div className="group relative">
             <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-            <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden">
+            <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden">
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg">
                     <MessageSquare className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Recent Activity Intelligence</h3>
+                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Recent Communication</h3>
                     <p className="text-slate-600 dark:text-slate-400">Smart conversation tracking and engagement</p>
                   </div>
                 </div>
@@ -1567,9 +1252,9 @@ export function Dashboard() {
                 </div>
               </div>
               
-              <div className="space-y-4 w-full">
-                {recentSMSConversations && recentSMSConversations.length > 0 ? (
-                  recentSMSConversations.slice(0, 5).map((conversation, index) => (
+                             <div className="space-y-4 w-full">
+                 {recentSMSConversations && recentSMSConversations.length > 0 ? (
+                   recentSMSConversations.slice(0, 3).map((conversation, index) => (
                     <motion.div 
                       key={conversation.id}
                       className="group/card relative"
@@ -1650,7 +1335,7 @@ export function Dashboard() {
           {/* Attendance by Event Type */}
           <div className="group relative">
             <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-            <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
                   <BarChart3 className="h-6 w-6 text-white" />
@@ -1669,17 +1354,24 @@ export function Dashboard() {
                 >
                   <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
                   <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
-                    <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                      <BookOpen className="h-5 w-5 text-blue-600" />
-                      Sunday Service
-                    </h4>
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-blue-600 mb-2">
-                        {isLoading ? '...' : Math.round((stats.sundayServiceAttendance || 0) / Math.max(stats.sundayServiceEvents || 1, 1))}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                          <BookOpen className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <h4 className="text-base font-semibold text-slate-900 dark:text-white">Sunday Service</h4>
+                          <p className="text-xs text-slate-600 dark:text-slate-400">
+                            {isLoading ? '...' : `${stats.sundayServiceEvents || 0} events • ${stats.sundayServiceAttendance || 0} total`}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-sm text-slate-600 dark:text-slate-400">
-                        {isLoading ? '...' : `${stats.sundayServiceEvents || 0} events • ${stats.sundayServiceAttendance || 0} total`}
-                      </p>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-blue-600">
+                          {isLoading ? '...' : Math.round((stats.sundayServiceAttendance || 0) / Math.max(stats.sundayServiceEvents || 1, 1))}
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-500">avg attendance</p>
+                      </div>
                     </div>
                   </div>
                 </motion.div>
@@ -1691,17 +1383,24 @@ export function Dashboard() {
                 >
                   <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
                   <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
-                    <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                      <Book className="h-5 w-5 text-emerald-600" />
-                      Bible Study
-                    </h4>
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-emerald-600 mb-2">
-                        {isLoading ? '...' : Math.round((stats.bibleStudyAttendance || 0) / Math.max(stats.bibleStudyEvents || 1, 1))}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center">
+                          <Book className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <h4 className="text-base font-semibold text-slate-900 dark:text-white">Bible Study</h4>
+                          <p className="text-xs text-slate-600 dark:text-slate-400">
+                            {isLoading ? '...' : `${stats.bibleStudyEvents || 0} events • ${stats.bibleStudyAttendance || 0} total`}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-sm text-slate-600 dark:text-slate-400">
-                        {isLoading ? '...' : `${stats.bibleStudyEvents || 0} events • ${stats.bibleStudyAttendance || 0} total`}
-                      </p>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-emerald-600">
+                          {isLoading ? '...' : Math.round((stats.bibleStudyAttendance || 0) / Math.max(stats.bibleStudyEvents || 1, 1))}
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-500">avg attendance</p>
+                      </div>
                     </div>
                   </div>
                 </motion.div>
@@ -1713,20 +1412,40 @@ export function Dashboard() {
                 >
                   <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-500/20 to-amber-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
                   <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
-                    <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                      <Users className="h-5 w-5 text-amber-600" />
-                      Fellowship
-                    </h4>
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-amber-600 mb-2">
-                        {isLoading ? '...' : Math.round((stats.fellowshipAttendance || 0) / Math.max(stats.fellowshipEvents || 1, 1))}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl flex items-center justify-center">
+                          <Users className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <h4 className="text-base font-semibold text-slate-900 dark:text-white">Fellowship</h4>
+                          <p className="text-xs text-slate-600 dark:text-slate-400">
+                            {isLoading ? '...' : `${stats.fellowshipEvents || 0} events • ${stats.fellowshipAttendance || 0} total`}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-sm text-slate-600 dark:text-slate-400">
-                        {isLoading ? '...' : `${stats.fellowshipEvents || 0} events • ${stats.fellowshipAttendance || 0} total`}
-                      </p>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-amber-600">
+                          {isLoading ? '...' : Math.round((stats.fellowshipAttendance || 0) / Math.max(stats.fellowshipEvents || 1, 1))}
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-500">avg attendance</p>
+                      </div>
                     </div>
                   </div>
                 </motion.div>
+              </div>
+              
+              <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+                <Button 
+                  variant="outline" 
+                  className="w-full bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800 hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30 transition-all duration-300 h-12 text-base font-medium" 
+                  asChild
+                >
+                  <a href="/events" className="flex items-center justify-center space-x-2">
+                    <span>View All Events</span>
+                    <ArrowUpRight className="h-5 w-5" />
+                  </a>
+                </Button>
               </div>
             </div>
           </div>
@@ -1734,10 +1453,10 @@ export function Dashboard() {
       </motion.div>
               
       {/* Advanced Analytics Section */}
-      <motion.div variants={itemVariants} className="mb-12">
+      <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
         <div className="group relative">
           <div className="absolute -inset-1 bg-gradient-to-r from-slate-500 to-slate-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 bg-gradient-to-br from-slate-500 to-slate-600 rounded-2xl flex items-center justify-center shadow-lg">
@@ -1748,13 +1467,9 @@ export function Dashboard() {
                   <p className="text-slate-600 dark:text-slate-400">Intelligent insights and performance metrics</p>
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
-                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Real-time</span>
-              </div>
             </div>
             
-            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                {/* Sunday Service Attendance Rate */}
                <div className={`p-3 sm:p-4 rounded-lg border ${
                 stats.sundayServiceRate >= 70 ? 
@@ -2304,21 +2019,23 @@ export function Dashboard() {
 
 
       {/* Detailed Attendance Statistics */}
-      <motion.div variants={itemVariants} className="mb-12">
+      <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
         <div className="group relative">
           <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                <Users className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Attendance Statistics</h3>
-                <p className="text-slate-600 dark:text-slate-400">Last 30 days overview</p>
+          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                  <Users className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Attendance Statistics</h3>
+                  <p className="text-slate-600 dark:text-slate-400">Last 30 days overview</p>
+                </div>
               </div>
             </div>
             
-            <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+            <div className="grid gap-3 sm:gap-6 grid-cols-1 lg:grid-cols-2">
               {/* Service Breakdown */}
               <motion.div 
                 className="group/card relative"
@@ -2474,17 +2191,19 @@ export function Dashboard() {
       </motion.div>
 
       {/* Financial Intelligence */}
-      <motion.div variants={itemVariants} className="mb-12">
+      <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
         <div className="group relative">
           <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
-                <TrendingUp className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Donation Statistics</h3>
-                <p className="text-slate-600 dark:text-slate-400">Financial overview of your organization</p>
+          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
+                  <TrendingUp className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Donation Statistics</h3>
+                  <p className="text-slate-600 dark:text-slate-400">Financial overview of your organization</p>
+                </div>
               </div>
             </div>
             
@@ -2605,21 +2324,23 @@ export function Dashboard() {
       </motion.div>
 
       {/* Event Intelligence */}
-      <motion.div variants={itemVariants} className="mb-12">
+      <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
         <div className="group relative">
           <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                <Calendar className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Event Intelligence</h3>
-                <p className="text-slate-600 dark:text-slate-400">Event planning and engagement metrics</p>
+          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                  <Calendar className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Event Intelligence</h3>
+                  <p className="text-slate-600 dark:text-slate-400">Event planning and engagement metrics</p>
+                </div>
               </div>
             </div>
             
-            <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-8">
+            <div className="grid gap-3 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-8">
               {/* Average Per Month */}
               <motion.div 
                 className="group/card relative"
@@ -2728,21 +2449,27 @@ export function Dashboard() {
       </motion.div>
 
       {/* Membership Intelligence */}
-      <motion.div variants={itemVariants} className="mb-12">
+      <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
         <div className="group relative">
           <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
-                <Users2 className="h-6 w-6 text-white" />
+          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
+                  <Users2 className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Membership Intelligence</h3>
+                  <p className="text-slate-600 dark:text-slate-400">Member engagement and growth analysis</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Membership Intelligence</h3>
-                <p className="text-slate-600 dark:text-slate-400">Member engagement and growth analysis</p>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-purple-500 rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">AI Intelligence</span>
               </div>
             </div>
             
-            <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-8">
+            <div className="grid gap-3 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-8">
               {/* Active Members */}
               <motion.div 
                 className="group/card relative"
@@ -2850,21 +2577,27 @@ export function Dashboard() {
       </motion.div>
 
       {/* Demographics Intelligence */}
-      <motion.div variants={itemVariants} className="mb-12">
+      <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
         <div className="group relative">
           <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-cyan-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg">
-                <BarChart3 className="h-6 w-6 text-white" />
+          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg">
+                  <BarChart3 className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Demographics Intelligence</h3>
+                  <p className="text-slate-600 dark:text-slate-400">Family structure and age distribution</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Demographics Intelligence</h3>
-                <p className="text-slate-600 dark:text-slate-400">Family structure and age distribution</p>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-purple-500 rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">AI Intelligence</span>
               </div>
             </div>
             
-            <div className="grid gap-6 grid-cols-1 md:grid-cols-2 mb-8">
+            <div className="grid gap-3 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-8">
               {/* Family Statistics */}
               <motion.div 
                 className="group/card relative"
