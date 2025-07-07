@@ -1,483 +1,2306 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { format, startOfWeek, parseISO, isValid } from 'date-fns';
+import { format, parseISO, isValid, startOfYear, endOfYear, startOfMonth, endOfMonth } from 'date-fns';
 import { 
   Plus, 
   DollarSign,
   Download,
   Pencil,
-  Trash2
+  Trash2,
+  Search,
+  Filter,
+  Users,
+  TrendingUp,
+  Calendar,
+  Target,
+  Receipt,
+  BarChart3,
+  PieChart,
+  FileText,
+  Eye,
+  Archive,
+  RefreshCw,
+  CreditCard,
+  Banknote,
+  Gift,
+  Heart,
+  Building,
+  Zap,
+  User,
+  UserX,
+  CheckCircle,
+  AlertCircle,
+  Clock,
+  ArrowUpRight,
+  ChevronRight
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/use-toast';
-import { getDonations, addDonation, updateDonation, deleteDonation } from '@/lib/data';
+import { 
+  getDonations, 
+  addDonation, 
+  updateDonation, 
+  deleteDonation,
+  getCampaigns,
+  addCampaign,
+  updateCampaign,
+  getPledges,
+  addPledge,
+  getCategories,
+  getDonationAnalytics,
+  generateDonationReport,
+  getReceipts,
+  generateReceipt,
+  getBatches,
+  createBatch,
+  updateBatch,
+  closeBatch,
+  getBatchDetails
+} from '@/lib/donationService';
+import { getMembers, getAllEvents } from '@/lib/data';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.05 } }
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 100 } }
+};
 
 export function Donations() {
+  // State management
+  const [activeTab, setActiveTab] = useState('donations');
   const [donations, setDonations] = useState([]);
-  const [isAddDonationOpen, setIsAddDonationOpen] = useState(false);
-  const [isEditDonationOpen, setIsEditDonationOpen] = useState(false);
-  const [isDeleteDonationOpen, setIsDeleteDonationOpen] = useState(false);
+  const [campaigns, setCampaigns] = useState([]);
+  const [pledges, setPledges] = useState([]);
+  const [batches, setBatches] = useState([]);
+  const [members, setMembers] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [analytics, setAnalytics] = useState(null);
+  const [receipts, setReceipts] = useState([]);
+  
+  // Loading states
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false);
+  
+  // Dialog states
+  const [isDonationDialogOpen, setIsDonationDialogOpen] = useState(false);
+  const [isCampaignDialogOpen, setIsCampaignDialogOpen] = useState(false);
+  const [isPledgeDialogOpen, setIsPledgeDialogOpen] = useState(false);
+  const [isBatchDialogOpen, setIsBatchDialogOpen] = useState(false);
+  const [isBatchDetailsDialogOpen, setIsBatchDetailsDialogOpen] = useState(false);
+  const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  
+  // Selected items
   const [selectedDonation, setSelectedDonation] = useState(null);
-  const [newDonation, setNewDonation] = useState({
+  const [selectedCampaign, setSelectedCampaign] = useState(null);
+  const [selectedPledge, setSelectedPledge] = useState(null);
+  const [selectedBatch, setSelectedBatch] = useState(null);
+  const [selectedBatchForDetails, setSelectedBatchForDetails] = useState(null);
+  const [batchDetails, setBatchDetails] = useState(null);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  
+  // Filters
+  const [filters, setFilters] = useState({
+    startDate: format(startOfYear(new Date(new Date().getFullYear() - 1, 0, 1)), 'yyyy-MM-dd'), // Start of last year
+    endDate: format(endOfYear(new Date(new Date().getFullYear() + 1, 11, 31)), 'yyyy-MM-dd'), // End of next year
+    donorId: '',
+    campaignId: '',
+    fundDesignation: 'all',
+    paymentMethod: 'all',
+    search: '',
+    minAmount: '',
+    maxAmount: ''
+  });
+  
+  // Form states
+  const [donationForm, setDonationForm] = useState({
+    donor_id: null,
     amount: '',
     date: format(new Date(), 'yyyy-MM-dd'),
-    type: 'weekly',
-    notes: '',
-    attendance: ''
+    fund_designation: 'general',
+    payment_method: 'cash',
+    check_number: '',
+    campaign_id: null,
+    batch_id: null,
+    is_anonymous: false,
+    is_tax_deductible: true,
+    notes: ''
   });
-  const { toast } = useToast();
-  const [error, setError] = useState('');
+  
+  const [campaignForm, setCampaignForm] = useState({
+    name: '',
+    description: '',
+    goal_amount: '',
+    start_date: '',
+    end_date: '',
+    campaign_type: 'fundraising',
+    visibility: 'public'
+  });
+  
+  const [pledgeForm, setPledgeForm] = useState({
+    donor_id: '',
+    campaign_id: '',
+    pledge_amount: '',
+    pledge_date: format(new Date(), 'yyyy-MM-dd'),
+    due_date: '',
+    frequency: 'one_time',
+    notes: ''
+  });
+  
+  const [batchForm, setBatchForm] = useState({
+    name: '',
+    description: '',
+    status: 'open',
+    selectedEvent: ''
+  });
 
+  // Donor search state for the donation dialog
+  const [donorSearch, setDonorSearch] = useState('');
+  const [isDonorDropdownOpen, setIsDonorDropdownOpen] = useState(false);
+
+  // Intelligence section visibility
+  const [showIntelligence, setShowIntelligence] = useState(false);
+
+  const { toast } = useToast();
+
+  // Load initial data
   useEffect(() => {
-    fetchDonations();
+    loadAllData();
   }, []);
 
-  const fetchDonations = async () => {
-    try {
-      const data = await getDonations();
-      setDonations(data || []);
-    } catch (error) {
-      console.error('Error fetching donations:', error);
-      if (error.message === 'Failed to fetch') {
-        toast({ 
-          title: 'Offline Mode', 
-          description: 'You are currently offline. Some features may be limited.', 
-          variant: 'warning' 
-        });
-      } else {
-        toast({ 
-          title: 'Error', 
-          description: 'Failed to fetch donations', 
-          variant: 'destructive' 
-        });
+  // Load analytics when filters change
+  useEffect(() => {
+    if (filters.startDate && filters.endDate) {
+      loadAnalytics();
+    }
+  }, [filters.startDate, filters.endDate]);
+
+  // Close donor dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isDonorDropdownOpen && !event.target.closest('.donor-dropdown-container')) {
+        setIsDonorDropdownOpen(false);
       }
-    }
-  };
-
-  const getSundayDate = (dateString) => {
-    const date = parseISO(dateString);
-    if (!isValid(date)) {
-      console.error('Invalid date:', dateString);
-      return null;
-    }
-    const sunday = startOfWeek(date, { weekStartsOn: 0 }); // 0 = Sunday
-    return {
-      sunday: format(sunday, 'yyyy-MM-dd'),
-      displayDate: format(sunday, 'MMM d, yyyy')
     };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isDonorDropdownOpen]);
+
+  const loadAllData = async () => {
+    setIsLoading(true);
+    try {
+      const [donationsData, campaignsData, pledgesData, batchesData, membersData, eventsData, categoriesData, receiptsData] = await Promise.all([
+        getDonations(filters),
+        getCampaigns(),
+        getPledges(),
+        getBatches(),
+        getMembers(),
+        getAllEvents(),
+        getCategories(),
+        getReceipts()
+      ]);
+      
+      setDonations(donationsData);
+      setCampaigns(campaignsData);
+      setPledges(pledgesData);
+      setBatches(batchesData);
+      setMembers(membersData);
+      setEvents(eventsData);
+      setCategories(categoriesData);
+      setReceipts(receiptsData);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load donation data",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  const loadAnalytics = async () => {
+    setIsLoadingAnalytics(true);
+    try {
+      const analyticsData = await getDonationAnalytics(filters.startDate, filters.endDate);
+      setAnalytics(analyticsData);
+    } catch (error) {
+      console.error('Error loading analytics:', error);
+    } finally {
+      setIsLoadingAnalytics(false);
+    }
+  };
+
+  const applyFilters = async () => {
+    setIsLoading(true);
+    try {
+      const filteredDonations = await getDonations(filters);
+      setDonations(filteredDonations);
+    } catch (error) {
+      console.error('Error applying filters:', error);
+      toast({
+        title: "Error",
+        description: "Failed to apply filters",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Donation operations
   const handleAddDonation = async (e) => {
     e.preventDefault();
-    
     try {
-      const donationData = {
-        ...newDonation,
-        attendance: newDonation.attendance ? parseInt(newDonation.attendance) : null
-      };
-
-      // console.log('Adding donation with data:', donationData);
-      const addedDonation = await addDonation(donationData);
-      setDonations([addedDonation, ...donations]);
-      setNewDonation({
-        amount: '',
-        date: new Date().toISOString().split('T')[0],
-        type: 'weekly',
-        notes: '',
-        attendance: ''
+      const newDonation = await addDonation({
+        ...donationForm,
+        amount: parseFloat(donationForm.amount)
       });
-      setIsAddDonationOpen(false);
+      
+      setDonations([newDonation, ...donations]);
+      setIsDonationDialogOpen(false);
+      resetDonationForm();
       toast({
         title: "Success",
-        description: "Donation added successfully.",
+        description: "Donation added successfully",
       });
     } catch (error) {
       console.error('Error adding donation:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to add donation.",
-        variant: "destructive"
+        description: "Failed to add donation",
+        variant: "destructive",
       });
     }
-  };
-
-  const handleEditDonation = (donation) => {
-    setSelectedDonation(donation);
-    setIsEditDonationOpen(true);
-  };
-
-  const handleDeleteDonation = (donation) => {
-    setSelectedDonation(donation);
-    setIsDeleteDonationOpen(true);
   };
 
   const handleUpdateDonation = async (e) => {
     e.preventDefault();
     try {
-      if (!selectedDonation.date) {
-        setError('Please select a date');
-        return;
-      }
-
-      // Ensure attendance is a number
-      const attendance = selectedDonation.attendance ? 
-        (typeof selectedDonation.attendance === 'number' ? 
-          selectedDonation.attendance : 
-          parseInt(selectedDonation.attendance, 10)) : 
-        null;
-
-      const updates = {
-        amount: parseFloat(selectedDonation.amount),
-        date: new Date(selectedDonation.date).toISOString(),
-        type: selectedDonation.type,
-        notes: selectedDonation.notes,
-        attendance
-      };
-
-      const updatedDonation = await updateDonation(selectedDonation.id, updates);
-
-      if (!updatedDonation) {
-        throw new Error('No data returned from update');
-      }
-
-      setDonations(prev => prev.map(d => 
-        d.id === selectedDonation.id ? updatedDonation : d
-      ));
-      setIsEditDonationOpen(false);
+      const updatedDonation = await updateDonation(selectedDonation.id, {
+        ...donationForm,
+        amount: parseFloat(donationForm.amount)
+      });
+      
+      setDonations(donations.map(d => d.id === selectedDonation.id ? updatedDonation : d));
+      setIsDonationDialogOpen(false);
       setSelectedDonation(null);
-      setError('');
-      toast({ title: 'Success', description: 'Donation updated successfully.' });
+      resetDonationForm();
+      toast({
+        title: "Success",
+        description: "Donation updated successfully",
+      });
     } catch (error) {
       console.error('Error updating donation:', error);
-      setError(error.message || 'Failed to update donation');
-      toast({ 
-        title: 'Error', 
-        description: error.message || 'Failed to update donation', 
-        variant: 'destructive' 
+      toast({
+        title: "Error",
+        description: "Failed to update donation",
+        variant: "destructive",
       });
     }
   };
 
-  const handleConfirmDelete = async () => {
+  // Campaign operations
+  const handleAddCampaign = async (e) => {
+    e.preventDefault();
     try {
-      const { error } = await deleteDonation(selectedDonation.id);
-
-      if (error) throw error;
-
-      setDonations(prev => prev.filter(d => d.id !== selectedDonation.id));
-      setIsDeleteDonationOpen(false);
-      setSelectedDonation(null);
-      toast({ title: 'Success', description: 'Donation deleted successfully.' });
+      const newCampaign = await addCampaign({
+        ...campaignForm,
+        goal_amount: campaignForm.goal_amount ? parseFloat(campaignForm.goal_amount) : null
+      });
+      
+      setCampaigns([newCampaign, ...campaigns]);
+      setIsCampaignDialogOpen(false);
+      resetCampaignForm();
+      toast({
+        title: "Success",
+        description: "Campaign created successfully",
+      });
     } catch (error) {
-      toast({ title: 'Error', description: 'Failed to delete donation.', variant: 'destructive' });
+      console.error('Error adding campaign:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create campaign",
+        variant: "destructive",
+      });
     }
   };
 
-  const calculateTotalDonations = () => {
-    return donations.reduce((total, donation) => total + parseFloat(donation.amount), 0);
+  // Pledge operations
+  const handleAddPledge = async (e) => {
+    e.preventDefault();
+    try {
+      const newPledge = await addPledge({
+        ...pledgeForm,
+        pledge_amount: parseFloat(pledgeForm.pledge_amount)
+      });
+      
+      setPledges([newPledge, ...pledges]);
+      setIsPledgeDialogOpen(false);
+      resetPledgeForm();
+      toast({
+        title: "Success",
+        description: "Pledge created successfully",
+      });
+    } catch (error) {
+      console.error('Error adding pledge:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create pledge",
+        variant: "destructive",
+      });
+    }
   };
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.05
+  // Batch operations
+  const handleAddBatch = async (e) => {
+    e.preventDefault();
+    try {
+      // Remove selectedEvent field before sending to API (it's only for UI purposes)
+      const { selectedEvent, ...batchData } = batchForm;
+      const newBatch = await createBatch(batchData);
+      setBatches([newBatch, ...batches]);
+      setIsBatchDialogOpen(false);
+      resetBatchForm();
+      toast({
+        title: "Success",
+        description: "Batch created successfully",
+      });
+    } catch (error) {
+      console.error('Error creating batch:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create batch",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateBatch = async (e) => {
+    e.preventDefault();
+    try {
+      // Remove selectedEvent field before sending to API (it's only for UI purposes)
+      const { selectedEvent, ...batchData } = batchForm;
+      const updatedBatch = await updateBatch(selectedBatch.id, batchData);
+      setBatches(batches.map(b => b.id === selectedBatch.id ? updatedBatch : b));
+      setIsBatchDialogOpen(false);
+      setSelectedBatch(null);
+      resetBatchForm();
+      toast({
+        title: "Success",
+        description: "Batch updated successfully",
+      });
+    } catch (error) {
+      console.error('Error updating batch:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update batch",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCloseBatch = async (batchId) => {
+    try {
+      const closedBatch = await closeBatch(batchId);
+      setBatches(batches.map(b => b.id === batchId ? closedBatch : b));
+      toast({
+        title: "Success",
+        description: "Batch closed successfully",
+      });
+    } catch (error) {
+      console.error('Error closing batch:', error);
+      toast({
+        title: "Error",
+        description: "Failed to close batch",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Delete operations
+  const handleDelete = async () => {
+    try {
+      if (itemToDelete.type === 'donation') {
+        await deleteDonation(itemToDelete.id);
+        setDonations(donations.filter(d => d.id !== itemToDelete.id));
       }
+      // Add more delete operations for campaigns, pledges, etc.
+      
+      setIsDeleteDialogOpen(false);
+      setItemToDelete(null);
+      toast({
+        title: "Success",
+        description: `${itemToDelete.type} deleted successfully`,
+      });
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      toast({
+        title: "Error",
+        description: `Failed to delete ${itemToDelete.type}`,
+        variant: "destructive",
+      });
     }
   };
 
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        type: "spring",
-        stiffness: 100
-      }
+  // Form reset functions
+  const resetDonationForm = () => {
+    // Find the currently open batch (most recent one if multiple)
+    const openBatches = batches.filter(batch => batch.status === 'open');
+    const defaultBatchId = openBatches.length > 0 ? openBatches[0].id : null;
+    
+    setDonationForm({
+      donor_id: null,
+      amount: '',
+      date: format(new Date(), 'yyyy-MM-dd'),
+      fund_designation: 'general',
+      payment_method: 'cash',
+      check_number: '',
+      campaign_id: null,
+      batch_id: defaultBatchId,
+      is_anonymous: false,
+      is_tax_deductible: true,
+      notes: ''
+    });
+    setDonorSearch('');
+    setIsDonorDropdownOpen(false);
+  };
+
+  const resetCampaignForm = () => {
+    setCampaignForm({
+      name: '',
+      description: '',
+      goal_amount: '',
+      start_date: '',
+      end_date: '',
+      campaign_type: 'fundraising',
+      visibility: 'public'
+    });
+  };
+
+  const resetPledgeForm = () => {
+    setPledgeForm({
+      donor_id: '',
+      campaign_id: '',
+      pledge_amount: '',
+      pledge_date: format(new Date(), 'yyyy-MM-dd'),
+      due_date: '',
+      frequency: 'one_time',
+      notes: ''
+    });
+  };
+
+  const resetBatchForm = () => {
+    setBatchForm({
+      name: '',
+      description: '',
+      status: 'open',
+      selectedEvent: ''
+    });
+  };
+
+  // Edit handlers
+  const handleEditDonation = (donation) => {
+    setSelectedDonation(donation);
+    setDonationForm({
+      donor_id: donation.donor_id || null,
+      amount: donation.amount.toString(),
+      date: donation.date,
+      fund_designation: donation.fund_designation || 'general',
+      payment_method: donation.payment_method || 'cash',
+      check_number: donation.check_number || '',
+      campaign_id: donation.campaign_id || null,
+      batch_id: donation.batch_id || null,
+      is_anonymous: donation.is_anonymous || false,
+      is_tax_deductible: donation.is_tax_deductible || true,
+      notes: donation.notes || ''
+    });
+    
+    // Set donor search to the selected donor's name
+    if (donation.donor_id && donation.donor) {
+      setDonorSearch(`${donation.donor.firstname} ${donation.donor.lastname}`);
+    } else {
+      setDonorSearch('Anonymous');
+    }
+    setIsDonorDropdownOpen(false);
+    setIsDonationDialogOpen(true);
+  };
+
+  const handleEditBatch = (batch) => {
+    setSelectedBatch(batch);
+    setBatchForm({
+      name: batch.name || '',
+      description: batch.description || '',
+      status: batch.status || 'open',
+      selectedEvent: '' // Don't try to match existing batches to events
+    });
+    setIsBatchDialogOpen(true);
+  };
+
+  const handleViewBatchDetails = async (batch) => {
+    try {
+      setSelectedBatchForDetails(batch);
+      setIsBatchDetailsDialogOpen(true);
+      
+      // Fetch detailed batch information
+      const details = await getBatchDetails(batch.id);
+      setBatchDetails(details);
+    } catch (error) {
+      console.error('Error fetching batch details:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load batch details",
+        variant: "destructive",
+      });
     }
   };
+
+  // Utility functions
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
+  };
+
+  const getPaymentMethodIcon = (method) => {
+    switch (method) {
+      case 'credit_card':
+      case 'debit_card':
+        return <CreditCard className="h-4 w-4" />;
+      case 'cash':
+        return <Banknote className="h-4 w-4" />;
+      case 'check':
+        return <FileText className="h-4 w-4" />;
+      case 'online':
+        return <Zap className="h-4 w-4" />;
+      default:
+        return <DollarSign className="h-4 w-4" />;
+    }
+  };
+
+  const getFundDesignationIcon = (designation) => {
+    switch (designation) {
+      case 'building_fund':
+        return <Building className="h-4 w-4" />;
+      case 'missions':
+        return <Heart className="h-4 w-4" />;
+      case 'tithe':
+        return <Gift className="h-4 w-4" />;
+      default:
+        return <DollarSign className="h-4 w-4" />;
+    }
+  };
+
+  // Filter and format Sunday worship events for batch selection (last 1 past, next 1 upcoming)
+  const getSundayWorshipEvents = () => {
+    const now = new Date();
+    
+    // Filter all Sunday worship events
+    const sundayWorshipEvents = events.filter(event => {
+      const eventType = (event.event_type || '').toLowerCase();
+      const title = (event.title || '').toLowerCase();
+      return eventType.includes('sunday') || eventType.includes('worship') || 
+             title.includes('sunday') || title.includes('worship');
+    });
+    
+    // Separate past and future events
+    const pastEvents = sundayWorshipEvents
+      .filter(event => new Date(event.start_date) < now)
+      .sort((a, b) => new Date(b.start_date) - new Date(a.start_date)); // Most recent first
+    
+    const futureEvents = sundayWorshipEvents
+      .filter(event => new Date(event.start_date) >= now)
+      .sort((a, b) => new Date(a.start_date) - new Date(b.start_date)); // Earliest first
+    
+    // Take only the last 1 past event and next 1 future event
+    const selectedEvents = [];
+    
+    if (pastEvents.length > 0) {
+      selectedEvents.push(pastEvents[0]); // Most recent past event
+    }
+    
+    if (futureEvents.length > 0) {
+      selectedEvents.push(futureEvents[0]); // Next upcoming event
+    }
+    
+    // Sort final list: past events first, then future events
+    return selectedEvents.sort((a, b) => {
+      const dateA = new Date(a.start_date);
+      const dateB = new Date(b.start_date);
+      
+      if (dateA < now && dateB < now) {
+        return dateB - dateA; // Past events: most recent first
+      } else if (dateA >= now && dateB >= now) {
+        return dateA - dateB; // Future events: earliest first
+      } else if (dateA < now && dateB >= now) {
+        return -1; // Past events come before future events
+      } else {
+        return 1; // Future events come after past events
+      }
+    });
+  };
+
+  // Generate batch name from selected event
+  const generateBatchNameFromEvent = (eventId) => {
+    const event = events.find(e => e.id === eventId);
+    if (!event) return '';
+    
+    try {
+      const eventDate = parseISO(event.start_date);
+      const formattedDate = format(eventDate, 'MMM d, yyyy');
+      return `${event.title} - ${formattedDate}`;
+    } catch (error) {
+      console.error('Error parsing event date for batch name:', event.start_date, error);
+      return `${event.title} - ${event.start_date}`;
+    }
+  };
+
+  // Handle event selection for batch
+  const handleEventSelection = (eventId) => {
+    setBatchForm(prev => ({
+      ...prev,
+      selectedEvent: eventId,
+      name: eventId ? generateBatchNameFromEvent(eventId) : prev.name
+    }));
+  };
+
+  // Filter members based on donor search
+  const getFilteredMembers = () => {
+    if (!donorSearch.trim()) return members;
+    
+    const searchTerm = donorSearch.toLowerCase();
+    return members.filter(member => {
+      const fullName = `${member.firstname} ${member.lastname}`.toLowerCase();
+      const email = (member.email || '').toLowerCase();
+      return fullName.includes(searchTerm) || email.includes(searchTerm);
+    });
+  };
+
+  // Handle donor selection
+  const handleDonorSelect = (member) => {
+    if (member) {
+      setDonationForm({...donationForm, donor_id: member.id});
+      setDonorSearch(`${member.firstname} ${member.lastname}`);
+    } else {
+      setDonationForm({...donationForm, donor_id: null});
+      setDonorSearch('Anonymous');
+    }
+    setIsDonorDropdownOpen(false);
+  };
+
+  // Get selected donor display name
+  const getSelectedDonorName = () => {
+    if (!donationForm.donor_id) return 'Anonymous';
+    const selectedMember = members.find(m => m.id === donationForm.donor_id);
+    return selectedMember ? `${selectedMember.firstname} ${selectedMember.lastname}` : '';
+  };
+
+  // Summary calculations
+  const donationSummary = useMemo(() => {
+    const totalAmount = donations.reduce((sum, d) => sum + parseFloat(d.amount), 0);
+    const averageAmount = donations.length > 0 ? totalAmount / donations.length : 0;
+    const uniqueDonors = new Set(donations.filter(d => d.donor_id).map(d => d.donor_id)).size;
+    
+    return {
+      totalAmount,
+      averageAmount,
+      donationCount: donations.length,
+      uniqueDonors
+    };
+  }, [donations]);
+
+  const campaignSummary = useMemo(() => {
+    const activeCampaigns = campaigns.filter(c => c.is_active);
+    const totalGoal = activeCampaigns.reduce((sum, c) => sum + (parseFloat(c.goal_amount) || 0), 0);
+    const totalRaised = activeCampaigns.reduce((sum, c) => sum + (parseFloat(c.current_amount) || 0), 0);
+    
+    return {
+      activeCampaigns: activeCampaigns.length,
+      totalCampaigns: campaigns.length,
+      totalGoal,
+      totalRaised,
+      progressPercentage: totalGoal > 0 ? (totalRaised / totalGoal) * 100 : 0
+    };
+  }, [campaigns]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Donations</h1>
-        <p className="text-muted-foreground">
-          Track and manage church donations.
-        </p>
-      </div>
+    <motion.div 
+      className="space-y-6"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
+      {/* Header - Next-Gen Design */}
+      <motion.div className="mb-4 sm:mb-8 relative" variants={itemVariants}>
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-indigo-600/5 blur-3xl rounded-3xl"></div>
+        <div className="relative backdrop-blur-sm bg-white/90 dark:bg-slate-900/95 border border-white/30 dark:border-slate-700/50 rounded-2xl sm:rounded-3xl p-3 sm:p-6 shadow-xl">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between space-y-6 lg:space-y-0">
+            <div className="flex-1">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 bg-clip-text text-transparent mb-2">
+                Donation Management
+              </h1>
+              <p className="text-slate-600 dark:text-slate-300 text-lg font-medium">
+                Comprehensive donation tracking, campaign management, and financial analytics
+              </p>
+              <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-4">
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm text-slate-600 dark:text-slate-300">Live Data</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                  <span className="text-sm text-slate-600 dark:text-slate-300">Financial Analytics</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowIntelligence(!showIntelligence)}
+                  className="flex items-center space-x-2 bg-white/80 dark:bg-slate-800/80 border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                >
+                  <div className="w-3 h-3 bg-purple-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm text-slate-600 dark:text-slate-300">
+                    {showIntelligence ? 'Hide' : 'Show'} AI Intelligence
+                  </span>
+                  <BarChart3 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
 
-      <div className="flex justify-end">
-        <Button onClick={() => setIsAddDonationOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Donation
-        </Button>
-      </div>
+      {/* Summary Cards - Next-Gen Design */}
+      <motion.div variants={itemVariants} className="grid gap-3 sm:gap-6 lg:gap-8 grid-cols-1 lg:grid-cols-4 mb-6 sm:mb-12">
+        {/* Total Donations */}
+        <motion.div variants={itemVariants}>
+          <div className="group relative">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+            <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="flex items-center space-x-2 mb-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
+                  <DollarSign className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Donations</h3>
+                  <p className="text-slate-600 dark:text-slate-400 text-xs">Total Amount</p>
+                </div>
+              </div>
+              <div>
+                <div className="text-xl font-bold text-blue-600 dark:text-blue-400 mb-1">
+                  {isLoading ? '---' : formatCurrency(donationSummary.totalAmount)}
+                </div>
+                <div className="flex items-center text-xs text-blue-600 dark:text-blue-400">
+                  <TrendingUp className="h-3 w-3 mr-1" />
+                  {donationSummary.donationCount} total
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>All Donations</CardTitle>
-          <CardDescription>Complete donation history by Sunday</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {donations.map((donation) => {
-              const dateInfo = getSundayDate(donation.date);
-              if (!dateInfo) return null; // Skip invalid dates
+        {/* Average Donation */}
+        <motion.div variants={itemVariants}>
+          <div className="group relative">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+            <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="flex items-center space-x-2 mb-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-md">
+                  <TrendingUp className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Average</h3>
+                  <p className="text-slate-600 dark:text-slate-400 text-xs">Per Donation</p>
+                </div>
+              </div>
+              <div>
+                <div className="text-xl font-bold text-emerald-600 mb-1">
+                  {isLoading ? '---' : formatCurrency(donationSummary.averageAmount)}
+                </div>
+                <div className="flex items-center text-xs text-emerald-600">
+                  <BarChart3 className="h-3 w-3 mr-1" />
+                  Average
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Active Donors */}
+        <motion.div variants={itemVariants}>
+          <div className="group relative">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-600 to-orange-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+            <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="flex items-center space-x-2 mb-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl flex items-center justify-center shadow-md">
+                  <Users className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Donors</h3>
+                  <p className="text-slate-600 dark:text-slate-400 text-xs">Active Givers</p>
+                </div>
+              </div>
+              <div>
+                <div className="text-xl font-bold text-amber-600 mb-1">
+                  {isLoading ? '---' : donationSummary.uniqueDonors}
+                </div>
+                <div className="flex items-center text-xs text-amber-600">
+                  <Users className="h-3 w-3 mr-1" />
+                  Unique
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Campaign Progress */}
+        <motion.div variants={itemVariants}>
+          <div className="group relative">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+            <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="flex items-center space-x-2 mb-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
+                  <Target className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Campaigns</h3>
+                  <p className="text-slate-600 dark:text-slate-400 text-xs">Progress Rate</p>
+                </div>
+              </div>
+              <div>
+                <div className="text-xl font-bold text-purple-600 mb-1">
+                  {isLoading ? '---' : `${campaignSummary.progressPercentage.toFixed(1)}%`}
+                </div>
+                <div className="flex items-center text-xs text-purple-600">
+                  <Target className="h-3 w-3 mr-1" />
+                  Progress
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+
+      {/* Compact Donation Analysis */}
+      <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
+        <div className="group relative">
+          <div className="absolute -inset-1 bg-gradient-to-r from-slate-500 to-slate-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+          <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-slate-500 to-slate-600 rounded-2xl flex items-center justify-center shadow-lg">
+                  <BarChart3 className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Donation Analysis</h3>
+                  <p className="text-slate-600 dark:text-slate-400">Comprehensive giving metrics and insights</p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Compact Analysis Grid */}
+            <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-6">
+              {/* Amount Statistics */}
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 rounded-xl p-3 border border-blue-200 dark:border-blue-800">
+                <div className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">Highest</div>
+                <div className="text-lg font-bold text-blue-900 dark:text-blue-100">
+                  {formatCurrency(Math.max(...donations.map(d => parseFloat(d.amount) || 0), 0))}
+                </div>
+              </div>
               
-              return (
-                <div key={donation.id} className="rounded-lg border p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-sm font-medium text-muted-foreground">
-                        {dateInfo.displayDate}
+              <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950 dark:to-emerald-900 rounded-xl p-3 border border-emerald-200 dark:border-emerald-800">
+                <div className="text-xs font-medium text-emerald-700 dark:text-emerald-300 mb-1">Lowest</div>
+                <div className="text-lg font-bold text-emerald-900 dark:text-emerald-100">
+                  {formatCurrency(Math.min(...donations.map(d => parseFloat(d.amount) || 0).filter(a => a > 0), 0))}
+                </div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 rounded-xl p-3 border border-amber-200 dark:border-amber-800">
+                <div className="text-xs font-medium text-amber-700 dark:text-amber-300 mb-1">Median</div>
+                <div className="text-lg font-bold text-amber-900 dark:text-amber-100">
+                  {formatCurrency((() => {
+                    const amounts = donations.map(d => parseFloat(d.amount) || 0).sort((a, b) => a - b);
+                    const middle = Math.floor(amounts.length / 2);
+                    return amounts.length % 2 === 0 ? (amounts[middle - 1] + amounts[middle]) / 2 : amounts[middle];
+                  })())}
+                </div>
+              </div>
+              
+              {/* Donor Statistics */}
+              <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 rounded-xl p-3 border border-purple-200 dark:border-purple-800">
+                <div className="text-xs font-medium text-purple-700 dark:text-purple-300 mb-1">Recurring</div>
+                <div className="text-lg font-bold text-purple-900 dark:text-purple-100">
+                  {(() => {
+                    const donorCounts = {};
+                    donations.forEach(d => {
+                      if (!d.is_anonymous && d.donor_id) {
+                        donorCounts[d.donor_id] = (donorCounts[d.donor_id] || 0) + 1;
+                      }
+                    });
+                    return Object.values(donorCounts).filter(count => count > 1).length;
+                  })()}
+                </div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-950 dark:to-teal-900 rounded-xl p-3 border border-teal-200 dark:border-teal-800">
+                <div className="text-xs font-medium text-teal-700 dark:text-teal-300 mb-1">First-time</div>
+                <div className="text-lg font-bold text-teal-900 dark:text-teal-100">
+                  {(() => {
+                    const donorCounts = {};
+                    donations.forEach(d => {
+                      if (!d.is_anonymous && d.donor_id) {
+                        donorCounts[d.donor_id] = (donorCounts[d.donor_id] || 0) + 1;
+                      }
+                    });
+                    return Object.values(donorCounts).filter(count => count === 1).length;
+                  })()}
+                </div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 rounded-xl p-3 border border-gray-200 dark:border-gray-800">
+                <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Anonymous</div>
+                <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                  {donations.filter(d => d.is_anonymous).length}
+                </div>
+              </div>
+              
+              {/* Payment Method Analysis */}
+              <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-950 dark:to-indigo-900 rounded-xl p-3 border border-indigo-200 dark:border-indigo-800">
+                <div className="text-xs font-medium text-indigo-700 dark:text-indigo-300 mb-1">Cash</div>
+                <div className="text-lg font-bold text-indigo-900 dark:text-indigo-100">
+                  {donations.filter(d => d.payment_method === 'cash').length}
+                </div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 rounded-xl p-3 border border-green-200 dark:border-green-800">
+                <div className="text-xs font-medium text-green-700 dark:text-green-300 mb-1">Check</div>
+                <div className="text-lg font-bold text-green-900 dark:text-green-100">
+                  {donations.filter(d => d.payment_method === 'check').length}
+                </div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-950 dark:to-pink-900 rounded-xl p-3 border border-pink-200 dark:border-pink-800">
+                <div className="text-xs font-medium text-pink-700 dark:text-pink-300 mb-1">Card</div>
+                <div className="text-lg font-bold text-pink-900 dark:text-pink-100">
+                  {donations.filter(d => d.payment_method === 'credit_card').length}
+                </div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-950 dark:to-cyan-900 rounded-xl p-3 border border-cyan-200 dark:border-cyan-800">
+                <div className="text-xs font-medium text-cyan-700 dark:text-cyan-300 mb-1">Online</div>
+                <div className="text-lg font-bold text-cyan-900 dark:text-cyan-100">
+                  {donations.filter(d => d.payment_method === 'online').length}
+                </div>
+              </div>
+              
+              {/* Fund Distribution */}
+              <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900 rounded-xl p-3 border border-orange-200 dark:border-orange-800">
+                <div className="text-xs font-medium text-orange-700 dark:text-orange-300 mb-1">General</div>
+                <div className="text-lg font-bold text-orange-900 dark:text-orange-100">
+                  {formatCurrency(donations.filter(d => d.fund_designation === 'general').reduce((sum, d) => sum + parseFloat(d.amount), 0))}
+                </div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-violet-50 to-violet-100 dark:from-violet-950 dark:to-violet-900 rounded-xl p-3 border border-violet-200 dark:border-violet-800">
+                <div className="text-xs font-medium text-violet-700 dark:text-violet-300 mb-1">Tithes</div>
+                <div className="text-lg font-bold text-violet-900 dark:text-violet-100">
+                  {formatCurrency(donations.filter(d => d.fund_designation === 'tithe').reduce((sum, d) => sum + parseFloat(d.amount), 0))}
+                </div>
+              </div>
+            </div>
+            
+            {/* Monthly Breakdown */}
+            <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+              <h4 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Monthly Breakdown</h4>
+              <div className="grid gap-2 grid-cols-3 md:grid-cols-6 lg:grid-cols-12">
+                {(() => {
+                  const monthlyData = {};
+                  donations.forEach(d => {
+                    const month = format(parseISO(d.date), 'MMM');
+                    monthlyData[month] = (monthlyData[month] || 0) + parseFloat(d.amount);
+                  });
+                  
+                  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                  return months.map(month => (
+                    <div key={month} className="text-center p-2 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                      <div className="text-xs font-medium text-slate-600 dark:text-slate-400">{month}</div>
+                      <div className="text-sm font-bold text-slate-900 dark:text-white">
+                        {formatCurrency(monthlyData[month] || 0)}
                       </div>
-                      <div className="text-2xl font-bold text-green-600">
-                        ${parseFloat(donation.amount).toFixed(2)}
-                      </div>
-                      {donation.attendance && (
-                        <div className="text-sm text-muted-foreground">
-                          Attendance: {donation.attendance} people
-                        </div>
-                      )}
-                      {donation.notes && (
-                        <div className="text-sm text-muted-foreground mt-1">
-                          {donation.notes}
-                        </div>
-                      )}
                     </div>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditDonation(donation)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDeleteDonation(donation)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                  ));
+                })()}
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Donation Intelligence */}
+      {showIntelligence && (
+        <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
+          <div className="group relative">
+            <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center shadow-lg">
+                  <BarChart3 className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Donation Intelligence</h3>
+                  <p className="text-slate-600 dark:text-slate-400">AI-powered insights and giving recommendations</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-purple-500 rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">AI Intelligence</span>
+              </div>
+            </div>
+            
+            {/* Intelligence Grid */}
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+              {/* Giving Pattern Analysis */}
+              <motion.div className="group/card relative" variants={itemVariants}>
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-green-500/20 to-green-600/20 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                      <TrendingUp className="h-4 w-4 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Giving Pattern</h4>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-2xl font-bold text-green-600">
+                      {(() => {
+                        const monthlyAverage = donationSummary.totalAmount / Math.max(1, Math.ceil((new Date() - new Date(filters.startDate)) / (1000 * 60 * 60 * 24 * 30)));
+                        const lastMonthTotal = donations.filter(d => {
+                          const donationDate = new Date(d.date);
+                          const lastMonth = new Date();
+                          lastMonth.setMonth(lastMonth.getMonth() - 1);
+                          return donationDate.getMonth() === lastMonth.getMonth() && donationDate.getFullYear() === lastMonth.getFullYear();
+                        }).reduce((sum, d) => sum + parseFloat(d.amount), 0);
+                        
+                        if (lastMonthTotal > monthlyAverage * 1.1) return 'Strong';
+                        if (lastMonthTotal > monthlyAverage * 0.9) return 'Steady';
+                        return 'Declining';
+                      })()}
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      {(() => {
+                        const currentMonthDonations = donations.filter(d => {
+                          const donationDate = new Date(d.date);
+                          const now = new Date();
+                          return donationDate.getMonth() === now.getMonth() && donationDate.getFullYear() === now.getFullYear();
+                        });
+                        return `${currentMonthDonations.length} donations this month`;
+                      })()}
+                    </p>
+                    <div className="text-xs text-slate-500 dark:text-slate-500">
+                      {(() => {
+                        const monthlyAverage = donationSummary.totalAmount / Math.max(1, Math.ceil((new Date() - new Date(filters.startDate)) / (1000 * 60 * 60 * 24 * 30)));
+                        const lastMonthTotal = donations.filter(d => {
+                          const donationDate = new Date(d.date);
+                          const lastMonth = new Date();
+                          lastMonth.setMonth(lastMonth.getMonth() - 1);
+                          return donationDate.getMonth() === lastMonth.getMonth() && donationDate.getFullYear() === lastMonth.getFullYear();
+                        }).reduce((sum, d) => sum + parseFloat(d.amount), 0);
+                        
+                        if (lastMonthTotal > monthlyAverage * 1.1) return 'Keep up this positive momentum';
+                        if (lastMonthTotal > monthlyAverage * 0.9) return 'Maintain current outreach efforts';
+                        return 'Consider stewardship campaigns';
+                      })()}
                     </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </CardContent>
-        <CardFooter className="border-t p-4 flex justify-between">
-          <div className="text-sm text-muted-foreground">
-            Total: ${calculateTotalDonations().toLocaleString()}
-          </div>
-          <Button variant="outline" size="sm">
-            <Download className="mr-2 h-4 w-4" />
-            Export
-          </Button>
-        </CardFooter>
-      </Card>
+              </motion.div>
 
-      {/* Add Donation Dialog */}
-      <Dialog open={isAddDonationOpen} onOpenChange={setIsAddDonationOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+              {/* Payment Method Efficiency */}
+              <motion.div className="group/card relative" variants={itemVariants}>
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                      <CreditCard className="h-4 w-4 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Payment Insights</h4>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {(() => {
+                        const methodStats = donations.reduce((acc, d) => {
+                          acc[d.payment_method] = (acc[d.payment_method] || 0) + parseFloat(d.amount);
+                          return acc;
+                        }, {});
+                        const topMethod = Object.entries(methodStats).sort((a, b) => b[1] - a[1])[0];
+                        return topMethod ? topMethod[0].replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Cash';
+                      })()}
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      Most popular payment method
+                    </p>
+                    <div className="text-xs text-slate-500 dark:text-slate-500">
+                      {(() => {
+                        const onlineTotal = donations.filter(d => d.payment_method === 'online').reduce((sum, d) => sum + parseFloat(d.amount), 0);
+                        const totalAmount = donations.reduce((sum, d) => sum + parseFloat(d.amount), 0);
+                        const onlinePercentage = totalAmount > 0 ? (onlineTotal / totalAmount * 100).toFixed(1) : 0;
+                        return `${onlinePercentage}% of donations are online`;
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Donor Engagement Score */}
+              <motion.div className="group/card relative" variants={itemVariants}>
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500/20 to-purple-600/20 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                      <Users className="h-4 w-4 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Donor Engagement</h4>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-2xl font-bold text-purple-600">
+                      {(() => {
+                        const repeatDonors = donations.reduce((acc, d) => {
+                          if (d.donor_id) {
+                            acc[d.donor_id] = (acc[d.donor_id] || 0) + 1;
+                          }
+                          return acc;
+                        }, {});
+                        const repeatCount = Object.values(repeatDonors).filter(count => count > 1).length;
+                        const engagementRate = donationSummary.uniqueDonors > 0 ? (repeatCount / donationSummary.uniqueDonors * 100).toFixed(0) : 0;
+                        return `${engagementRate}%`;
+                      })()}
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      Repeat donor rate
+                    </p>
+                    <div className="text-xs text-slate-500 dark:text-slate-500">
+                      {(() => {
+                        const repeatDonors = donations.reduce((acc, d) => {
+                          if (d.donor_id) {
+                            acc[d.donor_id] = (acc[d.donor_id] || 0) + 1;
+                          }
+                          return acc;
+                        }, {});
+                        const repeatCount = Object.values(repeatDonors).filter(count => count > 1).length;
+                        const engagementRate = donationSummary.uniqueDonors > 0 ? (repeatCount / donationSummary.uniqueDonors * 100) : 0;
+                        
+                        if (engagementRate > 70) return 'Excellent donor retention';
+                        if (engagementRate > 50) return 'Good donor loyalty';
+                        return 'Focus on donor retention strategies';
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Fund Allocation Efficiency */}
+              <motion.div className="group/card relative" variants={itemVariants}>
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-500/20 to-amber-600/20 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg flex items-center justify-center">
+                      <PieChart className="h-4 w-4 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Fund Distribution</h4>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-2xl font-bold text-amber-600">
+                      {(() => {
+                        const fundStats = donations.reduce((acc, d) => {
+                          acc[d.fund_designation] = (acc[d.fund_designation] || 0) + parseFloat(d.amount);
+                          return acc;
+                        }, {});
+                        const topFund = Object.entries(fundStats).sort((a, b) => b[1] - a[1])[0];
+                        return topFund ? topFund[0].replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'General';
+                      })()}
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      Top receiving fund
+                    </p>
+                    <div className="text-xs text-slate-500 dark:text-slate-500">
+                      {(() => {
+                        const fundStats = donations.reduce((acc, d) => {
+                          acc[d.fund_designation] = (acc[d.fund_designation] || 0) + parseFloat(d.amount);
+                          return acc;
+                        }, {});
+                        const fundCount = Object.keys(fundStats).length;
+                        return `Donations spread across ${fundCount} fund${fundCount !== 1 ? 's' : ''}`;
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Batch Processing Efficiency */}
+              <motion.div className="group/card relative" variants={itemVariants}>
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center">
+                      <Archive className="h-4 w-4 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Batch Efficiency</h4>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-2xl font-bold text-emerald-600">
+                      {(() => {
+                        const openBatches = batches.filter(b => b.status === 'open').length;
+                        const totalBatches = batches.length;
+                        if (totalBatches === 0) return 'N/A';
+                        if (openBatches === 0) return 'Organized';
+                        if (openBatches === 1) return 'Active';
+                        return 'Multiple';
+                      })()}
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      {(() => {
+                        const openBatches = batches.filter(b => b.status === 'open').length;
+                        if (openBatches === 0) return 'All batches processed';
+                        if (openBatches === 1) return '1 batch in progress';
+                        return `${openBatches} batches in progress`;
+                      })()}
+                    </p>
+                    <div className="text-xs text-slate-500 dark:text-slate-500">
+                      {(() => {
+                        const openBatches = batches.filter(b => b.status === 'open').length;
+                        if (openBatches === 0) return 'Great batch management';
+                        if (openBatches === 1) return 'Good processing workflow';
+                        return 'Consider closing completed batches';
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Anonymous Giving Insights */}
+              <motion.div className="group/card relative" variants={itemVariants}>
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-indigo-600/20 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                      <UserX className="h-4 w-4 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Anonymous Giving</h4>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-2xl font-bold text-indigo-600">
+                      {(() => {
+                        const anonymousDonations = donations.filter(d => d.is_anonymous);
+                        const anonymousTotal = anonymousDonations.reduce((sum, d) => sum + parseFloat(d.amount), 0);
+                        const totalAmount = donations.reduce((sum, d) => sum + parseFloat(d.amount), 0);
+                        return totalAmount > 0 ? `${(anonymousTotal / totalAmount * 100).toFixed(1)}%` : '0%';
+                      })()}
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      Anonymous contribution rate
+                    </p>
+                    <div className="text-xs text-slate-500 dark:text-slate-500">
+                      {(() => {
+                        const anonymousDonations = donations.filter(d => d.is_anonymous);
+                        const anonymousRate = anonymousDonations.length / Math.max(donations.length, 1) * 100;
+                        if (anonymousRate > 25) return 'High privacy preference';
+                        if (anonymousRate > 10) return 'Moderate anonymous giving';
+                        return 'Most donors prefer recognition';
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+      )}
+
+      {/* Filters - Next-Gen Design */}
+      <motion.div variants={itemVariants}>
+        <div className="group relative">
+          <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-slate-500 to-slate-600 rounded-2xl flex items-center justify-center shadow-lg">
+                  <Filter className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Smart Filters</h3>
+                  <p className="text-slate-600 dark:text-slate-400">Intelligent data filtering and search</p>
+                </div>
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-4 lg:grid-cols-6">
+              <div className="space-y-2">
+                <Label htmlFor="start-date">Start Date</Label>
+                <Input
+                  id="start-date"
+                  type="date"
+                  value={filters.startDate}
+                  onChange={(e) => setFilters({...filters, startDate: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="end-date">End Date</Label>
+                <Input
+                  id="end-date"
+                  type="date"
+                  value={filters.endDate}
+                  onChange={(e) => setFilters({...filters, endDate: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="fund-designation">Fund</Label>
+                <Select value={filters.fundDesignation} onValueChange={(value) => setFilters({...filters, fundDesignation: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All funds" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Funds</SelectItem>
+                    <SelectItem value="general">General</SelectItem>
+                    <SelectItem value="tithe">Tithes</SelectItem>
+                    <SelectItem value="building_fund">Building Fund</SelectItem>
+                    <SelectItem value="missions">Missions</SelectItem>
+                    <SelectItem value="youth_ministry">Youth Ministry</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="payment-method">Payment Method</Label>
+                <Select value={filters.paymentMethod} onValueChange={(value) => setFilters({...filters, paymentMethod: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All methods" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Methods</SelectItem>
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="check">Check</SelectItem>
+                    <SelectItem value="credit_card">Credit Card</SelectItem>
+                    <SelectItem value="online">Online</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="search">Search</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="search"
+                    placeholder="Search notes, check #..."
+                    value={filters.search}
+                    onChange={(e) => setFilters({...filters, search: e.target.value})}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <div className="flex items-end">
+                <Button onClick={applyFilters} className="w-full">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Apply Filters
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Main Tabs */}
+      <motion.div variants={itemVariants}>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="donations" className="flex items-center space-x-2">
+              <DollarSign className="h-4 w-4" />
+              <span>Donations</span>
+            </TabsTrigger>
+            <TabsTrigger value="campaigns" className="flex items-center space-x-2">
+              <Target className="h-4 w-4" />
+              <span>Campaigns</span>
+            </TabsTrigger>
+            <TabsTrigger value="pledges" className="flex items-center space-x-2">
+              <CheckCircle className="h-4 w-4" />
+              <span>Pledges</span>
+            </TabsTrigger>
+            <TabsTrigger value="batches" className="flex items-center space-x-2">
+              <Archive className="h-4 w-4" />
+              <span>Batches</span>
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center space-x-2">
+              <BarChart3 className="h-4 w-4" />
+              <span>Analytics</span>
+            </TabsTrigger>
+            <TabsTrigger value="receipts" className="flex items-center space-x-2">
+              <Receipt className="h-4 w-4" />
+              <span>Receipts</span>
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Donations Tab */}
+          <TabsContent value="donations" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold">Donations</h2>
+                <p className="text-muted-foreground">Track and manage all donations</p>
+              </div>
+              <Button onClick={() => setIsDonationDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Donation
+              </Button>
+            </div>
+
+            <Card>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="border-b">
+                      <tr className="text-left">
+                        <th className="p-4 font-medium">Date</th>
+                        <th className="p-4 font-medium">Donor</th>
+                        <th className="p-4 font-medium">Amount</th>
+                        <th className="p-4 font-medium">Method</th>
+                        <th className="p-4 font-medium">Fund</th>
+                        <th className="p-4 font-medium">Campaign</th>
+                        <th className="p-4 font-medium">Batch</th>
+                        <th className="p-4 font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {isLoading ? (
+                        Array.from({ length: 5 }).map((_, i) => (
+                          <tr key={i} className="border-b">
+                            <td className="p-4"><Skeleton className="h-4 w-20" /></td>
+                            <td className="p-4"><Skeleton className="h-4 w-32" /></td>
+                            <td className="p-4"><Skeleton className="h-4 w-16" /></td>
+                            <td className="p-4"><Skeleton className="h-4 w-20" /></td>
+                            <td className="p-4"><Skeleton className="h-4 w-24" /></td>
+                            <td className="p-4"><Skeleton className="h-4 w-28" /></td>
+                            <td className="p-4"><Skeleton className="h-4 w-24" /></td>
+                            <td className="p-4"><Skeleton className="h-4 w-20" /></td>
+                          </tr>
+                        ))
+                      ) : donations.length === 0 ? (
+                        <tr>
+                          <td colSpan="8" className="p-8 text-center text-muted-foreground">
+                            No donations found for the selected filters
+                          </td>
+                        </tr>
+                      ) : (
+                        donations.map((donation) => (
+                          <tr key={donation.id} className="border-b hover:bg-muted/50">
+                            <td className="p-4">
+                              {format(parseISO(donation.date), 'MMM d, yyyy')}
+                            </td>
+                            <td className="p-4">
+                              <div className="flex items-center space-x-2">
+                                {donation.is_anonymous ? (
+                                  <Badge variant="secondary">Anonymous</Badge>
+                                ) : donation.donor ? (
+                                  <div>
+                                    <div className="font-medium">
+                                      {donation.donor.firstname} {donation.donor.lastname}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">
+                                      {donation.donor.email}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground">No donor linked</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-4">
+                              <div className="font-semibold text-emerald-600">
+                                {formatCurrency(donation.amount)}
+                              </div>
+                            </td>
+                            <td className="p-4">
+                              <div className="flex items-center space-x-2">
+                                {getPaymentMethodIcon(donation.payment_method)}
+                                <span className="capitalize">
+                                  {donation.payment_method?.replace('_', ' ')}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="p-4">
+                              <div className="flex items-center space-x-2">
+                                {getFundDesignationIcon(donation.fund_designation)}
+                                <span className="capitalize">
+                                  {donation.fund_designation?.replace('_', ' ')}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="p-4">
+                              {donation.campaign ? (
+                                <Badge variant="outline">{donation.campaign.name}</Badge>
+                              ) : (
+                                <span className="text-muted-foreground">None</span>
+                              )}
+                            </td>
+                            <td className="p-4">
+                              {donation.batch ? (
+                                <Badge variant="secondary" className="flex items-center space-x-1 max-w-[200px]" title={donation.batch.name}>
+                                  <Archive className="h-3 w-3 flex-shrink-0" />
+                                  <span className="truncate">{donation.batch.name}</span>
+                                </Badge>
+                              ) : (
+                                <span className="text-muted-foreground">None</span>
+                              )}
+                            </td>
+                            <td className="p-4">
+                              <div className="flex space-x-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEditDonation(donation)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setItemToDelete({ type: 'donation', id: donation.id });
+                                    setIsDeleteDialogOpen(true);
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Other tabs content will be added here... */}
+          <TabsContent value="campaigns" className="space-y-6">
+            <div className="text-center py-12">
+              <Target className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Campaigns Coming Soon</h3>
+              <p className="text-muted-foreground">Campaign management features are being developed</p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="pledges" className="space-y-6">
+            <div className="text-center py-12">
+              <CheckCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Pledges Coming Soon</h3>
+              <p className="text-muted-foreground">Pledge management features are being developed</p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="batches" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold">Donation Batches</h2>
+                <p className="text-muted-foreground">Organize donations into batches for processing</p>
+              </div>
+              <Button onClick={() => setIsBatchDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Batch
+              </Button>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {isLoading ? (
+                Array.from({ length: 6 }).map((_, i) => (
+                  <Card key={i}>
+                    <CardContent className="p-6">
+                      <Skeleton className="h-4 w-32 mb-4" />
+                      <Skeleton className="h-6 w-20 mb-2" />
+                      <Skeleton className="h-4 w-24 mb-4" />
+                      <div className="flex space-x-2">
+                        <Skeleton className="h-8 w-16" />
+                        <Skeleton className="h-8 w-16" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : batches.length > 0 ? (
+                batches.map((batch) => (
+                  <motion.div key={batch.id} variants={itemVariants}>
+                    <Card className="relative overflow-hidden hover:shadow-lg transition-all duration-300">
+                      <div className={`absolute top-0 left-0 right-0 h-1 ${
+                        batch.status === 'open' ? 'bg-green-500' :
+                        batch.status === 'processing' ? 'bg-yellow-500' :
+                        'bg-gray-500'
+                      }`}></div>
+                      <CardContent className="p-6">
+                        <div className="mb-4">
+                          <div className="flex justify-end mb-2">
+                            <Badge variant={
+                              batch.status === 'open' ? 'default' :
+                              batch.status === 'processing' ? 'secondary' :
+                              'outline'
+                            }>
+                              {batch.status}
+                            </Badge>
+                          </div>
+                          <h3 className="text-lg font-semibold leading-tight" title={batch.name}>
+                            {batch.name}
+                          </h3>
+                        </div>
+                        
+                        <div className="space-y-2 mb-4">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Total Amount</span>
+                            <span className="font-semibold">{formatCurrency(batch.total_amount || 0)}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Donations</span>
+                            <span className="font-semibold">{batch.donation_count || 0}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Created</span>
+                            <span className="font-semibold">
+                              {batch.created_at ? format(parseISO(batch.created_at), 'MMM d, yyyy') : 'N/A'}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {batch.description && (
+                          <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                            {batch.description}
+                          </p>
+                        )}
+                        
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditBatch(batch)}
+                          >
+                            <Pencil className="h-3 w-3 mr-1" />
+                            Edit
+                          </Button>
+                          {batch.status === 'open' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleCloseBatch(batch.id)}
+                            >
+                              <Archive className="h-3 w-3 mr-1" />
+                              Close
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewBatchDetails(batch)}
+                          >
+                            <Eye className="h-3 w-3 mr-1" />
+                            View
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))
+              ) : (
+                <div className="col-span-full text-center py-12">
+                  <Archive className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No Batches Found</h3>
+                  <p className="text-muted-foreground mb-4">Create your first donation batch to get started</p>
+                  <Button onClick={() => setIsBatchDialogOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create First Batch
+                  </Button>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="analytics" className="space-y-6">
+            <div className="text-center py-12">
+              <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Analytics Coming Soon</h3>
+              <p className="text-muted-foreground">Advanced analytics features are being developed</p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="receipts" className="space-y-6">
+            <div className="text-center py-12">
+              <Receipt className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Receipts Coming Soon</h3>
+              <p className="text-muted-foreground">Receipt management features are being developed</p>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </motion.div>
+
+      {/* Add/Edit Donation Dialog */}
+      <Dialog open={isDonationDialogOpen} onOpenChange={setIsDonationDialogOpen}>
+        <DialogContent className="sm:max-w-[700px]">
           <DialogHeader>
-            <DialogTitle>Add New Donation</DialogTitle>
+            <DialogTitle>
+              {selectedDonation ? 'Edit Donation' : 'Add New Donation'}
+            </DialogTitle>
             <DialogDescription>
-              Record a new donation. The donation will be recorded for the Sunday of the selected week.
+              {selectedDonation ? 'Update donation details' : 'Record a new donation'}
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+          <form onSubmit={selectedDonation ? handleUpdateDonation : handleAddDonation}>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                  <Label htmlFor="donor">Donor</Label>
+                  <div className="relative donor-dropdown-container">
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="donor"
+                        value={donorSearch}
+                        onChange={(e) => {
+                          setDonorSearch(e.target.value);
+                          setIsDonorDropdownOpen(true);
+                        }}
+                        onFocus={() => setIsDonorDropdownOpen(true)}
+                        placeholder="Search for donor or type 'Anonymous'"
+                        className="pl-10"
+                      />
+                    </div>
+                    
+                    {isDonorDropdownOpen && (
+                      <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                        <div 
+                          className="px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer border-b"
+                          onClick={() => handleDonorSelect(null)}
+                        >
+                          <div className="flex items-center space-x-2">
+                            <UserX className="h-4 w-4 text-muted-foreground" />
+                            <span>Anonymous (No donor)</span>
+                          </div>
+                        </div>
+                        
+                        {getFilteredMembers().length > 0 ? (
+                          getFilteredMembers().map((member) => (
+                            <div
+                              key={member.id}
+                              className="px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
+                              onClick={() => handleDonorSelect(member)}
+                            >
+                              <div className="flex items-center space-x-2">
+                                <User className="h-4 w-4 text-muted-foreground" />
+                                <div>
+                                  <div className="font-medium">
+                                    {member.firstname} {member.lastname}
+                                  </div>
+                                  {member.email && (
+                                    <div className="text-sm text-muted-foreground">
+                                      {member.email}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        ) : donorSearch.trim() !== '' ? (
+                          <div className="px-3 py-2 text-muted-foreground">
+                            No members found matching "{donorSearch}"
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Amount ($) *</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={donationForm.amount}
+                    onChange={(e) => setDonationForm({...donationForm, amount: e.target.value})}
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="date">Date *</Label>
+                  <Input
+                    id="date"
+                    type="date"
+                    value={donationForm.date}
+                    onChange={(e) => setDonationForm({...donationForm, date: e.target.value})}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="fund-designation">Fund Designation</Label>
+                  <Select 
+                    value={donationForm.fund_designation} 
+                    onValueChange={(value) => setDonationForm({...donationForm, fund_designation: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="tithe">Tithes & Offerings</SelectItem>
+                      <SelectItem value="general">General Fund</SelectItem>
+                      <SelectItem value="building_fund">Building Fund</SelectItem>
+                      <SelectItem value="missions">Missions</SelectItem>
+                      <SelectItem value="youth_ministry">Youth Ministry</SelectItem>
+                      <SelectItem value="outreach">Outreach</SelectItem>
+                      <SelectItem value="benevolence">Benevolence</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="payment-method">Payment Method</Label>
+                  <Select 
+                    value={donationForm.payment_method} 
+                    onValueChange={(value) => setDonationForm({...donationForm, payment_method: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="check">Check</SelectItem>
+                      <SelectItem value="credit_card">Credit Card</SelectItem>
+                      <SelectItem value="debit_card">Debit Card</SelectItem>
+                      <SelectItem value="ach">ACH Transfer</SelectItem>
+                      <SelectItem value="online">Online Payment</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="check-number">Check Number</Label>
+                  <Input
+                    id="check-number"
+                    value={donationForm.check_number}
+                    onChange={(e) => setDonationForm({...donationForm, check_number: e.target.value})}
+                    placeholder="If payment by check"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="campaign">Campaign (Optional)</Label>
+                  <Select 
+                    value={donationForm.campaign_id || 'none'} 
+                    onValueChange={(value) => setDonationForm({...donationForm, campaign_id: value === 'none' ? null : value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="No campaign" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Campaign</SelectItem>
+                      {campaigns.filter(c => c.is_active).map((campaign) => (
+                        <SelectItem key={campaign.id} value={campaign.id}>
+                          {campaign.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="batch">Batch (Optional)</Label>
+                  <Select 
+                    value={donationForm.batch_id || 'none'} 
+                    onValueChange={(value) => setDonationForm({...donationForm, batch_id: value === 'none' ? null : value})}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="No batch" />
+                    </SelectTrigger>
+                    <SelectContent className="max-w-[400px]">
+                      <SelectItem value="none">No Batch</SelectItem>
+                      {batches.filter(b => b.status === 'open').map((batch) => (
+                        <SelectItem key={batch.id} value={batch.id} className="max-w-[380px]">
+                          <div className="flex flex-col py-1">
+                            <div className="text-sm font-medium truncate max-w-[360px]" title={batch.name}>
+                              {batch.name}
+                            </div>
+                            {batch.batch_number && (
+                              <div className="text-xs text-muted-foreground">
+                                #{batch.batch_number}
+                              </div>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
               <div className="space-y-2">
-                <Label htmlFor="amount">Amount ($) *</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  value={newDonation.amount}
-                  onChange={(e) => setNewDonation({...newDonation, amount: e.target.value})}
-                  required
+                <Label htmlFor="notes">Notes</Label>
+                <Textarea
+                  id="notes"
+                  value={donationForm.notes}
+                  onChange={(e) => setDonationForm({...donationForm, notes: e.target.value})}
+                  placeholder="Additional notes about this donation"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="date">Date *</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={newDonation.date}
-                  onChange={(e) => setNewDonation({...newDonation, date: e.target.value})}
-                  required
-                />
+              
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="anonymous"
+                    checked={donationForm.is_anonymous}
+                    onChange={(e) => setDonationForm({...donationForm, is_anonymous: e.target.checked})}
+                    className="rounded"
+                  />
+                  <Label htmlFor="anonymous">Anonymous donation</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="tax-deductible"
+                    checked={donationForm.is_tax_deductible}
+                    onChange={(e) => setDonationForm({...donationForm, is_tax_deductible: e.target.checked})}
+                    className="rounded"
+                  />
+                  <Label htmlFor="tax-deductible">Tax deductible</Label>
+                </div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="type">Type</Label>
-                <select
-                  id="type"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  value={newDonation.type}
-                  onChange={(e) => setNewDonation({...newDonation, type: e.target.value})}
-                >
-                  <option value="weekly">Weekly</option>
-                  <option value="special">Special</option>
-                  <option value="building_fund">Building Fund</option>
-                  <option value="missions">Missions</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="attendance">Attendance</Label>
-                <Input
-                  id="attendance"
-                  type="number"
-                  min="0"
-                  value={newDonation.attendance}
-                  onChange={(e) => setNewDonation({...newDonation, attendance: e.target.value})}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Input
-                id="notes"
-                value={newDonation.notes}
-                onChange={(e) => setNewDonation({...newDonation, notes: e.target.value})}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDonationOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAddDonation}>
-              Add Donation
-            </Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => {
+                  setIsDonationDialogOpen(false);
+                  setSelectedDonation(null);
+                  resetDonationForm();
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit">
+                {selectedDonation ? 'Update Donation' : 'Add Donation'}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
-      {/* Edit Donation Dialog */}
-      <Dialog open={isEditDonationOpen} onOpenChange={setIsEditDonationOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+      {/* Add/Edit Batch Dialog */}
+      <Dialog open={isBatchDialogOpen} onOpenChange={setIsBatchDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Edit Donation</DialogTitle>
+            <DialogTitle>
+              {selectedBatch ? 'Edit Batch' : 'Create New Batch'}
+            </DialogTitle>
             <DialogDescription>
-              Update the donation details. The donation will be recorded for the Sunday of the selected week.
+              {selectedBatch ? 'Update batch details' : 'Create a new donation batch for organizing multiple donations'}
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-amount">Amount ($) *</Label>
-                <Input
-                  id="edit-amount"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  value={selectedDonation?.amount || ''}
-                  onChange={(e) => setSelectedDonation({
-                    ...selectedDonation,
-                    amount: e.target.value
-                  })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-date">Date *</Label>
-                <Input
-                  id="edit-date"
-                  type="date"
-                  value={selectedDonation?.date || ''}
-                  onChange={(e) => setSelectedDonation({
-                    ...selectedDonation,
-                    date: e.target.value
-                  })}
-                  required
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-type">Type</Label>
-                <select
-                  id="edit-type"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  value={selectedDonation?.type || 'weekly'}
-                  onChange={(e) => setSelectedDonation({
-                    ...selectedDonation,
-                    type: e.target.value
-                  })}
+          <form onSubmit={selectedBatch ? handleUpdateBatch : handleAddBatch}>
+            <div className="grid gap-4 py-4">
+                              <div className="space-y-2">
+                <Label htmlFor="sunday-event">Select Sunday Service (Optional)</Label>
+                <Select 
+                  value={batchForm.selectedEvent || 'none'} 
+                  onValueChange={(value) => handleEventSelection(value === 'none' ? '' : value)}
                 >
-                  <option value="weekly">Weekly</option>
-                  <option value="special">Special</option>
-                  <option value="building_fund">Building Fund</option>
-                  <option value="missions">Missions</option>
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Choose a Sunday service" />
+                  </SelectTrigger>
+                  <SelectContent className="max-w-[450px]">
+                    <SelectItem value="none">None - Enter custom name</SelectItem>
+                    {getSundayWorshipEvents().length > 0 ? (
+                      getSundayWorshipEvents().map((event) => {
+                        try {
+                          const eventDate = parseISO(event.start_date);
+                          const now = new Date();
+                          const isPastEvent = eventDate < now;
+                          
+                          return (
+                            <SelectItem key={event.id} value={event.id} className="max-w-[430px]">
+                              <div className="flex flex-col py-1 w-full">
+                                <div className="flex items-center justify-between w-full">
+                                  <div className="text-sm font-medium truncate max-w-[280px]" title={event.title}>
+                                    {event.title}
+                                  </div>
+                                  <div className={`text-xs px-2 py-1 rounded ${isPastEvent ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+                                    {isPastEvent ? 'Past' : 'Upcoming'}
+                                  </div>
+                                </div>
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  {format(eventDate, 'MMM d, yyyy')} • {format(eventDate, 'h:mm a')}
+                                </div>
+                              </div>
+                            </SelectItem>
+                          );
+                        } catch (error) {
+                          console.error('Error parsing event date:', event.start_date, error);
+                          return (
+                            <SelectItem key={event.id} value={event.id}>
+                              <div className="text-sm">{event.title} - {event.start_date}</div>
+                            </SelectItem>
+                          );
+                        }
+                      })
+                    ) : (
+                      <SelectItem value="no-events" disabled>
+                        No Sunday worship events found
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
+              
               <div className="space-y-2">
-                <Label htmlFor="edit-attendance">Attendance</Label>
+                <Label htmlFor="batch-name">Batch Name *</Label>
                 <Input
-                  id="edit-attendance"
-                  type="number"
-                  min="0"
-                  value={selectedDonation?.attendance || ''}
-                  onChange={(e) => setSelectedDonation({
-                    ...selectedDonation,
-                    attendance: e.target.value
-                  })}
+                  id="batch-name"
+                  value={batchForm.name}
+                  onChange={(e) => setBatchForm({...batchForm, name: e.target.value})}
+                  placeholder={batchForm.selectedEvent ? "Auto-generated from selected event" : "e.g., Sunday Service - Jan 15, 2024"}
+                  required
+                />
+                {batchForm.selectedEvent && (
+                  <p className="text-xs text-muted-foreground">
+                    Name auto-generated from selected Sunday service. You can edit it if needed.
+                  </p>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="batch-description">Description</Label>
+                <Textarea
+                  id="batch-description"
+                  value={batchForm.description}
+                  onChange={(e) => setBatchForm({...batchForm, description: e.target.value})}
+                  placeholder="Optional description for this batch"
+                  rows={3}
                 />
               </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="batch-status">Status</Label>
+                <Select 
+                  value={batchForm.status} 
+                  onValueChange={(value) => setBatchForm({...batchForm, status: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="open">Open</SelectItem>
+                    <SelectItem value="processing">Processing</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-notes">Notes</Label>
-              <Input
-                id="edit-notes"
-                value={selectedDonation?.notes || ''}
-                onChange={(e) => setSelectedDonation({
-                  ...selectedDonation,
-                  notes: e.target.value
-                })}
-              />
+            <DialogFooter>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => {
+                  setIsBatchDialogOpen(false);
+                  setSelectedBatch(null);
+                  resetBatchForm();
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit">
+                {selectedBatch ? 'Update Batch' : 'Create Batch'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Batch Details Dialog */}
+      <Dialog open={isBatchDetailsDialogOpen} onOpenChange={setIsBatchDetailsDialogOpen}>
+        <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl">
+              Batch Details: {selectedBatchForDetails?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Complete information about this donation batch
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedBatchForDetails && (
+            <div className="space-y-6">
+              {/* Batch Information */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Batch Number</Label>
+                  <div className="text-sm text-muted-foreground">{selectedBatchForDetails.batch_number}</div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Status</Label>
+                  <Badge variant={
+                    selectedBatchForDetails.status === 'open' ? 'default' :
+                    selectedBatchForDetails.status === 'processing' ? 'secondary' :
+                    'outline'
+                  }>
+                    {selectedBatchForDetails.status}
+                  </Badge>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Created Date</Label>
+                  <div className="text-sm text-muted-foreground">
+                    {format(parseISO(selectedBatchForDetails.batch_date), 'MMM d, yyyy')}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Closed Date</Label>
+                  <div className="text-sm text-muted-foreground">
+                    {selectedBatchForDetails.closed_at ? format(parseISO(selectedBatchForDetails.closed_at), 'MMM d, yyyy') : 'Not closed'}
+                  </div>
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label className="text-sm font-medium">Description</Label>
+                  <div className="text-sm text-muted-foreground">
+                    {selectedBatchForDetails.description || 'No description provided'}
+                  </div>
+                </div>
+              </div>
+
+                             {/* Batch Statistics */}
+               {batchDetails && batchDetails.statistics && (
+                 <div className="bg-slate-50 dark:bg-slate-900 rounded-lg p-4">
+                   <h4 className="font-semibold mb-3">Statistics</h4>
+                   <div className="grid gap-4 md:grid-cols-3">
+                     <div className="text-center">
+                       <div className="text-2xl font-bold text-blue-600">{batchDetails.statistics.donation_count}</div>
+                       <div className="text-sm text-muted-foreground">Donations</div>
+                     </div>
+                     <div className="text-center">
+                       <div className="text-2xl font-bold text-green-600">{formatCurrency(batchDetails.statistics.total_amount)}</div>
+                       <div className="text-sm text-muted-foreground">Total Amount</div>
+                     </div>
+                     <div className="text-center">
+                       <div className="text-2xl font-bold text-purple-600">{formatCurrency(batchDetails.statistics.average_donation)}</div>
+                       <div className="text-sm text-muted-foreground">Average Amount</div>
+                     </div>
+                   </div>
+                 </div>
+               )}
+
+              {/* Donations in this batch */}
+              <div>
+                <h4 className="font-semibold mb-3">Donations in this Batch</h4>
+                {batchDetails && batchDetails.donations ? (
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-slate-50 dark:bg-slate-900">
+                          <tr>
+                            <th className="px-4 py-2 text-left text-sm font-medium">Date</th>
+                            <th className="px-4 py-2 text-left text-sm font-medium">Donor</th>
+                            <th className="px-4 py-2 text-left text-sm font-medium">Amount</th>
+                            <th className="px-4 py-2 text-left text-sm font-medium">Method</th>
+                            <th className="px-4 py-2 text-left text-sm font-medium">Fund</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                          {batchDetails.donations.map((donation) => (
+                            <tr key={donation.id} className="hover:bg-slate-50 dark:hover:bg-slate-900">
+                              <td className="px-4 py-2 text-sm">
+                                {format(parseISO(donation.date), 'MMM d, yyyy')}
+                              </td>
+                                                             <td className="px-4 py-2 text-sm">
+                                 {donation.is_anonymous ? 'Anonymous' : 
+                                  donation.donor ? `${donation.donor.firstname} ${donation.donor.lastname}` : 'N/A'}
+                               </td>
+                              <td className="px-4 py-2 text-sm font-medium">
+                                {formatCurrency(donation.amount)}
+                              </td>
+                              <td className="px-4 py-2 text-sm">
+                                <div className="flex items-center space-x-2">
+                                  {getPaymentMethodIcon(donation.payment_method)}
+                                  <span className="capitalize">{donation.payment_method}</span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-2 text-sm">
+                                <div className="flex items-center space-x-2">
+                                  {getFundDesignationIcon(donation.fund_designation)}
+                                  <span className="capitalize">{donation.fund_designation.replace('_', ' ')}</span>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-muted-foreground">
+                    Loading donations...
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
+          
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDonationOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleUpdateDonation}>
-              Save Changes
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsBatchDetailsDialogOpen(false);
+                setSelectedBatchForDetails(null);
+                setBatchDetails(null);
+              }}
+            >
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDonationOpen} onOpenChange={setIsDeleteDonationOpen}>
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Delete Donation</DialogTitle>
+            <DialogTitle>Confirm Deletion</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this donation? This action cannot be undone.
+              Are you sure you want to delete this {itemToDelete?.type}? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDonationOpen(false)}>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleConfirmDelete}>
+            <Button variant="destructive" onClick={handleDelete}>
               Delete
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </motion.div>
   );
 }
+
