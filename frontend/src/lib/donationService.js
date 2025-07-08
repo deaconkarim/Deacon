@@ -3,6 +3,14 @@ import { supabase } from './supabaseClient';
 // Helper function to get current user's organization ID
 const getCurrentUserOrganizationId = async () => {
   try {
+    // Check if we're impersonating a user and use that organization ID
+    const impersonatingUser = localStorage.getItem('impersonating_user');
+    if (impersonatingUser) {
+      const impersonationData = JSON.parse(impersonatingUser);
+      console.log('🔍 [DonationService] Using impersonated organization ID:', impersonationData.organization_id);
+      return impersonationData.organization_id;
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
@@ -10,11 +18,11 @@ const getCurrentUserOrganizationId = async () => {
       .from('organization_users')
       .select('organization_id')
       .eq('user_id', user.id)
-      .eq('status', 'active')
-      .single();
+      .eq('approval_status', 'approved')
+      .limit(1);
 
     if (error) throw error;
-    return data?.organization_id;
+    return data && data.length > 0 ? data[0].organization_id : null;
   } catch (error) {
     console.error('Error getting user organization:', error);
     return null;
@@ -40,6 +48,11 @@ export async function getDonations(filters = {}) {
         batch:donation_batches(id, name, batch_number, description, status)
       `)
       .eq('organization_id', organizationId);
+
+    // Option to exclude legacy batch summaries (for individual donation view)
+    if (filters.excludeLegacyBatches) {
+      query = query.eq('is_legacy_batch_summary', false);
+    }
 
     // Apply filters
     if (filters.startDate) {
@@ -596,7 +609,7 @@ export async function getBatches(status = 'all') {
   }
 }
 
-export async function addBatch(batch) {
+export async function createBatch(batch) {
   try {
     const organizationId = await getCurrentUserOrganizationId();
     if (!organizationId) {
@@ -627,8 +640,10 @@ export async function addBatch(batch) {
   }
 }
 
-// Alias for compatibility
-export const createBatch = addBatch;
+// Backward compatibility alias
+export async function addBatch(batch) {
+  return createBatch(batch);
+}
 
 export async function updateBatch(id, updates) {
   try {
@@ -891,6 +906,94 @@ export async function generateDonationReport(reportType, filters = {}) {
           end: filters.endDate
         }
       }
+    };
+  } catch (error) {
+    throw error;
+  }
+}
+
+// ================== LEGACY BATCH MIGRATION HELPERS ==================
+
+export async function getLegacyDonations() {
+  try {
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
+    const { data, error } = await supabase
+      .from('donations')
+      .select(`
+        *,
+        batch:donation_batches(id, name, batch_number, description, status)
+      `)
+      .eq('organization_id', organizationId)
+      .eq('is_legacy_batch_summary', true)
+      .order('date', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function checkMigrationStatus() {
+  try {
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
+    const { data, error } = await supabase
+      .from('automation_settings')
+      .select('setting_value')
+      .eq('organization_id', organizationId)
+      .eq('setting_key', 'donation_migration_completed')
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error; // PGRST116 is "not found"
+    
+    return data?.setting_value || { migration_completed: false };
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function getMigrationSummary() {
+  try {
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
+    // Get counts of legacy vs new donations
+    const { data: legacyCount, error: legacyError } = await supabase
+      .from('donations')
+      .select('id', { count: 'exact' })
+      .eq('organization_id', organizationId)
+      .eq('is_legacy_batch_summary', true);
+
+    const { data: newCount, error: newError } = await supabase
+      .from('donations')
+      .select('id', { count: 'exact' })
+      .eq('organization_id', organizationId)
+      .eq('is_legacy_batch_summary', false);
+
+    const { data: batchCount, error: batchError } = await supabase
+      .from('donation_batches')
+      .select('id', { count: 'exact' })
+      .eq('organization_id', organizationId);
+
+    if (legacyError || newError || batchError) {
+      throw legacyError || newError || batchError;
+    }
+
+    return {
+      legacyDonations: legacyCount?.length || 0,
+      newDonations: newCount?.length || 0,
+      totalBatches: batchCount?.length || 0,
+      migrationStatus: await checkMigrationStatus()
     };
   } catch (error) {
     throw error;

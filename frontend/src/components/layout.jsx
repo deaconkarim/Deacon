@@ -26,7 +26,8 @@ import {
   CheckCircle,
   Clock,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  Shield
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
@@ -39,7 +40,7 @@ import {
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { Logo } from '@/components/ui/logo';
 import { useAuth } from '@/lib/authContext';
-import { isUserAdmin, getApprovalNotifications, getOrganizationName } from '@/lib/data';
+import { isUserAdmin, isSystemAdmin, getApprovalNotifications, getOrganizationName } from '@/lib/data';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabaseClient';
@@ -51,24 +52,46 @@ export function Layout() {
   const { toast } = useToast();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSystemAdminUser, setIsSystemAdminUser] = useState(false);
   const [pendingApprovals, setPendingApprovals] = useState(0);
   const [organizationName, setOrganizationName] = useState('Church App');
   const [hoveredNav, setHoveredNav] = useState(null);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const [isImpersonating, setIsImpersonating] = useState(false);
+  const [impersonationData, setImpersonationData] = useState(null);
 
-  const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: Home, color: 'text-blue-500' },
-    { name: 'Events', href: '/events', icon: Calendar, color: 'text-green-500' },
-    { name: 'Children Check-In', href: '/children-check-in', icon: Baby, color: 'text-pink-500' },
-    { name: 'People', href: '/members', icon: Users, color: 'text-purple-500' },
-    { name: 'Donations', href: '/donations', icon: DollarSign, color: 'text-yellow-500' },
-    { name: 'Groups', href: '/groups', icon: UserPlus, color: 'text-indigo-500' },
-    { name: 'Tasks', href: '/tasks', icon: ClipboardList, color: 'text-orange-500' },
-    { name: 'SMS', href: '/sms', icon: MessageSquare, color: 'text-teal-500' },
-    { name: 'Alerts', href: '/alerts', icon: Bell, color: 'text-red-500' },
-    { name: 'Reports', href: '/reports', icon: BarChart2, color: 'text-emerald-500' },
-    { name: 'Settings', href: '/settings', icon: Settings, color: 'text-gray-500' },
-  ];
+  // Generate navigation items based on user permissions
+  const generateNavigation = () => {
+    const baseNavigation = [
+      { name: 'Dashboard', href: '/dashboard', icon: Home, color: 'text-blue-500' },
+      { name: 'Events', href: '/events', icon: Calendar, color: 'text-green-500' },
+      { name: 'Children Check-In', href: '/children-check-in', icon: Baby, color: 'text-pink-500' },
+      { name: 'People', href: '/members', icon: Users, color: 'text-purple-500' },
+      { name: 'Donations', href: '/donations', icon: DollarSign, color: 'text-yellow-500' },
+      { name: 'Groups', href: '/groups', icon: UserPlus, color: 'text-indigo-500' },
+      { name: 'Tasks', href: '/tasks', icon: ClipboardList, color: 'text-orange-500' },
+      { name: 'SMS', href: '/sms', icon: MessageSquare, color: 'text-teal-500' },
+      { name: 'Alerts', href: '/alerts', icon: Bell, color: 'text-red-500' },
+      { name: 'Reports', href: '/reports', icon: BarChart2, color: 'text-emerald-500' },
+    ];
+
+    // Add Admin Center for system administrators only
+    if (isSystemAdminUser) {
+      baseNavigation.push({
+        name: 'Admin Center',
+        href: '/admin-center',
+        icon: Shield,
+        color: 'text-red-600',
+        isSystemAdmin: true
+      });
+    }
+
+    baseNavigation.push({ name: 'Settings', href: '/settings', icon: Settings, color: 'text-gray-500' });
+
+    return baseNavigation;
+  };
+
+  const navigation = generateNavigation();
 
   const mainNavItems = navigation.slice(0, 5); // Show 5 main items on tablet
   const moreNavItems = navigation.slice(5);
@@ -78,8 +101,13 @@ export function Layout() {
   useEffect(() => {
     const checkAdminAndNotifications = async () => {
       try {
-        const adminStatus = await isUserAdmin();
+        const [adminStatus, systemAdminStatus] = await Promise.all([
+          isUserAdmin(),
+          isSystemAdmin()
+        ]);
+        
         setIsAdmin(adminStatus);
+        setIsSystemAdminUser(systemAdminStatus);
         
         if (adminStatus) {
           try {
@@ -115,9 +143,71 @@ export function Layout() {
     fetchOrganizationName();
   }, []);
 
+  // Check for admin center redirect flag
+  useEffect(() => {
+    const shouldRedirectToAdminCenter = localStorage.getItem('redirect_to_admin_center');
+    if (shouldRedirectToAdminCenter === 'true') {
+      localStorage.removeItem('redirect_to_admin_center');
+      navigate('/admin-center');
+    }
+  }, [navigate]);
+
+  // Check for impersonation state
+  useEffect(() => {
+    const checkImpersonationState = () => {
+      const impersonatingUser = localStorage.getItem('impersonating_user');
+      if (impersonatingUser) {
+        setIsImpersonating(true);
+        setImpersonationData(JSON.parse(impersonatingUser));
+      } else {
+        setIsImpersonating(false);
+        setImpersonationData(null);
+      }
+    };
+
+    checkImpersonationState();
+    
+    // Listen for localStorage changes
+    window.addEventListener('storage', checkImpersonationState);
+    
+    return () => {
+      window.removeEventListener('storage', checkImpersonationState);
+    };
+  }, []);
+
+  const handleReturnToAdminCenter = async () => {
+    try {
+      // Clear impersonation flags
+      localStorage.removeItem('impersonating_user');
+      setIsImpersonating(false);
+      setImpersonationData(null);
+      
+      // Store a flag to redirect to admin center after login
+      localStorage.setItem('redirect_to_admin_center', 'true');
+      
+      // Sign out current user
+      await supabase.auth.signOut();
+      
+      // Force page reload to go to login
+      window.location.href = '/login';
+      
+    } catch (error) {
+      console.error('Error returning to admin center:', error);
+      toast({
+        title: "Error",
+        description: "Failed to return to admin center",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleSignOut = async () => {
     try {
       // console.log('Sign out initiated...');
+      
+      // Clear impersonation state
+      setIsImpersonating(false);
+      setImpersonationData(null);
       
       // Clear any local storage or session data
       localStorage.clear();
@@ -178,6 +268,30 @@ export function Layout() {
       </aside>
       {/* Main Content with Header */}
       <div className="flex-1 flex flex-col md:ml-16 transition-all duration-200">
+        {/* Impersonation Banner */}
+        {isImpersonating && impersonationData && (
+          <div className="bg-amber-100 dark:bg-amber-900/30 border-b border-amber-300 dark:border-amber-700/50 px-4 py-2 sticky top-0 z-50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                <span className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                  System Admin Mode: Viewing as {impersonationData.admin_name} 
+                  ({impersonationData.organization_name})
+                </span>
+              </div>
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="border-amber-300 text-amber-700 hover:bg-amber-200 dark:border-amber-600 dark:text-amber-300 dark:hover:bg-amber-800"
+                onClick={handleReturnToAdminCenter}
+              >
+                <Shield className="h-3 w-3 mr-1" />
+                Return to Admin Center
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Header stays at the top, full width */}
         <header className="bg-card border-b px-4 py-3 flex justify-between items-center sticky top-0 z-40">
           <div className="flex items-center gap-2">

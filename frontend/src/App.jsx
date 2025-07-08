@@ -17,8 +17,10 @@ import { Register } from './pages/register';
 import { Invite } from './pages/invite';
 import { SMS } from './pages/sms';
 import AlertsPage from './pages/alerts';
+import { AdminCenter } from './pages/admin-center';
 
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { AdminRoute } from './components/AdminRoute';
 import ApprovalStatus from './components/ApprovalStatus';
 import PrivacyPolicy from './pages/privacy-policy';
 import { TermsOfService } from './pages/terms-of-service';
@@ -54,8 +56,10 @@ function App() {
         <Route path="/settings" element={<Settings />} />
         <Route path="/sms" element={<SMS />} />
         <Route path="/alerts" element={<AlertsPage />} />
-
       </Route>
+      
+      {/* System Admin only routes */}
+      <Route path="/admin-center" element={<AdminRoute><AdminCenter /></AdminRoute>} />
     </Routes>
   );
 }

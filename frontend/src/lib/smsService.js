@@ -3,6 +3,14 @@ import { supabase } from './supabaseClient';
 // Import the function to get current user's organization ID
 const getCurrentUserOrganizationId = async () => {
   try {
+    // Check if we're impersonating a user and use that organization ID
+    const impersonatingUser = localStorage.getItem('impersonating_user');
+    if (impersonatingUser) {
+      const impersonationData = JSON.parse(impersonatingUser);
+      console.log('🔍 [SMSService] Using impersonated organization ID:', impersonationData.organization_id);
+      return impersonationData.organization_id;
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
@@ -10,11 +18,10 @@ const getCurrentUserOrganizationId = async () => {
       .from('organization_users')
       .select('organization_id')
       .eq('user_id', user.id)
-      .eq('status', 'active')
       .eq('approval_status', 'approved')
-      .single();
+      .limit(1);
 
-    return userProfile?.organization_id || null;
+    return userProfile && userProfile.length > 0 ? userProfile[0].organization_id : null;
   } catch (error) {
     console.error('Error getting user organization ID:', error);
     return null;

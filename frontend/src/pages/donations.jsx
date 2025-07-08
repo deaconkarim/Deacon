@@ -132,7 +132,7 @@ export function Donations() {
     donor_id: null,
     amount: '',
     date: format(new Date(), 'yyyy-MM-dd'),
-    fund_designation: 'general',
+    fund_designation: 'tithe',
     payment_method: 'cash',
     check_number: '',
     campaign_id: null,
@@ -472,7 +472,7 @@ export function Donations() {
       donor_id: null,
       amount: '',
       date: format(new Date(), 'yyyy-MM-dd'),
-      fund_designation: 'general',
+      fund_designation: 'tithe',
       payment_method: 'cash',
       check_number: '',
       campaign_id: null,
@@ -744,22 +744,54 @@ export function Donations() {
   }, [campaigns]);
 
   return (
-    <motion.div 
-      className="space-y-6"
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-    >
-      {/* Header - Next-Gen Design */}
-      <motion.div className="mb-4 sm:mb-8 relative" variants={itemVariants}>
+    <div className="w-full max-w-full overflow-x-hidden">
+      {/* Mobile Header */}
+      <div className="block md:hidden">
+        <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white">
+          <div className="absolute inset-0 bg-black/20"></div>
+          <div className="relative px-4 py-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h1 className="text-2xl font-bold">Donations</h1>
+                <p className="text-blue-100 text-sm">Financial Management</p>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold">
+                  {formatCurrency(donationSummary.totalAmount)}
+                </div>
+                <div className="text-xs text-blue-100">Total Raised</div>
+              </div>
+            </div>
+            
+            {/* Quick Stats */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="text-center">
+                <div className="text-lg font-bold">{donationSummary.donationCount}</div>
+                <div className="text-xs text-blue-100">Donations</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold">{donationSummary.uniqueDonors}</div>
+                <div className="text-xs text-blue-100">Donors</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold">{formatCurrency(donationSummary.averageAmount)}</div>
+                <div className="text-xs text-blue-100">Average</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop Header */}
+      <motion.div className="hidden md:block mb-4 sm:mb-8 relative" variants={itemVariants}>
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-indigo-600/5 blur-3xl rounded-3xl"></div>
-        <div className="relative backdrop-blur-sm bg-white/90 dark:bg-slate-900/95 border border-white/30 dark:border-slate-700/50 rounded-2xl sm:rounded-3xl p-3 sm:p-6 shadow-xl">
-          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between space-y-6 lg:space-y-0">
+        <div className="relative backdrop-blur-sm bg-white/90 dark:bg-slate-900/95 border border-white/30 dark:border-slate-700/50 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between space-y-4 lg:space-y-0">
             <div className="flex-1">
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 bg-clip-text text-transparent mb-2">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 bg-clip-text text-transparent mb-2">
                 Donation Management
               </h1>
-              <p className="text-slate-600 dark:text-slate-300 text-lg font-medium">
+              <p className="text-slate-600 dark:text-slate-300 text-sm sm:text-base lg:text-lg font-medium">
                 Comprehensive donation tracking, campaign management, and financial analytics
               </p>
               <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-4">
@@ -789,274 +821,144 @@ export function Donations() {
         </div>
       </motion.div>
 
-      {/* Summary Cards - Next-Gen Design */}
-      <motion.div variants={itemVariants} className="grid gap-3 sm:gap-6 lg:gap-8 grid-cols-1 lg:grid-cols-4 mb-6 sm:mb-12">
+      {/* Mobile Quick Actions */}
+      <div className="block md:hidden px-4 py-3 bg-white dark:bg-slate-900 border-b">
+        <div className="flex items-center space-x-3">
+          <Button
+            onClick={() => setIsDonationDialogOpen(true)}
+            className="flex-1 bg-blue-600 hover:bg-blue-700"
+            size="sm"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Donation
+          </Button>
+          <Button
+            onClick={() => setShowIntelligence(!showIntelligence)}
+            variant="outline"
+            size="sm"
+            className="px-3"
+          >
+            <Filter className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      <motion.div 
+        className="space-y-6"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+
+
+      {/* Summary Cards */}
+      <motion.div variants={itemVariants} className="grid gap-4 grid-cols-1 lg:grid-cols-4 mb-6">
         {/* Total Donations */}
         <motion.div variants={itemVariants}>
-          <div className="group relative">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-            <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+          <Card>
+            <CardContent className="p-4">
               <div className="flex items-center space-x-2 mb-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
-                  <DollarSign className="h-4 w-4 text-white" />
+                <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                  <DollarSign className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Donations</h3>
-                  <p className="text-slate-600 dark:text-slate-400 text-xs">Total Amount</p>
+                  <h3 className="text-sm font-medium text-slate-900 dark:text-white">Donations</h3>
+                  <p className="text-slate-500 dark:text-slate-400 text-xs">Total Amount</p>
                 </div>
               </div>
               <div>
                 <div className="text-xl font-bold text-blue-600 dark:text-blue-400 mb-1">
                   {isLoading ? '---' : formatCurrency(donationSummary.totalAmount)}
                 </div>
-                <div className="flex items-center text-xs text-blue-600 dark:text-blue-400">
+                <div className="flex items-center text-xs text-slate-500 dark:text-slate-400">
                   <TrendingUp className="h-3 w-3 mr-1" />
                   {donationSummary.donationCount} total
                 </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </motion.div>
 
         {/* Average Donation */}
         <motion.div variants={itemVariants}>
-          <div className="group relative">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-            <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+          <Card>
+            <CardContent className="p-4">
               <div className="flex items-center space-x-2 mb-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-md">
-                  <TrendingUp className="h-4 w-4 text-white" />
+                <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900 rounded-lg flex items-center justify-center">
+                  <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Average</h3>
-                  <p className="text-slate-600 dark:text-slate-400 text-xs">Per Donation</p>
+                  <h3 className="text-sm font-medium text-slate-900 dark:text-white">Average</h3>
+                  <p className="text-slate-500 dark:text-slate-400 text-xs">Per Donation</p>
                 </div>
               </div>
               <div>
-                <div className="text-xl font-bold text-emerald-600 mb-1">
+                <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mb-1">
                   {isLoading ? '---' : formatCurrency(donationSummary.averageAmount)}
                 </div>
-                <div className="flex items-center text-xs text-emerald-600">
+                <div className="flex items-center text-xs text-slate-500 dark:text-slate-400">
                   <BarChart3 className="h-3 w-3 mr-1" />
                   Average
                 </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </motion.div>
 
         {/* Active Donors */}
         <motion.div variants={itemVariants}>
-          <div className="group relative">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-600 to-orange-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-            <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+          <Card>
+            <CardContent className="p-4">
               <div className="flex items-center space-x-2 mb-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl flex items-center justify-center shadow-md">
-                  <Users className="h-4 w-4 text-white" />
+                <div className="w-8 h-8 bg-amber-100 dark:bg-amber-900 rounded-lg flex items-center justify-center">
+                  <Users className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Donors</h3>
-                  <p className="text-slate-600 dark:text-slate-400 text-xs">Active Givers</p>
+                  <h3 className="text-sm font-medium text-slate-900 dark:text-white">Donors</h3>
+                  <p className="text-slate-500 dark:text-slate-400 text-xs">Active Givers</p>
                 </div>
               </div>
               <div>
-                <div className="text-xl font-bold text-amber-600 mb-1">
+                <div className="text-xl font-bold text-amber-600 dark:text-amber-400 mb-1">
                   {isLoading ? '---' : donationSummary.uniqueDonors}
                 </div>
-                <div className="flex items-center text-xs text-amber-600">
+                <div className="flex items-center text-xs text-slate-500 dark:text-slate-400">
                   <Users className="h-3 w-3 mr-1" />
                   Unique
                 </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </motion.div>
 
         {/* Campaign Progress */}
         <motion.div variants={itemVariants}>
-          <div className="group relative">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-            <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+          <Card>
+            <CardContent className="p-4">
               <div className="flex items-center space-x-2 mb-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
-                  <Target className="h-4 w-4 text-white" />
+                <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
+                  <Target className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Campaigns</h3>
-                  <p className="text-slate-600 dark:text-slate-400 text-xs">Progress Rate</p>
+                  <h3 className="text-sm font-medium text-slate-900 dark:text-white">Campaigns</h3>
+                  <p className="text-slate-500 dark:text-slate-400 text-xs">Progress Rate</p>
                 </div>
               </div>
               <div>
-                <div className="text-xl font-bold text-purple-600 mb-1">
+                <div className="text-xl font-bold text-purple-600 dark:text-purple-400 mb-1">
                   {isLoading ? '---' : `${campaignSummary.progressPercentage.toFixed(1)}%`}
                 </div>
-                <div className="flex items-center text-xs text-purple-600">
+                <div className="flex items-center text-xs text-slate-500 dark:text-slate-400">
                   <Target className="h-3 w-3 mr-1" />
                   Progress
                 </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </motion.div>
       </motion.div>
-
-      {/* Compact Donation Analysis */}
-      <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
-        <div className="group relative">
-          <div className="absolute -inset-1 bg-gradient-to-r from-slate-500 to-slate-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-          <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-slate-500 to-slate-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <BarChart3 className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Donation Analysis</h3>
-                  <p className="text-slate-600 dark:text-slate-400">Comprehensive giving metrics and insights</p>
-                </div>
-              </div>
-            </div>
-            
-            {/* Compact Analysis Grid */}
-            <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-6">
-              {/* Amount Statistics */}
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 rounded-xl p-3 border border-blue-200 dark:border-blue-800">
-                <div className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">Highest</div>
-                <div className="text-lg font-bold text-blue-900 dark:text-blue-100">
-                  {formatCurrency(Math.max(...donations.map(d => parseFloat(d.amount) || 0), 0))}
-                </div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950 dark:to-emerald-900 rounded-xl p-3 border border-emerald-200 dark:border-emerald-800">
-                <div className="text-xs font-medium text-emerald-700 dark:text-emerald-300 mb-1">Lowest</div>
-                <div className="text-lg font-bold text-emerald-900 dark:text-emerald-100">
-                  {formatCurrency(Math.min(...donations.map(d => parseFloat(d.amount) || 0).filter(a => a > 0), 0))}
-                </div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 rounded-xl p-3 border border-amber-200 dark:border-amber-800">
-                <div className="text-xs font-medium text-amber-700 dark:text-amber-300 mb-1">Median</div>
-                <div className="text-lg font-bold text-amber-900 dark:text-amber-100">
-                  {formatCurrency((() => {
-                    const amounts = donations.map(d => parseFloat(d.amount) || 0).sort((a, b) => a - b);
-                    const middle = Math.floor(amounts.length / 2);
-                    return amounts.length % 2 === 0 ? (amounts[middle - 1] + amounts[middle]) / 2 : amounts[middle];
-                  })())}
-                </div>
-              </div>
-              
-              {/* Donor Statistics */}
-              <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 rounded-xl p-3 border border-purple-200 dark:border-purple-800">
-                <div className="text-xs font-medium text-purple-700 dark:text-purple-300 mb-1">Recurring</div>
-                <div className="text-lg font-bold text-purple-900 dark:text-purple-100">
-                  {(() => {
-                    const donorCounts = {};
-                    donations.forEach(d => {
-                      if (!d.is_anonymous && d.donor_id) {
-                        donorCounts[d.donor_id] = (donorCounts[d.donor_id] || 0) + 1;
-                      }
-                    });
-                    return Object.values(donorCounts).filter(count => count > 1).length;
-                  })()}
-                </div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-950 dark:to-teal-900 rounded-xl p-3 border border-teal-200 dark:border-teal-800">
-                <div className="text-xs font-medium text-teal-700 dark:text-teal-300 mb-1">First-time</div>
-                <div className="text-lg font-bold text-teal-900 dark:text-teal-100">
-                  {(() => {
-                    const donorCounts = {};
-                    donations.forEach(d => {
-                      if (!d.is_anonymous && d.donor_id) {
-                        donorCounts[d.donor_id] = (donorCounts[d.donor_id] || 0) + 1;
-                      }
-                    });
-                    return Object.values(donorCounts).filter(count => count === 1).length;
-                  })()}
-                </div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 rounded-xl p-3 border border-gray-200 dark:border-gray-800">
-                <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Anonymous</div>
-                <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                  {donations.filter(d => d.is_anonymous).length}
-                </div>
-              </div>
-              
-              {/* Payment Method Analysis */}
-              <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-950 dark:to-indigo-900 rounded-xl p-3 border border-indigo-200 dark:border-indigo-800">
-                <div className="text-xs font-medium text-indigo-700 dark:text-indigo-300 mb-1">Cash</div>
-                <div className="text-lg font-bold text-indigo-900 dark:text-indigo-100">
-                  {donations.filter(d => d.payment_method === 'cash').length}
-                </div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 rounded-xl p-3 border border-green-200 dark:border-green-800">
-                <div className="text-xs font-medium text-green-700 dark:text-green-300 mb-1">Check</div>
-                <div className="text-lg font-bold text-green-900 dark:text-green-100">
-                  {donations.filter(d => d.payment_method === 'check').length}
-                </div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-950 dark:to-pink-900 rounded-xl p-3 border border-pink-200 dark:border-pink-800">
-                <div className="text-xs font-medium text-pink-700 dark:text-pink-300 mb-1">Card</div>
-                <div className="text-lg font-bold text-pink-900 dark:text-pink-100">
-                  {donations.filter(d => d.payment_method === 'credit_card').length}
-                </div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-950 dark:to-cyan-900 rounded-xl p-3 border border-cyan-200 dark:border-cyan-800">
-                <div className="text-xs font-medium text-cyan-700 dark:text-cyan-300 mb-1">Online</div>
-                <div className="text-lg font-bold text-cyan-900 dark:text-cyan-100">
-                  {donations.filter(d => d.payment_method === 'online').length}
-                </div>
-              </div>
-              
-              {/* Fund Distribution */}
-              <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900 rounded-xl p-3 border border-orange-200 dark:border-orange-800">
-                <div className="text-xs font-medium text-orange-700 dark:text-orange-300 mb-1">General</div>
-                <div className="text-lg font-bold text-orange-900 dark:text-orange-100">
-                  {formatCurrency(donations.filter(d => d.fund_designation === 'general').reduce((sum, d) => sum + parseFloat(d.amount), 0))}
-                </div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-violet-50 to-violet-100 dark:from-violet-950 dark:to-violet-900 rounded-xl p-3 border border-violet-200 dark:border-violet-800">
-                <div className="text-xs font-medium text-violet-700 dark:text-violet-300 mb-1">Tithes</div>
-                <div className="text-lg font-bold text-violet-900 dark:text-violet-100">
-                  {formatCurrency(donations.filter(d => d.fund_designation === 'tithe').reduce((sum, d) => sum + parseFloat(d.amount), 0))}
-                </div>
-              </div>
-            </div>
-            
-            {/* Monthly Breakdown */}
-            <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
-              <h4 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Monthly Breakdown</h4>
-              <div className="grid gap-2 grid-cols-3 md:grid-cols-6 lg:grid-cols-12">
-                {(() => {
-                  const monthlyData = {};
-                  donations.forEach(d => {
-                    const month = format(parseISO(d.date), 'MMM');
-                    monthlyData[month] = (monthlyData[month] || 0) + parseFloat(d.amount);
-                  });
-                  
-                  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                  return months.map(month => (
-                    <div key={month} className="text-center p-2 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                      <div className="text-xs font-medium text-slate-600 dark:text-slate-400">{month}</div>
-                      <div className="text-sm font-bold text-slate-900 dark:text-white">
-                        {formatCurrency(monthlyData[month] || 0)}
-                      </div>
-                    </div>
-                  ));
-                })()}
-              </div>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Donation Intelligence */}
-      {showIntelligence && (
+{/* Donation Intelligence */}
+{showIntelligence && (
         <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
           <div className="group relative">
             <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
@@ -1334,19 +1236,191 @@ export function Donations() {
         </div>
       </motion.div>
       )}
-
-      {/* Filters - Next-Gen Design */}
-      <motion.div variants={itemVariants}>
-        <div className="group relative">
-          <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+      {/* Compact Donation Analysis */}
+      <motion.div variants={itemVariants} className="mb-6">
+        <Card>
+          <CardContent className="p-6">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-slate-500 to-slate-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <Filter className="h-6 w-6 text-white" />
+                <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center">
+                  <BarChart3 className="h-6 w-6 text-slate-600 dark:text-slate-400" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Smart Filters</h3>
-                  <p className="text-slate-600 dark:text-slate-400">Intelligent data filtering and search</p>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">Donation Analysis</h3>
+                  <p className="text-slate-600 dark:text-slate-400">Last 90 days giving metrics and insights</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs text-slate-500 dark:text-slate-400">Analysis Period</div>
+                <div className="text-sm font-medium text-slate-900 dark:text-slate-100">Last 90 Days</div>
+              </div>
+            </div>
+            
+            {(() => {
+              // Filter donations to last 90 days
+              const ninetyDaysAgo = new Date();
+              ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+              const ninetyDaysAgoStr = ninetyDaysAgo.toISOString().split('T')[0];
+              
+              const recentDonations = donations.filter(d => d.date >= ninetyDaysAgoStr);
+              
+              return (
+                <>
+                  {/* Compact Analysis Grid */}
+                  <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-6">
+                    {/* Amount Statistics */}
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 rounded-xl p-3 border border-blue-200 dark:border-blue-800">
+                      <div className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">Highest</div>
+                      <div className="text-lg font-bold text-blue-900 dark:text-blue-100">
+                        {formatCurrency(Math.max(...recentDonations.map(d => parseFloat(d.amount) || 0), 0))}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950 dark:to-emerald-900 rounded-xl p-3 border border-emerald-200 dark:border-emerald-800">
+                      <div className="text-xs font-medium text-emerald-700 dark:text-emerald-300 mb-1">Lowest</div>
+                      <div className="text-lg font-bold text-emerald-900 dark:text-emerald-100">
+                        {formatCurrency(Math.min(...recentDonations.map(d => parseFloat(d.amount) || 0).filter(a => a > 0), 0))}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 rounded-xl p-3 border border-amber-200 dark:border-amber-800">
+                      <div className="text-xs font-medium text-amber-700 dark:text-amber-300 mb-1">Median</div>
+                      <div className="text-lg font-bold text-amber-900 dark:text-amber-100">
+                        {formatCurrency((() => {
+                          const amounts = recentDonations.map(d => parseFloat(d.amount) || 0).sort((a, b) => a - b);
+                          const middle = Math.floor(amounts.length / 2);
+                          return amounts.length % 2 === 0 ? (amounts[middle - 1] + amounts[middle]) / 2 : amounts[middle];
+                        })())}
+                      </div>
+                    </div>
+                    
+                    {/* Donor Statistics */}
+                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 rounded-xl p-3 border border-purple-200 dark:border-purple-800">
+                      <div className="text-xs font-medium text-purple-700 dark:text-purple-300 mb-1">Recurring</div>
+                      <div className="text-lg font-bold text-purple-900 dark:text-purple-100">
+                        {(() => {
+                          const donorCounts = {};
+                          recentDonations.forEach(d => {
+                            if (!d.is_anonymous && d.donor_id) {
+                              donorCounts[d.donor_id] = (donorCounts[d.donor_id] || 0) + 1;
+                            }
+                          });
+                          return Object.values(donorCounts).filter(count => count > 1).length;
+                        })()}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-950 dark:to-teal-900 rounded-xl p-3 border border-teal-200 dark:border-teal-800">
+                      <div className="text-xs font-medium text-teal-700 dark:text-teal-300 mb-1">First-time</div>
+                      <div className="text-lg font-bold text-teal-900 dark:text-teal-100">
+                        {(() => {
+                          const donorCounts = {};
+                          recentDonations.forEach(d => {
+                            if (!d.is_anonymous && d.donor_id) {
+                              donorCounts[d.donor_id] = (donorCounts[d.donor_id] || 0) + 1;
+                            }
+                          });
+                          return Object.values(donorCounts).filter(count => count === 1).length;
+                        })()}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 rounded-xl p-3 border border-gray-200 dark:border-gray-800">
+                      <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Anonymous</div>
+                      <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                        {recentDonations.filter(d => d.is_anonymous).length}
+                      </div>
+                    </div>
+                    
+                    {/* Payment Method Analysis */}
+                    <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-950 dark:to-indigo-900 rounded-xl p-3 border border-indigo-200 dark:border-indigo-800">
+                      <div className="text-xs font-medium text-indigo-700 dark:text-indigo-300 mb-1">Cash</div>
+                      <div className="text-lg font-bold text-indigo-900 dark:text-indigo-100">
+                        {recentDonations.filter(d => d.payment_method === 'cash').length}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 rounded-xl p-3 border border-green-200 dark:border-green-800">
+                      <div className="text-xs font-medium text-green-700 dark:text-green-300 mb-1">Check</div>
+                      <div className="text-lg font-bold text-green-900 dark:text-green-100">
+                        {recentDonations.filter(d => d.payment_method === 'check').length}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-950 dark:to-pink-900 rounded-xl p-3 border border-pink-200 dark:border-pink-800">
+                      <div className="text-xs font-medium text-pink-700 dark:text-pink-300 mb-1">Card</div>
+                      <div className="text-lg font-bold text-pink-900 dark:text-pink-100">
+                        {recentDonations.filter(d => d.payment_method === 'credit_card').length}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-950 dark:to-cyan-900 rounded-xl p-3 border border-cyan-200 dark:border-cyan-800">
+                      <div className="text-xs font-medium text-cyan-700 dark:text-cyan-300 mb-1">Online</div>
+                      <div className="text-lg font-bold text-cyan-900 dark:text-cyan-100">
+                        {recentDonations.filter(d => d.payment_method === 'online').length}
+                      </div>
+                    </div>
+                    
+                    {/* Fund Distribution */}
+                    <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900 rounded-xl p-3 border border-orange-200 dark:border-orange-800">
+                      <div className="text-xs font-medium text-orange-700 dark:text-orange-300 mb-1">General</div>
+                      <div className="text-lg font-bold text-orange-900 dark:text-orange-100">
+                        {formatCurrency(recentDonations.filter(d => d.fund_designation === 'general').reduce((sum, d) => sum + parseFloat(d.amount), 0))}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-violet-50 to-violet-100 dark:from-violet-950 dark:to-violet-900 rounded-xl p-3 border border-violet-200 dark:border-violet-800">
+                      <div className="text-xs font-medium text-violet-700 dark:text-violet-300 mb-1">Tithes</div>
+                      <div className="text-lg font-bold text-violet-900 dark:text-violet-100">
+                        {formatCurrency(recentDonations.filter(d => d.fund_designation === 'tithe').reduce((sum, d) => sum + parseFloat(d.amount), 0))}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Monthly Breakdown */}
+                  <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Monthly Breakdown (Last 90 Days)</h4>
+                    <div className="grid gap-2 grid-cols-3 md:grid-cols-6 lg:grid-cols-12">
+                      {(() => {
+                        const monthlyData = {};
+                        recentDonations.forEach(d => {
+                          const month = format(parseISO(d.date), 'MMM');
+                          monthlyData[month] = (monthlyData[month] || 0) + parseFloat(d.amount);
+                        });
+                        
+                        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                        return months.map(month => (
+                          <div key={month} className="text-center p-2 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                            <div className="text-xs font-medium text-slate-600 dark:text-slate-400">{month}</div>
+                            <div className="text-sm font-bold text-slate-900 dark:text-white">
+                              {formatCurrency(monthlyData[month] || 0)}
+                            </div>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      
+
+      {/* Filters */}
+      <motion.div variants={itemVariants}>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center">
+                  <Filter className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Filters</h3>
+                  <p className="text-slate-600 dark:text-slate-400">Filter and search donations</p>
                 </div>
               </div>
             </div>
@@ -1420,35 +1494,114 @@ export function Donations() {
                 </Button>
               </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </motion.div>
 
       {/* Main Tabs */}
       <motion.div variants={itemVariants}>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="donations" className="flex items-center space-x-2">
+          {/* Mobile Tab Navigation */}
+          <div className="block md:hidden">
+            <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 px-4 py-3">
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  onClick={() => setActiveTab('donations')}
+                  className={`flex flex-col items-center space-y-1 px-3 py-3 rounded-xl text-xs font-medium transition-all duration-200 ${
+                    activeTab === 'donations' 
+                      ? 'bg-blue-600 text-white shadow-lg' 
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <DollarSign className="h-5 w-5" />
+                  <span>Donations</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('batches')}
+                  className={`flex flex-col items-center space-y-1 px-3 py-3 rounded-xl text-xs font-medium transition-all duration-200 ${
+                    activeTab === 'batches' 
+                      ? 'bg-blue-600 text-white shadow-lg' 
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <Archive className="h-5 w-5" />
+                  <span>Batches</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('analytics')}
+                  className={`flex flex-col items-center space-y-1 px-3 py-3 rounded-xl text-xs font-medium transition-all duration-200 ${
+                    activeTab === 'analytics' 
+                      ? 'bg-blue-600 text-white shadow-lg' 
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <BarChart3 className="h-5 w-5" />
+                  <span>Analytics</span>
+                </button>
+              </div>
+              
+              {/* Secondary options */}
+              <div className="flex justify-center space-x-2 mt-3">
+                <button
+                  onClick={() => setActiveTab('campaigns')}
+                  className={`flex items-center space-x-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
+                    activeTab === 'campaigns' 
+                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' 
+                      : 'text-slate-500 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <Target className="h-3 w-3" />
+                  <span>Campaigns</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('pledges')}
+                  className={`flex items-center space-x-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
+                    activeTab === 'pledges' 
+                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' 
+                      : 'text-slate-500 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <CheckCircle className="h-3 w-3" />
+                  <span>Pledges</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('receipts')}
+                  className={`flex items-center space-x-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
+                    activeTab === 'receipts' 
+                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' 
+                      : 'text-slate-500 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <Receipt className="h-3 w-3" />
+                  <span>Receipts</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop Tab Navigation */}
+          <TabsList className="hidden md:grid w-full grid-cols-6">
+            <TabsTrigger value="donations" className="flex items-center justify-center space-x-2">
               <DollarSign className="h-4 w-4" />
               <span>Donations</span>
             </TabsTrigger>
-            <TabsTrigger value="campaigns" className="flex items-center space-x-2">
+            <TabsTrigger value="campaigns" className="flex items-center justify-center space-x-2">
               <Target className="h-4 w-4" />
               <span>Campaigns</span>
             </TabsTrigger>
-            <TabsTrigger value="pledges" className="flex items-center space-x-2">
+            <TabsTrigger value="pledges" className="flex items-center justify-center space-x-2">
               <CheckCircle className="h-4 w-4" />
               <span>Pledges</span>
             </TabsTrigger>
-            <TabsTrigger value="batches" className="flex items-center space-x-2">
+            <TabsTrigger value="batches" className="flex items-center justify-center space-x-2">
               <Archive className="h-4 w-4" />
               <span>Batches</span>
             </TabsTrigger>
-            <TabsTrigger value="analytics" className="flex items-center space-x-2">
+            <TabsTrigger value="analytics" className="flex items-center justify-center space-x-2">
               <BarChart3 className="h-4 w-4" />
               <span>Analytics</span>
             </TabsTrigger>
-            <TabsTrigger value="receipts" className="flex items-center space-x-2">
+            <TabsTrigger value="receipts" className="flex items-center justify-center space-x-2">
               <Receipt className="h-4 w-4" />
               <span>Receipts</span>
             </TabsTrigger>
@@ -1456,123 +1609,315 @@ export function Donations() {
 
           {/* Donations Tab */}
           <TabsContent value="donations" className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-bold">Donations</h2>
-                <p className="text-muted-foreground">Track and manage all donations</p>
+                <h2 className="text-xl sm:text-2xl font-bold">Donations</h2>
+                <p className="text-muted-foreground text-sm sm:text-base">Track and manage all donations</p>
               </div>
-              <Button onClick={() => setIsDonationDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Donation
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                <Button onClick={applyFilters} variant="outline" className="w-full sm:w-auto sm:hidden">
+                  <Filter className="h-4 w-4 mr-2" />
+                  Apply Filters
+                </Button>
+                <Button onClick={() => setIsDonationDialogOpen(true)} className="w-full sm:w-auto">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Donation
+                </Button>
+              </div>
             </div>
 
             <Card>
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="border-b">
+                {/* Mobile Card Layout */}
+                <div className="block md:hidden">
+                  {isLoading ? (
+                    <div className="space-y-4 p-4">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <div key={i} className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
+                          <div className="flex justify-between items-start mb-3">
+                            <Skeleton className="h-5 w-24" />
+                            <Skeleton className="h-6 w-20" />
+                          </div>
+                          <div className="space-y-2">
+                            <Skeleton className="h-4 w-32" />
+                            <Skeleton className="h-4 w-28" />
+                            <Skeleton className="h-4 w-24" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : donations.length === 0 ? (
+                    <div className="p-8 text-center text-muted-foreground">
+                      <DollarSign className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                      <h3 className="text-lg font-semibold mb-2">No Donations Found</h3>
+                      <p className="text-sm mb-4">No donations match your current filters</p>
+                      <Button onClick={() => setIsDonationDialogOpen(true)} className="w-full">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add First Donation
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 p-4">
+                      {donations.map((donation) => (
+                        <div key={donation.id} className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4 shadow-sm hover:shadow-md transition-shadow">
+                          {/* Header with date and amount */}
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                                <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                              </div>
+                              <div>
+                                <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                  {format(parseISO(donation.date), 'MMM d, yyyy')}
+                                </div>
+                                <div className="text-xs text-slate-500 dark:text-slate-400">
+                                  {format(parseISO(donation.date), 'EEEE')}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                                {formatCurrency(donation.amount)}
+                              </div>
+                              <div className="text-xs text-slate-500 dark:text-slate-400">
+                                {donation.is_tax_deductible ? 'Tax Deductible' : 'Non-deductible'}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Donor info */}
+                          <div className="flex items-center space-x-3 mb-3">
+                            <div className="w-8 h-8 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center">
+                              {donation.is_anonymous ? (
+                                <UserX className="h-4 w-4 text-slate-500" />
+                              ) : (
+                                <User className="h-4 w-4 text-slate-500" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              {donation.is_anonymous ? (
+                                <div className="flex items-center space-x-2">
+                                  <Badge variant="secondary" className="text-xs">Anonymous</Badge>
+                                </div>
+                              ) : donation.donor ? (
+                                <div>
+                                  <div className="font-medium text-slate-900 dark:text-slate-100 truncate">
+                                    {donation.donor.firstname} {donation.donor.lastname}
+                                  </div>
+                                  {donation.donor.email && (
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                                      {donation.donor.email}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-sm text-slate-500 dark:text-slate-400">No donor linked</span>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Payment method and fund */}
+                          <div className="grid grid-cols-2 gap-3 mb-3">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-7 h-7 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center">
+                                {getPaymentMethodIcon(donation.payment_method)}
+                              </div>
+                              <div>
+                                <div className="text-xs text-slate-500 dark:text-slate-400">Payment</div>
+                                <div className="text-sm font-medium text-slate-900 dark:text-slate-100 capitalize">
+                                  {donation.payment_method?.replace('_', ' ')}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <div className="w-7 h-7 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center">
+                                {getFundDesignationIcon(donation.fund_designation)}
+                              </div>
+                              <div>
+                                <div className="text-xs text-slate-500 dark:text-slate-400">Fund</div>
+                                <div className="text-sm font-medium text-slate-900 dark:text-slate-100 capitalize">
+                                  {donation.fund_designation?.replace('_', ' ')}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Campaign and batch info */}
+                          {(donation.campaign || donation.batch) && (
+                            <div className="flex flex-wrap gap-2 mb-3">
+                              {donation.campaign && (
+                                <Badge variant="outline" className="text-xs">
+                                  <Target className="h-3 w-3 mr-1" />
+                                  {donation.campaign.name}
+                                </Badge>
+                              )}
+                              {donation.batch && (
+                                <Badge variant="secondary" className="text-xs">
+                                  <Archive className="h-3 w-3 mr-1" />
+                                  {donation.batch.name}
+                                </Badge>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Check number */}
+                          {donation.check_number && (
+                            <div className="mb-3">
+                              <div className="text-xs text-slate-500 dark:text-slate-400">Check Number</div>
+                              <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                #{donation.check_number}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Notes */}
+                          {donation.notes && (
+                            <div className="mb-3 p-2 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                              <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Notes</div>
+                              <div className="text-sm text-slate-700 dark:text-slate-300">
+                                {donation.notes}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Actions */}
+                          <div className="flex space-x-2 pt-3 border-t border-slate-200 dark:border-slate-700">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditDonation(donation)}
+                              className="flex-1"
+                            >
+                              <Pencil className="h-4 w-4 mr-1" />
+                              Edit
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setItemToDelete({ type: 'donation', id: donation.id });
+                                setIsDeleteDialogOpen(true);
+                              }}
+                              className="flex-1"
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Delete
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Desktop Table Layout */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full min-w-[800px]">
+                    <thead className="border-b bg-muted/50">
                       <tr className="text-left">
-                        <th className="p-4 font-medium">Date</th>
-                        <th className="p-4 font-medium">Donor</th>
-                        <th className="p-4 font-medium">Amount</th>
-                        <th className="p-4 font-medium">Method</th>
-                        <th className="p-4 font-medium">Fund</th>
-                        <th className="p-4 font-medium">Campaign</th>
-                        <th className="p-4 font-medium">Batch</th>
-                        <th className="p-4 font-medium">Actions</th>
+                        <th className="p-3 sm:p-4 font-medium text-xs sm:text-sm">Date</th>
+                        <th className="p-3 sm:p-4 font-medium text-xs sm:text-sm">Donor</th>
+                        <th className="p-3 sm:p-4 font-medium text-xs sm:text-sm">Amount</th>
+                        <th className="p-3 sm:p-4 font-medium text-xs sm:text-sm">Method</th>
+                        <th className="p-3 sm:p-4 font-medium text-xs sm:text-sm">Fund</th>
+                        <th className="p-3 sm:p-4 font-medium text-xs sm:text-sm hidden lg:table-cell">Campaign</th>
+                        <th className="p-3 sm:p-4 font-medium text-xs sm:text-sm hidden lg:table-cell">Batch</th>
+                        <th className="p-3 sm:p-4 font-medium text-xs sm:text-sm">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {isLoading ? (
                         Array.from({ length: 5 }).map((_, i) => (
                           <tr key={i} className="border-b">
-                            <td className="p-4"><Skeleton className="h-4 w-20" /></td>
-                            <td className="p-4"><Skeleton className="h-4 w-32" /></td>
-                            <td className="p-4"><Skeleton className="h-4 w-16" /></td>
-                            <td className="p-4"><Skeleton className="h-4 w-20" /></td>
-                            <td className="p-4"><Skeleton className="h-4 w-24" /></td>
-                            <td className="p-4"><Skeleton className="h-4 w-28" /></td>
-                            <td className="p-4"><Skeleton className="h-4 w-24" /></td>
-                            <td className="p-4"><Skeleton className="h-4 w-20" /></td>
+                            <td className="p-3 sm:p-4"><Skeleton className="h-4 w-16 sm:w-20" /></td>
+                            <td className="p-3 sm:p-4"><Skeleton className="h-4 w-24 sm:w-32" /></td>
+                            <td className="p-3 sm:p-4"><Skeleton className="h-4 w-12 sm:w-16" /></td>
+                            <td className="p-3 sm:p-4"><Skeleton className="h-4 w-16 sm:w-20" /></td>
+                            <td className="p-3 sm:p-4"><Skeleton className="h-4 w-20 sm:w-24" /></td>
+                            <td className="p-3 sm:p-4 hidden lg:table-cell"><Skeleton className="h-4 w-24 sm:w-28" /></td>
+                            <td className="p-3 sm:p-4 hidden lg:table-cell"><Skeleton className="h-4 w-20 sm:w-24" /></td>
+                            <td className="p-3 sm:p-4"><Skeleton className="h-4 w-16 sm:w-20" /></td>
                           </tr>
                         ))
                       ) : donations.length === 0 ? (
                         <tr>
-                          <td colSpan="8" className="p-8 text-center text-muted-foreground">
+                          <td colSpan="8" className="p-6 sm:p-8 text-center text-muted-foreground text-sm sm:text-base">
                             No donations found for the selected filters
                           </td>
                         </tr>
                       ) : (
                         donations.map((donation) => (
-                          <tr key={donation.id} className="border-b hover:bg-muted/50">
-                            <td className="p-4">
-                              {format(parseISO(donation.date), 'MMM d, yyyy')}
+                          <tr key={donation.id} className="border-b hover:bg-muted/50 transition-colors">
+                            <td className="p-3 sm:p-4">
+                              <div className="text-xs sm:text-sm font-medium">
+                                {format(parseISO(donation.date), 'MMM d, yyyy')}
+                              </div>
                             </td>
-                            <td className="p-4">
+                            <td className="p-3 sm:p-4">
                               <div className="flex items-center space-x-2">
                                 {donation.is_anonymous ? (
-                                  <Badge variant="secondary">Anonymous</Badge>
+                                  <Badge variant="secondary" className="text-xs">Anonymous</Badge>
                                 ) : donation.donor ? (
-                                  <div>
-                                    <div className="font-medium">
+                                  <div className="min-w-0 flex-1">
+                                    <div className="font-medium text-xs sm:text-sm truncate">
                                       {donation.donor.firstname} {donation.donor.lastname}
                                     </div>
-                                    <div className="text-sm text-muted-foreground">
+                                    <div className="text-xs text-muted-foreground truncate hidden sm:block">
                                       {donation.donor.email}
                                     </div>
                                   </div>
                                 ) : (
-                                  <span className="text-muted-foreground">No donor linked</span>
+                                  <span className="text-muted-foreground text-xs sm:text-sm">No donor</span>
                                 )}
                               </div>
                             </td>
-                            <td className="p-4">
-                              <div className="font-semibold text-emerald-600">
+                            <td className="p-3 sm:p-4">
+                              <div className="font-semibold text-emerald-600 text-sm sm:text-base">
                                 {formatCurrency(donation.amount)}
                               </div>
                             </td>
-                            <td className="p-4">
+                            <td className="p-3 sm:p-4">
                               <div className="flex items-center space-x-2">
                                 {getPaymentMethodIcon(donation.payment_method)}
-                                <span className="capitalize">
+                                <span className="capitalize text-xs sm:text-sm">
                                   {donation.payment_method?.replace('_', ' ')}
                                 </span>
                               </div>
                             </td>
-                            <td className="p-4">
+                            <td className="p-3 sm:p-4">
                               <div className="flex items-center space-x-2">
                                 {getFundDesignationIcon(donation.fund_designation)}
-                                <span className="capitalize">
+                                <span className="capitalize text-xs sm:text-sm">
                                   {donation.fund_designation?.replace('_', ' ')}
                                 </span>
                               </div>
                             </td>
-                            <td className="p-4">
+                            <td className="p-3 sm:p-4 hidden lg:table-cell">
                               {donation.campaign ? (
-                                <Badge variant="outline">{donation.campaign.name}</Badge>
+                                <Badge variant="outline" className="text-xs">{donation.campaign.name}</Badge>
                               ) : (
-                                <span className="text-muted-foreground">None</span>
+                                <span className="text-muted-foreground text-xs">None</span>
                               )}
                             </td>
-                            <td className="p-4">
+                            <td className="p-3 sm:p-4 hidden lg:table-cell">
                               {donation.batch ? (
-                                <Badge variant="secondary" className="flex items-center space-x-1 max-w-[200px]" title={donation.batch.name}>
+                                <Badge variant="secondary" className="flex items-center space-x-1 max-w-[150px] text-xs" title={donation.batch.name}>
                                   <Archive className="h-3 w-3 flex-shrink-0" />
                                   <span className="truncate">{donation.batch.name}</span>
                                 </Badge>
                               ) : (
-                                <span className="text-muted-foreground">None</span>
+                                <span className="text-muted-foreground text-xs">None</span>
                               )}
                             </td>
-                            <td className="p-4">
+                            <td className="p-3 sm:p-4">
                               <div className="flex space-x-2">
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleEditDonation(donation)}
+                                  className="text-xs h-8 px-2 sm:px-3"
                                 >
-                                  <Pencil className="h-4 w-4" />
+                                  <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
                                 </Button>
                                 <Button
                                   variant="outline"
@@ -1581,8 +1926,9 @@ export function Donations() {
                                     setItemToDelete({ type: 'donation', id: donation.id });
                                     setIsDeleteDialogOpen(true);
                                   }}
+                                  className="text-xs h-8 px-2 sm:px-3"
                                 >
-                                  <Trash2 className="h-4 w-4" />
+                                  <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                                 </Button>
                               </div>
                             </td>
@@ -1614,18 +1960,18 @@ export function Donations() {
           </TabsContent>
 
           <TabsContent value="batches" className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-bold">Donation Batches</h2>
-                <p className="text-muted-foreground">Organize donations into batches for processing</p>
+                <h2 className="text-xl sm:text-2xl font-bold">Donation Batches</h2>
+                <p className="text-muted-foreground text-sm sm:text-base">Organize donations into batches for processing</p>
               </div>
-              <Button onClick={() => setIsBatchDialogOpen(true)}>
+              <Button onClick={() => setIsBatchDialogOpen(true)} className="w-full sm:w-auto">
                 <Plus className="h-4 w-4 mr-2" />
                 Create Batch
               </Button>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
               {isLoading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <Card key={i}>
@@ -1666,15 +2012,15 @@ export function Donations() {
                         </div>
                         
                         <div className="space-y-2 mb-4">
-                          <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center justify-between text-xs sm:text-sm">
                             <span className="text-muted-foreground">Total Amount</span>
                             <span className="font-semibold">{formatCurrency(batch.total_amount || 0)}</span>
                           </div>
-                          <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center justify-between text-xs sm:text-sm">
                             <span className="text-muted-foreground">Donations</span>
                             <span className="font-semibold">{batch.donation_count || 0}</span>
                           </div>
-                          <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center justify-between text-xs sm:text-sm">
                             <span className="text-muted-foreground">Created</span>
                             <span className="font-semibold">
                               {batch.created_at ? format(parseISO(batch.created_at), 'MMM d, yyyy') : 'N/A'}
@@ -1688,11 +2034,12 @@ export function Donations() {
                           </p>
                         )}
                         
-                        <div className="flex space-x-2">
+                        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleEditBatch(batch)}
+                            className="text-xs h-8 w-full sm:w-auto"
                           >
                             <Pencil className="h-3 w-3 mr-1" />
                             Edit
@@ -1702,6 +2049,7 @@ export function Donations() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleCloseBatch(batch.id)}
+                              className="text-xs h-8 w-full sm:w-auto"
                             >
                               <Archive className="h-3 w-3 mr-1" />
                               Close
@@ -1711,6 +2059,7 @@ export function Donations() {
                             variant="outline"
                             size="sm"
                             onClick={() => handleViewBatchDetails(batch)}
+                            className="text-xs h-8 w-full sm:w-auto"
                           >
                             <Eye className="h-3 w-3 mr-1" />
                             View
@@ -1721,11 +2070,11 @@ export function Donations() {
                   </motion.div>
                 ))
               ) : (
-                <div className="col-span-full text-center py-12">
-                  <Archive className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Batches Found</h3>
-                  <p className="text-muted-foreground mb-4">Create your first donation batch to get started</p>
-                  <Button onClick={() => setIsBatchDialogOpen(true)}>
+                <div className="col-span-full text-center py-8 sm:py-12">
+                  <Archive className="h-10 w-10 sm:h-12 sm:w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-base sm:text-lg font-semibold mb-2">No Batches Found</h3>
+                  <p className="text-sm sm:text-base text-muted-foreground mb-4">Create your first donation batch to get started</p>
+                  <Button onClick={() => setIsBatchDialogOpen(true)} className="w-full sm:w-auto">
                     <Plus className="h-4 w-4 mr-2" />
                     Create First Batch
                   </Button>
@@ -2141,132 +2490,325 @@ export function Donations() {
 
       {/* Batch Details Dialog */}
       <Dialog open={isBatchDetailsDialogOpen} onOpenChange={setIsBatchDetailsDialogOpen}>
-        <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-xl">
-              Batch Details: {selectedBatchForDetails?.name}
-            </DialogTitle>
-            <DialogDescription>
-              Complete information about this donation batch
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="w-full max-w-[95vw] sm:max-w-[800px] max-h-[90vh] overflow-y-auto p-0">
+          {/* Mobile Header */}
+          <div className="block md:hidden">
+            <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-lg font-bold truncate">Batch Details</h2>
+                  <p className="text-sm text-blue-100 truncate">
+                    {selectedBatchForDetails?.name}
+                  </p>
+                </div>
+                <Badge 
+                  variant={selectedBatchForDetails?.status === 'open' ? 'default' : 'secondary'}
+                  className="bg-white/20 text-white border-white/30"
+                >
+                  {selectedBatchForDetails?.status}
+                </Badge>
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop Header */}
+          <div className="hidden md:block">
+            <DialogHeader className="p-6 pb-4">
+              <DialogTitle className="text-xl">
+                Batch Details: {selectedBatchForDetails?.name}
+              </DialogTitle>
+              <DialogDescription>
+                Complete information about this donation batch
+              </DialogDescription>
+            </DialogHeader>
+          </div>
           
           {selectedBatchForDetails && (
-            <div className="space-y-6">
-              {/* Batch Information */}
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Batch Number</Label>
-                  <div className="text-sm text-muted-foreground">{selectedBatchForDetails.batch_number}</div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Status</Label>
-                  <Badge variant={
-                    selectedBatchForDetails.status === 'open' ? 'default' :
-                    selectedBatchForDetails.status === 'processing' ? 'secondary' :
-                    'outline'
-                  }>
-                    {selectedBatchForDetails.status}
-                  </Badge>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Created Date</Label>
-                  <div className="text-sm text-muted-foreground">
-                    {format(parseISO(selectedBatchForDetails.batch_date), 'MMM d, yyyy')}
+            <div className="p-4 md:p-6 space-y-6">
+              {/* Mobile Batch Information Cards */}
+              <div className="block md:hidden space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                        <Archive className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400">Batch #</div>
+                        <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                          {selectedBatchForDetails.batch_number || 'N/A'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <div className="w-8 h-8 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
+                        <Calendar className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      </div>
+                      <div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400">Created</div>
+                        <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                          {format(parseISO(selectedBatchForDetails.batch_date), 'MMM d')}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Closed Date</Label>
-                  <div className="text-sm text-muted-foreground">
-                    {selectedBatchForDetails.closed_at ? format(parseISO(selectedBatchForDetails.closed_at), 'MMM d, yyyy') : 'Not closed'}
+                
+                {selectedBatchForDetails.description && (
+                  <div className="bg-slate-50 dark:bg-slate-900 rounded-lg p-4">
+                    <div className="text-sm font-medium text-slate-900 dark:text-slate-100 mb-2">Description</div>
+                    <div className="text-sm text-slate-600 dark:text-slate-400">
+                      {selectedBatchForDetails.description}
+                    </div>
                   </div>
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label className="text-sm font-medium">Description</Label>
-                  <div className="text-sm text-muted-foreground">
-                    {selectedBatchForDetails.description || 'No description provided'}
+                )}
+              </div>
+
+              {/* Desktop Batch Information */}
+              <div className="hidden md:block">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Batch Number</Label>
+                    <div className="text-sm text-muted-foreground">{selectedBatchForDetails.batch_number}</div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Status</Label>
+                    <Badge variant={
+                      selectedBatchForDetails.status === 'open' ? 'default' :
+                      selectedBatchForDetails.status === 'processing' ? 'secondary' :
+                      'outline'
+                    }>
+                      {selectedBatchForDetails.status}
+                    </Badge>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Created Date</Label>
+                    <div className="text-sm text-muted-foreground">
+                      {format(parseISO(selectedBatchForDetails.batch_date), 'MMM d, yyyy')}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Closed Date</Label>
+                    <div className="text-sm text-muted-foreground">
+                      {selectedBatchForDetails.closed_at ? format(parseISO(selectedBatchForDetails.closed_at), 'MMM d, yyyy') : 'Not closed'}
+                    </div>
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label className="text-sm font-medium">Description</Label>
+                    <div className="text-sm text-muted-foreground">
+                      {selectedBatchForDetails.description || 'No description provided'}
+                    </div>
                   </div>
                 </div>
               </div>
 
-                             {/* Batch Statistics */}
-               {batchDetails && batchDetails.statistics && (
-                 <div className="bg-slate-50 dark:bg-slate-900 rounded-lg p-4">
-                   <h4 className="font-semibold mb-3">Statistics</h4>
-                   <div className="grid gap-4 md:grid-cols-3">
-                     <div className="text-center">
-                       <div className="text-2xl font-bold text-blue-600">{batchDetails.statistics.donation_count}</div>
-                       <div className="text-sm text-muted-foreground">Donations</div>
-                     </div>
-                     <div className="text-center">
-                       <div className="text-2xl font-bold text-green-600">{formatCurrency(batchDetails.statistics.total_amount)}</div>
-                       <div className="text-sm text-muted-foreground">Total Amount</div>
-                     </div>
-                     <div className="text-center">
-                       <div className="text-2xl font-bold text-purple-600">{formatCurrency(batchDetails.statistics.average_donation)}</div>
-                       <div className="text-sm text-muted-foreground">Average Amount</div>
-                     </div>
-                   </div>
-                 </div>
-               )}
+              {/* Mobile Statistics */}
+              {batchDetails && batchDetails.statistics && (
+                <div className="block md:hidden">
+                  <div className="grid grid-cols-1 gap-3">
+                    <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm text-blue-100">Total Donations</div>
+                          <div className="text-2xl font-bold">{batchDetails.statistics.donation_count}</div>
+                        </div>
+                        <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                          <DollarSign className="h-6 w-6" />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm text-green-100">Total Amount</div>
+                          <div className="text-2xl font-bold">{formatCurrency(batchDetails.statistics.total_amount)}</div>
+                        </div>
+                        <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                          <TrendingUp className="h-6 w-6" />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm text-purple-100">Average Amount</div>
+                          <div className="text-2xl font-bold">{formatCurrency(batchDetails.statistics.average_donation)}</div>
+                        </div>
+                        <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                          <BarChart3 className="h-6 w-6" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Desktop Statistics */}
+              {batchDetails && batchDetails.statistics && (
+                <div className="hidden md:block">
+                  <div className="bg-slate-50 dark:bg-slate-900 rounded-lg p-4">
+                    <h4 className="font-semibold mb-3">Statistics</h4>
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-blue-600">{batchDetails.statistics.donation_count}</div>
+                        <div className="text-sm text-muted-foreground">Donations</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-600">{formatCurrency(batchDetails.statistics.total_amount)}</div>
+                        <div className="text-sm text-muted-foreground">Total Amount</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-purple-600">{formatCurrency(batchDetails.statistics.average_donation)}</div>
+                        <div className="text-sm text-muted-foreground">Average Amount</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Donations in this batch */}
               <div>
-                <h4 className="font-semibold mb-3">Donations in this Batch</h4>
+                <h4 className="text-lg font-semibold mb-4 text-slate-900 dark:text-slate-100">Donations in this Batch</h4>
                 {batchDetails && batchDetails.donations ? (
-                  <div className="border rounded-lg overflow-hidden">
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead className="bg-slate-50 dark:bg-slate-900">
-                          <tr>
-                            <th className="px-4 py-2 text-left text-sm font-medium">Date</th>
-                            <th className="px-4 py-2 text-left text-sm font-medium">Donor</th>
-                            <th className="px-4 py-2 text-left text-sm font-medium">Amount</th>
-                            <th className="px-4 py-2 text-left text-sm font-medium">Method</th>
-                            <th className="px-4 py-2 text-left text-sm font-medium">Fund</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                          {batchDetails.donations.map((donation) => (
-                            <tr key={donation.id} className="hover:bg-slate-50 dark:hover:bg-slate-900">
-                              <td className="px-4 py-2 text-sm">
-                                {format(parseISO(donation.date), 'MMM d, yyyy')}
-                              </td>
-                                                             <td className="px-4 py-2 text-sm">
-                                 {donation.is_anonymous ? 'Anonymous' : 
-                                  donation.donor ? `${donation.donor.firstname} ${donation.donor.lastname}` : 'N/A'}
-                               </td>
-                              <td className="px-4 py-2 text-sm font-medium">
+                  <div>
+                    {/* Mobile Donation Cards */}
+                    <div className="block md:hidden space-y-3">
+                      {batchDetails.donations.map((donation) => (
+                        <div key={donation.id} className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
+                          {/* Header with date and amount */}
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                                <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                              </div>
+                              <div>
+                                <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                  {format(parseISO(donation.date), 'MMM d, yyyy')}
+                                </div>
+                                <div className="text-xs text-slate-500 dark:text-slate-400">
+                                  {format(parseISO(donation.date), 'EEEE')}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
                                 {formatCurrency(donation.amount)}
-                              </td>
-                              <td className="px-4 py-2 text-sm">
-                                <div className="flex items-center space-x-2">
-                                  {getPaymentMethodIcon(donation.payment_method)}
-                                  <span className="capitalize">{donation.payment_method}</span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Donor info */}
+                          <div className="flex items-center space-x-3 mb-3">
+                            <div className="w-8 h-8 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center">
+                              {donation.is_anonymous ? (
+                                <UserX className="h-4 w-4 text-slate-500" />
+                              ) : (
+                                <User className="h-4 w-4 text-slate-500" />
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                {donation.is_anonymous ? 'Anonymous' : 
+                                 donation.donor ? `${donation.donor.firstname} ${donation.donor.lastname}` : 'N/A'}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Payment method and fund */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-7 h-7 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center">
+                                {getPaymentMethodIcon(donation.payment_method)}
+                              </div>
+                              <div>
+                                <div className="text-xs text-slate-500 dark:text-slate-400">Payment</div>
+                                <div className="text-sm font-medium text-slate-900 dark:text-slate-100 capitalize">
+                                  {donation.payment_method?.replace('_', ' ')}
                                 </div>
-                              </td>
-                              <td className="px-4 py-2 text-sm">
-                                <div className="flex items-center space-x-2">
-                                  {getFundDesignationIcon(donation.fund_designation)}
-                                  <span className="capitalize">{donation.fund_designation.replace('_', ' ')}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <div className="w-7 h-7 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center">
+                                {getFundDesignationIcon(donation.fund_designation)}
+                              </div>
+                              <div>
+                                <div className="text-xs text-slate-500 dark:text-slate-400">Fund</div>
+                                <div className="text-sm font-medium text-slate-900 dark:text-slate-100 capitalize">
+                                  {donation.fund_designation?.replace('_', ' ')}
                                 </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Desktop Table */}
+                    <div className="hidden md:block">
+                      <div className="border rounded-lg overflow-hidden">
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead className="bg-slate-50 dark:bg-slate-900">
+                              <tr>
+                                <th className="px-4 py-2 text-left text-sm font-medium">Date</th>
+                                <th className="px-4 py-2 text-left text-sm font-medium">Donor</th>
+                                <th className="px-4 py-2 text-left text-sm font-medium">Amount</th>
+                                <th className="px-4 py-2 text-left text-sm font-medium">Method</th>
+                                <th className="px-4 py-2 text-left text-sm font-medium">Fund</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                              {batchDetails.donations.map((donation) => (
+                                <tr key={donation.id} className="hover:bg-slate-50 dark:hover:bg-slate-900">
+                                  <td className="px-4 py-2 text-sm">
+                                    {format(parseISO(donation.date), 'MMM d, yyyy')}
+                                  </td>
+                                  <td className="px-4 py-2 text-sm">
+                                    {donation.is_anonymous ? 'Anonymous' : 
+                                     donation.donor ? `${donation.donor.firstname} ${donation.donor.lastname}` : 'N/A'}
+                                  </td>
+                                  <td className="px-4 py-2 text-sm font-medium">
+                                    {formatCurrency(donation.amount)}
+                                  </td>
+                                  <td className="px-4 py-2 text-sm">
+                                    <div className="flex items-center space-x-2">
+                                      {getPaymentMethodIcon(donation.payment_method)}
+                                      <span className="capitalize">{donation.payment_method}</span>
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-2 text-sm">
+                                    <div className="flex items-center space-x-2">
+                                      {getFundDesignationIcon(donation.fund_designation)}
+                                      <span className="capitalize">{donation.fund_designation.replace('_', ' ')}</span>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-4 text-muted-foreground">
-                    Loading donations...
+                  <div className="text-center py-8 text-muted-foreground">
+                    <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <RefreshCw className="h-6 w-6 animate-spin" />
+                    </div>
+                    <div className="text-sm">Loading donations...</div>
                   </div>
                 )}
               </div>
             </div>
           )}
           
-          <DialogFooter>
+          {/* Mobile Footer */}
+          <div className="block md:hidden sticky bottom-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 p-4">
             <Button 
               variant="outline" 
               onClick={() => {
@@ -2274,10 +2816,27 @@ export function Donations() {
                 setSelectedBatchForDetails(null);
                 setBatchDetails(null);
               }}
+              className="w-full"
             >
               Close
             </Button>
-          </DialogFooter>
+          </div>
+
+          {/* Desktop Footer */}
+          <div className="hidden md:block">
+            <DialogFooter className="p-6 pt-0">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsBatchDetailsDialogOpen(false);
+                  setSelectedBatchForDetails(null);
+                  setBatchDetails(null);
+                }}
+              >
+                Close
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -2300,7 +2859,8 @@ export function Donations() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </motion.div>
+      </motion.div>
+    </div>
   );
 }
 
