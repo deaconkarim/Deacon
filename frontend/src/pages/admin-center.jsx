@@ -313,18 +313,8 @@ export function AdminCenter() {
         organization_users: usersWithDetails
       };
 
-      if (error) {
-        console.error('Error fetching organization details:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load organization details",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      setOrgDetails(details);
-      console.log('Organization details loaded:', details);
+      setOrgDetails(combinedDetails);
+      console.log('Organization details loaded:', combinedDetails);
     } catch (error) {
       console.error('Error loading organization details:', error);
       toast({
@@ -342,16 +332,7 @@ export function AdminCenter() {
       // Find an admin user in this organization to impersonate
       const { data: adminUsers, error } = await supabase
         .from('organization_users')
-        .select(`
-          user_id,
-          role,
-          approval_status,
-          members!inner(
-            firstname,
-            lastname,
-            email
-          )
-        `)
+        .select('user_id, role, approval_status')
         .eq('organization_id', org.id)
         .eq('role', 'admin')
         .eq('approval_status', 'approved')
@@ -379,22 +360,81 @@ export function AdminCenter() {
       const adminUser = adminUsers[0];
       console.log('Found admin user to impersonate:', adminUser);
 
+      // Get the member details for this admin user
+      const { data: memberData, error: memberError } = await supabase
+        .from('members')
+        .select('firstname, lastname, email')
+        .eq('user_id', adminUser.user_id)
+        .single();
+
+      if (memberError) {
+        console.error('Error fetching member details for admin user:', memberError);
+        toast({
+          title: "Error",
+          description: "Failed to load admin user details",
+          variant: "destructive"
+        });
+        return;
+      }
+
       // Store current session info for later restoration
       localStorage.setItem('system_admin_session', JSON.stringify({
         user_id: user.id,
-        return_url: '/admin-center'
+        email: user.email,
+        return_url: '/admin-center',
+        timestamp: new Date().toISOString()
       }));
 
-      // Simulate login as the organization admin
-      // In a real implementation, you'd need a secure backend endpoint for this
-      toast({
-        title: "Login Simulation",
-        description: `Would login as ${adminUser.members.firstname} ${adminUser.members.lastname} (${adminUser.members.email}) for organization "${org.name}"`,
-      });
+      // Mark that we're impersonating a user
+      localStorage.setItem('impersonating_user', JSON.stringify({
+        user_id: adminUser.user_id,
+        organization_id: org.id,
+        organization_name: org.name,
+        admin_name: `${memberData.firstname} ${memberData.lastname}`,
+        admin_email: memberData.email
+      }));
 
-      // For now, just navigate to dashboard
-      // In production, you'd actually switch the user session
-      navigate('/dashboard');
+      try {
+        // Generate a magic link for the admin user to sign them in
+        const { data: magicLink, error: magicError } = await supabase.auth.admin.generateLink({
+          type: 'magiclink',
+          email: memberData.email,
+          redirect_to: `${window.location.origin}/dashboard`
+        });
+
+        if (magicError) {
+          console.error('Error generating magic link:', magicError);
+          
+          // Fallback: Just navigate with localStorage flags
+          toast({
+            title: "Switching to Organization",
+            description: `Logging in as ${memberData.firstname} ${memberData.lastname} for ${org.name}`,
+          });
+          
+          // Navigate to dashboard with impersonation flag
+          navigate('/dashboard');
+          return;
+        }
+
+        // Sign out current user and sign in as the organization admin
+        await supabase.auth.signOut();
+        
+        // Use the magic link to sign in as the organization admin
+        window.location.href = magicLink.properties.action_link;
+        
+      } catch (authError) {
+        console.error('Error during authentication switch:', authError);
+        
+        // Clear impersonation flags on error
+        localStorage.removeItem('impersonating_user');
+        localStorage.removeItem('system_admin_session');
+        
+        toast({
+          title: "Error",
+          description: "Failed to switch to organization admin. Please try again.",
+          variant: "destructive"
+        });
+      }
       
     } catch (error) {
       console.error('Error during login as:', error);

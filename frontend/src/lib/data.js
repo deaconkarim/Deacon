@@ -3,6 +3,14 @@ import { supabase } from './supabaseClient';
 // Helper function to get current user's organization ID
 const getCurrentUserOrganizationId = async () => {
   try {
+    // Check if we're impersonating a user and use that organization ID
+    const impersonatingUser = localStorage.getItem('impersonating_user');
+    if (impersonatingUser) {
+      const impersonationData = JSON.parse(impersonatingUser);
+      console.log('🔍 Using impersonated organization ID:', impersonationData.organization_id);
+      return impersonationData.organization_id;
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
@@ -24,6 +32,13 @@ const getCurrentUserOrganizationId = async () => {
 // Helper function to check if user is approved
 export const isUserApproved = async () => {
   try {
+    // Check if we're impersonating a user - if so, assume they're approved
+    const impersonatingUser = localStorage.getItem('impersonating_user');
+    if (impersonatingUser) {
+      console.log('🔍 Impersonating user - assuming approved status');
+      return true;
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return false;
 
@@ -65,6 +80,25 @@ export const getUserApprovalStatus = async () => {
 // Helper function to check if user is admin
 export const isUserAdmin = async () => {
   try {
+    // Check if we're impersonating a user - if so, check the impersonated user's role
+    const impersonatingUser = localStorage.getItem('impersonating_user');
+    if (impersonatingUser) {
+      const impersonationData = JSON.parse(impersonatingUser);
+      console.log('🔍 Checking admin status for impersonated user:', impersonationData.user_id);
+      
+      const { data, error } = await supabase
+        .from('organization_users')
+        .select('role')
+        .eq('user_id', impersonationData.user_id)
+        .eq('organization_id', impersonationData.organization_id)
+        .eq('approval_status', 'approved')
+        .eq('role', 'admin')
+        .limit(1);
+
+      if (error) return false;
+      return data && data.length > 0;
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return false;
 
@@ -1566,6 +1600,14 @@ export const getVolunteerStats = async () => {
 // Get the current user's organization name
 export const getOrganizationName = async () => {
   try {
+    // Check if we're impersonating a user and use that organization name
+    const impersonatingUser = localStorage.getItem('impersonating_user');
+    if (impersonatingUser) {
+      const impersonationData = JSON.parse(impersonatingUser);
+      console.log('🔍 Using impersonated organization name:', impersonationData.organization_name);
+      return impersonationData.organization_name;
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 

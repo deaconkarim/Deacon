@@ -2796,6 +2796,46 @@ export function Dashboard() {
                   </div>
                 </div>
               </motion.div>
+
+              {/* Gender Distribution */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500/20 to-purple-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                    <Users className="h-5 w-5 text-purple-600" />
+                    Gender Distribution
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Male</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {isLoading ? '...' : people.filter(person => 
+                          person.gender && person.gender.toLowerCase() === 'male'
+                        ).length}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Female</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {isLoading ? '...' : people.filter(person => 
+                          person.gender && person.gender.toLowerCase() === 'female'
+                        ).length}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Unspecified</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {isLoading ? '...' : people.filter(person => 
+                          !person.gender || (person.gender.toLowerCase() !== 'male' && person.gender.toLowerCase() !== 'female')
+                        ).length}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
             </div>
           </div>
         </div>

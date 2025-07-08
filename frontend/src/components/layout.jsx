@@ -57,6 +57,8 @@ export function Layout() {
   const [organizationName, setOrganizationName] = useState('Church App');
   const [hoveredNav, setHoveredNav] = useState(null);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const [isImpersonating, setIsImpersonating] = useState(false);
+  const [impersonationData, setImpersonationData] = useState(null);
 
   // Generate navigation items based on user permissions
   const generateNavigation = () => {
@@ -141,9 +143,71 @@ export function Layout() {
     fetchOrganizationName();
   }, []);
 
+  // Check for admin center redirect flag
+  useEffect(() => {
+    const shouldRedirectToAdminCenter = localStorage.getItem('redirect_to_admin_center');
+    if (shouldRedirectToAdminCenter === 'true') {
+      localStorage.removeItem('redirect_to_admin_center');
+      navigate('/admin-center');
+    }
+  }, [navigate]);
+
+  // Check for impersonation state
+  useEffect(() => {
+    const checkImpersonationState = () => {
+      const impersonatingUser = localStorage.getItem('impersonating_user');
+      if (impersonatingUser) {
+        setIsImpersonating(true);
+        setImpersonationData(JSON.parse(impersonatingUser));
+      } else {
+        setIsImpersonating(false);
+        setImpersonationData(null);
+      }
+    };
+
+    checkImpersonationState();
+    
+    // Listen for localStorage changes
+    window.addEventListener('storage', checkImpersonationState);
+    
+    return () => {
+      window.removeEventListener('storage', checkImpersonationState);
+    };
+  }, []);
+
+  const handleReturnToAdminCenter = async () => {
+    try {
+      // Clear impersonation flags
+      localStorage.removeItem('impersonating_user');
+      setIsImpersonating(false);
+      setImpersonationData(null);
+      
+      // Store a flag to redirect to admin center after login
+      localStorage.setItem('redirect_to_admin_center', 'true');
+      
+      // Sign out current user
+      await supabase.auth.signOut();
+      
+      // Force page reload to go to login
+      window.location.href = '/login';
+      
+    } catch (error) {
+      console.error('Error returning to admin center:', error);
+      toast({
+        title: "Error",
+        description: "Failed to return to admin center",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleSignOut = async () => {
     try {
       // console.log('Sign out initiated...');
+      
+      // Clear impersonation state
+      setIsImpersonating(false);
+      setImpersonationData(null);
       
       // Clear any local storage or session data
       localStorage.clear();
@@ -204,6 +268,30 @@ export function Layout() {
       </aside>
       {/* Main Content with Header */}
       <div className="flex-1 flex flex-col md:ml-16 transition-all duration-200">
+        {/* Impersonation Banner */}
+        {isImpersonating && impersonationData && (
+          <div className="bg-amber-100 dark:bg-amber-900/30 border-b border-amber-300 dark:border-amber-700/50 px-4 py-2 sticky top-0 z-50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                <span className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                  System Admin Mode: Viewing as {impersonationData.admin_name} 
+                  ({impersonationData.organization_name})
+                </span>
+              </div>
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="border-amber-300 text-amber-700 hover:bg-amber-200 dark:border-amber-600 dark:text-amber-300 dark:hover:bg-amber-800"
+                onClick={handleReturnToAdminCenter}
+              >
+                <Shield className="h-3 w-3 mr-1" />
+                Return to Admin Center
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Header stays at the top, full width */}
         <header className="bg-card border-b px-4 py-3 flex justify-between items-center sticky top-0 z-40">
           <div className="flex items-center gap-2">
