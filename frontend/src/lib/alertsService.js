@@ -3,6 +3,14 @@ import { supabase } from './supabaseClient';
 // Helper function to get current user's organization ID
 async function getCurrentUserOrganizationId() {
   try {
+    // Check if we're impersonating a user and use that organization ID
+    const impersonatingUser = localStorage.getItem('impersonating_user');
+    if (impersonatingUser) {
+      const impersonationData = JSON.parse(impersonatingUser);
+      console.log('🔍 [AlertsService] Using impersonated organization ID:', impersonationData.organization_id);
+      return impersonationData.organization_id;
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       throw new Error('User not authenticated');
@@ -12,15 +20,14 @@ async function getCurrentUserOrganizationId() {
       .from('organization_users')
       .select('organization_id')
       .eq('user_id', user.id)
-      .eq('status', 'active')
       .eq('approval_status', 'approved')
-      .single();
+      .limit(1);
 
-    if (orgError || !orgUser) {
+    if (orgError || !orgUser || orgUser.length === 0) {
       throw new Error('User not associated with any organization');
     }
 
-    return orgUser.organization_id;
+    return orgUser[0].organization_id;
   } catch (error) {
     console.error('Error getting organization ID:', error);
     throw error;

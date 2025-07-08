@@ -1,0 +1,1372 @@
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { 
+  Plus, 
+  Building2,
+  Users,
+  UserCheck,
+  Database,
+  Settings,
+  Shield,
+  Eye,
+  LogIn,
+  LogOut,
+  Search,
+  Filter,
+  MoreVertical,
+  Edit,
+  Trash2,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  Crown,
+  Church
+} from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/components/ui/use-toast';
+import { getOrganizations, getAllUsers, getSystemStats, deleteOrganization } from '@/lib/adminService';
+import { isSystemAdmin } from '@/lib/data';
+import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/lib/authContext';
+import { useNavigate } from 'react-router-dom';
+
+export function AdminCenter() {
+  const [activeTab, setActiveTab] = useState('organizations');
+  const [organizations, setOrganizations] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [debugInfo, setDebugInfo] = useState(null);
+  const [adminStatus, setAdminStatus] = useState(null);
+  
+  // Dialog states
+  const [isOrgDialogOpen, setIsOrgDialogOpen] = useState(false);
+  const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
+  const [isImpersonateDialogOpen, setIsImpersonateDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isViewOrgDialogOpen, setIsViewOrgDialogOpen] = useState(false);
+  
+  // Selected items
+  const [selectedOrg, setSelectedOrg] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [orgToDelete, setOrgToDelete] = useState(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [viewingOrg, setViewingOrg] = useState(null);
+  const [orgDetails, setOrgDetails] = useState(null);
+  
+  // Search and filters
+  const [orgSearch, setOrgSearch] = useState('');
+  const [userSearch, setUserSearch] = useState('');
+  
+  // Form states
+  const [orgForm, setOrgForm] = useState({
+    name: '',
+    slug: '',
+    description: '',
+    contact_email: '',
+    contact_phone: '',
+    address: '',
+    city: '',
+    state: '',
+    zip: '',
+    plan: 'basic',
+    status: 'active'
+  });
+  
+  const [userForm, setUserForm] = useState({
+    email: '',
+    password: '',
+    firstname: '',
+    lastname: '',
+    role: 'member',
+    organization_id: '',
+    status: 'active'
+  });
+
+  const { toast } = useToast();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate('/login');
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast({
+        title: "Error",
+        description: "Failed to sign out",
+        variant: "destructive"
+      });
+    }
+  };
+
+  useEffect(() => {
+    checkAdminStatusAndLoadData();
+  }, []);
+
+  const checkAdminStatusAndLoadData = async () => {
+    console.log('🔐 Checking admin status...');
+    try {
+      // Check if user is system admin
+      const isAdmin = await isSystemAdmin();
+      console.log('🔐 System admin check result:', isAdmin);
+      
+      // Get current user info for debug
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log('👤 Current user:', user?.email);
+      
+      // Get user's organization memberships for debug
+      const { data: orgMemberships } = await supabase
+        .from('organization_users')
+        .select(`
+          role,
+          approval_status,
+          organizations(name)
+        `)
+        .eq('user_id', user?.id);
+      
+      console.log('📝 Organization memberships:', orgMemberships);
+      
+      const debug = {
+        isSystemAdmin: isAdmin,
+        currentUser: user?.email,
+        organizationMemberships: orgMemberships || []
+      };
+      
+      setDebugInfo(debug);
+      setAdminStatus(isAdmin);
+      
+      if (isAdmin) {
+        console.log('✅ User is admin, loading data...');
+        loadData();
+      } else {
+        console.warn('⚠️ User is not a system admin, skipping data load');
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error('❌ Error checking admin status:', error);
+      setDebugInfo({
+        error: error.message,
+        isSystemAdmin: false
+      });
+      setIsLoading(false);
+    }
+  };
+
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      console.log('🚀 Admin Center: Loading data...');
+      
+      // Test each function individually
+      console.log('📋 Loading organizations...');
+      const orgsData = await getOrganizations();
+      console.log('📋 Organizations result:', orgsData);
+      
+      console.log('👥 Loading users...');
+      const usersData = await getAllUsers();
+      console.log('👥 Users result:', usersData);
+      
+      console.log('📊 Loading stats...');
+      const statsData = await getSystemStats();
+      console.log('📊 Stats result:', statsData);
+      
+      console.log('📊 Admin Center: Data loaded!', {
+        organizations: orgsData?.length || 0,
+        users: usersData?.length || 0,
+        stats: statsData
+      });
+      
+      setOrganizations(orgsData || []);
+      setUsers(usersData || []);
+      setStats(statsData);
+    } catch (error) {
+      console.error('💥 Error loading data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load admin data",
+        variant: "destructive"
+      });
+      // Set empty arrays to prevent crashes
+      setOrganizations([]);
+      setUsers([]);
+      setStats({
+        organizations: { total: 0, recent: 0 },
+        users: { total: 0, recent: 0 },
+        members: { total: 0 },
+        donations: { total: 0, totalAmount: 0 }
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteOrganization = async () => {
+    if (!orgToDelete) return;
+    
+    console.log('Attempting to delete organization:', orgToDelete);
+    
+    try {
+      await deleteOrganization(orgToDelete.id);
+      
+      // Remove from local state
+      setOrganizations(organizations.filter(org => org.id !== orgToDelete.id));
+      
+      // Close dialog and clear selection
+      setIsDeleteDialogOpen(false);
+      setOrgToDelete(null);
+      setDeleteConfirmText('');
+      
+      toast({
+        title: "Success",
+        description: `Organization "${orgToDelete.name}" has been deleted successfully`,
+      });
+    } catch (error) {
+      console.error('Error deleting organization:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete organization. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const confirmDeleteOrganization = (org) => {
+    console.log('Confirming delete for organization:', org);
+    setOrgToDelete(org);
+    setDeleteConfirmText('');
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleViewOrganization = async (org) => {
+    console.log('Viewing organization:', org);
+    setViewingOrg(org);
+    setIsViewOrgDialogOpen(true);
+    
+    try {
+      // Fetch organization details
+      const { data: details, error } = await supabase
+        .from('organizations')
+        .select('*')
+        .eq('id', org.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching organization details:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load organization details",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Fetch organization users separately
+      const { data: orgUsers, error: orgUsersError } = await supabase
+        .from('organization_users')
+        .select('user_id, role, approval_status, created_at')
+        .eq('organization_id', org.id)
+        .order('created_at', { ascending: false });
+
+      if (orgUsersError) {
+        console.error('Error fetching organization users:', orgUsersError);
+        toast({
+          title: "Error",
+          description: "Failed to load organization users",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Fetch member details for each user
+      const usersWithDetails = await Promise.all(
+        (orgUsers || []).map(async (orgUser) => {
+          const { data: memberData } = await supabase
+            .from('members')
+            .select('firstname, lastname, email')
+            .eq('user_id', orgUser.user_id)
+            .single();
+
+          return {
+            ...orgUser,
+            members: memberData || { 
+              firstname: 'Unknown', 
+              lastname: 'User', 
+              email: 'No email' 
+            }
+          };
+        })
+      );
+
+      // Combine the data
+      const combinedDetails = {
+        ...details,
+        organization_users: usersWithDetails
+      };
+
+      setOrgDetails(combinedDetails);
+      console.log('Organization details loaded:', combinedDetails);
+    } catch (error) {
+      console.error('Error loading organization details:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load organization details",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleLoginAsOrganization = async (org) => {
+    console.log('Attempting to login as organization:', org);
+    
+    try {
+      // Find an admin user in this organization to impersonate
+      const { data: adminUsers, error } = await supabase
+        .from('organization_users')
+        .select('user_id, role, approval_status')
+        .eq('organization_id', org.id)
+        .eq('role', 'admin')
+        .eq('approval_status', 'approved')
+        .limit(1);
+
+      if (error) {
+        console.error('Error finding admin users:', error);
+        toast({
+          title: "Error",
+          description: "Failed to find organization administrators",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (!adminUsers || adminUsers.length === 0) {
+        toast({
+          title: "No Admins Found",
+          description: "This organization has no approved administrators to login as",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const adminUser = adminUsers[0];
+      console.log('Found admin user to impersonate:', adminUser);
+
+      // Get the member details for this admin user
+      const { data: memberData, error: memberError } = await supabase
+        .from('members')
+        .select('firstname, lastname, email')
+        .eq('user_id', adminUser.user_id)
+        .single();
+
+      if (memberError) {
+        console.error('Error fetching member details for admin user:', memberError);
+        toast({
+          title: "Error",
+          description: "Failed to load admin user details",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Store current session info for later restoration
+      localStorage.setItem('system_admin_session', JSON.stringify({
+        user_id: user.id,
+        email: user.email,
+        return_url: '/admin-center',
+        timestamp: new Date().toISOString()
+      }));
+
+      // Mark that we're impersonating a user
+      localStorage.setItem('impersonating_user', JSON.stringify({
+        user_id: adminUser.user_id,
+        organization_id: org.id,
+        organization_name: org.name,
+        admin_name: `${memberData.firstname} ${memberData.lastname}`,
+        admin_email: memberData.email
+      }));
+
+      try {
+        // Generate a magic link for the admin user to sign them in
+        const { data: magicLink, error: magicError } = await supabase.auth.admin.generateLink({
+          type: 'magiclink',
+          email: memberData.email,
+          redirect_to: `${window.location.origin}/dashboard`
+        });
+
+        if (magicError) {
+          console.error('Error generating magic link:', magicError);
+          
+          // Fallback: Just navigate with localStorage flags
+          toast({
+            title: "Switching to Organization",
+            description: `Logging in as ${memberData.firstname} ${memberData.lastname} for ${org.name}`,
+          });
+          
+          // Navigate to dashboard with impersonation flag
+          navigate('/dashboard');
+          return;
+        }
+
+        // Sign out current user and sign in as the organization admin
+        await supabase.auth.signOut();
+        
+        // Use the magic link to sign in as the organization admin
+        window.location.href = magicLink.properties.action_link;
+        
+      } catch (authError) {
+        console.error('Error during authentication switch:', authError);
+        
+        // Clear impersonation flags on error
+        localStorage.removeItem('impersonating_user');
+        localStorage.removeItem('system_admin_session');
+        
+        toast({
+          title: "Error",
+          description: "Failed to switch to organization admin. Please try again.",
+          variant: "destructive"
+        });
+      }
+      
+    } catch (error) {
+      console.error('Error during login as:', error);
+      toast({
+        title: "Error",
+        description: "Failed to login as organization admin",
+        variant: "destructive"
+      });
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+      {/* Admin Header */}
+      <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center">
+              <Crown className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-slate-900 dark:text-white">System Administration</h1>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Platform Management Console</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-4">
+            <div className="text-right">
+              <div className="text-sm font-medium text-slate-900 dark:text-white">{user?.email}</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">System Administrator</div>
+            </div>
+            <Button variant="outline" onClick={handleSignOut}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <div className="max-w-7xl mx-auto p-6">
+       
+
+      {/* Access Denied Message */}
+      {adminStatus === false && (
+        <div className="mb-8 p-8 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-center">
+          <AlertCircle className="h-12 w-12 mx-auto text-red-500 mb-4" />
+          <h2 className="text-xl font-bold text-red-800 dark:text-red-200 mb-2">Access Denied</h2>
+          <p className="text-red-600 dark:text-red-300">
+            You need to be a system administrator to access the admin center.
+          </p>
+        </div>
+      )}
+
+      {/* Header */}
+      <motion.div className="mb-8 relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-purple-600/5 to-indigo-600/5 blur-3xl rounded-3xl"></div>
+        <div className="relative backdrop-blur-sm bg-white/90 dark:bg-slate-900/95 border border-white/30 dark:border-slate-700/50 rounded-3xl p-6 shadow-xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
+                <Crown className="h-8 w-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 bg-clip-text text-transparent">
+                  Admin Center
+                </h1>
+                <p className="text-slate-600 dark:text-slate-300 text-lg">
+                  Super Admin Dashboard - Manage Organizations & Users
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className={`w-3 h-3 rounded-full animate-pulse ${adminStatus ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span className="text-sm text-slate-600 dark:text-slate-300">
+                {adminStatus ? 'Admin Access' : 'Access Denied'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Stats Cards - Only show if user has admin access */}
+      {adminStatus && (
+        <motion.div className="grid gap-6 grid-cols-1 md:grid-cols-4 mb-8">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                  <Building2 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-blue-600">{stats?.organizations?.total || 0}</div>
+                  <div className="text-sm text-slate-600 dark:text-slate-400">Organizations</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
+                  <Users className="h-6 w-6 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-green-600">{stats?.members?.total || 0}</div>
+                  <div className="text-sm text-slate-600 dark:text-slate-400">Total Members</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
+                  <UserCheck className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-purple-600">{stats?.users?.total || 0}</div>
+                  <div className="text-sm text-slate-600 dark:text-slate-400">Total Admins</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900 rounded-lg flex items-center justify-center">
+                  <Shield className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-amber-600">{organizations.filter(org => org.status === 'active').length}</div>
+                  <div className="text-sm text-slate-600 dark:text-slate-400">Active Orgs</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Main Tabs - Only show if user has admin access */}
+      {adminStatus && (
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="organizations" className="flex items-center space-x-2">
+            <Church className="h-4 w-4" />
+            <span>Organizations</span>
+          </TabsTrigger>
+          <TabsTrigger value="users" className="flex items-center space-x-2">
+            <Users className="h-4 w-4" />
+            <span>Users</span>
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Organizations Tab */}
+        <TabsContent value="organizations" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-bold">Organizations</h2>
+              <p className="text-slate-600 dark:text-slate-400">Manage church organizations</p>
+            </div>
+            <Button onClick={() => setIsOrgDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Organization
+            </Button>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center space-x-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Search organizations..."
+                  value={orgSearch}
+                  onChange={(e) => setOrgSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {organizations.map((org) => (
+                <Card key={org.id}>
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <h3 className="font-semibold text-lg">{org.name}</h3>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">/{org.slug}</p>
+                      </div>
+                      <Badge variant={org.status === 'active' ? 'default' : 'secondary'}>
+                        {org.status}
+                      </Badge>
+                    </div>
+                    
+                    <div className="space-y-2 mb-4">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-600 dark:text-slate-400">Members</span>
+                        <span className="font-medium">{org.member_count || 0}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-600 dark:text-slate-400">Admins</span>
+                        <span className="font-medium">{org.admin_count || 0}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-600 dark:text-slate-400">Plan</span>
+                        <Badge variant="outline">{org.plan}</Badge>
+                      </div>
+                    </div>
+                    
+                    <div className="flex space-x-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={() => handleViewOrganization(org)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={() => handleLoginAsOrganization(org)}
+                      >
+                        <LogIn className="h-4 w-4 mr-1" />
+                        Login As
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                        onClick={() => confirmDeleteOrganization(org)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Users Tab */}
+        <TabsContent value="users" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-bold">Users</h2>
+              <p className="text-slate-600 dark:text-slate-400">Manage users across all organizations</p>
+            </div>
+            <Button onClick={() => setIsUserDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add User
+            </Button>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center space-x-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Search users..."
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            <Card>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="border-b bg-slate-50 dark:bg-slate-900">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-sm font-medium">User</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium">Organization</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium">Role</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium">Last Login</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {users.map((user) => (
+                        <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-900">
+                          <td className="px-4 py-3">
+                            <div>
+                              <div className="font-medium">{user.firstname} {user.lastname}</div>
+                              <div className="text-sm text-slate-600 dark:text-slate-400">{user.email}</div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm">{user.organization_name}</td>
+                          <td className="px-4 py-3">
+                            <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
+                              {user.role}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
+                              {user.status}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3 text-sm">{user.last_login}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex space-x-2">
+                              <Button variant="outline" size="sm">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="outline" size="sm">
+                                <LogIn className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
+      )}
+
+      {/* Add Organization Dialog */}
+      <Dialog open={isOrgDialogOpen} onOpenChange={setIsOrgDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedOrg ? 'Edit Organization' : 'Add New Organization'}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedOrg ? 'Update organization details' : 'Create a new church organization'}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => e.preventDefault()}>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="org-name">Organization Name *</Label>
+                  <Input
+                    id="org-name"
+                    value={orgForm.name}
+                    onChange={(e) => setOrgForm({...orgForm, name: e.target.value})}
+                    placeholder="First Baptist Church"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="org-slug">URL Slug *</Label>
+                  <Input
+                    id="org-slug"
+                    value={orgForm.slug}
+                    onChange={(e) => setOrgForm({...orgForm, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-')})}
+                    placeholder="first-baptist"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="org-description">Description</Label>
+                <Textarea
+                  id="org-description"
+                  value={orgForm.description}
+                  onChange={(e) => setOrgForm({...orgForm, description: e.target.value})}
+                  placeholder="Brief description of the organization"
+                  rows={3}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="contact-email">Contact Email *</Label>
+                  <Input
+                    id="contact-email"
+                    type="email"
+                    value={orgForm.contact_email}
+                    onChange={(e) => setOrgForm({...orgForm, contact_email: e.target.value})}
+                    placeholder="admin@church.org"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact-phone">Contact Phone</Label>
+                  <Input
+                    id="contact-phone"
+                    value={orgForm.contact_phone}
+                    onChange={(e) => setOrgForm({...orgForm, contact_phone: e.target.value})}
+                    placeholder="(555) 123-4567"
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="address">Address</Label>
+                <Input
+                  id="address"
+                  value={orgForm.address}
+                  onChange={(e) => setOrgForm({...orgForm, address: e.target.value})}
+                  placeholder="123 Church St"
+                />
+              </div>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="city">City</Label>
+                  <Input
+                    id="city"
+                    value={orgForm.city}
+                    onChange={(e) => setOrgForm({...orgForm, city: e.target.value})}
+                    placeholder="Springfield"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="state">State</Label>
+                  <Input
+                    id="state"
+                    value={orgForm.state}
+                    onChange={(e) => setOrgForm({...orgForm, state: e.target.value})}
+                    placeholder="IL"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="zip">ZIP Code</Label>
+                  <Input
+                    id="zip"
+                    value={orgForm.zip}
+                    onChange={(e) => setOrgForm({...orgForm, zip: e.target.value})}
+                    placeholder="62701"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="plan">Plan</Label>
+                  <Select value={orgForm.plan} onValueChange={(value) => setOrgForm({...orgForm, plan: value})}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="basic">Basic ($29/month)</SelectItem>
+                      <SelectItem value="pro">Pro ($79/month)</SelectItem>
+                      <SelectItem value="enterprise">Enterprise ($199/month)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select value={orgForm.status} onValueChange={(value) => setOrgForm({...orgForm, status: value})}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="suspended">Suspended</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setIsOrgDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit">
+                {selectedOrg ? 'Update Organization' : 'Create Organization'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Organization Dialog */}
+      <Dialog open={isViewOrgDialogOpen} onOpenChange={setIsViewOrgDialogOpen}>
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Building2 className="h-5 w-5 text-blue-500" />
+              <span>Organization Details: {viewingOrg?.name}</span>
+            </DialogTitle>
+            <DialogDescription>
+              Complete information about this organization and its users
+            </DialogDescription>
+          </DialogHeader>
+          
+          {viewingOrg && (
+            <div className="space-y-6 py-4">
+              {/* Organization Info */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Organization Name</Label>
+                    <div className="text-lg font-semibold">{viewingOrg.name}</div>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">URL Slug</Label>
+                    <div className="text-sm font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">/{viewingOrg.slug}</div>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Status</Label>
+                    <div>
+                      <Badge variant={viewingOrg.status === 'active' ? 'default' : 'secondary'}>
+                        {viewingOrg.status}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Plan</Label>
+                    <div>
+                      <Badge variant="outline">{viewingOrg.plan}</Badge>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Contact Email</Label>
+                    <div className="text-sm">{viewingOrg.contact_email}</div>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Contact Phone</Label>
+                    <div className="text-sm">{viewingOrg.contact_phone || 'Not provided'}</div>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Address</Label>
+                    <div className="text-sm">
+                      {viewingOrg.address ? (
+                        <>
+                          {typeof viewingOrg.address === 'string' ? (
+                            <>
+                              {viewingOrg.address}<br />
+                              {viewingOrg.city && `${viewingOrg.city}, `}
+                              {viewingOrg.state} {viewingOrg.zip}
+                            </>
+                          ) : (
+                            <>
+                              {viewingOrg.address.street}<br />
+                              {viewingOrg.address.city && `${viewingOrg.address.city}, `}
+                              {viewingOrg.address.state} {viewingOrg.address.zip}
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        'Not provided'
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Created</Label>
+                    <div className="text-sm">
+                      {viewingOrg.created_at ? new Date(viewingOrg.created_at).toLocaleDateString() : 'Unknown'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {viewingOrg.description && (
+                <div>
+                  <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Description</Label>
+                  <div className="mt-1 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg text-sm">
+                    {viewingOrg.description}
+                  </div>
+                </div>
+              )}
+              
+                             {/* Organization Users */}
+               <div>
+                 <Label className="text-lg font-semibold mb-4 block">Organization Users</Label>
+                 {orgDetails && orgDetails.organization_users ? (
+                   <div className="border rounded-lg overflow-hidden">
+                     <table className="w-full">
+                       <thead className="bg-slate-50 dark:bg-slate-900">
+                         <tr>
+                           <th className="px-4 py-2 text-left text-sm font-medium">User</th>
+                           <th className="px-4 py-2 text-left text-sm font-medium">Role</th>
+                           <th className="px-4 py-2 text-left text-sm font-medium">Status</th>
+                           <th className="px-4 py-2 text-left text-sm font-medium">Joined</th>
+                         </tr>
+                       </thead>
+                       <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                         {orgDetails.organization_users.map((orgUser, index) => (
+                           <tr key={index} className="hover:bg-slate-50 dark:hover:bg-slate-900">
+                             <td className="px-4 py-2">
+                               <div>
+                                 <div className="font-medium text-sm">
+                                   {orgUser.members.firstname} {orgUser.members.lastname}
+                                 </div>
+                                 <div className="text-xs text-slate-500">{orgUser.members.email}</div>
+                               </div>
+                             </td>
+                             <td className="px-4 py-2">
+                               <Badge variant={orgUser.role === 'admin' ? 'default' : 'secondary'}>
+                                 {orgUser.role || 'member'}
+                               </Badge>
+                             </td>
+                             <td className="px-4 py-2">
+                               <Badge variant={orgUser.approval_status === 'approved' ? 'default' : 'secondary'}>
+                                 {orgUser.approval_status || 'pending'}
+                               </Badge>
+                             </td>
+                             <td className="px-4 py-2 text-sm">
+                               {orgUser.created_at ? 
+                                 new Date(orgUser.created_at).toLocaleDateString() : 
+                                 'Unknown'
+                               }
+                             </td>
+                           </tr>
+                         ))}
+                       </tbody>
+                     </table>
+                   </div>
+                 ) : (
+                   <div className="text-center py-8 text-slate-500">
+                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                     Loading organization users...
+                   </div>
+                 )}
+               </div>
+              
+              {/* Quick Stats */}
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="bg-blue-50 dark:bg-blue-950 rounded-lg p-4">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {orgDetails?.organization_users?.length || 0}
+                  </div>
+                  <div className="text-sm text-blue-700 dark:text-blue-300">Total Users</div>
+                </div>
+                <div className="bg-green-50 dark:bg-green-950 rounded-lg p-4">
+                  <div className="text-2xl font-bold text-green-600">
+                    {orgDetails?.organization_users?.filter(u => u.role === 'admin').length || 0}
+                  </div>
+                  <div className="text-sm text-green-700 dark:text-green-300">Administrators</div>
+                </div>
+                <div className="bg-purple-50 dark:bg-purple-950 rounded-lg p-4">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {orgDetails?.organization_users?.filter(u => u.approval_status === 'pending').length || 0}
+                  </div>
+                  <div className="text-sm text-purple-700 dark:text-purple-300">Pending Users</div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsViewOrgDialogOpen(false);
+                setViewingOrg(null);
+                setOrgDetails(null);
+              }}
+            >
+              Close
+            </Button>
+            {viewingOrg && (
+              <Button 
+                onClick={() => {
+                  setIsViewOrgDialogOpen(false);
+                  handleLoginAsOrganization(viewingOrg);
+                }}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <LogIn className="h-4 w-4 mr-2" />
+                Login as Admin
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add User Dialog */}
+      <Dialog open={isUserDialogOpen} onOpenChange={setIsUserDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedUser ? 'Edit User' : 'Add New User'}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedUser ? 'Update user details' : 'Create a new user account'}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => e.preventDefault()}>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="user-organization">Organization *</Label>
+                <Select value={userForm.organization_id} onValueChange={(value) => setUserForm({...userForm, organization_id: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select organization" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {organizations.map((org) => (
+                      <SelectItem key={org.id} value={org.id.toString()}>
+                        {org.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="user-firstname">First Name *</Label>
+                  <Input
+                    id="user-firstname"
+                    value={userForm.firstname}
+                    onChange={(e) => setUserForm({...userForm, firstname: e.target.value})}
+                    placeholder="John"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="user-lastname">Last Name *</Label>
+                  <Input
+                    id="user-lastname"
+                    value={userForm.lastname}
+                    onChange={(e) => setUserForm({...userForm, lastname: e.target.value})}
+                    placeholder="Smith"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="user-email">Email Address *</Label>
+                <Input
+                  id="user-email"
+                  type="email"
+                  value={userForm.email}
+                  onChange={(e) => setUserForm({...userForm, email: e.target.value})}
+                  placeholder="john@church.org"
+                  required
+                />
+              </div>
+              
+              {!selectedUser && (
+                <div className="space-y-2">
+                  <Label htmlFor="user-password">Password *</Label>
+                  <Input
+                    id="user-password"
+                    type="password"
+                    value={userForm.password}
+                    onChange={(e) => setUserForm({...userForm, password: e.target.value})}
+                    placeholder="Temporary password"
+                    required
+                  />
+                </div>
+              )}
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="user-role">Role</Label>
+                  <Select value={userForm.role} onValueChange={(value) => setUserForm({...userForm, role: value})}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="member">Member</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="pastor">Pastor</SelectItem>
+                      <SelectItem value="deacon">Deacon</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="user-status">Status</Label>
+                  <Select value={userForm.status} onValueChange={(value) => setUserForm({...userForm, status: value})}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="suspended">Suspended</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setIsUserDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit">
+                {selectedUser ? 'Update User' : 'Create User'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Impersonation Dialog */}
+      <Dialog open={isImpersonateDialogOpen} onOpenChange={setIsImpersonateDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Shield className="h-5 w-5 text-amber-500" />
+              <span>Impersonate User</span>
+            </DialogTitle>
+            <DialogDescription>
+              You are about to login as another user. This action will be logged for security purposes.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+              <div className="flex items-start space-x-3">
+                <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-amber-800 dark:text-amber-200">Security Notice</p>
+                  <p className="text-amber-700 dark:text-amber-300">
+                    Your admin session will be temporarily stored. You can return to this admin panel by logging out of the impersonated account.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsImpersonateDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              className="bg-amber-600 hover:bg-amber-700"
+              onClick={() => {
+                // TODO: Implement impersonation
+                toast({
+                  title: "Impersonation Started",
+                  description: "You are now logged in as the selected user",
+                });
+                setIsImpersonateDialogOpen(false);
+              }}
+            >
+              <LogIn className="h-4 w-4 mr-2" />
+              Start Impersonation
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Organization Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2 text-red-600">
+              <AlertCircle className="h-5 w-5" />
+              <span>Delete Organization</span>
+            </DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete the organization and all associated data.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {orgToDelete && (
+            <div className="py-4">
+              <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <Trash2 className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-medium text-red-800 dark:text-red-200 mb-2">
+                      You are about to delete:
+                    </p>
+                    <div className="space-y-1">
+                      <p className="text-red-700 dark:text-red-300">
+                        <strong>Organization:</strong> {orgToDelete.name}
+                      </p>
+                      <p className="text-red-700 dark:text-red-300">
+                        <strong>Members:</strong> {orgToDelete.member_count || 0}
+                      </p>
+                      <p className="text-red-700 dark:text-red-300">
+                        <strong>URL:</strong> /{orgToDelete.slug}
+                      </p>
+                    </div>
+                    <p className="text-red-700 dark:text-red-300 mt-3 font-medium">
+                      All members, donations, events, and other data will be permanently deleted.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-4">
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  Type <strong>DELETE</strong> to confirm:
+                </p>
+                <Input
+                  placeholder="Type DELETE to confirm"
+                  className="mt-2"
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsDeleteDialogOpen(false);
+                setOrgToDelete(null);
+                setDeleteConfirmText('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={handleDeleteOrganization}
+              disabled={deleteConfirmText !== 'DELETE'}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Organization
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      </div>
+    </div>
+  );
+} 

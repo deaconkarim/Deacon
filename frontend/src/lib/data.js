@@ -3,6 +3,14 @@ import { supabase } from './supabaseClient';
 // Helper function to get current user's organization ID
 const getCurrentUserOrganizationId = async () => {
   try {
+    // Check if we're impersonating a user and use that organization ID
+    const impersonatingUser = localStorage.getItem('impersonating_user');
+    if (impersonatingUser) {
+      const impersonationData = JSON.parse(impersonatingUser);
+      console.log('🔍 Using impersonated organization ID:', impersonationData.organization_id);
+      return impersonationData.organization_id;
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
@@ -10,12 +18,11 @@ const getCurrentUserOrganizationId = async () => {
       .from('organization_users')
       .select('organization_id')
       .eq('user_id', user.id)
-      .eq('status', 'active')
       .eq('approval_status', 'approved')
-      .single();
+      .limit(1);
 
     if (error) throw error;
-    return data?.organization_id;
+    return data && data.length > 0 ? data[0].organization_id : null;
   } catch (error) {
     console.error('Error getting user organization:', error);
     return null;
@@ -25,6 +32,13 @@ const getCurrentUserOrganizationId = async () => {
 // Helper function to check if user is approved
 export const isUserApproved = async () => {
   try {
+    // Check if we're impersonating a user - if so, assume they're approved
+    const impersonatingUser = localStorage.getItem('impersonating_user');
+    if (impersonatingUser) {
+      console.log('🔍 Impersonating user - assuming approved status');
+      return true;
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return false;
 
@@ -32,11 +46,11 @@ export const isUserApproved = async () => {
       .from('organization_users')
       .select('approval_status')
       .eq('user_id', user.id)
-      .eq('status', 'active')
-      .single();
+      .eq('approval_status', 'approved')
+      .limit(1);
 
     if (error) return false;
-    return data?.approval_status === 'approved';
+    return data && data.length > 0;
   } catch (error) {
     console.error('Error checking user approval status:', error);
     return false;
@@ -53,11 +67,10 @@ export const getUserApprovalStatus = async () => {
       .from('organization_users')
       .select('approval_status, rejection_reason')
       .eq('user_id', user.id)
-      .eq('status', 'active')
-      .single();
+      .limit(1);
 
     if (error) return null;
-    return data;
+    return data && data.length > 0 ? data[0] : null;
   } catch (error) {
     console.error('Error getting user approval status:', error);
     return null;
@@ -67,6 +80,25 @@ export const getUserApprovalStatus = async () => {
 // Helper function to check if user is admin
 export const isUserAdmin = async () => {
   try {
+    // Check if we're impersonating a user - if so, check the impersonated user's role
+    const impersonatingUser = localStorage.getItem('impersonating_user');
+    if (impersonatingUser) {
+      const impersonationData = JSON.parse(impersonatingUser);
+      console.log('🔍 Checking admin status for impersonated user:', impersonationData.user_id);
+      
+      const { data, error } = await supabase
+        .from('organization_users')
+        .select('role')
+        .eq('user_id', impersonationData.user_id)
+        .eq('organization_id', impersonationData.organization_id)
+        .eq('approval_status', 'approved')
+        .eq('role', 'admin')
+        .limit(1);
+
+      if (error) return false;
+      return data && data.length > 0;
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return false;
 
@@ -74,14 +106,55 @@ export const isUserAdmin = async () => {
       .from('organization_users')
       .select('role')
       .eq('user_id', user.id)
-      .eq('status', 'active')
       .eq('approval_status', 'approved')
-      .single();
+      .eq('role', 'admin')
+      .limit(1);
 
     if (error) return false;
-    return data?.role === 'admin';
+    return data && data.length > 0;
   } catch (error) {
     console.error('Error checking user admin status:', error);
+    return false;
+  }
+};
+
+// Helper function to check if user is a system administrator
+export const isSystemAdmin = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
+
+    // First, find the System Administration organization
+    const { data: systemOrg, error: orgError } = await supabase
+      .from('organizations')
+      .select('id')
+      .eq('name', 'System Administration')
+      .maybeSingle();
+
+    if (orgError || !systemOrg) {
+      console.error('System Administration organization not found:', orgError);
+      return false;
+    }
+
+    // Check if the user is an admin in the System Administration organization
+    const { data: orgUser, error: userError } = await supabase
+      .from('organization_users')
+      .select('role, approval_status')
+      .eq('user_id', user.id)
+      .eq('organization_id', systemOrg.id)
+      .eq('role', 'admin')
+      .eq('approval_status', 'approved')
+      .maybeSingle();
+
+    if (userError) {
+      console.error('Error checking system admin status:', userError);
+      return false;
+    }
+
+    // Check if user is an approved admin in the System Administration organization
+    return !!orgUser;
+  } catch (error) {
+    console.error('Error checking system admin status:', error);
     return false;
   }
 };
@@ -1120,7 +1193,6 @@ export const getPendingApprovals = async () => {
       .select('*')
       .eq('organization_id', organizationId)
       .eq('approval_status', 'pending')
-      .eq('status', 'active')
       .order('created_at', { ascending: false });
 
     if (orgUsersError) throw orgUsersError;
@@ -1528,6 +1600,14 @@ export const getVolunteerStats = async () => {
 // Get the current user's organization name
 export const getOrganizationName = async () => {
   try {
+    // Check if we're impersonating a user and use that organization name
+    const impersonatingUser = localStorage.getItem('impersonating_user');
+    if (impersonatingUser) {
+      const impersonationData = JSON.parse(impersonatingUser);
+      console.log('🔍 Using impersonated organization name:', impersonationData.organization_name);
+      return impersonationData.organization_name;
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
@@ -1536,16 +1616,16 @@ export const getOrganizationName = async () => {
       .from('organization_users')
       .select('organization_id')
       .eq('user_id', user.id)
-      .eq('status', 'active')
-      .single();
+      .eq('approval_status', 'approved')
+      .limit(1);
 
-    if (userOrgError || !userOrg) return null;
+    if (userOrgError || !userOrg || userOrg.length === 0) return null;
 
     // Get the organization name
     const { data: org, error: orgError } = await supabase
       .from('organizations')
       .select('name')
-      .eq('id', userOrg.organization_id)
+      .eq('id', userOrg[0].organization_id)
       .single();
 
     if (orgError || !org) return null;
