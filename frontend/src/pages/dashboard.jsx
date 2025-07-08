@@ -46,6 +46,17 @@ import {
   Church,
   Reply,
   CheckCircle,
+  Target,
+  ListTodo,
+  ClipboardList,
+  Plus,
+  Edit,
+  Trash,
+  User2,
+  UserPlus2,
+  AlertCircle,
+  Clock4,
+  Flag
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -177,6 +188,7 @@ export function Dashboard() {
   const [isDeleteDonationOpen, setIsDeleteDonationOpen] = useState(false);
   const [attendanceTimeRange, setAttendanceTimeRange] = useState('week'); // 'week' or 'month'
   const [recentSMSConversations, setRecentSMSConversations] = useState([]);
+  const [personalTasks, setPersonalTasks] = useState([]);
 
   // SMS Conversation Dialog state
   const [selectedSMSConversation, setSelectedSMSConversation] = useState(null);
@@ -210,6 +222,10 @@ export function Dashboard() {
       
       // Extract data from the consolidated response
       const { members, donations: donationsData, events: eventsData, tasks, sms, celebrations, attendance, family } = dashboardData;
+      
+      // Load personal tasks for current user
+      const personalTasksData = await dashboardService.getPersonalTasks(dashboardData.organizationId);
+      setPersonalTasks(personalTasksData);
       
       // Transform members data to match existing structure
       const transformedPeople = members.all?.map(person => ({
@@ -341,7 +357,7 @@ export function Dashboard() {
     } finally {
       setIsLoading(false);
     }
-     }, [toast]);
+  }, [toast]);
 
   useEffect(() => {
     loadDashboardData();
@@ -1058,6 +1074,120 @@ export function Dashboard() {
         </motion.div>
       </div>
 
+      {/* Personal Tasks Section - Only show if user has assigned tasks */}
+      {personalTasks && personalTasks.length > 0 && (
+        <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
+          <div className="group relative">
+            <div className="absolute -inset-1 bg-gradient-to-r from-purple-500 to-violet-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+            <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-violet-500 rounded-2xl flex items-center justify-center shadow-lg">
+                    <ClipboardList className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white">My Tasks</h3>
+                    <p className="text-slate-600 dark:text-slate-400">Tasks assigned to you</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-3xl font-bold text-purple-600 mb-1">
+                    {personalTasks.length}
+                  </div>
+                  <div className="flex items-center text-sm text-purple-600">
+                    <Target className="h-4 w-4 mr-1" />
+                    Assigned
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                {personalTasks.slice(0, 3).map((task, index) => (
+                  <motion.div 
+                    key={task.id}
+                    className="group/task relative"
+                    variants={itemVariants}
+                  >
+                    <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500/20 to-violet-500/20 rounded-2xl blur opacity-0 group-hover/task:opacity-100 transition duration-300"></div>
+                    <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-slate-900 dark:text-white truncate">
+                            {task.title}
+                          </h4>
+                          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                            {task.description && task.description.length > 60 
+                              ? `${task.description.substring(0, 60)}...` 
+                              : task.description || 'No description'}
+                          </p>
+                        </div>
+                        <div className="flex items-center space-x-2 ml-3">
+                          <div className={`w-2 h-2 rounded-full ${
+                            task.priority === 'high' ? 'bg-red-500' :
+                            task.priority === 'medium' ? 'bg-yellow-500' :
+                            'bg-green-500'
+                          }`}></div>
+                          <div className={`w-2 h-2 rounded-full ${
+                            task.status === 'pending' ? 'bg-gray-500' :
+                            task.status === 'in_progress' ? 'bg-blue-500' :
+                            'bg-green-500'
+                          }`}></div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                        <div className="flex items-center space-x-3">
+                          {task.requestor && (
+                            <div className="flex items-center space-x-1">
+                              <User2 className="h-3 w-3" />
+                              <span>From: {task.requestor.fullName}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center space-x-1">
+                            <Flag className="h-3 w-3" />
+                            <span className="capitalize">
+                              {task.priority === 'high' ? 'High' :
+                               task.priority === 'medium' ? 'Medium' :
+                               'Low'} Priority
+                            </span>
+                          </div>
+                        </div>
+                        {task.due_date && (
+                          <div className="flex items-center space-x-1">
+                            <Clock4 className="h-3 w-3" />
+                            <span>Due: {format(new Date(task.due_date), 'MMM d')}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+                
+                {personalTasks.length > 3 && (
+                  <div className="text-center pt-2">
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      +{personalTasks.length - 3} more tasks
+                    </p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+                <Button 
+                  variant="outline" 
+                  className="w-full bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 border-purple-200 dark:border-purple-800 hover:from-purple-100 hover:to-violet-100 dark:hover:from-purple-900/30 dark:hover:to-violet-900/30 transition-all duration-300" 
+                  asChild
+                >
+                  <a href="/tasks" className="flex items-center justify-center space-x-2">
+                    <span>View All My Tasks</span>
+                    <ChevronRight className="h-4 w-4" />
+                  </a>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
  {/* Church Intelligence - Deep Insights */}
       <motion.div variants={itemVariants} className="mb-6 sm:mb-12">

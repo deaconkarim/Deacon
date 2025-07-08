@@ -45,6 +45,7 @@ export const dashboardService = {
       ]);
 
       return {
+        organizationId,
         members: membersData,
         donations: donationsData,
         events: eventsData,
@@ -329,6 +330,55 @@ export const dashboardService = {
       all: tasks,
       stats: taskStats
     };
+  },
+
+  // Personal tasks for current user
+  async getPersonalTasks(organizationId) {
+    try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      // Get user's member record
+      const { data: member } = await supabase
+        .from('members')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('organization_id', organizationId)
+        .single();
+
+      if (!member) return [];
+
+      // Get tasks assigned to this user
+      const { data: tasks, error } = await supabase
+        .from('tasks')
+        .select(`
+          *,
+          requestor:requestor_id (id, firstname, lastname),
+          assignee:assignee_id (id, firstname, lastname)
+        `)
+        .eq('organization_id', organizationId)
+        .eq('assignee_id', member.id)
+        .neq('status', 'completed') // Only active tasks
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      return tasks.map(task => ({
+        ...task,
+        requestor: task.requestor ? {
+          ...task.requestor,
+          fullName: `${task.requestor.firstname} ${task.requestor.lastname}`
+        } : null,
+        assignee: task.assignee ? {
+          ...task.assignee,
+          fullName: `${task.assignee.firstname} ${task.assignee.lastname}`
+        } : null
+      }));
+    } catch (error) {
+      console.error('Error fetching personal tasks:', error);
+      return [];
+    }
   },
 
   // SMS data - single API call instead of multiple
