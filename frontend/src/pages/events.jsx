@@ -713,13 +713,13 @@ export default function Events() {
           .from('organization_users')
           .select('organization_id')
           .eq('user_id', user.id)
-          .eq('status', 'active')
-          .single();
+          .eq('approval_status', 'approved')
+          .limit(1);
         
         if (orgError) {
           console.error('Error fetching organization_id for event attendance:', orgError);
         } else {
-          organizationId = orgData?.organization_id;
+          organizationId = orgData?.length > 0 ? orgData[0].organization_id : null;
           console.log('🔍 Found organization_id for event attendance:', organizationId);
         }
       } catch (error) {
@@ -1035,13 +1035,13 @@ export default function Events() {
           .from('organization_users')
           .select('organization_id')
           .eq('user_id', user.id)
-          .eq('status', 'active')
-          .single();
+          .eq('approval_status', 'approved')
+          .limit(1);
         
         if (orgError) {
           console.error('Error fetching organization_id:', orgError);
         } else {
-          organizationId = orgData?.organization_id;
+          organizationId = orgData?.length > 0 ? orgData[0].organization_id : null;
           console.log('🔍 Found organization_id:', organizationId);
         }
       } catch (error) {

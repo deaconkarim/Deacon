@@ -12,11 +12,10 @@ const getCurrentUserOrganizationId = async () => {
       .from('organization_users')
       .select('organization_id')
       .eq('user_id', user.id)
-      .eq('status', 'active')
       .eq('approval_status', 'approved')
-      .single();
+      .limit(1);
 
-    return userProfile?.organization_id || null;
+    return userProfile && userProfile.length > 0 ? userProfile[0].organization_id : null;
   } catch (error) {
     console.error('Error getting user organization ID:', error);
     return null;
@@ -106,11 +105,11 @@ export const dashboardService = {
     const currentMonth = now.getMonth();
 
     // Calculate various donation metrics
-    const totalDonations = donations.reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0);
+    const totalDonations = Math.round(donations.reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0) * 100) / 100;
     
-    const monthlyDonations = donations
+    const monthlyDonations = Math.round(donations
       .filter(d => d.date.startsWith(`${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}`))
-      .reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0);
+      .reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0) * 100) / 100;
 
     // Last month calculations
     const lastMonth = new Date(currentYear, currentMonth - 1, 1);
@@ -118,9 +117,9 @@ export const dashboardService = {
     const lastMonthStr = lastMonth.toISOString().split('T')[0];
     const lastMonthEndStr = lastMonthEnd.toISOString().split('T')[0];
     
-    const lastMonthDonations = donations
+    const lastMonthDonations = Math.round(donations
       .filter(d => d.date >= lastMonthStr && d.date <= lastMonthEndStr)
-      .reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0);
+      .reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0) * 100) / 100;
 
     // Two months ago calculations
     const twoMonthsAgo = new Date(currentYear, currentMonth - 2, 1);
@@ -128,37 +127,52 @@ export const dashboardService = {
     const twoMonthsAgoStr = twoMonthsAgo.toISOString().split('T')[0];
     const twoMonthsAgoEndStr = twoMonthsAgoEnd.toISOString().split('T')[0];
     
-    const twoMonthsAgoDonations = donations
+    const twoMonthsAgoDonations = Math.round(donations
       .filter(d => d.date >= twoMonthsAgoStr && d.date <= twoMonthsAgoEndStr)
-      .reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0);
+      .reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0) * 100) / 100;
 
-    // Weekly calculations
+    // Last week calculations (previous 7 days)
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const oneWeekAgoStr = oneWeekAgo.toISOString().split('T')[0];
+    
+    const lastWeekDonations = Math.round(donations
+      .filter(d => d.date >= oneWeekAgoStr && d.date < now.toISOString().split('T')[0])
+      .reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0) * 100) / 100;
+
+    // Weekly average calculations (last 90 days)
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    const ninetyDaysAgoStr = ninetyDaysAgo.toISOString().split('T')[0];
+    
     const weeklyDonationTotals = {};
-    donations.forEach(donation => {
-      try {
-        const date = new Date(donation.date);
-        if (isNaN(date.getTime())) return;
-        
-        const startOfWeek = new Date(date);
-        const dayOfWeek = date.getDay();
-        startOfWeek.setDate(date.getDate() - dayOfWeek);
-        startOfWeek.setHours(0, 0, 0, 0);
-        
-        const weekKey = startOfWeek.toISOString().split('T')[0];
-        const amount = parseFloat(donation.amount) || 0;
-        
-        if (!weeklyDonationTotals[weekKey]) {
-          weeklyDonationTotals[weekKey] = 0;
+    donations
+      .filter(d => d.date >= ninetyDaysAgoStr) // Only last 90 days
+      .forEach(donation => {
+        try {
+          const date = new Date(donation.date);
+          if (isNaN(date.getTime())) return;
+          
+          const startOfWeek = new Date(date);
+          const dayOfWeek = date.getDay();
+          startOfWeek.setDate(date.getDate() - dayOfWeek);
+          startOfWeek.setHours(0, 0, 0, 0);
+          
+          const weekKey = startOfWeek.toISOString().split('T')[0];
+          const amount = parseFloat(donation.amount) || 0;
+          
+          if (!weeklyDonationTotals[weekKey]) {
+            weeklyDonationTotals[weekKey] = 0;
+          }
+          weeklyDonationTotals[weekKey] += amount;
+        } catch (error) {
+          console.error('Error processing donation for weekly average:', donation, error);
         }
-        weeklyDonationTotals[weekKey] += amount;
-      } catch (error) {
-        console.error('Error processing donation for weekly average:', donation, error);
-      }
-    });
+      });
 
     const weeklyTotals = Object.values(weeklyDonationTotals);
     const weeklyAverage = weeklyTotals.length > 0 ? 
-      weeklyTotals.reduce((sum, total) => sum + total, 0) / weeklyTotals.length : 0;
+      Math.round((weeklyTotals.reduce((sum, total) => sum + total, 0) / weeklyTotals.length) * 100) / 100 : 0;
 
     // Monthly average calculation
     const donationDates = donations.map(d => d.date);
@@ -188,8 +202,10 @@ export const dashboardService = {
     });
     
     const actualMonthsWithData = uniqueMonths.size;
-    const monthlyAverage = actualMonthsWithData > 0 ? totalDonationsExcludingCurrent / actualMonthsWithData : 0;
-    const growthRate = monthlyAverage > 0 ? ((monthlyDonations - monthlyAverage) / monthlyAverage) * 100 : 0;
+    const monthlyAverage = actualMonthsWithData > 0 ? 
+      Math.round((totalDonationsExcludingCurrent / actualMonthsWithData) * 100) / 100 : 0;
+    const growthRate = monthlyAverage > 0 ? 
+      Math.round(((monthlyDonations - monthlyAverage) / monthlyAverage) * 100 * 10) / 10 : 0;
 
     // Last Sunday calculations
     const lastSunday = new Date();
@@ -198,7 +214,7 @@ export const dashboardService = {
     lastSunday.setDate(lastSunday.getDate() - daysToSubtract);
     lastSunday.setHours(0, 0, 0, 0);
     
-    const lastSundayDonations = donations.filter(donation => {
+    const lastSundayDonations = Math.round(donations.filter(donation => {
       try {
         const donationDate = new Date(donation.date + 'T00:00:00');
         const donationSunday = new Date(donationDate);
@@ -209,7 +225,7 @@ export const dashboardService = {
       } catch (error) {
         return false;
       }
-    }).reduce((sum, donation) => sum + (parseFloat(donation.amount) || 0), 0);
+    }).reduce((sum, donation) => sum + (parseFloat(donation.amount) || 0), 0) * 100) / 100;
 
     return {
       all: donations,
@@ -219,6 +235,7 @@ export const dashboardService = {
         monthly: monthlyDonations,
         lastMonth: lastMonthDonations,
         twoMonthsAgo: twoMonthsAgoDonations,
+        lastWeek: lastWeekDonations,
         lastSunday: lastSundayDonations,
         weeklyAverage,
         monthlyAverage,
@@ -339,15 +356,24 @@ export const dashboardService = {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
 
-      // Get user's member record
-      const { data: member } = await supabase
+      // Get user's member record - use maybeSingle() to handle no results gracefully
+      const { data: member, error: memberError } = await supabase
         .from('members')
         .select('id')
         .eq('user_id', user.id)
         .eq('organization_id', organizationId)
-        .single();
+        .maybeSingle();
 
-      if (!member) return [];
+      // If there's an error or no member record, return empty array
+      if (memberError) {
+        console.warn('Error fetching member record for personal tasks:', memberError);
+        return [];
+      }
+
+      if (!member) {
+        console.info('No member record found for user in this organization - returning empty tasks');
+        return [];
+      }
 
       // Get tasks assigned to this user
       const { data: tasks, error } = await supabase

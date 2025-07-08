@@ -10,12 +10,11 @@ const getCurrentUserOrganizationId = async () => {
       .from('organization_users')
       .select('organization_id')
       .eq('user_id', user.id)
-      .eq('status', 'active')
       .eq('approval_status', 'approved')
-      .single();
+      .limit(1);
 
     if (error) throw error;
-    return data?.organization_id;
+    return data && data.length > 0 ? data[0].organization_id : null;
   } catch (error) {
     console.error('Error getting user organization:', error);
     return null;
@@ -32,11 +31,11 @@ export const isUserApproved = async () => {
       .from('organization_users')
       .select('approval_status')
       .eq('user_id', user.id)
-      .eq('status', 'active')
-      .single();
+      .eq('approval_status', 'approved')
+      .limit(1);
 
     if (error) return false;
-    return data?.approval_status === 'approved';
+    return data && data.length > 0;
   } catch (error) {
     console.error('Error checking user approval status:', error);
     return false;
@@ -53,11 +52,10 @@ export const getUserApprovalStatus = async () => {
       .from('organization_users')
       .select('approval_status, rejection_reason')
       .eq('user_id', user.id)
-      .eq('status', 'active')
-      .single();
+      .limit(1);
 
     if (error) return null;
-    return data;
+    return data && data.length > 0 ? data[0] : null;
   } catch (error) {
     console.error('Error getting user approval status:', error);
     return null;
@@ -74,14 +72,55 @@ export const isUserAdmin = async () => {
       .from('organization_users')
       .select('role')
       .eq('user_id', user.id)
-      .eq('status', 'active')
       .eq('approval_status', 'approved')
-      .single();
+      .eq('role', 'admin')
+      .limit(1);
 
     if (error) return false;
-    return data?.role === 'admin';
+    return data && data.length > 0;
   } catch (error) {
     console.error('Error checking user admin status:', error);
+    return false;
+  }
+};
+
+// Helper function to check if user is a system administrator
+export const isSystemAdmin = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
+
+    // First, find the System Administration organization
+    const { data: systemOrg, error: orgError } = await supabase
+      .from('organizations')
+      .select('id')
+      .eq('name', 'System Administration')
+      .maybeSingle();
+
+    if (orgError || !systemOrg) {
+      console.error('System Administration organization not found:', orgError);
+      return false;
+    }
+
+    // Check if the user is an admin in the System Administration organization
+    const { data: orgUser, error: userError } = await supabase
+      .from('organization_users')
+      .select('role, approval_status')
+      .eq('user_id', user.id)
+      .eq('organization_id', systemOrg.id)
+      .eq('role', 'admin')
+      .eq('approval_status', 'approved')
+      .maybeSingle();
+
+    if (userError) {
+      console.error('Error checking system admin status:', userError);
+      return false;
+    }
+
+    // Check if user is an approved admin in the System Administration organization
+    return !!orgUser;
+  } catch (error) {
+    console.error('Error checking system admin status:', error);
     return false;
   }
 };
@@ -1120,7 +1159,6 @@ export const getPendingApprovals = async () => {
       .select('*')
       .eq('organization_id', organizationId)
       .eq('approval_status', 'pending')
-      .eq('status', 'active')
       .order('created_at', { ascending: false });
 
     if (orgUsersError) throw orgUsersError;
@@ -1536,16 +1574,16 @@ export const getOrganizationName = async () => {
       .from('organization_users')
       .select('organization_id')
       .eq('user_id', user.id)
-      .eq('status', 'active')
-      .single();
+      .eq('approval_status', 'approved')
+      .limit(1);
 
-    if (userOrgError || !userOrg) return null;
+    if (userOrgError || !userOrg || userOrg.length === 0) return null;
 
     // Get the organization name
     const { data: org, error: orgError } = await supabase
       .from('organizations')
       .select('name')
-      .eq('id', userOrg.organization_id)
+      .eq('id', userOrg[0].organization_id)
       .single();
 
     if (orgError || !org) return null;

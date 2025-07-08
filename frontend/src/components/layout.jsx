@@ -26,7 +26,8 @@ import {
   CheckCircle,
   Clock,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  Shield
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
@@ -39,7 +40,7 @@ import {
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { Logo } from '@/components/ui/logo';
 import { useAuth } from '@/lib/authContext';
-import { isUserAdmin, getApprovalNotifications, getOrganizationName } from '@/lib/data';
+import { isUserAdmin, isSystemAdmin, getApprovalNotifications, getOrganizationName } from '@/lib/data';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabaseClient';
@@ -51,24 +52,44 @@ export function Layout() {
   const { toast } = useToast();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSystemAdminUser, setIsSystemAdminUser] = useState(false);
   const [pendingApprovals, setPendingApprovals] = useState(0);
   const [organizationName, setOrganizationName] = useState('Church App');
   const [hoveredNav, setHoveredNav] = useState(null);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
 
-  const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: Home, color: 'text-blue-500' },
-    { name: 'Events', href: '/events', icon: Calendar, color: 'text-green-500' },
-    { name: 'Children Check-In', href: '/children-check-in', icon: Baby, color: 'text-pink-500' },
-    { name: 'People', href: '/members', icon: Users, color: 'text-purple-500' },
-    { name: 'Donations', href: '/donations', icon: DollarSign, color: 'text-yellow-500' },
-    { name: 'Groups', href: '/groups', icon: UserPlus, color: 'text-indigo-500' },
-    { name: 'Tasks', href: '/tasks', icon: ClipboardList, color: 'text-orange-500' },
-    { name: 'SMS', href: '/sms', icon: MessageSquare, color: 'text-teal-500' },
-    { name: 'Alerts', href: '/alerts', icon: Bell, color: 'text-red-500' },
-    { name: 'Reports', href: '/reports', icon: BarChart2, color: 'text-emerald-500' },
-    { name: 'Settings', href: '/settings', icon: Settings, color: 'text-gray-500' },
-  ];
+  // Generate navigation items based on user permissions
+  const generateNavigation = () => {
+    const baseNavigation = [
+      { name: 'Dashboard', href: '/dashboard', icon: Home, color: 'text-blue-500' },
+      { name: 'Events', href: '/events', icon: Calendar, color: 'text-green-500' },
+      { name: 'Children Check-In', href: '/children-check-in', icon: Baby, color: 'text-pink-500' },
+      { name: 'People', href: '/members', icon: Users, color: 'text-purple-500' },
+      { name: 'Donations', href: '/donations', icon: DollarSign, color: 'text-yellow-500' },
+      { name: 'Groups', href: '/groups', icon: UserPlus, color: 'text-indigo-500' },
+      { name: 'Tasks', href: '/tasks', icon: ClipboardList, color: 'text-orange-500' },
+      { name: 'SMS', href: '/sms', icon: MessageSquare, color: 'text-teal-500' },
+      { name: 'Alerts', href: '/alerts', icon: Bell, color: 'text-red-500' },
+      { name: 'Reports', href: '/reports', icon: BarChart2, color: 'text-emerald-500' },
+    ];
+
+    // Add Admin Center for system administrators only
+    if (isSystemAdminUser) {
+      baseNavigation.push({
+        name: 'Admin Center',
+        href: '/admin-center',
+        icon: Shield,
+        color: 'text-red-600',
+        isSystemAdmin: true
+      });
+    }
+
+    baseNavigation.push({ name: 'Settings', href: '/settings', icon: Settings, color: 'text-gray-500' });
+
+    return baseNavigation;
+  };
+
+  const navigation = generateNavigation();
 
   const mainNavItems = navigation.slice(0, 5); // Show 5 main items on tablet
   const moreNavItems = navigation.slice(5);
@@ -78,8 +99,13 @@ export function Layout() {
   useEffect(() => {
     const checkAdminAndNotifications = async () => {
       try {
-        const adminStatus = await isUserAdmin();
+        const [adminStatus, systemAdminStatus] = await Promise.all([
+          isUserAdmin(),
+          isSystemAdmin()
+        ]);
+        
         setIsAdmin(adminStatus);
+        setIsSystemAdminUser(systemAdminStatus);
         
         if (adminStatus) {
           try {

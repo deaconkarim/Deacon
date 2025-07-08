@@ -132,7 +132,7 @@ export function Donations() {
     donor_id: null,
     amount: '',
     date: format(new Date(), 'yyyy-MM-dd'),
-    fund_designation: 'general',
+    fund_designation: 'tithe',
     payment_method: 'cash',
     check_number: '',
     campaign_id: null,
@@ -472,7 +472,7 @@ export function Donations() {
       donor_id: null,
       amount: '',
       date: format(new Date(), 'yyyy-MM-dd'),
-      fund_designation: 'general',
+      fund_designation: 'tithe',
       payment_method: 'cash',
       check_number: '',
       campaign_id: null,
@@ -1247,145 +1247,162 @@ export function Donations() {
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-slate-900 dark:text-white">Donation Analysis</h3>
-                  <p className="text-slate-600 dark:text-slate-400">Comprehensive giving metrics and insights</p>
+                  <p className="text-slate-600 dark:text-slate-400">Last 90 days giving metrics and insights</p>
                 </div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs text-slate-500 dark:text-slate-400">Analysis Period</div>
+                <div className="text-sm font-medium text-slate-900 dark:text-slate-100">Last 90 Days</div>
               </div>
             </div>
             
-            {/* Compact Analysis Grid */}
-            <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-6">
-              {/* Amount Statistics */}
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 rounded-xl p-3 border border-blue-200 dark:border-blue-800">
-                <div className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">Highest</div>
-                <div className="text-lg font-bold text-blue-900 dark:text-blue-100">
-                  {formatCurrency(Math.max(...donations.map(d => parseFloat(d.amount) || 0), 0))}
-                </div>
-              </div>
+            {(() => {
+              // Filter donations to last 90 days
+              const ninetyDaysAgo = new Date();
+              ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+              const ninetyDaysAgoStr = ninetyDaysAgo.toISOString().split('T')[0];
               
-              <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950 dark:to-emerald-900 rounded-xl p-3 border border-emerald-200 dark:border-emerald-800">
-                <div className="text-xs font-medium text-emerald-700 dark:text-emerald-300 mb-1">Lowest</div>
-                <div className="text-lg font-bold text-emerald-900 dark:text-emerald-100">
-                  {formatCurrency(Math.min(...donations.map(d => parseFloat(d.amount) || 0).filter(a => a > 0), 0))}
-                </div>
-              </div>
+              const recentDonations = donations.filter(d => d.date >= ninetyDaysAgoStr);
               
-              <div className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 rounded-xl p-3 border border-amber-200 dark:border-amber-800">
-                <div className="text-xs font-medium text-amber-700 dark:text-amber-300 mb-1">Median</div>
-                <div className="text-lg font-bold text-amber-900 dark:text-amber-100">
-                  {formatCurrency((() => {
-                    const amounts = donations.map(d => parseFloat(d.amount) || 0).sort((a, b) => a - b);
-                    const middle = Math.floor(amounts.length / 2);
-                    return amounts.length % 2 === 0 ? (amounts[middle - 1] + amounts[middle]) / 2 : amounts[middle];
-                  })())}
-                </div>
-              </div>
-              
-              {/* Donor Statistics */}
-              <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 rounded-xl p-3 border border-purple-200 dark:border-purple-800">
-                <div className="text-xs font-medium text-purple-700 dark:text-purple-300 mb-1">Recurring</div>
-                <div className="text-lg font-bold text-purple-900 dark:text-purple-100">
-                  {(() => {
-                    const donorCounts = {};
-                    donations.forEach(d => {
-                      if (!d.is_anonymous && d.donor_id) {
-                        donorCounts[d.donor_id] = (donorCounts[d.donor_id] || 0) + 1;
-                      }
-                    });
-                    return Object.values(donorCounts).filter(count => count > 1).length;
-                  })()}
-                </div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-950 dark:to-teal-900 rounded-xl p-3 border border-teal-200 dark:border-teal-800">
-                <div className="text-xs font-medium text-teal-700 dark:text-teal-300 mb-1">First-time</div>
-                <div className="text-lg font-bold text-teal-900 dark:text-teal-100">
-                  {(() => {
-                    const donorCounts = {};
-                    donations.forEach(d => {
-                      if (!d.is_anonymous && d.donor_id) {
-                        donorCounts[d.donor_id] = (donorCounts[d.donor_id] || 0) + 1;
-                      }
-                    });
-                    return Object.values(donorCounts).filter(count => count === 1).length;
-                  })()}
-                </div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 rounded-xl p-3 border border-gray-200 dark:border-gray-800">
-                <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Anonymous</div>
-                <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                  {donations.filter(d => d.is_anonymous).length}
-                </div>
-              </div>
-              
-              {/* Payment Method Analysis */}
-              <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-950 dark:to-indigo-900 rounded-xl p-3 border border-indigo-200 dark:border-indigo-800">
-                <div className="text-xs font-medium text-indigo-700 dark:text-indigo-300 mb-1">Cash</div>
-                <div className="text-lg font-bold text-indigo-900 dark:text-indigo-100">
-                  {donations.filter(d => d.payment_method === 'cash').length}
-                </div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 rounded-xl p-3 border border-green-200 dark:border-green-800">
-                <div className="text-xs font-medium text-green-700 dark:text-green-300 mb-1">Check</div>
-                <div className="text-lg font-bold text-green-900 dark:text-green-100">
-                  {donations.filter(d => d.payment_method === 'check').length}
-                </div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-950 dark:to-pink-900 rounded-xl p-3 border border-pink-200 dark:border-pink-800">
-                <div className="text-xs font-medium text-pink-700 dark:text-pink-300 mb-1">Card</div>
-                <div className="text-lg font-bold text-pink-900 dark:text-pink-100">
-                  {donations.filter(d => d.payment_method === 'credit_card').length}
-                </div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-950 dark:to-cyan-900 rounded-xl p-3 border border-cyan-200 dark:border-cyan-800">
-                <div className="text-xs font-medium text-cyan-700 dark:text-cyan-300 mb-1">Online</div>
-                <div className="text-lg font-bold text-cyan-900 dark:text-cyan-100">
-                  {donations.filter(d => d.payment_method === 'online').length}
-                </div>
-              </div>
-              
-              {/* Fund Distribution */}
-              <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900 rounded-xl p-3 border border-orange-200 dark:border-orange-800">
-                <div className="text-xs font-medium text-orange-700 dark:text-orange-300 mb-1">General</div>
-                <div className="text-lg font-bold text-orange-900 dark:text-orange-100">
-                  {formatCurrency(donations.filter(d => d.fund_designation === 'general').reduce((sum, d) => sum + parseFloat(d.amount), 0))}
-                </div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-violet-50 to-violet-100 dark:from-violet-950 dark:to-violet-900 rounded-xl p-3 border border-violet-200 dark:border-violet-800">
-                <div className="text-xs font-medium text-violet-700 dark:text-violet-300 mb-1">Tithes</div>
-                <div className="text-lg font-bold text-violet-900 dark:text-violet-100">
-                  {formatCurrency(donations.filter(d => d.fund_designation === 'tithe').reduce((sum, d) => sum + parseFloat(d.amount), 0))}
-                </div>
-              </div>
-            </div>
-            
-            {/* Monthly Breakdown */}
-            <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
-              <h4 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Monthly Breakdown</h4>
-              <div className="grid gap-2 grid-cols-3 md:grid-cols-6 lg:grid-cols-12">
-                {(() => {
-                  const monthlyData = {};
-                  donations.forEach(d => {
-                    const month = format(parseISO(d.date), 'MMM');
-                    monthlyData[month] = (monthlyData[month] || 0) + parseFloat(d.amount);
-                  });
-                  
-                  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                  return months.map(month => (
-                    <div key={month} className="text-center p-2 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                      <div className="text-xs font-medium text-slate-600 dark:text-slate-400">{month}</div>
-                      <div className="text-sm font-bold text-slate-900 dark:text-white">
-                        {formatCurrency(monthlyData[month] || 0)}
+              return (
+                <>
+                  {/* Compact Analysis Grid */}
+                  <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-6">
+                    {/* Amount Statistics */}
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 rounded-xl p-3 border border-blue-200 dark:border-blue-800">
+                      <div className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">Highest</div>
+                      <div className="text-lg font-bold text-blue-900 dark:text-blue-100">
+                        {formatCurrency(Math.max(...recentDonations.map(d => parseFloat(d.amount) || 0), 0))}
                       </div>
                     </div>
-                  ));
-                })()}
-              </div>
-            </div>
+                    
+                    <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950 dark:to-emerald-900 rounded-xl p-3 border border-emerald-200 dark:border-emerald-800">
+                      <div className="text-xs font-medium text-emerald-700 dark:text-emerald-300 mb-1">Lowest</div>
+                      <div className="text-lg font-bold text-emerald-900 dark:text-emerald-100">
+                        {formatCurrency(Math.min(...recentDonations.map(d => parseFloat(d.amount) || 0).filter(a => a > 0), 0))}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 rounded-xl p-3 border border-amber-200 dark:border-amber-800">
+                      <div className="text-xs font-medium text-amber-700 dark:text-amber-300 mb-1">Median</div>
+                      <div className="text-lg font-bold text-amber-900 dark:text-amber-100">
+                        {formatCurrency((() => {
+                          const amounts = recentDonations.map(d => parseFloat(d.amount) || 0).sort((a, b) => a - b);
+                          const middle = Math.floor(amounts.length / 2);
+                          return amounts.length % 2 === 0 ? (amounts[middle - 1] + amounts[middle]) / 2 : amounts[middle];
+                        })())}
+                      </div>
+                    </div>
+                    
+                    {/* Donor Statistics */}
+                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 rounded-xl p-3 border border-purple-200 dark:border-purple-800">
+                      <div className="text-xs font-medium text-purple-700 dark:text-purple-300 mb-1">Recurring</div>
+                      <div className="text-lg font-bold text-purple-900 dark:text-purple-100">
+                        {(() => {
+                          const donorCounts = {};
+                          recentDonations.forEach(d => {
+                            if (!d.is_anonymous && d.donor_id) {
+                              donorCounts[d.donor_id] = (donorCounts[d.donor_id] || 0) + 1;
+                            }
+                          });
+                          return Object.values(donorCounts).filter(count => count > 1).length;
+                        })()}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-950 dark:to-teal-900 rounded-xl p-3 border border-teal-200 dark:border-teal-800">
+                      <div className="text-xs font-medium text-teal-700 dark:text-teal-300 mb-1">First-time</div>
+                      <div className="text-lg font-bold text-teal-900 dark:text-teal-100">
+                        {(() => {
+                          const donorCounts = {};
+                          recentDonations.forEach(d => {
+                            if (!d.is_anonymous && d.donor_id) {
+                              donorCounts[d.donor_id] = (donorCounts[d.donor_id] || 0) + 1;
+                            }
+                          });
+                          return Object.values(donorCounts).filter(count => count === 1).length;
+                        })()}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 rounded-xl p-3 border border-gray-200 dark:border-gray-800">
+                      <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Anonymous</div>
+                      <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                        {recentDonations.filter(d => d.is_anonymous).length}
+                      </div>
+                    </div>
+                    
+                    {/* Payment Method Analysis */}
+                    <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-950 dark:to-indigo-900 rounded-xl p-3 border border-indigo-200 dark:border-indigo-800">
+                      <div className="text-xs font-medium text-indigo-700 dark:text-indigo-300 mb-1">Cash</div>
+                      <div className="text-lg font-bold text-indigo-900 dark:text-indigo-100">
+                        {recentDonations.filter(d => d.payment_method === 'cash').length}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 rounded-xl p-3 border border-green-200 dark:border-green-800">
+                      <div className="text-xs font-medium text-green-700 dark:text-green-300 mb-1">Check</div>
+                      <div className="text-lg font-bold text-green-900 dark:text-green-100">
+                        {recentDonations.filter(d => d.payment_method === 'check').length}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-950 dark:to-pink-900 rounded-xl p-3 border border-pink-200 dark:border-pink-800">
+                      <div className="text-xs font-medium text-pink-700 dark:text-pink-300 mb-1">Card</div>
+                      <div className="text-lg font-bold text-pink-900 dark:text-pink-100">
+                        {recentDonations.filter(d => d.payment_method === 'credit_card').length}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-950 dark:to-cyan-900 rounded-xl p-3 border border-cyan-200 dark:border-cyan-800">
+                      <div className="text-xs font-medium text-cyan-700 dark:text-cyan-300 mb-1">Online</div>
+                      <div className="text-lg font-bold text-cyan-900 dark:text-cyan-100">
+                        {recentDonations.filter(d => d.payment_method === 'online').length}
+                      </div>
+                    </div>
+                    
+                    {/* Fund Distribution */}
+                    <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900 rounded-xl p-3 border border-orange-200 dark:border-orange-800">
+                      <div className="text-xs font-medium text-orange-700 dark:text-orange-300 mb-1">General</div>
+                      <div className="text-lg font-bold text-orange-900 dark:text-orange-100">
+                        {formatCurrency(recentDonations.filter(d => d.fund_designation === 'general').reduce((sum, d) => sum + parseFloat(d.amount), 0))}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-violet-50 to-violet-100 dark:from-violet-950 dark:to-violet-900 rounded-xl p-3 border border-violet-200 dark:border-violet-800">
+                      <div className="text-xs font-medium text-violet-700 dark:text-violet-300 mb-1">Tithes</div>
+                      <div className="text-lg font-bold text-violet-900 dark:text-violet-100">
+                        {formatCurrency(recentDonations.filter(d => d.fund_designation === 'tithe').reduce((sum, d) => sum + parseFloat(d.amount), 0))}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Monthly Breakdown */}
+                  <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Monthly Breakdown (Last 90 Days)</h4>
+                    <div className="grid gap-2 grid-cols-3 md:grid-cols-6 lg:grid-cols-12">
+                      {(() => {
+                        const monthlyData = {};
+                        recentDonations.forEach(d => {
+                          const month = format(parseISO(d.date), 'MMM');
+                          monthlyData[month] = (monthlyData[month] || 0) + parseFloat(d.amount);
+                        });
+                        
+                        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                        return months.map(month => (
+                          <div key={month} className="text-center p-2 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                            <div className="text-xs font-medium text-slate-600 dark:text-slate-400">{month}</div>
+                            <div className="text-sm font-bold text-slate-900 dark:text-white">
+                              {formatCurrency(monthlyData[month] || 0)}
+                            </div>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </CardContent>
         </Card>
       </motion.div>

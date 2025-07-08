@@ -10,11 +10,10 @@ const getCurrentUserOrganizationId = async () => {
       .from('organization_users')
       .select('organization_id')
       .eq('user_id', user.id)
-      .eq('status', 'active')
       .eq('approval_status', 'approved')
-      .single();
+      .limit(1);
 
-    return userProfile?.organization_id || null;
+    return userProfile && userProfile.length > 0 ? userProfile[0].organization_id : null;
   } catch (error) {
     console.error('Error getting user organization ID:', error);
     return null;

@@ -264,6 +264,7 @@ export function Dashboard() {
       const growthRate = donationsData.stats.growthRate;
       const lastMonthDonations = donationsData.stats.lastMonth;
       const twoMonthsAgoDonations = donationsData.stats.twoMonthsAgo;
+      const lastWeekDonations = donationsData.stats.lastWeek;
       const lastSundayDonations = donationsData.stats.lastSunday;
 
       // Use pre-calculated event stats
@@ -316,7 +317,7 @@ export function Dashboard() {
         children: family.children,
         lastMonthDonations,
         twoMonthsAgoDonations,
-        lastWeekDonations: weeklyAverage, // Using weekly average as approximation
+        lastWeekDonations,
         lastSundayDonations,
         totalTasks: tasks.stats.total,
         pendingTasks: tasks.stats.pending,
@@ -2350,7 +2351,7 @@ export function Dashboard() {
                   </h4>
                   <div className="text-center">
                     <div className="text-xl sm:text-2xl font-bold text-blue-600 mb-2">
-                      {isLoading ? '...' : `$${(stats.thisMonthDonations || 0).toFixed(2)}`}
+                      {isLoading ? '...' : `$${(stats.monthlyDonations || 0).toFixed(2)}`}
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       {(() => {
