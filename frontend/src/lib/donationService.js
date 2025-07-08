@@ -663,7 +663,8 @@ export async function closeBatch(id) {
       .from('donation_batches')
       .update({ 
         status: 'closed',
-        closed_at: new Date().toISOString()
+        processed_at: new Date().toISOString(),
+        processed_by: (await supabase.auth.getUser()).data.user?.id
       })
       .eq('id', id)
       .eq('organization_id', organizationId)
