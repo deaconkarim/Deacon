@@ -69,16 +69,9 @@ export function AdminCenter() {
   // Form states
   const [orgForm, setOrgForm] = useState({
     name: '',
-    slug: '',
-    description: '',
     contact_email: '',
     contact_phone: '',
-    address: '',
-    city: '',
-    state: '',
-    zip: '',
-    plan: 'basic',
-    status: 'active'
+    address: ''
   });
   
   const [userForm, setUserForm] = useState({
@@ -623,7 +616,12 @@ export function AdminCenter() {
                     <div className="flex items-start justify-between mb-4">
                       <div>
                         <h3 className="font-semibold text-lg">{org.name}</h3>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">/{org.slug}</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                          {org.address ? (
+                            typeof org.address === 'string' ? org.address : 
+                            `${org.address.street}, ${org.address.city}, ${org.address.state} ${org.address.zip}`
+                          ) : 'No address'}
+                        </p>
                       </div>
                       <Badge variant={org.status === 'active' ? 'default' : 'secondary'}>
                         {org.status}
@@ -639,10 +637,7 @@ export function AdminCenter() {
                         <span className="text-slate-600 dark:text-slate-400">Admins</span>
                         <span className="font-medium">{org.admin_count || 0}</span>
                       </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-600 dark:text-slate-400">Plan</span>
-                        <Badge variant="outline">{org.plan}</Badge>
-                      </div>
+
                     </div>
                     
                     <div className="flex space-x-2">
@@ -777,37 +772,14 @@ export function AdminCenter() {
           </DialogHeader>
           <form onSubmit={(e) => e.preventDefault()}>
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="org-name">Organization Name *</Label>
-                  <Input
-                    id="org-name"
-                    value={orgForm.name}
-                    onChange={(e) => setOrgForm({...orgForm, name: e.target.value})}
-                    placeholder="First Baptist Church"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="org-slug">URL Slug *</Label>
-                  <Input
-                    id="org-slug"
-                    value={orgForm.slug}
-                    onChange={(e) => setOrgForm({...orgForm, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-')})}
-                    placeholder="first-baptist"
-                    required
-                  />
-                </div>
-              </div>
-              
               <div className="space-y-2">
-                <Label htmlFor="org-description">Description</Label>
-                <Textarea
-                  id="org-description"
-                  value={orgForm.description}
-                  onChange={(e) => setOrgForm({...orgForm, description: e.target.value})}
-                  placeholder="Brief description of the organization"
-                  rows={3}
+                <Label htmlFor="org-name">Organization Name *</Label>
+                <Input
+                  id="org-name"
+                  value={orgForm.name}
+                  onChange={(e) => setOrgForm({...orgForm, name: e.target.value})}
+                  placeholder="First Baptist Church"
+                  required
                 />
               </div>
               
@@ -836,71 +808,13 @@ export function AdminCenter() {
               
               <div className="space-y-2">
                 <Label htmlFor="address">Address</Label>
-                <Input
+                <Textarea
                   id="address"
                   value={orgForm.address}
                   onChange={(e) => setOrgForm({...orgForm, address: e.target.value})}
-                  placeholder="123 Church St"
+                  placeholder="123 Church St, Springfield, IL 62701"
+                  rows={2}
                 />
-              </div>
-              
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="city">City</Label>
-                  <Input
-                    id="city"
-                    value={orgForm.city}
-                    onChange={(e) => setOrgForm({...orgForm, city: e.target.value})}
-                    placeholder="Springfield"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="state">State</Label>
-                  <Input
-                    id="state"
-                    value={orgForm.state}
-                    onChange={(e) => setOrgForm({...orgForm, state: e.target.value})}
-                    placeholder="IL"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="zip">ZIP Code</Label>
-                  <Input
-                    id="zip"
-                    value={orgForm.zip}
-                    onChange={(e) => setOrgForm({...orgForm, zip: e.target.value})}
-                    placeholder="62701"
-                  />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="plan">Plan</Label>
-                  <Select value={orgForm.plan} onValueChange={(value) => setOrgForm({...orgForm, plan: value})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="basic">Basic ($29/month)</SelectItem>
-                      <SelectItem value="pro">Pro ($79/month)</SelectItem>
-                      <SelectItem value="enterprise">Enterprise ($199/month)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
-                  <Select value={orgForm.status} onValueChange={(value) => setOrgForm({...orgForm, status: value})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="suspended">Suspended</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
             </div>
             <DialogFooter>
@@ -942,21 +856,11 @@ export function AdminCenter() {
                     <div className="text-lg font-semibold">{viewingOrg.name}</div>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">URL Slug</Label>
-                    <div className="text-sm font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">/{viewingOrg.slug}</div>
-                  </div>
-                  <div>
                     <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Status</Label>
                     <div>
-                      <Badge variant={viewingOrg.status === 'active' ? 'default' : 'secondary'}>
-                        {viewingOrg.status}
+                      <Badge variant={viewingOrg.is_active ? 'default' : 'secondary'}>
+                        {viewingOrg.is_active ? 'Active' : 'Inactive'}
                       </Badge>
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Plan</Label>
-                    <div>
-                      <Badge variant="outline">{viewingOrg.plan}</Badge>
                     </div>
                   </div>
                 </div>
@@ -1003,14 +907,7 @@ export function AdminCenter() {
                 </div>
               </div>
               
-              {viewingOrg.description && (
-                <div>
-                  <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Description</Label>
-                  <div className="mt-1 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg text-sm">
-                    {viewingOrg.description}
-                  </div>
-                </div>
-              )}
+
               
                              {/* Organization Users */}
                <div>
@@ -1321,7 +1218,7 @@ export function AdminCenter() {
                         <strong>Members:</strong> {orgToDelete.member_count || 0}
                       </p>
                       <p className="text-red-700 dark:text-red-300">
-                        <strong>URL:</strong> /{orgToDelete.slug}
+                        <strong>Email:</strong> {orgToDelete.email || 'No email'}
                       </p>
                     </div>
                     <p className="text-red-700 dark:text-red-300 mt-3 font-medium">

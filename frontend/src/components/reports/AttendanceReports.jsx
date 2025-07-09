@@ -59,12 +59,16 @@ export function AttendanceReports() {
       const todayStr = format(today, 'yyyy-MM-dd');
       const endDateStr = format(endDate, 'yyyy-MM-dd');
 
+      // Use the earlier date between endDate and today
+      const filterEndDate = endDate < today ? endDate : today;
+      const filterEndDateStr = format(filterEndDate, 'yyyy-MM-dd');
+
       // Fetch events for the selected month - ONLY PAST EVENTS
       const { data: events, error: eventsError } = await supabase
         .from('events')
         .select('*')
         .gte('start_date', format(startDate, 'yyyy-MM-dd'))
-        .lte('start_date', Math.min(endDateStr, todayStr)) // Only include events up to today
+        .lte('start_date', filterEndDateStr) // Only include events up to today
         .order('start_date', { ascending: false }); // Order by date descending
 
       if (eventsError) throw eventsError;
@@ -170,7 +174,7 @@ export function AttendanceReports() {
 
     // Process member statistics
     const memberStatsObj = attendance.reduce((acc, record) => {
-      if (record.status === 'checked-in' || record.status === 'attending') {
+      if ((record.status === 'checked-in' || record.status === 'attending') && record.members) {
         const memberName = `${record.members.firstname} ${record.members.lastname}`;
         if (!acc[memberName]) {
           acc[memberName] = 0;
@@ -190,7 +194,7 @@ export function AttendanceReports() {
     const eventDetails = sortedEvents.map(event => {
       const eventAttendance = attendance.filter(a => a.event_id === event.id);
       const attendingMembers = eventAttendance
-        .filter(a => a.status === 'checked-in' || a.status === 'attending')
+        .filter(a => (a.status === 'checked-in' || a.status === 'attending') && a.members)
         .map(a => `${a.members.firstname} ${a.members.lastname}`)
         .sort();
 
@@ -258,11 +262,11 @@ export function AttendanceReports() {
       const updatedEvent = {
         ...selectedEvent,
         attendingMembers: attendance
-          .filter(a => a.status === 'checked-in' || a.status === 'attending')
+          .filter(a => (a.status === 'checked-in' || a.status === 'attending') && a.members)
           .map(a => `${a.members.firstname} ${a.members.lastname}`)
           .sort(),
         attendees: attendance.filter(a => 
-          a.status === 'checked-in' || a.status === 'attending'
+          (a.status === 'checked-in' || a.status === 'attending') && a.members
         ).length
       };
 

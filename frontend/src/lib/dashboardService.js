@@ -539,7 +539,7 @@ export const dashboardService = {
     // Get events and attendance for last 6 months - ONLY PAST EVENTS
     const { data: events, error: eventsError } = await supabase
       .from('events')
-      .select('id, event_type, start_date')
+      .select('id, event_type, start_date, title')
       .eq('organization_id', organizationId)
       .gte('start_date', sixMonthsAgoStr)
       .lte('start_date', todayStr) // Only include events that have already happened
@@ -630,9 +630,9 @@ export const dashboardService = {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
 
-    // Look for Sunday Worship Service events in the last 30 days - ONLY PAST EVENTS
+    // Look for Sunday Service events in the last 30 days - ONLY PAST EVENTS
     const recentSundayEvents = events.filter(e => 
-      e.event_type === 'Sunday Worship Service' && 
+      e.event_type === 'Sunday Service' && 
       e.start_date >= thirtyDaysAgoStr && 
       e.start_date <= todayStr  // Only past events
     );

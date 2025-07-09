@@ -48,30 +48,9 @@ export async function createOrganization(orgData) {
       .from('organizations')
       .insert([{
         name: orgData.name,
-        slug: orgData.slug,
-        description: orgData.description,
-        contact_email: orgData.contact_email,
-        contact_phone: orgData.contact_phone,
-        address: orgData.address,
-        city: orgData.city,
-        state: orgData.state,
-        zip: orgData.zip,
-        plan: orgData.plan || 'basic',
-        status: orgData.status || 'active',
-        settings: {
-          features: {
-            donations: true,
-            events: true,
-            members: true,
-            messaging: true,
-            reports: true
-          },
-          limits: {
-            members: orgData.plan === 'pro' ? 1000 : 100,
-            storage_gb: orgData.plan === 'pro' ? 10 : 1,
-            monthly_emails: orgData.plan === 'pro' ? 10000 : 1000
-          }
-        }
+        email: orgData.contact_email,
+        phone: orgData.contact_phone,
+        address: orgData.address
       }])
       .select()
       .single();
@@ -108,7 +87,7 @@ export async function deleteOrganization(id) {
     // First, check if the organization exists and get basic info
     const { data: org, error: selectError } = await supabase
       .from('organizations')
-      .select('name, slug')
+      .select('name')
       .eq('id', id)
       .single();
 
@@ -194,7 +173,7 @@ export async function deleteOrganization(id) {
       console.log('Stored procedure executed successfully');
     }
 
-    console.log(`Organization ${org.name} (${org.slug}) deleted successfully`);
+    console.log(`Organization ${org.name} deleted successfully`);
   } catch (error) {
     console.error('Error deleting organization:', error);
     throw error;

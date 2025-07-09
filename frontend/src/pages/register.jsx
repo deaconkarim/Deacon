@@ -19,7 +19,6 @@ export function Register() {
     confirmPassword: '',
     // Organization fields
     organizationName: '',
-    organizationDescription: '',
     organizationPhone: '',
     organizationAddress: {
       street: '',
@@ -109,26 +108,11 @@ export function Register() {
       if (userError) throw userError;
 
       if (userData.user) {
-        // Generate a slug from the organization name
-        const generateSlug = (name) => {
-          return name
-            .toLowerCase()
-            .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
-            .replace(/\s+/g, '-') // Replace spaces with hyphens
-            .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
-            .trim('-') // Remove leading/trailing hyphens
-            + '-' + Date.now().toString().slice(-6); // Add timestamp to ensure uniqueness
-        };
-
-        const organizationSlug = generateSlug(formData.organizationName);
-
         // Create the organization
         const { data: orgData, error: orgError } = await supabase
           .from('organizations')
           .insert({
             name: formData.organizationName,
-            slug: organizationSlug,
-            description: formData.organizationDescription || null,
             phone: formData.organizationPhone || null,
             address: formData.organizationAddress
           })
@@ -321,17 +305,7 @@ export function Register() {
                 </div>
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="organizationDescription">Description</Label>
-                <Textarea
-                  id="organizationDescription"
-                  name="organizationDescription"
-                  placeholder="Brief description of your church (optional)"
-                  value={formData.organizationDescription}
-                  onChange={handleInputChange}
-                  rows={3}
-                />
-              </div>
+
               
               <div className="space-y-2">
                 <Label htmlFor="organizationPhone">Phone Number</Label>

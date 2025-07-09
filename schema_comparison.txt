@@ -1,0 +1,41 @@
+-- Testing column names from seeding scripts against the actual schema
+
+-- Organizations table (from schema):
+-- id, name, slug, description, address, phone, email, website, logo_url, settings, created_at, updated_at
+
+-- Members table (from schema):
+-- id, firstname, lastname, email, phone, address, status, notes, join_date, image_url, 
+-- created_at, updated_at, member_type, birth_date, gender, organization_id, role, user_id,
+-- marital_status, family_id, anniversary_date, spouse_name, has_children, occupation, 
+-- emergency_contact, last_attendance_date, attendance_frequency, ministry_involvement, 
+-- communication_preferences, tags
+
+-- Events table (from schema):
+-- id, title, description, start_date, end_date, location, url, is_recurring, recurrence_pattern,
+-- monthly_week, monthly_weekday, allow_rsvp, parent_event_id, is_master, created_at, updated_at,
+-- attendance_type, event_type, needs_volunteers, volunteer_roles, organization_id
+
+-- Groups table (from schema):
+-- id, name, description, leader_id, created_at, updated_at, organization_id
+
+-- Tasks table (from schema):
+-- id, title, description, due_date, status, priority, requestor_id, assignee_id, 
+-- created_at, updated_at, organization_id
+
+-- Donations table (from schema):
+-- id, amount, date, type, notes, attendance, created_at, updated_at, organization_id,
+-- donor_id, campaign_id, pledge_id, payment_method, check_number, is_anonymous,
+-- is_tax_deductible, fund_designation, currency, exchange_rate, processed_by,
+-- receipt_sent, receipt_sent_at, tags, metadata, batch_id, is_legacy_batch_summary
+
+-- Donation_batches table (from schema):
+-- id, organization_id, batch_number, batch_date, description, total_amount, donation_count,
+-- status, processed_by, processed_at, reconciled_by, reconciled_at, created_at, updated_at, name
+
+-- SMS_conversations table (from schema):
+-- id, organization_id, title, conversation_type, status, created_by, created_at, updated_at, group_id
+
+-- Automation_rules table (from schema):
+-- id, organization_id, name, description, trigger_type, trigger_conditions, action_type,
+-- action_data, is_active, created_at, updated_at
+

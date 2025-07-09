@@ -194,6 +194,13 @@ export function Dashboard() {
   const [selectedSMSConversation, setSelectedSMSConversation] = useState(null);
   const [replyMessage, setReplyMessage] = useState('');
   const [isSendingReply, setIsSendingReply] = useState(false);
+  
+  // Badge activation states
+  const [badgeStates, setBadgeStates] = useState({
+    liveData: false,
+    analyticsActive: false,
+    aiIntelligence: false
+  });
 
   // Memoize the date objects to prevent infinite re-renders
   const attendanceDateRange = useMemo(() => {
@@ -363,6 +370,45 @@ export function Dashboard() {
   useEffect(() => {
     loadDashboardData();
   }, [loadDashboardData]);
+
+  // Badge activation sequence - activate badges after data loads
+  useEffect(() => {
+    if (!isLoading) {
+      // Reset badges first
+      setBadgeStates({
+        liveData: false,
+        analyticsActive: false,
+        aiIntelligence: false
+      });
+      
+      // Start badge activation sequence after data loads
+      const activateBadges = async () => {
+        // 1. Activate Live Data badge (500ms delay)
+        setTimeout(() => {
+          setBadgeStates(prev => ({ ...prev, liveData: true }));
+        }, 500);
+        
+        // 2. Activate Analytics Active badge (1.5s delay)
+        setTimeout(() => {
+          setBadgeStates(prev => ({ ...prev, analyticsActive: true }));
+        }, 1500);
+        
+        // 3. Activate AI Intelligence badge (2.5s delay)
+        setTimeout(() => {
+          setBadgeStates(prev => ({ ...prev, aiIntelligence: true }));
+        }, 2500);
+      };
+      
+      activateBadges();
+    } else {
+      // Reset badges when loading
+      setBadgeStates({
+        liveData: false,
+        analyticsActive: false,
+        aiIntelligence: false
+      });
+    }
+  }, [isLoading]);
 
   const handleOpenRSVPModal = async (eventId) => {
     setSelectedEvent({ id: eventId });
@@ -665,17 +711,17 @@ export function Dashboard() {
                   Intelligent Church Management System
                 </p>
                 <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-4">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm text-slate-600 dark:text-slate-300">Live Data</span>
+                  <div className={`flex items-center space-x-2 transition-all duration-500 ${badgeStates.liveData ? 'opacity-100 scale-100' : 'opacity-50 scale-95'}`}>
+                    <div className={`w-3 h-3 bg-emerald-500 rounded-full transition-all duration-500 ${badgeStates.liveData ? 'animate-pulse shadow-lg shadow-emerald-500/50' : ''}`}></div>
+                    <span className={`text-sm transition-all duration-500 ${badgeStates.liveData ? 'text-emerald-600 dark:text-emerald-400 font-medium' : 'text-slate-400 dark:text-slate-500'}`}>Live Data</span>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                    <span className="text-sm text-slate-600 dark:text-slate-300">Analytics Active</span>
+                  <div className={`flex items-center space-x-2 transition-all duration-500 ${badgeStates.analyticsActive ? 'opacity-100 scale-100' : 'opacity-50 scale-95'}`}>
+                    <div className={`w-3 h-3 bg-blue-500 rounded-full transition-all duration-500 ${badgeStates.analyticsActive ? 'animate-pulse shadow-lg shadow-blue-500/50' : ''}`}></div>
+                    <span className={`text-sm transition-all duration-500 ${badgeStates.analyticsActive ? 'text-blue-600 dark:text-blue-400 font-medium' : 'text-slate-400 dark:text-slate-500'}`}>Analytics Active</span>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-purple-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm text-slate-600 dark:text-slate-300">AI Intelligence</span>
+                  <div className={`flex items-center space-x-2 transition-all duration-500 ${badgeStates.aiIntelligence ? 'opacity-100 scale-100' : 'opacity-50 scale-95'}`}>
+                    <div className={`w-3 h-3 bg-purple-500 rounded-full transition-all duration-500 ${badgeStates.aiIntelligence ? 'animate-pulse shadow-lg shadow-purple-500/50' : ''}`}></div>
+                    <span className={`text-sm transition-all duration-500 ${badgeStates.aiIntelligence ? 'text-purple-600 dark:text-purple-400 font-medium' : 'text-slate-400 dark:text-slate-500'}`}>AI Intelligence</span>
                   </div>
                 </div>
               </div>
