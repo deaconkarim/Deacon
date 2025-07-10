@@ -96,61 +96,94 @@ export function Invite() {
     setIsProcessing(true);
 
     try {
-      // Create user account
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: invitation.email,
-        password: formData.password,
-        options: {
-          data: {
-            first_name: invitation.first_name,
-            last_name: invitation.last_name
-          },
-          emailConfirm: false
+      // Try to create user account, but handle existing user gracefully
+      let authData;
+      let authError;
+
+      try {
+        // Try to sign up first
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: invitation.email,
+          password: formData.password,
+          options: {
+            data: {
+              first_name: invitation.first_name,
+              last_name: invitation.last_name
+            },
+            emailConfirm: false
+          }
+        });
+
+        authData = signUpData;
+        authError = signUpError;
+      } catch (signUpError) {
+        // If signup fails because user exists, try to sign in
+        if (signUpError.message?.includes('already registered') || signUpError.message?.includes('User already registered')) {
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+            email: invitation.email,
+            password: formData.password
+          });
+
+          if (signInError) {
+            // Password doesn't match, show error
+            toast({
+              title: "Account already exists",
+              description: "An account with this email already exists. Please use the correct password or contact your administrator.",
+              variant: "destructive"
+            });
+            return;
+          }
+
+          authData = signInData;
+          authError = null;
+        } else {
+          throw signUpError;
         }
-      });
+      }
 
       if (authError) throw authError;
 
       // Check if member record already exists
       const { data: existingMember, error: memberCheckError } = await supabase
         .from('members')
-        .select('id')
+        .select('id, user_id')
         .eq('email', invitation.email)
-        .single();
+        .maybeSingle();
 
       if (existingMember) {
-        // First, update the invitation to remove the member_id reference
-        const { error: updateInvitationError } = await supabase
-          .from('organization_invitations')
-          .update({
-            member_id: null
-          })
-          .eq('id', invitationId);
+        // If the existing member has no user_id, update it with the new auth user ID
+        if (!existingMember.user_id) {
+          const { error: updateMemberError } = await supabase
+            .from('members')
+            .update({
+              user_id: authData.user.id,
+              organization_id: invitation.organization_id,
+              status: 'active'
+            })
+            .eq('id', existingMember.id);
 
-        if (updateInvitationError) throw updateInvitationError;
-
-        // Delete the old member record since we'll create a new one with the auth user ID
-        const { error: deleteMemberError } = await supabase
-          .from('members')
-          .delete()
-          .eq('email', invitation.email);
-
-        if (deleteMemberError) throw deleteMemberError;
+          if (updateMemberError) throw updateMemberError;
+        } else {
+          // If the existing member has a different user_id, this is a conflict
+          throw new Error('Email is already associated with another user account');
+        }
       }
 
-      // Create new member record with auth user ID
-      const { error: memberError } = await supabase
-        .from('members')
-        .insert({
-          id: authData.user.id, // Use the same ID as the auth user
-          firstname: invitation.first_name,
-          lastname: invitation.last_name,
-          email: invitation.email,
-          status: 'active',
-          organization_id: invitation.organization_id
-        });
+      // Only create new member record if one doesn't already exist
+      if (!existingMember) {
+        const { error: memberError } = await supabase
+          .from('members')
+          .insert({
+            id: authData.user.id, // Use the same ID as the auth user
+            firstname: invitation.first_name,
+            lastname: invitation.last_name,
+            email: invitation.email,
+            status: 'active',
+            organization_id: invitation.organization_id
+          });
 
-      if (memberError) throw memberError;
+        if (memberError) throw memberError;
+      }
 
       // Create organization membership
       const { error: membershipError } = await supabase
