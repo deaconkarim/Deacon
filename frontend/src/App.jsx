@@ -12,6 +12,7 @@ import { Reports } from './pages/reports';
 import { Settings } from './pages/settings';
 import ChildrenCheckin from './pages/children-checkin';
 import AddChild from './pages/add-child';
+import EditChild from './pages/edit-child';
 import { Login } from './pages/login';
 import { Register } from './pages/register';
 import { Invite } from './pages/invite';
@@ -52,6 +53,7 @@ function App() {
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/children-check-in" element={<ChildrenCheckin />} />
         <Route path="/children-check-in/add" element={<AddChild />} />
+        <Route path="/edit-child/:childId" element={<EditChild />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/sms" element={<SMS />} />

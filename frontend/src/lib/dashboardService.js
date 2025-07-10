@@ -13,6 +13,14 @@ const getCurrentUserOrganizationId = async () => {
       return impersonationData.organization_id;
     }
 
+    // Check if we're impersonating an organization directly
+    const impersonatingOrg = localStorage.getItem('impersonating_organization');
+    if (impersonatingOrg) {
+      const impersonationData = JSON.parse(impersonatingOrg);
+      console.log('🔍 [DashboardService] Using impersonated organization ID:', impersonationData.organization_id);
+      return impersonationData.organization_id;
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
@@ -35,6 +43,8 @@ export const dashboardService = {
   async getDashboardData() {
     try {
       const organizationId = await getCurrentUserOrganizationId();
+      console.log('🔍 [DashboardService] Organization ID:', organizationId);
+      
       if (!organizationId) {
         throw new Error('User not associated with any organization');
       }
@@ -50,6 +60,14 @@ export const dashboardService = {
         this.getAttendanceData(organizationId),
         this.getFamilyData(organizationId)
       ]);
+
+      console.log('📊 [DashboardService] Data loaded:', {
+        members: membersData.counts?.total || 0,
+        donations: donationsData.all?.length || 0,
+        events: eventsData.all?.length || 0,
+        tasks: tasksData.all?.length || 0,
+        attendance: attendanceData
+      });
 
       return {
         organizationId,
@@ -70,6 +88,23 @@ export const dashboardService = {
 
   // Members data - single API call instead of multiple
   async getMembersData(organizationId) {
+    console.log('🔍 [DashboardService] Fetching members for organization:', organizationId);
+    
+    // First, let's see what organizations have members
+    const { data: allMembers, error: allMembersError } = await supabase
+      .from('members')
+      .select('organization_id, id, firstname, lastname')
+      .order('created_at', { ascending: false });
+
+    if (allMembersError) throw allMembersError;
+    
+    console.log('📊 [DashboardService] All members by organization:', 
+      allMembers?.reduce((acc, member) => {
+        acc[member.organization_id] = (acc[member.organization_id] || 0) + 1;
+        return acc;
+      }, {})
+    );
+    
     const { data: members, error } = await supabase
       .from('members')
       .select('*')
@@ -77,6 +112,9 @@ export const dashboardService = {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
+
+    console.log('📊 [DashboardService] Members found:', members?.length || 0);
+    console.log('📊 [DashboardService] Sample members:', members?.slice(0, 3));
 
     const activeMembers = members.filter(m => m.status === 'active');
     const inactiveMembers = members.filter(m => m.status === 'inactive');
@@ -637,20 +675,38 @@ export const dashboardService = {
       e.start_date <= todayStr  // Only past events
     );
 
+    // Debug logging
+    console.log('=== SUNDAY SERVICE RATE DEBUG ===');
+    console.log('Active member count:', activeMemberCount);
+    console.log('Total events found:', events.length);
+    console.log('Event types found:', [...new Set(events.map(e => e.event_type))]);
+    console.log('Recent Sunday events (last 30 days):', recentSundayEvents.length);
+    console.log('Recent Sunday events:', recentSundayEvents.map(e => ({ id: e.id, title: e.title, date: e.start_date, type: e.event_type })));
+    console.log('Total attendance records:', attendance.length);
+    console.log('Attendance statuses:', [...new Set(attendance.map(a => a.status))]);
+
     // Get unique active members who attended Sunday services in the last 30 days
     const sundayAttendees = new Set();
     const activeMemberIds = new Set(activeMembers.map(m => m.id));
     
     recentSundayEvents.forEach(event => {
       const eventAttendance = attendance.filter(a => a.event_id === event.id);
+      console.log(`Event ${event.title} (${event.id}): ${eventAttendance.length} attendance records`);
+      
       eventAttendance
         .filter(a => (a.status === 'checked-in' || a.status === 'attending') && a.member_id && activeMemberIds.has(a.member_id))
         .forEach(a => sundayAttendees.add(a.member_id));
     });
 
+    console.log('Unique active members who attended Sunday services:', sundayAttendees.size);
+    console.log('Sunday attendees:', Array.from(sundayAttendees));
+
     // Calculate percentage of active members who attend Sunday services
     const sundayServiceRate = activeMemberCount > 0 ? 
       Math.round((sundayAttendees.size / activeMemberCount) * 100) : 0;
+
+    console.log('Final Sunday Service Rate:', sundayServiceRate + '%');
+    console.log('=== END SUNDAY SERVICE RATE DEBUG ===');
 
     console.log('Sunday Service Rate calculation (past events only):', {
       activeMemberCount,

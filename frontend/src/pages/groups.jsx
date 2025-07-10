@@ -24,7 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabaseClient';
-import { getMembers, getGroups } from '@/lib/data';
+import { getMembers, getGroups, getCurrentUserOrganizationId } from '@/lib/data';
 import { getInitials } from '@/lib/utils/formatters';
 
 export function Groups() {
@@ -58,18 +58,9 @@ export function Groups() {
       // Get groups with proper organization filtering
       const groupsData = await getGroups();
       
-      // Get the current user's organization ID for additional queries
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      const { data: orgData } = await supabase
-        .from('organization_users')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .single();
-
-      if (!orgData?.organization_id) throw new Error('User not associated with any organization');
+      // Get the current user's organization ID using the helper function
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) throw new Error('User not associated with any organization');
 
       // Fetch additional data for each group with organization filtering
       const enrichedGroups = await Promise.all(
@@ -79,15 +70,19 @@ export function Groups() {
             .from('group_members')
             .select('*', { count: 'exact', head: true })
             .eq('group_id', group.id)
-            .eq('organization_id', orgData.organization_id);
+            .eq('organization_id', organizationId);
 
-          // Get leader info
-          const { data: leader } = await supabase
-            .from('members')
-            .select('firstname, lastname')
-            .eq('id', group.leader_id)
-            .eq('organization_id', orgData.organization_id)
-            .single();
+          // Get leader info only if leader_id exists
+          let leader = null;
+          if (group.leader_id) {
+            const { data: leaderData } = await supabase
+              .from('members')
+              .select('firstname, lastname')
+              .eq('id', group.leader_id)
+              .eq('organization_id', organizationId)
+              .single();
+            leader = leaderData;
+          }
 
           return {
             ...group,
@@ -137,13 +132,18 @@ export function Groups() {
       return;
     }
     try {
-      // Create the group without the members field
+      // Get the current user's organization ID
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) throw new Error('User not associated with any organization');
+
+      // Create the group with organization_id
       const { data, error } = await supabase
         .from('groups')
         .insert([{
           name: newGroup.name,
           description: newGroup.description,
-          leader_id: newGroup.leader_id
+          leader_id: newGroup.leader_id,
+          organization_id: organizationId
         }])
         .select();
       
@@ -153,7 +153,8 @@ export function Groups() {
       if (newGroup.members && newGroup.members.length > 0) {
         const memberInserts = newGroup.members.map(memberId => ({
           group_id: data[0].id,
-          member_id: memberId
+          member_id: memberId,
+          organization_id: organizationId
         }));
 
         const { error: memberError } = await supabase
@@ -272,11 +273,16 @@ export function Groups() {
         return;
       }
 
+      // Get the current user's organization ID
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) throw new Error('User not associated with any organization');
+
       const { error } = await supabase
         .from('group_members')
         .insert([{
           group_id: selectedGroup.id,
-          member_id: memberId
+          member_id: memberId,
+          organization_id: organizationId
         }]);
 
       if (error) throw error;

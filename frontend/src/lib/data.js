@@ -1,13 +1,19 @@
 import { supabase } from './supabaseClient';
 
 // Helper function to get current user's organization ID
-const getCurrentUserOrganizationId = async () => {
+export const getCurrentUserOrganizationId = async () => {
   try {
     // Check if we're impersonating a user and use that organization ID
     const impersonatingUser = localStorage.getItem('impersonating_user');
     if (impersonatingUser) {
       const impersonationData = JSON.parse(impersonatingUser);
-      console.log('🔍 Using impersonated organization ID:', impersonationData.organization_id);
+      return impersonationData.organization_id;
+    }
+
+    // Check if we're impersonating an organization directly
+    const impersonatingOrg = localStorage.getItem('impersonating_organization');
+    if (impersonatingOrg) {
+      const impersonationData = JSON.parse(impersonatingOrg);
       return impersonationData.organization_id;
     }
 
@@ -36,6 +42,12 @@ export const isUserApproved = async () => {
     const impersonatingUser = localStorage.getItem('impersonating_user');
     if (impersonatingUser) {
       console.log('🔍 Impersonating user - assuming approved status');
+      return true;
+    }
+
+    // Check if we're impersonating an organization - if so, assume they're approved
+    const impersonatingOrg = localStorage.getItem('impersonating_organization');
+    if (impersonatingOrg) {
       return true;
     }
 
@@ -97,6 +109,12 @@ export const isUserAdmin = async () => {
 
       if (error) return false;
       return data && data.length > 0;
+    }
+
+    // Check if we're impersonating an organization - if so, system admin has admin privileges
+    const impersonatingOrg = localStorage.getItem('impersonating_organization');
+    if (impersonatingOrg) {
+      return true;
     }
 
     const { data: { user } } = await supabase.auth.getUser();
@@ -1604,6 +1622,14 @@ export const getOrganizationName = async () => {
     const impersonatingUser = localStorage.getItem('impersonating_user');
     if (impersonatingUser) {
       const impersonationData = JSON.parse(impersonatingUser);
+      console.log('🔍 Using impersonated organization name:', impersonationData.organization_name);
+      return impersonationData.organization_name;
+    }
+
+    // Check if we're impersonating an organization directly
+    const impersonatingOrg = localStorage.getItem('impersonating_organization');
+    if (impersonatingOrg) {
+      const impersonationData = JSON.parse(impersonatingOrg);
       console.log('🔍 Using impersonated organization name:', impersonationData.organization_name);
       return impersonationData.organization_name;
     }

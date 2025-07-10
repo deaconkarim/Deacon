@@ -3,6 +3,42 @@ import { supabase } from '../lib/supabaseClient';
 import { format } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
+// Helper function to get current user's organization ID
+const getCurrentUserOrganizationId = async () => {
+  try {
+    // Check if we're impersonating a user and use that organization ID
+    const impersonatingUser = localStorage.getItem('impersonating_user');
+    if (impersonatingUser) {
+      const impersonationData = JSON.parse(impersonatingUser);
+      console.log('🔍 [ChildrenCheckin] Using impersonated organization ID:', impersonationData.organization_id);
+      return impersonationData.organization_id;
+    }
+
+    // Check if we're impersonating an organization directly
+    const impersonatingOrg = localStorage.getItem('impersonating_organization');
+    if (impersonatingOrg) {
+      const impersonationData = JSON.parse(impersonatingOrg);
+      console.log('🔍 [ChildrenCheckin] Using impersonated organization ID:', impersonationData.organization_id);
+      return impersonationData.organization_id;
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const { data: userProfile } = await supabase
+      .from('organization_users')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .eq('approval_status', 'approved')
+      .limit(1);
+
+    return userProfile && userProfile.length > 0 ? userProfile[0].organization_id : null;
+  } catch (error) {
+    console.error('Error getting user organization ID:', error);
+    return null;
+  }
+};
+
 export default function ChildrenCheckin() {
   const [children, setChildren] = useState([]);
   const [guardians, setGuardians] = useState([]);
@@ -17,10 +53,17 @@ export default function ChildrenCheckin() {
   useEffect(() => {
     async function fetchChildren() {
       try {
+        const organizationId = await getCurrentUserOrganizationId();
+        if (!organizationId) {
+          setError('No organization ID found');
+          return;
+        }
+
         const { data: childrenData, error: childrenError } = await supabase
           .from('members')
           .select('*')
-          .eq('member_type', 'child');
+          .eq('member_type', 'child')
+          .eq('organization_id', organizationId);
 
         if (childrenError) throw childrenError;
 
@@ -34,6 +77,10 @@ export default function ChildrenCheckin() {
 
         if (guardiansError) throw guardiansError;
 
+        console.log('🔍 [ChildrenCheckin] Organization ID:', organizationId);
+        console.log('🔍 [ChildrenCheckin] Guardians data:', guardiansData);
+        console.log('🔍 [ChildrenCheckin] Guardians count:', guardiansData?.length || 0);
+
         setChildren(childrenData);
         setGuardians(guardiansData);
       } catch (err) {
@@ -46,16 +93,23 @@ export default function ChildrenCheckin() {
     fetchChildren();
   }, []);
 
-  // Fetch events
+    // Fetch events
   useEffect(() => {
     const fetchEvents = async () => {
       try {
+        const organizationId = await getCurrentUserOrganizationId();
+        if (!organizationId) {
+          console.error('No organization ID found');
+          return;
+        }
+
         // First, let's see what events we have
         const { data: allEvents, error: allEventsError } = await supabase
           .from('events')
           .select('*')
+          .eq('organization_id', organizationId)
           .order('start_date', { ascending: true });
-
+        
         if (allEventsError) throw allEventsError;
         
         // Filter for check-in events
@@ -89,15 +143,22 @@ export default function ChildrenCheckin() {
   useEffect(() => {
     async function fetchAllCheckinHistory() {
       try {
+        const organizationId = await getCurrentUserOrganizationId();
+        if (!organizationId) {
+          console.error('No organization ID found');
+          return;
+        }
+
         const { data, error } = await supabase
           .from('child_checkin_logs')
           .select(`
             *,
-            child:child_id(*),
-            checked_in_by(*),
-            checked_out_by(*),
-            event:event_id(*)
+            child:members!child_checkin_logs_child_id_fkey(*),
+            checked_in_by:members!child_checkin_logs_checked_in_by_fkey(*),
+            checked_out_by:members!child_checkin_logs_checked_out_by_fkey(*),
+            event:events!child_checkin_logs_event_id_fkey(*)
           `)
+          .eq('organization_id', organizationId)
           .order('check_in_time', { ascending: false });
 
         if (error) throw error;
@@ -116,15 +177,22 @@ export default function ChildrenCheckin() {
 
     async function fetchCheckinLogs() {
       try {
+        const organizationId = await getCurrentUserOrganizationId();
+        if (!organizationId) {
+          setError('No organization ID found');
+          return;
+        }
+
         const { data, error } = await supabase
           .from('child_checkin_logs')
           .select(`
             *,
-            child:child_id(*),
-            checked_in_by(*),
-            checked_out_by(*)
+            child:members!child_checkin_logs_child_id_fkey(*),
+            checked_in_by:members!child_checkin_logs_checked_in_by_fkey(*),
+            checked_out_by:members!child_checkin_logs_checked_out_by_fkey(*)
           `)
-          .eq('event_id', selectedEvent.id);
+          .eq('event_id', selectedEvent.id)
+          .eq('organization_id', organizationId);
 
         if (error) throw error;
         setCheckinLogs(data);
@@ -141,6 +209,12 @@ export default function ChildrenCheckin() {
     if (!selectedEvent) return;
 
     try {
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) {
+        console.error('No organization ID found');
+        return;
+      }
+
       // Create check-in log
       const { data: checkinLog, error: checkinError } = await supabase
         .from('child_checkin_logs')
@@ -149,6 +223,7 @@ export default function ChildrenCheckin() {
             child_id: childId,
             event_id: selectedEvent.id,
             checked_in_by: guardianId,
+            organization_id: organizationId,
             check_in_time: new Date().toISOString(),
           },
         ])
@@ -164,6 +239,7 @@ export default function ChildrenCheckin() {
           {
             event_id: selectedEvent.id,
             member_id: childId,
+            organization_id: organizationId,
             status: 'checked-in'
           },
         ]);
@@ -182,15 +258,22 @@ export default function ChildrenCheckin() {
     if (!selectedEvent) return;
 
     try {
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) {
+        console.error('No organization ID found');
+        return;
+      }
+
       const { data, error } = await supabase
         .from('child_checkin_logs')
         .select(`
           *,
-          child:child_id(*),
-          checked_in_by(*),
-          checked_out_by(*)
+          child:members!child_checkin_logs_child_id_fkey(*),
+          checked_in_by:members!child_checkin_logs_checked_in_by_fkey(*),
+          checked_out_by:members!child_checkin_logs_checked_out_by_fkey(*)
         `)
-        .eq('event_id', selectedEvent.id);
+        .eq('event_id', selectedEvent.id)
+        .eq('organization_id', organizationId);
 
       if (error) throw error;
       setCheckinLogs(data);
@@ -201,19 +284,77 @@ export default function ChildrenCheckin() {
 
   const fetchAllCheckinHistory = async () => {
     try {
-      const { data, error } = await supabase
+      // Get current organization ID
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) {
+        console.error('No organization ID found');
+        return;
+      }
+
+      console.log('🔍 Fetching check-in history for organization:', organizationId);
+      
+      // Get the check-in logs for this organization
+      const { data: logs, error: logsError } = await supabase
         .from('child_checkin_logs')
-        .select(`
-          *,
-          child:child_id(*),
-          checked_in_by(*),
-          checked_out_by(*),
-          event:event_id(*)
-        `)
+        .select('*')
+        .eq('organization_id', organizationId)
         .order('check_in_time', { ascending: false });
 
-      if (error) throw error;
-      setAllCheckinHistory(data);
+      if (logsError) throw logsError;
+      
+      console.log('📊 Found', logs?.length || 0, 'check-in logs');
+      
+      if (!logs || logs.length === 0) {
+        setAllCheckinHistory([]);
+        return;
+      }
+
+      // Get unique IDs for related data
+      const childIds = [...new Set(logs.map(log => log.child_id).filter(Boolean))];
+      const guardianIds = [...new Set([
+        ...logs.map(log => log.checked_in_by).filter(Boolean),
+        ...logs.map(log => log.checked_out_by).filter(Boolean)
+      ])];
+      const eventIds = [...new Set(logs.map(log => log.event_id).filter(Boolean))];
+
+      console.log('🔍 Child IDs:', childIds);
+      console.log('🔍 Guardian IDs:', guardianIds);
+      console.log('🔍 Event IDs:', eventIds);
+
+      // Fetch related data for this organization
+      const [childrenData, guardiansData, eventsData] = await Promise.all([
+        childIds.length > 0 ? supabase.from('members').select('id, firstname, lastname, image_url').in('id', childIds).eq('organization_id', organizationId) : { data: [] },
+        guardianIds.length > 0 ? supabase.from('members').select('id, firstname, lastname').in('id', guardianIds).eq('organization_id', organizationId) : { data: [] },
+        eventIds.length > 0 ? supabase.from('events').select('id, title').in('id', eventIds).eq('organization_id', organizationId) : { data: [] }
+      ]);
+
+      // Create lookup maps
+      const childrenMap = (childrenData.data || []).reduce((acc, child) => {
+        acc[child.id] = child;
+        return acc;
+      }, {});
+      
+      const guardiansMap = (guardiansData.data || []).reduce((acc, guardian) => {
+        acc[guardian.id] = guardian;
+        return acc;
+      }, {});
+      
+      const eventsMap = (eventsData.data || []).reduce((acc, event) => {
+        acc[event.id] = event;
+        return acc;
+      }, {});
+
+      // Combine the data
+      const enrichedLogs = logs.map(log => ({
+        ...log,
+        child: childrenMap[log.child_id] || null,
+        checked_in_by: guardiansMap[log.checked_in_by] || null,
+        checked_out_by: guardiansMap[log.checked_out_by] || null,
+        event: eventsMap[log.event_id] || null
+      }));
+
+      console.log('📊 Enriched logs sample:', enrichedLogs.slice(0, 2));
+      setAllCheckinHistory(enrichedLogs);
     } catch (error) {
       console.error('Error fetching all check-in history:', error);
     }
@@ -237,9 +378,10 @@ export default function ChildrenCheckin() {
         .from('child_checkin_logs')
         .select(`
           *,
-          child:child_id(*),
-          checked_in_by(*),
-          checked_out_by(*)
+          child:members!child_checkin_logs_child_id_fkey(*),
+          checked_in_by:members!child_checkin_logs_checked_in_by_fkey(*),
+          checked_out_by:members!child_checkin_logs_checked_out_by_fkey(*),
+          event:events!child_checkin_logs_event_id_fkey(*)
         `)
         .eq('event_id', selectedEvent.id);
 
@@ -264,12 +406,20 @@ export default function ChildrenCheckin() {
     <div className="w-full max-w-full overflow-x-hidden px-0 sm:px-4 sm:rounded-lg sm:shadow bg-background box-border">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 px-2 md:px-0 w-full">
         <h1 className="text-3xl md:text-4xl font-bold text-foreground w-full md:w-auto">Children Check-in</h1>
-        <a
-          href="/children-check-in/add"
-          className="w-full md:w-auto mt-2 md:mt-0 bg-primary text-primary-foreground px-6 md:px-6 py-3 md:py-3 rounded-lg text-lg md:text-lg font-medium hover:bg-primary/90 h-14 md:h-14 flex items-center justify-center transition-colors"
-        >
-          Add Child
-        </a>
+        <div className="flex gap-2 w-full md:w-auto">
+          <a
+            href="/children-check-in/add"
+            className="flex-1 md:flex-none bg-primary text-primary-foreground px-6 md:px-6 py-3 md:py-3 rounded-lg text-lg md:text-lg font-medium hover:bg-primary/90 h-14 md:h-14 flex items-center justify-center transition-colors"
+          >
+            Add Child
+          </a>
+          <a
+            href="/members"
+            className="flex-1 md:flex-none bg-secondary text-secondary-foreground px-6 md:px-6 py-3 md:py-3 rounded-lg text-lg md:text-lg font-medium hover:bg-secondary/90 h-14 md:h-14 flex items-center justify-center transition-colors"
+          >
+            Manage Members
+          </a>
+        </div>
       </div>
 
       {/* Event Selection */}
@@ -308,12 +458,20 @@ export default function ChildrenCheckin() {
 
                 return (
                   <div key={child.id} className="border border-border p-4 md:p-4 rounded-lg bg-muted/50 w-full">
-                    <div className="flex items-center gap-3 md:gap-3 mb-3 md:mb-3">
-                      <Avatar className="h-12 w-12 md:h-12 md:w-12">
-                        <AvatarImage src={child.image_url} />
-                        <AvatarFallback className="text-lg md:text-lg bg-muted text-muted-foreground">{getInitials(child.firstname, child.lastname)}</AvatarFallback>
-                      </Avatar>
-                      <h3 className="text-lg md:text-lg font-medium text-foreground">{child.firstname} {child.lastname}</h3>
+                    <div className="flex items-center justify-between mb-3 md:mb-3">
+                      <div className="flex items-center gap-3 md:gap-3">
+                        <Avatar className="h-12 w-12 md:h-12 md:w-12">
+                          <AvatarImage src={child.image_url} />
+                          <AvatarFallback className="text-lg md:text-lg bg-muted text-muted-foreground">{getInitials(child.firstname, child.lastname)}</AvatarFallback>
+                        </Avatar>
+                        <h3 className="text-lg md:text-lg font-medium text-foreground">{child.firstname} {child.lastname}</h3>
+                      </div>
+                      <a
+                        href={`/edit-child/${child.id}`}
+                        className="text-sm bg-secondary text-secondary-foreground px-3 py-1 rounded hover:bg-secondary/90"
+                      >
+                        Edit
+                      </a>
                     </div>
                     {!isCheckedIn ? (
                       <div className="mt-3 md:mt-3">
@@ -327,7 +485,7 @@ export default function ChildrenCheckin() {
                           <option value="">Select guardian</option>
                           {childGuardians.map(guardian => (
                             <option key={guardian.id} value={guardian.guardian_id}>
-                              {guardian.guardian.firstname} {guardian.guardian.lastname}
+                              {guardian.guardian?.firstname || ''} {guardian.guardian?.lastname || ''}
                             </option>
                           ))}
                         </select>
@@ -364,7 +522,7 @@ export default function ChildrenCheckin() {
                             {log.child.firstname} {log.child.lastname}
                           </h3>
                           <p className="text-lg md:text-lg text-muted-foreground">
-                            Checked in by: {log.checked_in_by.firstname} {log.checked_in_by.lastname}
+                            Checked in by: {log.checked_in_by?.firstname || ''} {log.checked_in_by?.lastname || ''}
                           </p>
                         </div>
                       </div>
@@ -379,7 +537,7 @@ export default function ChildrenCheckin() {
                           <option value="">Select guardian</option>
                           {childGuardians.map(guardian => (
                             <option key={guardian.id} value={guardian.guardian_id}>
-                              {guardian.guardian.firstname} {guardian.guardian.lastname}
+                              {guardian.guardian?.firstname || ''} {guardian.guardian?.lastname || ''}
                             </option>
                           ))}
                         </select>
@@ -398,11 +556,11 @@ export default function ChildrenCheckin() {
               <ul className="space-y-4">
                 {allCheckinHistory.map(log => (
                   <li key={log.id} className="border border-border rounded-lg p-4 bg-muted/50">
-                    <div className="font-semibold text-lg">{log.child.firstname} {log.child.lastname}</div>
+                    <div className="font-semibold text-lg">{log.child?.firstname || ''} {log.child?.lastname || ''}</div>
                     <div className="text-base text-muted-foreground">{log.event?.title}</div>
                     <div className="text-base">Checked in: {log.check_in_time ? format(new Date(log.check_in_time), 'MMM d, yyyy h:mm a') : '-'}</div>
                     <div className="text-base">Checked out: {log.check_out_time ? format(new Date(log.check_out_time), 'MMM d, yyyy h:mm a') : '-'}</div>
-                    <div className="text-base text-muted-foreground">Guardian: {log.checked_in_by?.firstname} {log.checked_in_by?.lastname}</div>
+                    <div className="text-base text-muted-foreground">Guardian: {log.checked_in_by?.firstname || ''} {log.checked_in_by?.lastname || ''}</div>
                   </li>
                 ))}
               </ul>
@@ -432,7 +590,7 @@ export default function ChildrenCheckin() {
                   {allCheckinHistory.map(log => (
                     <tr key={log.id}>
                       <td className="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap">
-                        {log.child.firstname} {log.child.lastname}
+                        {log.child?.firstname || ''} {log.child?.lastname || ''}
                       </td>
                       <td className="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap">
                         {log.event?.title}
@@ -444,7 +602,7 @@ export default function ChildrenCheckin() {
                         {log.check_out_time ? format(new Date(log.check_out_time), 'MMM d, yyyy h:mm a') : ''}
                       </td>
                       <td className="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap">
-                        {log.checked_in_by?.firstname} {log.checked_in_by?.lastname}
+                        {log.checked_in_by?.firstname || ''} {log.checked_in_by?.lastname || ''}
                       </td>
                     </tr>
                   ))}

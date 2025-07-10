@@ -11,6 +11,14 @@ const getCurrentUserOrganizationId = async () => {
       return impersonationData.organization_id;
     }
 
+    // Check if we're impersonating an organization directly
+    const impersonatingOrg = localStorage.getItem('impersonating_organization');
+    if (impersonatingOrg) {
+      const impersonationData = JSON.parse(impersonatingOrg);
+      console.log('🔍 [SMSService] Using impersonated organization ID:', impersonationData.organization_id);
+      return impersonationData.organization_id;
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 

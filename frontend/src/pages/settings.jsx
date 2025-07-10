@@ -8,6 +8,7 @@ import DataManagementSettings from '@/components/settings/DataManagementSettings
 import UserManagementSettings from '@/components/settings/UserManagementSettings';
 import PendingApprovals from '@/components/settings/PendingApprovals';
 import AutomationSettings from '@/components/settings/AutomationSettings';
+import DemoSystemSettings from '@/components/settings/DemoSystemSettings';
 import { isUserAdmin } from '@/lib/data';
 
 export function Settings() {
@@ -68,6 +69,7 @@ export function Settings() {
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="automation">Automation</TabsTrigger>
+            {isAdmin && <TabsTrigger value="demo">Demo System</TabsTrigger>}
             <TabsTrigger value="data">Data Management</TabsTrigger>
           </TabsList>
         </div>
@@ -97,6 +99,12 @@ export function Settings() {
         <TabsContent value="automation">
           <AutomationSettings />
         </TabsContent>
+        
+        {isAdmin && (
+          <TabsContent value="demo">
+            <DemoSystemSettings />
+          </TabsContent>
+        )}
         
         <TabsContent value="data">
           <DataManagementSettings />

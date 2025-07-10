@@ -318,58 +318,12 @@ export function AdminCenter() {
     }
   };
 
+
+
   const handleLoginAsOrganization = async (org) => {
     console.log('Attempting to login as organization:', org);
     
     try {
-      // Find an admin user in this organization to impersonate
-      const { data: adminUsers, error } = await supabase
-        .from('organization_users')
-        .select('user_id, role, approval_status')
-        .eq('organization_id', org.id)
-        .eq('role', 'admin')
-        .eq('approval_status', 'approved')
-        .limit(1);
-
-      if (error) {
-        console.error('Error finding admin users:', error);
-        toast({
-          title: "Error",
-          description: "Failed to find organization administrators",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      if (!adminUsers || adminUsers.length === 0) {
-        toast({
-          title: "No Admins Found",
-          description: "This organization has no approved administrators to login as",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const adminUser = adminUsers[0];
-      console.log('Found admin user to impersonate:', adminUser);
-
-      // Get the member details for this admin user
-      const { data: memberData, error: memberError } = await supabase
-        .from('members')
-        .select('firstname, lastname, email')
-        .eq('user_id', adminUser.user_id)
-        .single();
-
-      if (memberError) {
-        console.error('Error fetching member details for admin user:', memberError);
-        toast({
-          title: "Error",
-          description: "Failed to load admin user details",
-          variant: "destructive"
-        });
-        return;
-      }
-
       // Store current session info for later restoration
       localStorage.setItem('system_admin_session', JSON.stringify({
         user_id: user.id,
@@ -378,56 +332,21 @@ export function AdminCenter() {
         timestamp: new Date().toISOString()
       }));
 
-      // Mark that we're impersonating a user
-      localStorage.setItem('impersonating_user', JSON.stringify({
-        user_id: adminUser.user_id,
+      // Mark that we're impersonating an organization (not a specific user)
+      localStorage.setItem('impersonating_organization', JSON.stringify({
         organization_id: org.id,
         organization_name: org.name,
-        admin_name: `${memberData.firstname} ${memberData.lastname}`,
-        admin_email: memberData.email
+        admin_name: 'System Admin',
+        admin_email: user.email
       }));
 
-      try {
-        // Generate a magic link for the admin user to sign them in
-        const { data: magicLink, error: magicError } = await supabase.auth.admin.generateLink({
-          type: 'magiclink',
-          email: memberData.email,
-          redirect_to: `${window.location.origin}/dashboard`
-        });
-
-        if (magicError) {
-          console.error('Error generating magic link:', magicError);
-          
-          // Fallback: Just navigate with localStorage flags
-          toast({
-            title: "Switching to Organization",
-            description: `Logging in as ${memberData.firstname} ${memberData.lastname} for ${org.name}`,
-          });
-          
-          // Navigate to dashboard with impersonation flag
-          navigate('/dashboard');
-          return;
-        }
-
-        // Sign out current user and sign in as the organization admin
-        await supabase.auth.signOut();
-        
-        // Use the magic link to sign in as the organization admin
-        window.location.href = magicLink.properties.action_link;
-        
-      } catch (authError) {
-        console.error('Error during authentication switch:', authError);
-        
-        // Clear impersonation flags on error
-        localStorage.removeItem('impersonating_user');
-        localStorage.removeItem('system_admin_session');
-        
-        toast({
-          title: "Error",
-          description: "Failed to switch to organization admin. Please try again.",
-          variant: "destructive"
-        });
-      }
+      toast({
+        title: "Switching to Organization",
+        description: `Logging in as system admin for ${org.name}`,
+      });
+      
+      // Navigate to dashboard with impersonation flag
+      navigate('/dashboard');
       
     } catch (error) {
       console.error('Error during login as:', error);
@@ -572,7 +491,7 @@ export function AdminCenter() {
       {/* Main Tabs - Only show if user has admin access */}
       {adminStatus && (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="organizations" className="flex items-center space-x-2">
             <Church className="h-4 w-4" />
             <span>Organizations</span>
@@ -580,6 +499,10 @@ export function AdminCenter() {
           <TabsTrigger value="users" className="flex items-center space-x-2">
             <Users className="h-4 w-4" />
             <span>Users</span>
+          </TabsTrigger>
+          <TabsTrigger value="demo" className="flex items-center space-x-2">
+            <Database className="h-4 w-4" />
+            <span>Demo System</span>
           </TabsTrigger>
         </TabsList>
 
@@ -755,6 +678,201 @@ export function AdminCenter() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* Demo System Tab */}
+        <TabsContent value="demo" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-bold">Demo System</h2>
+              <p className="text-slate-600 dark:text-slate-400">Manage automated demo data generation for all organizations</p>
+            </div>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Database className="h-5 w-5" />
+                <span>System-Wide Demo Controls</span>
+              </CardTitle>
+              <CardDescription>
+                Generate and manage demo data across all organizations in the system
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid gap-6 md:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Demo Data Overview</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                        <div className="text-2xl font-bold text-blue-600">{stats?.organizations?.total || 0}</div>
+                        <div className="text-sm text-blue-800 dark:text-blue-200">Organizations</div>
+                      </div>
+                      <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                        <div className="text-2xl font-bold text-green-600">{stats?.members?.total || 0}</div>
+                        <div className="text-sm text-green-800 dark:text-green-200">Total Members</div>
+                      </div>
+                    </div>
+                    <div className="text-sm text-slate-600 dark:text-slate-400">
+                      Demo data generation creates realistic church management scenarios with:
+                      <ul className="mt-2 space-y-1 list-disc list-inside">
+                        <li>100 members per organization</li>
+                        <li>6 months of historical events</li>
+                        <li>Realistic attendance patterns</li>
+                        <li>Weekly donation records</li>
+                        <li>Member profile images</li>
+                      </ul>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Demo Instructions</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-3 text-sm">
+                      <div className="flex items-start space-x-2">
+                        <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-xs font-bold text-blue-600">1</div>
+                        <div>
+                          <strong>Deploy Edge Functions:</strong><br />
+                          Run <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">npx supabase functions deploy</code>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-2">
+                        <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-xs font-bold text-blue-600">2</div>
+                        <div>
+                          <strong>Login as Organization:</strong><br />
+                          Use "Login as Org" button in Organizations tab
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-2">
+                        <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-xs font-bold text-blue-600">3</div>
+                        <div>
+                          <strong>Access Demo System:</strong><br />
+                          Go to Settings → Demo System in the organization
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-2">
+                        <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-xs font-bold text-blue-600">4</div>
+                        <div>
+                          <strong>Generate Data:</strong><br />
+                          Click "Generate Initial Demo Data"
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Edge Functions Status</CardTitle>
+                  <CardDescription>
+                    Required Supabase Edge Functions for demo data generation
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <div>
+                          <div className="font-medium">generate-demo-data</div>
+                          <div className="text-sm text-slate-600 dark:text-slate-400">
+                            Creates initial demo data (100 members, events, attendance, donations)
+                          </div>
+                        </div>
+                      </div>
+                      <Badge variant="secondary">Function</Badge>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <div>
+                          <div className="font-medium">weekly-demo-maintenance</div>
+                          <div className="text-sm text-slate-600 dark:text-slate-400">
+                            Automated weekly data refresh (new events, attendance, visitors)
+                          </div>
+                        </div>
+                      </div>
+                      <Badge variant="secondary">Function</Badge>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <div className="flex items-start space-x-2">
+                      <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
+                      <div className="text-sm">
+                        <p className="font-medium text-blue-800 dark:text-blue-200">Deployment Command</p>
+                        <div className="text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded mt-1 font-mono text-xs">
+                          <div>npx supabase functions deploy generate-demo-data</div>
+                          <div>npx supabase functions deploy weekly-demo-maintenance</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Demo Data Features</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-3">
+                      <h4 className="font-medium">Member Generation</h4>
+                      <ul className="text-sm space-y-1 text-slate-600 dark:text-slate-400">
+                        <li>• Realistic names and demographics</li>
+                        <li>• Profile images from various services</li>
+                        <li>• Varied attendance patterns</li>
+                        <li>• Contact information</li>
+                        <li>• Gender and member type data</li>
+                      </ul>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <h4 className="font-medium">Event & Attendance</h4>
+                      <ul className="text-sm space-y-1 text-slate-600 dark:text-slate-400">
+                        <li>• Weekly Sunday services</li>
+                        <li>• Wednesday Bible studies</li>
+                        <li>• Monthly fellowship events</li>
+                        <li>• Seasonal attendance variations</li>
+                        <li>• Realistic check-in patterns</li>
+                      </ul>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <h4 className="font-medium">Financial Data</h4>
+                      <ul className="text-sm space-y-1 text-slate-600 dark:text-slate-400">
+                        <li>• Weekly donation records</li>
+                        <li>• Varied giving amounts</li>
+                        <li>• Different payment methods</li>
+                        <li>• Donor behavior patterns</li>
+                        <li>• 26 weeks of history</li>
+                      </ul>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <h4 className="font-medium">Automation</h4>
+                      <ul className="text-sm space-y-1 text-slate-600 dark:text-slate-400">
+                        <li>• Weekly data maintenance</li>
+                        <li>• New visitor additions</li>
+                        <li>• Upcoming event generation</li>
+                        <li>• Data cleanup (&gt;1 year old)</li>
+                        <li>• Self-maintaining system</li>
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
       )}
