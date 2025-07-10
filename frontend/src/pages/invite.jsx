@@ -151,26 +151,19 @@ export function Invite() {
         .maybeSingle();
 
       if (existingMember) {
-        // If the existing member has no user_id, update it with the new auth user ID
-        if (!existingMember.user_id) {
-          const { error: updateMemberError } = await supabase
-            .from('members')
-            .update({
-              user_id: authData.user.id,
-              organization_id: invitation.organization_id,
-              status: 'active'
-            })
-            .eq('id', existingMember.id);
+        // Update the existing member record with the auth user ID
+        const { error: updateMemberError } = await supabase
+          .from('members')
+          .update({
+            user_id: authData.user.id,
+            organization_id: invitation.organization_id,
+            status: 'active'
+          })
+          .eq('id', existingMember.id);
 
-          if (updateMemberError) throw updateMemberError;
-        } else {
-          // If the existing member has a different user_id, this is a conflict
-          throw new Error('Email is already associated with another user account');
-        }
-      }
-
-      // Only create new member record if one doesn't already exist
-      if (!existingMember) {
+        if (updateMemberError) throw updateMemberError;
+      } else {
+        // Only create new member record if one doesn't already exist
         const { error: memberError } = await supabase
           .from('members')
           .insert({
