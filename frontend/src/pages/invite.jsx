@@ -143,40 +143,22 @@ export function Invite() {
 
       if (authError) throw authError;
 
-      // Check if member record already exists
-      const { data: existingMember, error: memberCheckError } = await supabase
+      // Update the existing member record with the auth user ID
+      console.log('Updating existing member record with user ID');
+      const { error: updateMemberError } = await supabase
         .from('members')
-        .select('id, user_id')
-        .eq('email', invitation.email)
-        .maybeSingle();
+        .update({
+          user_id: authData.user.id,
+          organization_id: invitation.organization_id,
+          status: 'active'
+        })
+        .eq('email', invitation.email);
 
-      if (existingMember) {
-        // Update the existing member record with the auth user ID
-        const { error: updateMemberError } = await supabase
-          .from('members')
-          .update({
-            user_id: authData.user.id,
-            organization_id: invitation.organization_id,
-            status: 'active'
-          })
-          .eq('id', existingMember.id);
-
-        if (updateMemberError) throw updateMemberError;
-      } else {
-        // Only create new member record if one doesn't already exist
-        const { error: memberError } = await supabase
-          .from('members')
-          .insert({
-            id: authData.user.id, // Use the same ID as the auth user
-            firstname: invitation.first_name,
-            lastname: invitation.last_name,
-            email: invitation.email,
-            status: 'active',
-            organization_id: invitation.organization_id
-          });
-
-        if (memberError) throw memberError;
+      if (updateMemberError) {
+        console.error('Error updating member:', updateMemberError);
+        throw updateMemberError;
       }
+      console.log('Successfully updated member with user ID');
 
       // Create organization membership
       const { error: membershipError } = await supabase
