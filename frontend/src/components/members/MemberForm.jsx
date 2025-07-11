@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { familyService } from '@/lib/familyService';
 
 function centerAspectCrop(mediaWidth, mediaHeight, aspect) {
@@ -502,17 +503,17 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="space-y-6 max-h-[85vh] overflow-y-auto pr-2">
+      <form onSubmit={handleSubmit} className="h-full flex flex-col">
         {/* Profile Image Section */}
-        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800">
+        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800 shadow-lg mb-6">
           <CardHeader className="text-center pb-4">
-            <CardTitle className="flex items-center justify-center gap-2 text-blue-900 dark:text-blue-100">
+            <CardTitle className="flex items-center justify-center gap-2 text-blue-900 dark:text-blue-100 text-lg">
               {isChild ? <Baby className="h-5 w-5" /> : <User className="h-5 w-5" />}
               Profile Photo
             </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-4">
-            <Avatar className="h-32 w-32 border-4 border-white dark:border-gray-800 shadow-lg">
+            <Avatar className="h-32 w-32 border-4 border-white dark:border-gray-800 shadow-xl">
               <AvatarImage src={memberData.image_url} />
               <AvatarFallback className="text-2xl font-semibold bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
                 {memberData.firstname?.charAt(0)}{memberData.lastname?.charAt(0)}
@@ -531,7 +532,7 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
                 variant="outline" 
                 disabled={isUploading}
                 onClick={() => document.getElementById('image').click()}
-                className="bg-white dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-blue-950 border-blue-300 dark:border-blue-700"
+                className="bg-white dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-blue-950 border-blue-300 dark:border-blue-700 shadow-sm hover:shadow-md transition-all duration-200"
               >
                 <Upload className="mr-2 h-4 w-4" />
                 {isUploading ? 'Uploading...' : 'Upload Photo'}
@@ -540,8 +541,30 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
           </CardContent>
         </Card>
 
-        {/* Basic Information */}
-        <Card className="border-l-4 border-l-blue-500">
+        {/* Tabbed Form Sections */}
+        <Tabs defaultValue="basic" className="flex-1 flex flex-col">
+          <TabsList className="grid w-full grid-cols-4 bg-muted/50 p-1 rounded-xl mb-6">
+            <TabsTrigger value="basic" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <User className="h-4 w-4 mr-2" />
+              Basic Info
+            </TabsTrigger>
+            <TabsTrigger value="contact" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <Phone className="h-4 w-4 mr-2" />
+              Contact
+            </TabsTrigger>
+            <TabsTrigger value="family" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <Heart className="h-4 w-4 mr-2" />
+              Family
+            </TabsTrigger>
+            <TabsTrigger value="additional" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <FileText className="h-4 w-4 mr-2" />
+              Additional
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Basic Information Tab */}
+          <TabsContent value="basic" className="flex-1 space-y-6 overflow-y-auto pr-2">
+            <Card className="border-l-4 border-l-blue-500 shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-blue-900 dark:text-blue-100">
               {isChild ? <Baby className="h-5 w-5" /> : <User className="h-5 w-5" />}
@@ -677,9 +700,52 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
             )}
           </CardContent>
         </Card>
+          </TabsContent>
 
-        {/* Address Information */}
-        <Card className="border-l-4 border-l-indigo-500">
+          {/* Contact Information Tab */}
+          <TabsContent value="contact" className="flex-1 space-y-6 overflow-y-auto pr-2">
+            {/* Email and Phone - Only for Adults */}
+            {!isChild && (
+              <Card className="border-l-4 border-l-green-500 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-green-900 dark:text-green-100">
+                    <Phone className="h-5 w-5" />
+                    Contact Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        value={memberData.email}
+                        onChange={handleFormChange}
+                        className="border-gray-300 dark:border-gray-600 focus:border-green-500"
+                        placeholder="member@example.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone" className="text-sm font-medium">Phone</Label>
+                      <Input
+                        id="phone"
+                        name="phone"
+                        type="tel"
+                        value={memberData.phone}
+                        onChange={handleFormChange}
+                        className="border-gray-300 dark:border-gray-600 focus:border-green-500"
+                        placeholder="(555) 123-4567"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Address Information */}
+            <Card className="border-l-4 border-l-indigo-500 shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-indigo-900 dark:text-indigo-100">
               <MapPin className="h-5 w-5" />
@@ -774,9 +840,12 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
             </div>
           </CardContent>
         </Card>
+          </TabsContent>
 
-        {/* Personal Information */}
-        <Card className="border-l-4 border-l-green-500">
+          {/* Family Information Tab */}
+          <TabsContent value="family" className="flex-1 space-y-6 overflow-y-auto pr-2">
+            {/* Personal Information */}
+            <Card className="border-l-4 border-l-green-500 shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-green-900 dark:text-green-100">
               <User className="h-5 w-5" />
@@ -811,260 +880,276 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
           </CardContent>
         </Card>
 
-        {/* Guardian Information - Only for Children */}
-        {isChild && (
-          <Card className="border-l-4 border-l-orange-500">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-orange-900 dark:text-orange-100">
-                <Shield className="h-5 w-5" />
-                Guardian Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label className="block text-sm font-medium text-gray-700 mb-1">
-                  Select Guardians (Hold Ctrl/Cmd to select multiple)
-                </Label>
-                <select
-                  multiple
-                  value={guardianIds}
-                  onChange={handleGuardianChange}
-                  className="w-full p-2 border rounded border-gray-300 dark:border-gray-600 focus:border-orange-500"
-                  size="5"
-                >
-                  {guardians.map(guardian => (
-                    <option key={guardian.id} value={guardian.id}>
-                      {guardian.firstname} {guardian.lastname}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Guardian Relationships */}
-              {guardianIds.length > 0 && (
-                <div className="mt-4">
-                  <h3 className="text-sm font-medium text-gray-700 mb-2">Guardian Relationships</h3>
-                  <div className="space-y-2">
-                    {guardianIds.map(guardianId => {
-                      const guardian = guardians.find(g => g.id === guardianId);
-                      return (
-                        <div key={guardianId} className="flex items-center gap-4">
-                          <span className="text-sm text-gray-600 min-w-[150px]">
-                            {guardian.firstname} {guardian.lastname}:
-                          </span>
-                          <select
-                            value={guardianRelationships[guardianId] || ''}
-                            onChange={(e) => handleRelationshipChange(guardianId, e.target.value)}
-                            className="flex-1 p-2 border rounded border-gray-300 dark:border-gray-600 focus:border-orange-500"
-                          >
-                            <option value="">Select relationship</option>
-                            <option value="Parent">Parent</option>
-                            <option value="Grandparent">Grandparent</option>
-                            <option value="Legal Guardian">Legal Guardian</option>
-                            <option value="Other">Other</option>
-                          </select>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Family Information - Only for Adults */}
-        {!isChild && (
-          <Card className="border-l-4 border-l-pink-500">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-pink-900 dark:text-pink-100">
-                <Heart className="h-5 w-5" />
-                Family Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-
-            {/* Adult-only fields */}
-            {!isChild && (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="marital_status" className="text-sm font-medium">Marital Status</Label>
-                    <Select
-                      value={memberData.marital_status}
-                      onValueChange={(value) => setMemberData(prev => ({ ...prev, marital_status: value }))}
+            {/* Guardian Information - Only for Children */}
+            {isChild && (
+              <Card className="border-l-4 border-l-orange-500 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-orange-900 dark:text-orange-100">
+                    <Shield className="h-5 w-5" />
+                    Guardian Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label className="block text-sm font-medium text-gray-700 mb-1">
+                      Select Guardians (Hold Ctrl/Cmd to select multiple)
+                    </Label>
+                    <select
+                      multiple
+                      value={guardianIds}
+                      onChange={handleGuardianChange}
+                      className="w-full p-2 border rounded border-gray-300 dark:border-gray-600 focus:border-orange-500"
+                      size="5"
                     >
-                      <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:border-pink-500">
-                        <SelectValue placeholder="Select marital status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="single">Single</SelectItem>
-                        <SelectItem value="married">Married</SelectItem>
-                        <SelectItem value="divorced">Divorced</SelectItem>
-                        <SelectItem value="widowed">Widowed</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      {guardians.map(guardian => (
+                        <option key={guardian.id} value={guardian.id}>
+                          {guardian.firstname} {guardian.lastname}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="spouse_name" className="text-sm font-medium">Spouse Name</Label>
-                    <Input
-                      id="spouse_name"
-                      name="spouse_name"
-                      value={memberData.spouse_name}
-                      onChange={handleFormChange}
-                      placeholder="Spouse's full name"
-                      className="border-gray-300 dark:border-gray-600 focus:border-pink-500"
-                    />
-                  </div>
-                </div>
 
+                  {/* Guardian Relationships */}
+                  {guardianIds.length > 0 && (
+                    <div className="mt-4">
+                      <h3 className="text-sm font-medium text-gray-700 mb-2">Guardian Relationships</h3>
+                      <div className="space-y-2">
+                        {guardianIds.map(guardianId => {
+                          const guardian = guardians.find(g => g.id === guardianId);
+                          return (
+                            <div key={guardianId} className="flex items-center gap-4">
+                              <span className="text-sm text-gray-600 min-w-[150px]">
+                                {guardian.firstname} {guardian.lastname}:
+                              </span>
+                              <select
+                                value={guardianRelationships[guardianId] || ''}
+                                onChange={(e) => handleRelationshipChange(guardianId, e.target.value)}
+                                className="flex-1 p-2 border rounded border-gray-300 dark:border-gray-600 focus:border-orange-500"
+                              >
+                                <option value="">Select relationship</option>
+                                <option value="Parent">Parent</option>
+                                <option value="Grandparent">Grandparent</option>
+                                <option value="Legal Guardian">Legal Guardian</option>
+                                <option value="Other">Other</option>
+                              </select>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Family Information - Only for Adults */}
+            {!isChild && (
+              <Card className="border-l-4 border-l-pink-500 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-pink-900 dark:text-pink-100">
+                    <Heart className="h-5 w-5" />
+                    Family Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="marital_status" className="text-sm font-medium">Marital Status</Label>
+                      <Select
+                        value={memberData.marital_status}
+                        onValueChange={(value) => setMemberData(prev => ({ ...prev, marital_status: value }))}
+                      >
+                        <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:border-pink-500">
+                          <SelectValue placeholder="Select marital status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="single">Single</SelectItem>
+                          <SelectItem value="married">Married</SelectItem>
+                          <SelectItem value="divorced">Divorced</SelectItem>
+                          <SelectItem value="widowed">Widowed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="spouse_name" className="text-sm font-medium">Spouse Name</Label>
+                      <Input
+                        id="spouse_name"
+                        name="spouse_name"
+                        value={memberData.spouse_name}
+                        onChange={handleFormChange}
+                        placeholder="Spouse's full name"
+                        className="border-gray-300 dark:border-gray-600 focus:border-pink-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="anniversary_date" className="text-sm font-medium">Wedding Anniversary</Label>
+                      <Input
+                        id="anniversary_date"
+                        name="anniversary_date"
+                        type="date"
+                        value={memberData.anniversary_date}
+                        onChange={handleFormChange}
+                        className="border-gray-300 dark:border-gray-600 focus:border-pink-500"
+                      />
+                    </div>
+                    <div className="flex items-center space-x-2 p-3 bg-pink-50 dark:bg-pink-950/20 rounded-lg border border-pink-200 dark:border-pink-800">
+                      <Checkbox
+                        id="has_children"
+                        checked={memberData.has_children}
+                        onCheckedChange={(checked) => setMemberData(prev => ({ ...prev, has_children: checked }))}
+                        className="border-pink-300 data-[state=checked]:bg-pink-500"
+                      />
+                      <Label htmlFor="has_children" className="text-sm font-medium text-pink-900 dark:text-pink-100">Has Children</Label>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* Additional Information Tab */}
+          <TabsContent value="additional" className="flex-1 space-y-6 overflow-y-auto pr-2">
+            {/* Emergency Contact */}
+            <Card className="border-l-4 border-l-red-500 shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-red-900 dark:text-red-100">
+                  <Shield className="h-5 w-5" />
+                  Emergency Contact
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="anniversary_date" className="text-sm font-medium">Wedding Anniversary</Label>
+                    <Label htmlFor="emergency_name" className="text-sm font-medium">Emergency Contact Name</Label>
                     <Input
-                      id="anniversary_date"
-                      name="anniversary_date"
-                      type="date"
-                      value={memberData.anniversary_date}
-                      onChange={handleFormChange}
-                      className="border-gray-300 dark:border-gray-600 focus:border-pink-500"
+                      id="emergency_name"
+                      value={memberData.emergency_contact.name}
+                      onChange={(e) => handleEmergencyContactChange('name', e.target.value)}
+                      placeholder="Emergency contact name"
+                      className="border-gray-300 dark:border-gray-600 focus:border-red-500"
                     />
                   </div>
-                  <div className="flex items-center space-x-2 p-3 bg-pink-50 dark:bg-pink-950/20 rounded-lg border border-pink-200 dark:border-pink-800">
-                    <Checkbox
-                      id="has_children"
-                      checked={memberData.has_children}
-                      onCheckedChange={(checked) => setMemberData(prev => ({ ...prev, has_children: checked }))}
-                      className="border-pink-300 data-[state=checked]:bg-pink-500"
+                  <div className="space-y-2">
+                    <Label htmlFor="emergency_phone" className="text-sm font-medium">Emergency Contact Phone</Label>
+                    <Input
+                      id="emergency_phone"
+                      value={memberData.emergency_contact.phone}
+                      onChange={(e) => handleEmergencyContactChange('phone', e.target.value)}
+                      placeholder="Emergency contact phone"
+                      className="border-gray-300 dark:border-gray-600 focus:border-red-500"
                     />
-                    <Label htmlFor="has_children" className="text-sm font-medium text-pink-900 dark:text-pink-100">Has Children</Label>
                   </div>
                 </div>
-              </>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="emergency_relationship" className="text-sm font-medium">Relationship</Label>
+                  <Input
+                    id="emergency_relationship"
+                    value={memberData.emergency_contact.relationship}
+                    onChange={(e) => handleEmergencyContactChange('relationship', e.target.value)}
+                    placeholder="e.g., Spouse, Parent, Friend"
+                    className="border-gray-300 dark:border-gray-600 focus:border-red-500"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Communication Preferences - Only for Adults */}
+            {!isChild && (
+              <Card className="border-l-4 border-l-purple-500 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-purple-900 dark:text-purple-100">
+                    <Mail className="h-5 w-5" />
+                    Communication Preferences
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center space-x-3 p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                    <Checkbox
+                      id="sms_preference"
+                      checked={memberData.communication_preferences.sms}
+                      onCheckedChange={(checked) => handleCommunicationPreferenceChange('sms', checked)}
+                      className="border-purple-300 data-[state=checked]:bg-purple-500"
+                    />
+                    <Label htmlFor="sms_preference" className="text-sm font-medium text-purple-900 dark:text-purple-100">Receive SMS notifications</Label>
+                  </div>
+                  <div className="flex items-center space-x-3 p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                    <Checkbox
+                      id="email_preference"
+                      checked={memberData.communication_preferences.email}
+                      onCheckedChange={(checked) => handleCommunicationPreferenceChange('email', checked)}
+                      className="border-purple-300 data-[state=checked]:bg-purple-500"
+                    />
+                    <Label htmlFor="email_preference" className="text-sm font-medium text-purple-900 dark:text-purple-100">Receive email notifications</Label>
+                  </div>
+                  <div className="flex items-center space-x-3 p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                    <Checkbox
+                      id="mail_preference"
+                      checked={memberData.communication_preferences.mail}
+                      onCheckedChange={(checked) => handleCommunicationPreferenceChange('mail', checked)}
+                      className="border-purple-300 data-[state=checked]:bg-purple-500"
+                    />
+                    <Label htmlFor="mail_preference" className="text-sm font-medium text-purple-900 dark:text-purple-100">Receive mail notifications</Label>
+                  </div>
+                </CardContent>
+              </Card>
             )}
-          </CardContent>
-        </Card>
-        )}
 
-        {/* Emergency Contact */}
-        <Card className="border-l-4 border-l-red-500">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-900 dark:text-red-100">
-              <Shield className="h-5 w-5" />
-              Emergency Contact
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="emergency_name" className="text-sm font-medium">Emergency Contact Name</Label>
-                <Input
-                  id="emergency_name"
-                  value={memberData.emergency_contact.name}
-                  onChange={(e) => handleEmergencyContactChange('name', e.target.value)}
-                  placeholder="Emergency contact name"
-                  className="border-gray-300 dark:border-gray-600 focus:border-red-500"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="emergency_phone" className="text-sm font-medium">Emergency Contact Phone</Label>
-                <Input
-                  id="emergency_phone"
-                  value={memberData.emergency_contact.phone}
-                  onChange={(e) => handleEmergencyContactChange('phone', e.target.value)}
-                  placeholder="Emergency contact phone"
-                  className="border-gray-300 dark:border-gray-600 focus:border-red-500"
-                />
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="emergency_relationship" className="text-sm font-medium">Relationship</Label>
-              <Input
-                id="emergency_relationship"
-                value={memberData.emergency_contact.relationship}
-                onChange={(e) => handleEmergencyContactChange('relationship', e.target.value)}
-                placeholder="e.g., Spouse, Parent, Friend"
-                className="border-gray-300 dark:border-gray-600 focus:border-red-500"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Communication Preferences - Only for Adults */}
-        {!isChild && (
-          <Card className="border-l-4 border-l-purple-500">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-purple-900 dark:text-purple-100">
-                <Mail className="h-5 w-5" />
-                Communication Preferences
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center space-x-3 p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
-                <Checkbox
-                  id="sms_preference"
-                  checked={memberData.communication_preferences.sms}
-                  onCheckedChange={(checked) => handleCommunicationPreferenceChange('sms', checked)}
-                  className="border-purple-300 data-[state=checked]:bg-purple-500"
-                />
-                <Label htmlFor="sms_preference" className="text-sm font-medium text-purple-900 dark:text-purple-100">Receive SMS notifications</Label>
-              </div>
-              <div className="flex items-center space-x-3 p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
-                <Checkbox
-                  id="email_preference"
-                  checked={memberData.communication_preferences.email}
-                  onCheckedChange={(checked) => handleCommunicationPreferenceChange('email', checked)}
-                  className="border-purple-300 data-[state=checked]:bg-purple-500"
-                />
-                <Label htmlFor="email_preference" className="text-sm font-medium text-purple-900 dark:text-purple-100">Receive email notifications</Label>
-              </div>
-              <div className="flex items-center space-x-3 p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
-                <Checkbox
-                  id="mail_preference"
-                  checked={memberData.communication_preferences.mail}
-                  onCheckedChange={(checked) => handleCommunicationPreferenceChange('mail', checked)}
-                  className="border-purple-300 data-[state=checked]:bg-purple-500"
-                />
-                <Label htmlFor="mail_preference" className="text-sm font-medium text-purple-900 dark:text-purple-100">Receive mail notifications</Label>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Notes */}
-        <Card className="border-l-4 border-l-gray-500">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-              <FileText className="h-5 w-5" />
-              Additional Notes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <Label htmlFor="notes" className="text-sm font-medium">Notes</Label>
-              <Textarea
-                id="notes"
-                name="notes"
-                value={memberData.notes}
-                onChange={handleFormChange}
-                placeholder="Any additional notes about this member..."
-                rows={4}
-                className="border-gray-300 dark:border-gray-600 focus:border-gray-500 resize-none"
-              />
-            </div>
-          </CardContent>
-        </Card>
+            {/* Notes */}
+            <Card className="border-l-4 border-l-gray-500 shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+                  <FileText className="h-5 w-5" />
+                  Additional Notes
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Label htmlFor="notes" className="text-sm font-medium">Notes</Label>
+                  <Textarea
+                    id="notes"
+                    name="notes"
+                    value={memberData.notes}
+                    onChange={handleFormChange}
+                    placeholder="Any additional notes about this member..."
+                    rows={4}
+                    className="border-gray-300 dark:border-gray-600 focus:border-gray-500 resize-none"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
 
         {/* Form Actions */}
-        <div className="flex justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg">
-          <Button type="button" variant="outline" onClick={onCancel} className="px-6">
-            Cancel
-          </Button>
-          <Button type="submit" className="px-6 bg-blue-600 hover:bg-blue-700">
-            Save Member
-          </Button>
-        </div>
+        <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20 shadow-lg mt-6">
+          <CardContent className="p-6">
+            <div className="flex justify-between items-center">
+              <div className="text-sm text-muted-foreground">
+                All changes will be saved when you click "Save Changes"
+              </div>
+              <div className="flex gap-3">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={onCancel} 
+                  className="px-6 shadow-sm hover:shadow-md transition-all duration-200"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  className="px-6 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg hover:shadow-xl transition-all duration-200"
+                >
+                  Save Changes
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </form>
 
       <Dialog open={showCropDialog} onOpenChange={setShowCropDialog}>

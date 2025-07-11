@@ -582,10 +582,28 @@ export function People() {
         <EmptyState onAddMember={() => setIsAddDialogOpen(true)} />
       ) : (
         <Tabs defaultValue="list" className="w-full">
-          <TabsList className="mb-4">
-            <TabsTrigger value="grid">Grid View</TabsTrigger>
-            <TabsTrigger value="list">List View</TabsTrigger>
-            <TabsTrigger value="families">Families</TabsTrigger>
+          <TabsList className="mb-4 w-full h-auto min-h-[48px] bg-muted p-1 rounded-lg">
+            <TabsTrigger 
+              value="grid" 
+              className="flex-1 h-10 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+            >
+              <Grid className="w-4 h-4 mr-2 hidden sm:inline" />
+              Grid
+            </TabsTrigger>
+            <TabsTrigger 
+              value="list" 
+              className="flex-1 h-10 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+            >
+              <List className="w-4 h-4 mr-2 hidden sm:inline" />
+              List
+            </TabsTrigger>
+            <TabsTrigger 
+              value="families" 
+              className="flex-1 h-10 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+            >
+              <Heart className="w-4 h-4 mr-2 hidden sm:inline" />
+              Families
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="grid">
