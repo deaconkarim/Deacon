@@ -645,6 +645,30 @@ export function FamilyReports() {
           </DialogHeader>
           {selectedFamily && (
             <div className="space-y-6">
+              {/* Primary Contact Highlight */}
+              {selectedFamily.primary_contact_id && (
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-yellow-900/20 border border-yellow-700 dark:bg-yellow-900/20 dark:border-yellow-700 bg-yellow-100 border-yellow-300 mb-2">
+                  <Crown className="w-5 h-5 text-yellow-400" />
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={
+                      selectedFamily.members.find(m => m.id === selectedFamily.primary_contact_id)?.image_url
+                    } />
+                    <AvatarFallback>
+                      {(() => {
+                        const pc = selectedFamily.members.find(m => m.id === selectedFamily.primary_contact_id);
+                        return pc ? (pc.firstname[0] + (pc.lastname ? pc.lastname[0] : '')) : '?';
+                      })()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="font-semibold text-yellow-800 dark:text-yellow-200">
+                    {(() => {
+                      const pc = selectedFamily.members.find(m => m.id === selectedFamily.primary_contact_id);
+                      return pc ? `${pc.firstname} ${pc.lastname}` : 'Unknown member';
+                    })()}
+                  </span>
+                  <span className="ml-2 text-xs text-yellow-700 dark:text-yellow-300">(Primary Contact)</span>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 rounded-lg bg-muted">
                   <p className="text-sm text-muted-foreground">Family Members</p>

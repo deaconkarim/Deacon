@@ -37,7 +37,7 @@ import { formatName, getInitials, formatPhoneNumber } from '@/lib/utils/formatte
 import { supabase } from '@/lib/supabase';
 import { getDonations } from '@/lib/donationService';
 
-export function MemberProfile() {
+export default function MemberProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();

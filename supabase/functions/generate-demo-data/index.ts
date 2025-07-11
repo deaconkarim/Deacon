@@ -516,6 +516,7 @@ class DemoDataGenerator {
         id: familyId,
         family_name: familyName,
         primary_contact_id: primaryMember.id,
+        organization_id: this.config.organizationId,
         address: {
           street: `${Math.floor(Math.random() * 9999) + 1000} ${['Main', 'Oak', 'Pine', 'Elm', 'Maple'][Math.floor(Math.random() * 5)]} St`,
           city: 'Anytown',

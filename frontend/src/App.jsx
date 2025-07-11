@@ -3,7 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/layout';
 import { Dashboard } from './pages/dashboard';
 import { People } from './pages/members';
-import { MemberProfile } from './pages/member-profile';
+import MemberProfile from './pages/member-profile';
 import Events from './pages/events';
 import { Donations } from './pages/donations';
 import { Groups } from './pages/groups';

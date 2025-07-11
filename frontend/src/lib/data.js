@@ -1319,49 +1319,13 @@ export const rejectUser = async (userId, rejectionReason) => {
 };
 
 export const getApprovalNotifications = async () => {
-  try {
-    const organizationId = await getCurrentUserOrganizationId();
-    if (!organizationId) {
-      console.log('No organization ID found, returning empty array');
-      return [];
-    }
-
-    const { data, error } = await supabase
-      .from('approval_notifications')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .eq('status', 'unread')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching approval notifications:', error);
-      // If table doesn't exist or permission denied, return empty array
-      if (error.code === 'PGRST116' || error.message.includes('permission denied')) {
-        return [];
-      }
-      throw error;
-    }
-    return data || [];
-  } catch (error) {
-    console.error('Error fetching approval notifications:', error);
-    // Return empty array instead of throwing to prevent app crashes
-    return [];
-  }
+  // The approval_notifications table no longer exists, so return empty array
+  return [];
 };
 
 export const markNotificationAsRead = async (notificationId) => {
-  try {
-    const { error } = await supabase
-      .from('approval_notifications')
-      .update({ status: 'read' })
-      .eq('id', notificationId);
-
-    if (error) throw error;
-    return true;
-  } catch (error) {
-    console.error('Error marking notification as read:', error);
-    throw error;
-  }
+  // The approval_notifications table no longer exists, so return true
+  return true;
 };
 
 export const makeUserAdmin = async (userId) => {
