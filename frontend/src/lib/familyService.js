@@ -3,9 +3,24 @@ import { supabase } from './supabaseClient';
 export const familyService = {
   // Get all families with their members
   async getFamilies() {
+    // First, get the current organization ID
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    // Get user's organization
+    const { data: orgUser, error: orgError } = await supabase
+      .from('organization_users')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (orgError || !orgUser) throw new Error('Unable to determine organization');
+
+    // Get families that belong to the current organization
     const { data, error } = await supabase
       .from('family_members_view')
       .select('*')
+      .eq('family_organization_id', orgUser.organization_id)
       .order('family_name', { ascending: true });
 
     if (error) throw error;
@@ -48,10 +63,24 @@ export const familyService = {
 
   // Get a single family by ID
   async getFamily(familyId) {
+    // First, get the current organization ID
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    // Get user's organization
+    const { data: orgUser, error: orgError } = await supabase
+      .from('organization_users')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (orgError || !orgUser) throw new Error('Unable to determine organization');
+
     const { data, error } = await supabase
       .from('family_members_view')
       .select('*')
       .eq('family_id', familyId)
+      .eq('family_organization_id', orgUser.organization_id)
       .order('firstname', { ascending: true });
 
     if (error) throw error;
@@ -92,9 +121,28 @@ export const familyService = {
 
   // Create a new family
   async createFamily(familyData) {
+    // First, get the current organization ID
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    // Get user's organization
+    const { data: orgUser, error: orgError } = await supabase
+      .from('organization_users')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (orgError || !orgUser) throw new Error('Unable to determine organization');
+
+    // Add organization_id to family data
+    const familyDataWithOrg = {
+      ...familyData,
+      organization_id: orgUser.organization_id
+    };
+
     const { data, error } = await supabase
       .from('families')
-      .insert(familyData)
+      .insert(familyDataWithOrg)
       .select()
       .single();
 
@@ -169,10 +217,24 @@ export const familyService = {
 
   // Get members not in any family
   async getUnassignedMembers() {
-    // First, get all members
+    // First, get the current organization ID
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    // Get user's organization
+    const { data: orgUser, error: orgError } = await supabase
+      .from('organization_users')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (orgError || !orgUser) throw new Error('Unable to determine organization');
+
+    // First, get all members in the current organization
     const { data: allMembers, error: membersError } = await supabase
       .from('members')
       .select('*')
+      .eq('organization_id', orgUser.organization_id)
       .order('firstname', { ascending: true });
 
     if (membersError) throw membersError;
@@ -194,10 +256,24 @@ export const familyService = {
 
   // Get members that could be added to a family
   async getAvailableMembers(familyId) {
-    // First, get all members
+    // First, get the current organization ID
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    // Get user's organization
+    const { data: orgUser, error: orgError } = await supabase
+      .from('organization_users')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (orgError || !orgUser) throw new Error('Unable to determine organization');
+
+    // First, get all members in the current organization
     const { data: allMembers, error: membersError } = await supabase
       .from('members')
       .select('*')
+      .eq('organization_id', orgUser.organization_id)
       .order('firstname', { ascending: true });
 
     if (membersError) throw membersError;
@@ -246,17 +322,35 @@ export const familyService = {
 
   // Get family statistics
   async getFamilyStats() {
-    // Get all families
-    const { data: families, error: familiesError } = await supabase
-      .from('families')
-      .select('id');
+    // First, get the current organization ID
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    // Get user's organization
+    const { data: orgUser, error: orgError } = await supabase
+      .from('organization_users')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (orgError || !orgUser) throw new Error('Unable to determine organization');
+
+    // Get families that belong to the current organization
+    const { data: familyData, error: familiesError } = await supabase
+      .from('family_members_view')
+      .select('family_id')
+      .eq('family_organization_id', orgUser.organization_id);
 
     if (familiesError) throw familiesError;
 
-    // Get all members
+    // Get unique family IDs
+    const uniqueFamilies = new Set(familyData.map(f => f.family_id));
+
+    // Get all members in the current organization
     const { data: members, error: membersError } = await supabase
       .from('members')
-      .select('id, member_type');
+      .select('id, member_type')
+      .eq('organization_id', orgUser.organization_id);
 
     if (membersError) throw membersError;
 
@@ -271,7 +365,7 @@ export const familyService = {
     const membersInFamilies = new Set(familyRelationships.map(fr => fr.member_id));
     
     const stats = {
-      totalFamilies: families.length,
+      totalFamilies: uniqueFamilies.size,
       totalMembers: members.length,
       adults: members.filter(m => m.member_type === 'adult').length,
       children: members.filter(m => m.member_type === 'child').length,

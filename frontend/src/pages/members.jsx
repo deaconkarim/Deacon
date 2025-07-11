@@ -74,6 +74,7 @@ export function People() {
   const [availableMembers, setAvailableMembers] = useState([]);
   const [isFamilyDetailsDialogOpen, setIsFamilyDetailsDialogOpen] = useState(false);
   const [selectedFamilyForDetails, setSelectedFamilyForDetails] = useState(null);
+  const [memberSearchQuery, setMemberSearchQuery] = useState('');
   const { toast } = useToast();
   const { user } = useAuth();
   const [memberAttendance, setMemberAttendance] = useState({});
@@ -153,6 +154,7 @@ export function People() {
 
   const handleEditFamily = async (family) => {
     setSelectedFamily(family);
+    setMemberSearchQuery(''); // Clear search query when dialog opens
     try {
       // Get members that can be added to this family (unassigned + current family members)
       const available = await familyService.getAvailableMembers(family.id);
@@ -1257,65 +1259,246 @@ export function People() {
               {/* Add Members */}
               <div className="space-y-3">
                 <h4 className="text-sm font-medium">Add Members</h4>
-                {availableMembers.filter(m => !selectedFamily.members.find(fm => fm.id === m.id)).length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No available members to add.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {availableMembers
+                <div className="space-y-3">
+                  {/* Search Input */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search members to add..."
+                      value={memberSearchQuery}
+                      onChange={(e) => setMemberSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  
+                  {/* Smart Suggestions */}
+                  {(() => {
+                    const familyName = selectedFamily?.family_name?.toLowerCase() || '';
+                    const familyNameWords = familyName.split(/\s+/).filter(word => word.length > 2);
+                    
+                    // Get suggested members based on family name
+                    const suggestedMembers = availableMembers
                       .filter(m => !selectedFamily.members.find(fm => fm.id === m.id))
-                      .map((member) => (
-                        <div 
-                          key={member.id} 
-                          className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-muted/50"
-                          onClick={() => navigate(`/members/${member.id}`)}
-                        >
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={member.image_url} />
-                              <AvatarFallback className="text-xs">
-                                {getInitials(member.firstname, member.lastname)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <div className="font-medium text-sm">
-                                {member.firstname} {member.lastname}
+                      .filter(m => {
+                        const memberLastName = m.lastname?.toLowerCase() || '';
+                        const memberFirstName = m.firstname?.toLowerCase() || '';
+                        
+                        // Check if any word in family name matches member's last name
+                        const lastNameMatch = familyNameWords.some(word => 
+                          memberLastName.includes(word) || word.includes(memberLastName)
+                        );
+                        
+                        // Check if family name contains member's last name
+                        const familyContainsLastName = familyName.includes(memberLastName);
+                        
+                        // Check if member's last name contains family name
+                        const lastNameContainsFamily = memberLastName.includes(familyName);
+                        
+                        return lastNameMatch || familyContainsLastName || lastNameContainsFamily;
+                      })
+                      .slice(0, 3); // Limit to top 3 suggestions
+                    
+                    // Get filtered members based on search query
+                    const filteredMembers = availableMembers
+                      .filter(m => !selectedFamily.members.find(fm => fm.id === m.id))
+                      .filter(m => 
+                        m.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                        m.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                        m.email?.toLowerCase().includes(memberSearchQuery.toLowerCase())
+                      );
+                    
+                    // Show suggestions if no search query and we have suggestions
+                    if (!memberSearchQuery && suggestedMembers.length > 0) {
+                      return (
+                        <div className="space-y-3">
+                          <div className="text-xs font-medium text-muted-foreground">
+                            Suggested members for "{selectedFamily?.family_name}":
+                          </div>
+                          <div className="space-y-2">
+                            {suggestedMembers.map((member) => (
+                              <div 
+                                key={member.id} 
+                                className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-muted/50 bg-blue-50 border-blue-200"
+                                onClick={() => navigate(`/members/${member.id}`)}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarImage src={member.image_url} />
+                                    <AvatarFallback className="text-xs">
+                                      {getInitials(member.firstname, member.lastname)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <div className="font-medium text-sm">
+                                      {member.firstname} {member.lastname}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {member.member_type} • {member.email}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Select
+                                    defaultValue="other"
+                                    onValueChange={(value) => handleAddMemberToFamily(member.id, value)}
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <SelectTrigger className="w-32">
+                                      <SelectValue placeholder="Relationship" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="spouse">Spouse</SelectItem>
+                                      <SelectItem value="parent">Parent</SelectItem>
+                                      <SelectItem value="child">Child</SelectItem>
+                                      <SelectItem value="sibling">Sibling</SelectItem>
+                                      <SelectItem value="other">Other</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <Button
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleAddMemberToFamily(member.id, 'other');
+                                    }}
+                                  >
+                                    Add
+                                  </Button>
+                                </div>
                               </div>
-                              <div className="text-xs text-muted-foreground">
-                                {member.member_type}
+                            ))}
+                          </div>
+                          {filteredMembers.length > 0 && (
+                            <div className="pt-2 border-t">
+                              <div className="text-xs font-medium text-muted-foreground mb-2">
+                                All available members:
+                              </div>
+                              <div className="space-y-2 max-h-40 overflow-y-auto">
+                                {filteredMembers.map((member) => (
+                                  <div 
+                                    key={member.id} 
+                                    className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-muted/50"
+                                    onClick={() => navigate(`/members/${member.id}`)}
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <Avatar className="h-8 w-8">
+                                        <AvatarImage src={member.image_url} />
+                                        <AvatarFallback className="text-xs">
+                                          {getInitials(member.firstname, member.lastname)}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div>
+                                        <div className="font-medium text-sm">
+                                          {member.firstname} {member.lastname}
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">
+                                          {member.member_type} • {member.email}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Select
+                                        defaultValue="other"
+                                        onValueChange={(value) => handleAddMemberToFamily(member.id, value)}
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <SelectTrigger className="w-32">
+                                          <SelectValue placeholder="Relationship" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="spouse">Spouse</SelectItem>
+                                          <SelectItem value="parent">Parent</SelectItem>
+                                          <SelectItem value="child">Child</SelectItem>
+                                          <SelectItem value="sibling">Sibling</SelectItem>
+                                          <SelectItem value="other">Other</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                      <Button
+                                        size="sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleAddMemberToFamily(member.id, 'other');
+                                        }}
+                                      >
+                                        Add
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
                             </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Select
-                              defaultValue="other"
-                              onValueChange={(value) => handleAddMemberToFamily(member.id, value)}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <SelectTrigger className="w-32">
-                                <SelectValue placeholder="Relationship" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="spouse">Spouse</SelectItem>
-                                <SelectItem value="parent">Parent</SelectItem>
-                                <SelectItem value="child">Child</SelectItem>
-                                <SelectItem value="sibling">Sibling</SelectItem>
-                                <SelectItem value="other">Other</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <Button
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleAddMemberToFamily(member.id, 'other');
-                              }}
-                            >
-                              Add
-                            </Button>
-                          </div>
+                          )}
                         </div>
-                      ))}
-                  </div>
-                )}
+                      );
+                    }
+                    
+                    // Show filtered results when searching
+                    if (filteredMembers.length === 0) {
+                      return (
+                        <div className="text-center py-4">
+                          <p className="text-sm text-muted-foreground">
+                            {memberSearchQuery ? 'No members found matching your search.' : 'No available members to add.'}
+                          </p>
+                        </div>
+                      );
+                    }
+                    
+                    return (
+                      <div className="space-y-2 max-h-60 overflow-y-auto">
+                        {filteredMembers.map((member) => (
+                          <div 
+                            key={member.id} 
+                            className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-muted/50"
+                            onClick={() => navigate(`/members/${member.id}`)}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src={member.image_url} />
+                                <AvatarFallback className="text-xs">
+                                  {getInitials(member.firstname, member.lastname)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <div className="font-medium text-sm">
+                                  {member.firstname} {member.lastname}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {member.member_type} • {member.email}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Select
+                                defaultValue="other"
+                                onValueChange={(value) => handleAddMemberToFamily(member.id, value)}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <SelectTrigger className="w-32">
+                                  <SelectValue placeholder="Relationship" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="spouse">Spouse</SelectItem>
+                                  <SelectItem value="parent">Parent</SelectItem>
+                                  <SelectItem value="child">Child</SelectItem>
+                                  <SelectItem value="sibling">Sibling</SelectItem>
+                                  <SelectItem value="other">Other</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <Button
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAddMemberToFamily(member.id, 'other');
+                                }}
+                              >
+                                Add
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
             </div>
           )}

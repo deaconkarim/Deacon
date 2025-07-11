@@ -178,6 +178,7 @@ SELECT
     fr.relationship_type,
     fr.related_member_id,
     fr.is_primary,
+    m.organization_id as member_organization_id,
     m.created_at as member_created_at
 FROM public.families f
 LEFT JOIN public.family_relationships fr ON f.id = fr.family_id
