@@ -67,7 +67,8 @@ export function People() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isFamilyDialogOpen, setIsFamilyDialogOpen] = useState(false);
   const [newFamily, setNewFamily] = useState({
-    family_name: ''
+    family_name: '',
+    primary_contact_id: ''
   });
   const [isEditFamilyDialogOpen, setIsEditFamilyDialogOpen] = useState(false);
   const [selectedFamily, setSelectedFamily] = useState(null);
@@ -136,7 +137,8 @@ export function People() {
       await loadFamilies(); // Reload families to get the complete data with members
       setIsFamilyDialogOpen(false);
       setNewFamily({
-        family_name: ''
+        family_name: '',
+        primary_contact_id: ''
       });
       toast({
         title: "Success",
@@ -239,6 +241,24 @@ export function People() {
       toast({
         title: "Error",
         description: "Failed to update family name",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateFamilyPrimaryContact = async (familyId, primaryContactId) => {
+    try {
+      await familyService.updateFamily(familyId, { primary_contact_id: primaryContactId || null });
+      await loadFamilies();
+      toast({
+        title: "Success",
+        description: "Primary contact updated successfully"
+      });
+    } catch (error) {
+      console.error('Error updating primary contact:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update primary contact",
         variant: "destructive",
       });
     }
@@ -898,7 +918,12 @@ export function People() {
                                     {getInitials(member.firstname, member.lastname)}
                                   </AvatarFallback>
                                 </Avatar>
-                                <span>{member.firstname} {member.lastname}</span>
+                                <div className="flex items-center gap-1">
+                                  <span>{member.firstname} {member.lastname}</span>
+                                  {member.id === family.primary_contact_id && (
+                                    <Crown className="w-3 h-3 text-yellow-500" />
+                                  )}
+                                </div>
                                 {getMemberTypeBadge(member.member_type)}
                                 {getRelationshipBadge(member.relationship_type)}
                               </div>
@@ -1123,11 +1148,11 @@ export function People() {
 
       {/* Create Family Dialog */}
       <Dialog open={isFamilyDialogOpen} onOpenChange={setIsFamilyDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Create New Family</DialogTitle>
             <DialogDescription>
-              Enter the family name below.
+              Enter the family name and select a primary contact.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -1139,6 +1164,32 @@ export function People() {
                 onChange={(e) => setNewFamily(prev => ({ ...prev, family_name: e.target.value }))}
                 placeholder="e.g., Smith Family"
               />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="primary_contact">Primary Contact</Label>
+                              <Select
+                  value={newFamily.primary_contact_id || 'none'}
+                  onValueChange={(value) => setNewFamily(prev => ({ ...prev, primary_contact_id: value === 'none' ? '' : value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a primary contact (optional)" />
+                  </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No primary contact</SelectItem>
+                  {members
+                    .filter(member => member.member_type === 'adult' && member.status === 'active')
+                    .sort((a, b) => `${a.firstname} ${a.lastname}`.localeCompare(`${b.firstname} ${b.lastname}`))
+                    .map((member) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.firstname} {member.lastname}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                The primary contact is the main person to contact for this family.
+              </p>
             </div>
           </div>
           <DialogFooter>
@@ -1179,6 +1230,41 @@ export function People() {
                     Update
                   </Button>
                 </div>
+              </div>
+
+              {/* Primary Contact */}
+              <div className="space-y-2">
+                <Label htmlFor="edit_primary_contact">Primary Contact</Label>
+                <div className="flex gap-2">
+                  <Select
+                    value={selectedFamily.primary_contact_id || 'none'}
+                    onValueChange={(value) => setSelectedFamily(prev => ({ ...prev, primary_contact_id: value === 'none' ? '' : value }))}
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Select a primary contact" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No primary contact</SelectItem>
+                      {selectedFamily.members
+                        .filter(member => member.member_type === 'adult')
+                        .sort((a, b) => `${a.firstname} ${a.lastname}`.localeCompare(`${b.firstname} ${b.lastname}`))
+                        .map((member) => (
+                          <SelectItem key={member.id} value={member.id}>
+                            {member.firstname} {member.lastname}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <Button 
+                    size="sm"
+                    onClick={() => handleUpdateFamilyPrimaryContact(selectedFamily.id, selectedFamily.primary_contact_id)}
+                  >
+                    Update
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  The primary contact is the main person to contact for this family.
+                </p>
               </div>
 
               {/* Current Members */}
