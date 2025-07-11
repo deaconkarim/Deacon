@@ -168,7 +168,7 @@ export function Invite() {
           user_id: authData.user.id,
           role: invitation.role,
           status: 'active',
-          approval_status: 'approved'
+  
         });
 
       if (membershipError) throw membershipError;

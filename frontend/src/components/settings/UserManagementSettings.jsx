@@ -96,7 +96,7 @@ const UserManagementSettings = () => {
       const [orgUsersResult, membersResult] = await Promise.all([
         supabase
           .from('organization_users')
-          .select('user_id, role, approval_status, created_at')
+          .select('user_id, role, created_at')
           .eq('organization_id', organizationId)
           .order('created_at', { ascending: false }),
         supabase
@@ -135,7 +135,6 @@ const UserManagementSettings = () => {
             email: member.email,
             status: member.status,
             role: orgUser.role,
-            approval_status: orgUser.approval_status,
             created_at: member.created_at
           });
         } else {
@@ -148,7 +147,6 @@ const UserManagementSettings = () => {
             email: 'No email',
             status: 'active',
             role: orgUser.role,
-            approval_status: orgUser.approval_status,
             created_at: orgUser.created_at
           });
         }
@@ -194,7 +192,7 @@ const UserManagementSettings = () => {
       // Check current user's organization membership and admin status
       const { data: userMembership, error: membershipError } = await supabase
         .from('organization_users')
-        .select('role, approval_status, organization_id')
+        .select('role, organization_id')
         .eq('user_id', user.id)
         .eq('status', 'active')
         .single();
@@ -210,9 +208,7 @@ const UserManagementSettings = () => {
         throw new Error('Only admins can invite users');
       }
 
-      if (userMembership.approval_status !== 'approved') {
-        throw new Error('User account not approved');
-      }
+
 
       // Ensure organizationId matches user's organization
       if (userMembership.organization_id !== organizationId) {
@@ -410,7 +406,7 @@ const UserManagementSettings = () => {
   const getRoleBadgeVariant = (role) => {
     switch (role) {
       case 'admin': return 'destructive';
-      case 'deacon': return 'default';
+      case 'staff': return 'default';
       default: return 'secondary';
     }
   };
@@ -709,7 +705,7 @@ const UserManagementSettings = () => {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="member">Member</SelectItem>
-                              <SelectItem value="deacon">Deacon</SelectItem>
+                              <SelectItem value="staff">Staff</SelectItem>
                               <SelectItem value="admin">Admin</SelectItem>
                             </SelectContent>
                           </Select>
@@ -825,7 +821,7 @@ const UserManagementSettings = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="member">Member</SelectItem>
-                  <SelectItem value="deacon">Deacon</SelectItem>
+                                          <SelectItem value="staff">Staff</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>

@@ -48,7 +48,7 @@ export function AdminRoute({ children }) {
         // Check if the user is an admin in the System Administration organization
         const { data: orgUser, error: userError } = await supabase
           .from('organization_users')
-          .select('role, approval_status')
+          .select('role')
           .eq('user_id', user.id)
           .eq('organization_id', systemOrg.id)
           .maybeSingle();
@@ -71,7 +71,7 @@ export function AdminRoute({ children }) {
 
         // Check if user is an approved admin in the System Administration organization
         const isAdmin = orgUser.role === 'admin' && 
-                       orgUser.approval_status === 'approved';
+                       true;
 
         console.log('Is system admin?', isAdmin);
         setIsSystemAdmin(isAdmin);

@@ -3,10 +3,8 @@ import { motion } from 'framer-motion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ChurchInfoSettings from '@/components/settings/ChurchInfoSettings';
 import AccountSettings from '@/components/settings/AccountSettings';
-import NotificationSettings from '@/components/settings/NotificationSettings';
 import DataManagementSettings from '@/components/settings/DataManagementSettings';
 import UserManagementSettings from '@/components/settings/UserManagementSettings';
-import PendingApprovals from '@/components/settings/PendingApprovals';
 import AutomationSettings from '@/components/settings/AutomationSettings';
 import DemoSystemSettings from '@/components/settings/DemoSystemSettings';
 import { isUserAdmin } from '@/lib/data';
@@ -65,9 +63,8 @@ export function Settings() {
           <TabsList className="mb-4 w-max min-w-full">
             <TabsTrigger value="church">Church Information</TabsTrigger>
             <TabsTrigger value="users">User Management</TabsTrigger>
-            {isAdmin && <TabsTrigger value="approvals">Pending Approvals</TabsTrigger>}
+
             <TabsTrigger value="account">Account</TabsTrigger>
-            <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="automation">Automation</TabsTrigger>
             {isAdmin && <TabsTrigger value="demo">Demo System</TabsTrigger>}
             <TabsTrigger value="data">Data Management</TabsTrigger>
@@ -82,18 +79,10 @@ export function Settings() {
           <UserManagementSettings />
         </TabsContent>
         
-        {isAdmin && (
-          <TabsContent value="approvals">
-            <PendingApprovals />
-          </TabsContent>
-        )}
+
         
         <TabsContent value="account">
           <AccountSettings />
-        </TabsContent>
-        
-        <TabsContent value="notifications">
-          <NotificationSettings />
         </TabsContent>
         
         <TabsContent value="automation">

@@ -149,7 +149,7 @@ export function Register() {
             user_id: userData.user.id,
             role: 'admin',
             status: 'active',
-            approval_status: 'approved'
+    
           });
 
         if (orgMemberError) {

@@ -46,6 +46,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { formatName, getInitials, formatPhoneNumber } from '@/lib/utils/formatters';
 import { useNavigate } from 'react-router-dom';
 import MemberForm from '@/components/members/MemberForm';
+import { PermissionGuard, PermissionButton, PermissionFeature } from '@/components/PermissionGuard';
+import { PERMISSIONS } from '@/lib/permissions.jsx';
 
 export function People() {
   const [members, setMembers] = useState([]);
@@ -484,55 +486,59 @@ export function People() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">People</h1>
-        <p className="text-muted-foreground">
-          Manage your church's people directory.
-        </p>
-      </div>
-      
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="relative w-full sm:w-96">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search people..."
-            className="pl-8"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+    <PermissionGuard permission={PERMISSIONS.MEMBERS_VIEW}>
+      <div className="space-y-6">
+        <div className="flex flex-col space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight">People</h1>
+          <p className="text-muted-foreground">
+            Manage your church's people directory.
+          </p>
         </div>
         
-        <div className="flex gap-2 w-full sm:w-auto">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full sm:w-[150px]">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-              <SelectItem value="visitor">Visitor</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          <div className="relative w-full sm:w-96">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search people..."
+              className="pl-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
           
-          <Select value={ageFilter} onValueChange={setAgeFilter}>
-            <SelectTrigger className="w-full sm:w-[150px]">
-              <SelectValue placeholder="Filter by age" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Ages</SelectItem>
-              <SelectItem value="adults">Adults</SelectItem>
-              <SelectItem value="children">Children</SelectItem>
-            </SelectContent>
-          </Select>
-          
-          <Button onClick={() => setIsAddDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Person
-          </Button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-[150px]">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="visitor">Visitor</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select value={ageFilter} onValueChange={setAgeFilter}>
+              <SelectTrigger className="w-full sm:w-[150px]">
+                <SelectValue placeholder="Filter by age" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Ages</SelectItem>
+                <SelectItem value="adults">Adults</SelectItem>
+                <SelectItem value="children">Children</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <PermissionButton 
+              permission={PERMISSIONS.MEMBERS_CREATE}
+              onClick={() => setIsAddDialogOpen(true)}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Person
+            </PermissionButton>
+          </div>
         </div>
-      </div>
       
       {members.length === 0 ? (
         <EmptyState onAddMember={() => setIsAddDialogOpen(true)} />
@@ -1467,5 +1473,6 @@ export function People() {
         </DialogContent>
       </Dialog>
     </div>
+    </PermissionGuard>
   );
 }

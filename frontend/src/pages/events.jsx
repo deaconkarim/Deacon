@@ -53,6 +53,8 @@ import { PotluckRSVPDialog } from '@/components/events/PotluckRSVPDialog';
 import { VolunteerList } from '@/components/events/VolunteerList';
 import { AddVolunteerForm } from '@/components/events/AddVolunteerForm';
 import { automationService } from '@/lib/automationService';
+import { PermissionGuard, PermissionButton, PermissionFeature } from '@/components/PermissionGuard';
+import { PERMISSIONS } from '@/lib/permissions.jsx';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -713,7 +715,7 @@ export default function Events() {
           .from('organization_users')
           .select('organization_id')
           .eq('user_id', user.id)
-          .eq('approval_status', 'approved')
+
           .limit(1);
         
         if (orgError) {
@@ -1035,7 +1037,7 @@ export default function Events() {
           .from('organization_users')
           .select('organization_id')
           .eq('user_id', user.id)
-          .eq('approval_status', 'approved')
+
           .limit(1);
         
         if (orgError) {
@@ -1492,19 +1494,21 @@ export default function Events() {
   };
 
   return (
-    <div className="w-full px-0 md:px-4">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 px-2 md:px-0">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">Events</h1>
-          <p className="text-gray-600 text-lg">Manage and track event attendance</p>
+    <PermissionGuard permission={PERMISSIONS.EVENTS_VIEW}>
+      <div className="w-full px-0 md:px-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 px-2 md:px-0">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold mb-2">Events</h1>
+            <p className="text-gray-600 text-lg">Manage and track event attendance</p>
+          </div>
+          <PermissionButton
+            permission={PERMISSIONS.EVENTS_CREATE}
+            onClick={() => setIsCreateEventOpen(true)}
+            className="w-full md:w-auto h-14 text-lg"
+          >
+            Create New Event
+          </PermissionButton>
         </div>
-        <Button
-          onClick={() => setIsCreateEventOpen(true)}
-          className="w-full md:w-auto h-14 text-lg"
-        >
-          Create New Event
-        </Button>
-      </div>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full px-2 md:px-0">
@@ -2100,5 +2104,6 @@ export default function Events() {
         </DialogContent>
       </Dialog>
     </div>
+    </PermissionGuard>
   );
 }

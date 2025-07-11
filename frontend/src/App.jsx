@@ -19,6 +19,7 @@ import { Invite } from './pages/invite';
 import { SMS } from './pages/sms';
 import AlertsPage from './pages/alerts';
 import { AdminCenter } from './pages/admin-center';
+import { Permissions } from './pages/permissions';
 
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AdminRoute } from './components/AdminRoute';
@@ -56,6 +57,7 @@ function App() {
         <Route path="/edit-child/:childId" element={<EditChild />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/permissions" element={<Permissions />} />
         <Route path="/sms" element={<SMS />} />
         <Route path="/alerts" element={<AlertsPage />} />
       </Route>

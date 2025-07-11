@@ -41,6 +41,8 @@ import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { Logo } from '@/components/ui/logo';
 import { useAuth } from '@/lib/authContext';
 import { isUserAdmin, isSystemAdmin, getApprovalNotifications, getOrganizationName } from '@/lib/data';
+import { usePermissions, PERMISSIONS } from '@/lib/permissions.jsx';
+import { PermissionNavItem } from '@/components/PermissionGuard';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabaseClient';
@@ -63,16 +65,76 @@ export function Layout() {
   // Generate navigation items based on user permissions
   const generateNavigation = () => {
     const baseNavigation = [
-      { name: 'Dashboard', href: '/dashboard', icon: Home, color: 'text-blue-500' },
-      { name: 'Events', href: '/events', icon: Calendar, color: 'text-green-500' },
-      { name: 'Children Check-In', href: '/children-check-in', icon: Baby, color: 'text-pink-500' },
-      { name: 'People', href: '/members', icon: Users, color: 'text-purple-500' },
-      { name: 'Donations', href: '/donations', icon: DollarSign, color: 'text-yellow-500' },
-      { name: 'Groups', href: '/groups', icon: UserPlus, color: 'text-indigo-500' },
-      { name: 'Tasks', href: '/tasks', icon: ClipboardList, color: 'text-orange-500' },
-      { name: 'SMS', href: '/sms', icon: MessageSquare, color: 'text-teal-500' },
-      { name: 'Alerts', href: '/alerts', icon: Bell, color: 'text-red-500' },
-      { name: 'Reports', href: '/reports', icon: BarChart2, color: 'text-emerald-500' },
+      { 
+        name: 'Dashboard', 
+        href: '/dashboard', 
+        icon: Home, 
+        color: 'text-blue-500',
+        permission: PERMISSIONS.REPORTS_VIEW // Basic view permission
+      },
+      { 
+        name: 'Events', 
+        href: '/events', 
+        icon: Calendar, 
+        color: 'text-green-500',
+        permission: PERMISSIONS.EVENTS_VIEW
+      },
+      { 
+        name: 'Children Check-In', 
+        href: '/children-check-in', 
+        icon: Baby, 
+        color: 'text-pink-500',
+        permission: PERMISSIONS.CHILDREN_VIEW
+      },
+      { 
+        name: 'People', 
+        href: '/members', 
+        icon: Users, 
+        color: 'text-purple-500',
+        permission: PERMISSIONS.MEMBERS_VIEW
+      },
+      { 
+        name: 'Donations', 
+        href: '/donations', 
+        icon: DollarSign, 
+        color: 'text-yellow-500',
+        permission: PERMISSIONS.DONATIONS_VIEW
+      },
+      { 
+        name: 'Groups', 
+        href: '/groups', 
+        icon: UserPlus, 
+        color: 'text-indigo-500',
+        permission: PERMISSIONS.GROUPS_VIEW
+      },
+      { 
+        name: 'Tasks', 
+        href: '/tasks', 
+        icon: ClipboardList, 
+        color: 'text-orange-500',
+        permission: PERMISSIONS.TASKS_VIEW
+      },
+      { 
+        name: 'SMS', 
+        href: '/sms', 
+        icon: MessageSquare, 
+        color: 'text-teal-500',
+        permission: PERMISSIONS.SETTINGS_VIEW // Basic access
+      },
+      { 
+        name: 'Alerts', 
+        href: '/alerts', 
+        icon: Bell, 
+        color: 'text-red-500',
+        permission: PERMISSIONS.REPORTS_VIEW // Basic access
+      },
+      { 
+        name: 'Reports', 
+        href: '/reports', 
+        icon: BarChart2, 
+        color: 'text-emerald-500',
+        permission: PERMISSIONS.REPORTS_VIEW
+      },
     ];
 
     // Add Admin Center for system administrators only
@@ -82,11 +144,25 @@ export function Layout() {
         href: '/admin-center',
         icon: Shield,
         color: 'text-red-600',
-        isSystemAdmin: true
+        isSystemAdmin: true,
+        permission: PERMISSIONS.SYSTEM_ADMIN
       });
     }
 
-    baseNavigation.push({ name: 'Settings', href: '/settings', icon: Settings, color: 'text-gray-500' });
+    baseNavigation.push({ 
+      name: 'Permissions', 
+      href: '/permissions', 
+      icon: Shield, 
+      color: 'text-purple-500',
+      permission: PERMISSIONS.USERS_EDIT
+    });
+    baseNavigation.push({ 
+      name: 'Settings', 
+      href: '/settings', 
+      icon: Settings, 
+      color: 'text-gray-500',
+      permission: PERMISSIONS.SETTINGS_VIEW
+    });
 
     return baseNavigation;
   };
@@ -246,23 +322,24 @@ export function Layout() {
         {navigation.map((item) => {
           const isActive = location.pathname === item.href;
           return (
-            <NavLink
-              key={item.name}
-              to={item.href}
-              className={({ isActive }) => cn(
-                "flex items-center gap-3 w-full h-12 px-3 rounded-lg transition-all",
-                isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
-              )}
-              title={item.name}
-            >
-              <item.icon className={cn("h-6 w-6 flex-shrink-0", isActive ? "text-primary" : item.color)} />
-              {sidebarExpanded && <span className="truncate text-base font-medium">{item.name}</span>}
-              {item.name === 'Settings' && isAdmin && pendingApprovals > 0 && (
-                <span className="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center flex-shrink-0">
-                  {pendingApprovals}
-                </span>
-              )}
-            </NavLink>
+            <PermissionNavItem key={item.name} permission={item.permission}>
+              <NavLink
+                to={item.href}
+                className={({ isActive }) => cn(
+                  "flex items-center gap-3 w-full h-12 px-3 rounded-lg transition-all",
+                  isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
+                )}
+                title={item.name}
+              >
+                <item.icon className={cn("h-6 w-6 flex-shrink-0", isActive ? "text-primary" : item.color)} />
+                {sidebarExpanded && <span className="truncate text-base font-medium">{item.name}</span>}
+                {item.name === 'Settings' && isAdmin && pendingApprovals > 0 && (
+                  <span className="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center flex-shrink-0">
+                    {pendingApprovals}
+                  </span>
+                )}
+              </NavLink>
+            </PermissionNavItem>
           );
         })}
       </aside>
@@ -345,24 +422,25 @@ export function Layout() {
             {mainNavItems.slice(0, 4).map((item) => {
               const isActive = location.pathname === item.href;
               return (
-                <NavLink
-                  key={item.name}
-                  to={item.href}
-                  className={({ isActive }) => cn(
-                    "flex flex-col items-center justify-center px-2 py-1 text-[9px] font-medium rounded-md transition-all relative",
-                    isActive
-                      ? "text-primary"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <item.icon className={cn("h-4 w-4 mb-0.5", isActive ? "text-primary" : item.color)} />
-                  <span>{item.name}</span>
-                  {item.name === 'Settings' && isAdmin && pendingApprovals > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {pendingApprovals}
-                    </span>
-                  )}
-                </NavLink>
+                <PermissionNavItem key={item.name} permission={item.permission}>
+                  <NavLink
+                    to={item.href}
+                    className={({ isActive }) => cn(
+                      "flex flex-col items-center justify-center px-2 py-1 text-[9px] font-medium rounded-md transition-all relative",
+                      isActive
+                        ? "text-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <item.icon className={cn("h-4 w-4 mb-0.5", isActive ? "text-primary" : item.color)} />
+                    <span>{item.name}</span>
+                    {item.name === 'Settings' && isAdmin && pendingApprovals > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {pendingApprovals}
+                      </span>
+                    )}
+                  </NavLink>
+                </PermissionNavItem>
               );
             })}
             <DropdownMenu>
@@ -374,23 +452,25 @@ export function Layout() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 {navigation.slice(4).map((item) => (
-                  <DropdownMenuItem key={item.name} asChild>
-                    <NavLink
-                      to={item.href}
-                      className={cn(
-                        "flex items-center gap-2 relative",
-                        location.pathname === item.href ? "text-primary" : ""
-                      )}
-                    >
-                      <item.icon className={cn("h-4 w-4", location.pathname === item.href ? "text-primary" : item.color)} />
-                      <span>{item.name}</span>
-                      {item.name === 'Settings' && isAdmin && pendingApprovals > 0 && (
-                        <span className="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                          {pendingApprovals}
-                        </span>
-                      )}
-                    </NavLink>
-                  </DropdownMenuItem>
+                  <PermissionNavItem key={item.name} permission={item.permission}>
+                    <DropdownMenuItem asChild>
+                      <NavLink
+                        to={item.href}
+                        className={cn(
+                          "flex items-center gap-2 relative",
+                          location.pathname === item.href ? "text-primary" : ""
+                        )}
+                      >
+                        <item.icon className={cn("h-4 w-4", location.pathname === item.href ? "text-primary" : item.color)} />
+                        <span>{item.name}</span>
+                        {item.name === 'Settings' && isAdmin && pendingApprovals > 0 && (
+                          <span className="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                            {pendingApprovals}
+                          </span>
+                        )}
+                      </NavLink>
+                    </DropdownMenuItem>
+                  </PermissionNavItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>

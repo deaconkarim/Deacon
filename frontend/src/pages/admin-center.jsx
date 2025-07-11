@@ -122,7 +122,7 @@ export function AdminCenter() {
         .from('organization_users')
         .select(`
           role,
-          approval_status,
+  
           organizations(name)
         `)
         .eq('user_id', user?.id);
@@ -266,7 +266,7 @@ export function AdminCenter() {
       // Fetch organization users separately
       const { data: orgUsers, error: orgUsersError } = await supabase
         .from('organization_users')
-        .select('user_id, role, approval_status, created_at')
+        .select('user_id, role, created_at')
         .eq('organization_id', org.id)
         .order('created_at', { ascending: false });
 
@@ -1058,9 +1058,7 @@ export function AdminCenter() {
                                </Badge>
                              </td>
                              <td className="px-4 py-2">
-                               <Badge variant={orgUser.approval_status === 'approved' ? 'default' : 'secondary'}>
-                                 {orgUser.approval_status || 'pending'}
-                               </Badge>
+                               
                              </td>
                              <td className="px-4 py-2 text-sm">
                                {orgUser.created_at ? 
@@ -1097,7 +1095,7 @@ export function AdminCenter() {
                 </div>
                 <div className="bg-purple-50 dark:bg-purple-950 rounded-lg p-4">
                   <div className="text-2xl font-bold text-purple-600">
-                    {orgDetails?.organization_users?.filter(u => u.approval_status === 'pending').length || 0}
+                    0
                   </div>
                   <div className="text-sm text-purple-700 dark:text-purple-300">Pending Users</div>
                 </div>
@@ -1221,7 +1219,7 @@ export function AdminCenter() {
                       <SelectItem value="member">Member</SelectItem>
                       <SelectItem value="admin">Admin</SelectItem>
                       <SelectItem value="pastor">Pastor</SelectItem>
-                      <SelectItem value="deacon">Deacon</SelectItem>
+                      <SelectItem value="staff">Staff</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
