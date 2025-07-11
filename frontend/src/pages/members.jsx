@@ -155,18 +155,26 @@ export function People() {
   };
 
   const handleEditFamily = async (family) => {
-    setSelectedFamily(family);
     setMemberSearchQuery(''); // Clear search query when dialog opens
     try {
+      // Get fresh family data to ensure we have the latest member information
+      const freshFamily = await familyService.getFamily(family.id);
+      if (freshFamily) {
+        setSelectedFamily(freshFamily);
+      } else {
+        setSelectedFamily(family);
+      }
+      
       // Get members that can be added to this family (unassigned + current family members)
       const available = await familyService.getAvailableMembers(family.id);
       setAvailableMembers(available);
       setIsEditFamilyDialogOpen(true);
     } catch (error) {
-      console.error('Error loading available members:', error);
+      console.error('Error loading family data:', error);
+      setSelectedFamily(family); // Fallback to original family data
       toast({
         title: "Error",
-        description: "Failed to load available members",
+        description: "Failed to load family data",
         variant: "destructive",
       });
     }
@@ -250,6 +258,14 @@ export function People() {
     try {
       await familyService.updateFamily(familyId, { primary_contact_id: primaryContactId || null });
       await loadFamilies();
+      
+      // Update the selected family with fresh data
+      const updatedFamilies = await familyService.getFamilies();
+      const updatedFamily = updatedFamilies.find(f => f.id === familyId);
+      if (updatedFamily) {
+        setSelectedFamily(updatedFamily);
+      }
+      
       toast({
         title: "Success",
         description: "Primary contact updated successfully"
@@ -909,26 +925,38 @@ export function People() {
                       <div className="space-y-2">
                         <h4 className="text-sm font-medium">Members</h4>
                         <div className="space-y-1">
-                          {family.members.slice(0, 3).map((member) => (
-                            <div key={member.id} className="flex items-center justify-between text-sm">
-                              <div className="flex items-center gap-2">
-                                <Avatar className="h-6 w-6">
-                                  <AvatarImage src={member.image_url} />
-                                  <AvatarFallback className="text-xs">
-                                    {getInitials(member.firstname, member.lastname)}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div className="flex items-center gap-1">
-                                  <span>{member.firstname} {member.lastname}</span>
-                                  {member.id === family.primary_contact_id && (
-                                    <Crown className="w-3 h-3 text-yellow-500" />
-                                  )}
+                          {(() => {
+                            // Sort members: adults first, then children, both sorted alphabetically
+                            const sortedMembers = family.members.sort((a, b) => {
+                              // First sort by member type (adults before children)
+                              if (a.member_type !== b.member_type) {
+                                return a.member_type === 'adult' ? -1 : 1;
+                              }
+                              // Then sort alphabetically by name
+                              return `${a.firstname} ${a.lastname}`.localeCompare(`${b.firstname} ${b.lastname}`);
+                            });
+                            
+                            return sortedMembers.slice(0, 3).map((member) => (
+                              <div key={member.id} className="flex items-center justify-between text-sm">
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="h-6 w-6">
+                                    <AvatarImage src={member.image_url} />
+                                    <AvatarFallback className="text-xs">
+                                      {getInitials(member.firstname, member.lastname)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="flex items-center gap-1">
+                                    <span>{member.firstname} {member.lastname}</span>
+                                    {member.id === family.primary_contact_id && (
+                                      <Crown className="w-3 h-3 text-yellow-500" />
+                                    )}
+                                  </div>
+                                  {getMemberTypeBadge(member.member_type)}
+                                  {getRelationshipBadge(member.relationship_type)}
                                 </div>
-                                {getMemberTypeBadge(member.member_type)}
-                                {getRelationshipBadge(member.relationship_type)}
                               </div>
-                            </div>
-                          ))}
+                            ));
+                          })()}
                           {family.members.length > 3 && (
                             <div className="text-xs text-muted-foreground">
                               +{family.members.length - 3} more member{family.members.length - 3 !== 1 ? 's' : ''}
@@ -1245,14 +1273,40 @@ export function People() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">No primary contact</SelectItem>
-                      {selectedFamily.members
-                        .filter(member => member.member_type === 'adult')
-                        .sort((a, b) => `${a.firstname} ${a.lastname}`.localeCompare(`${b.firstname} ${b.lastname}`))
-                        .map((member) => (
-                          <SelectItem key={member.id} value={member.id}>
-                            {member.firstname} {member.lastname}
-                          </SelectItem>
-                        ))}
+                      
+                      {/* Adults Section */}
+                      {selectedFamily.members.filter(member => member.member_type === 'adult').length > 0 && (
+                        <>
+                          <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground bg-muted">
+                            Adults
+                          </div>
+                          {selectedFamily.members
+                            .filter(member => member.member_type === 'adult')
+                            .sort((a, b) => `${a.firstname} ${a.lastname}`.localeCompare(`${b.firstname} ${b.lastname}`))
+                            .map((member) => (
+                              <SelectItem key={member.id} value={member.id}>
+                                {member.firstname} {member.lastname}
+                              </SelectItem>
+                            ))}
+                        </>
+                      )}
+                      
+                      {/* Children Section */}
+                      {selectedFamily.members.filter(member => member.member_type === 'child').length > 0 && (
+                        <>
+                          <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground bg-muted">
+                            Children
+                          </div>
+                          {selectedFamily.members
+                            .filter(member => member.member_type === 'child')
+                            .sort((a, b) => `${a.firstname} ${a.lastname}`.localeCompare(`${b.firstname} ${b.lastname}`))
+                            .map((member) => (
+                              <SelectItem key={member.id} value={member.id}>
+                                {member.firstname} {member.lastname}
+                              </SelectItem>
+                            ))}
+                        </>
+                      )}
                     </SelectContent>
                   </Select>
                   <Button 
@@ -1588,157 +1642,80 @@ export function People() {
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditFamilyDialogOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Family Details Dialog */}
       <Dialog open={isFamilyDetailsDialogOpen} onOpenChange={setIsFamilyDetailsDialogOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle className="text-xl">{selectedFamilyForDetails?.family_name}</DialogTitle>
+            <DialogTitle>Family Details</DialogTitle>
             <DialogDescription>
-              Family information and member details
+              View and manage family information.
             </DialogDescription>
           </DialogHeader>
           {selectedFamilyForDetails && (
             <div className="space-y-6">
-              {/* Family Stats */}
-              <div className="grid grid-cols-3 gap-4">
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="text-2xl font-bold">{selectedFamilyForDetails.members.length}</div>
-                    <p className="text-sm text-muted-foreground">Total Members</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="text-2xl font-bold">
-                      {selectedFamilyForDetails.members.filter(m => m.member_type === 'adult').length}
-                    </div>
-                    <p className="text-sm text-muted-foreground">Adults</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="text-2xl font-bold">
-                      {selectedFamilyForDetails.members.filter(m => m.member_type === 'child').length}
-                    </div>
-                    <p className="text-sm text-muted-foreground">Children</p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Family Members */}
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">Family Members</h3>
-                  <Button 
-                    size="sm"
-                    onClick={() => {
-                      setIsFamilyDetailsDialogOpen(false);
-                      handleEditFamily(selectedFamilyForDetails);
-                    }}
-                  >
-                    <Edit className="w-4 h-4 mr-2" />
-                    Edit Family
-                  </Button>
-                </div>
+                <h3 className="text-lg font-semibold">{selectedFamilyForDetails.family_name}</h3>
                 
-                {selectedFamilyForDetails.members.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">No members in this family yet.</p>
-                    <Button 
-                      variant="outline" 
-                      className="mt-2"
-                      onClick={() => {
-                        setIsFamilyDetailsDialogOpen(false);
-                        handleEditFamily(selectedFamilyForDetails);
-                      }}
-                    >
-                      Add Members
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {selectedFamilyForDetails.members.map((member) => (
-                      <Card 
-                        key={member.id} 
-                        className="hover:shadow-md transition-shadow cursor-pointer"
-                        onClick={() => navigate(`/members/${member.id}`)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                              <Avatar className="h-12 w-12">
-                                <AvatarImage src={member.image_url} />
-                                <AvatarFallback className="text-sm">
-                                  {getInitials(member.firstname, member.lastname)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <div className="font-semibold text-lg">
-                                  {member.firstname} {member.lastname}
-                                </div>
-                                <div className="text-sm text-muted-foreground space-x-2">
-                                  <span className="capitalize">{member.member_type}</span>
-                                  <span>•</span>
-                                  <span className="capitalize">{member.relationship_type}</span>
-                                  {member.birth_date && (
-                                    <>
-                                      <span>•</span>
-                                      <span>{calculateAge(member.birth_date)} years old</span>
-                                    </>
-                                  )}
-                                </div>
-                                {(member.email || member.phone) && (
-                                  <div className="text-sm text-muted-foreground mt-1">
-                                    {member.email && (
-                                      <div className="flex items-center gap-1">
-                                        <Mail className="w-3 h-3" />
-                                        {member.email}
-                                      </div>
-                                    )}
-                                    {member.phone && (
-                                      <div className="flex items-center gap-1">
-                                        <Phone className="w-3 h-3" />
-                                        {member.phone}
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium">Family Members</h4>
+                  <div className="space-y-2">
+                    {(() => {
+                      // Sort members: adults first, then children, both sorted alphabetically
+                      const sortedMembers = selectedFamilyForDetails.members.sort((a, b) => {
+                        // First sort by member type (adults before children)
+                        if (a.member_type !== b.member_type) {
+                          return a.member_type === 'adult' ? -1 : 1;
+                        }
+                        // Then sort alphabetically by name
+                        return `${a.firstname} ${a.lastname}`.localeCompare(`${b.firstname} ${b.lastname}`);
+                      });
+                      
+                      return sortedMembers.map((member) => (
+                        <div 
+                          key={member.id} 
+                          className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-muted/50"
+                          onClick={() => navigate(`/members/${member.id}`)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={member.image_url} />
+                              <AvatarFallback className="text-xs">
+                                {getInitials(member.firstname, member.lastname)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-medium text-sm">
+                                {member.firstname} {member.lastname}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {member.member_type} • {member.relationship_type}
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              {getMemberTypeBadge(member.member_type)}
-                              {getRelationshipBadge(member.relationship_type)}
-                              {member.is_primary && (
-                                <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                                  <Crown className="w-3 h-3 mr-1" />
-                                  Primary
-                                </Badge>
-                              )}
-                              <ArrowRight className="w-4 h-4 text-muted-foreground" />
-                            </div>
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                          <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+
+                {selectedFamilyForDetails.primary_contact_id && (
+                  <div className="pt-4 border-t">
+                    <h4 className="text-sm font-medium mb-2">Primary Contact</h4>
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                      <Crown className="w-4 h-4 text-yellow-500" />
+                      <span className="text-sm">
+                        {selectedFamilyForDetails.members.find(m => m.id === selectedFamilyForDetails.primary_contact_id)?.firstname} {selectedFamilyForDetails.members.find(m => m.id === selectedFamilyForDetails.primary_contact_id)?.lastname}
+                      </span>
+                    </div>
                   </div>
                 )}
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsFamilyDetailsDialogOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
