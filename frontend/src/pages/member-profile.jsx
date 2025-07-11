@@ -20,7 +20,8 @@ import {
   Shield,
   FileText,
   CheckCircle,
-  XCircle
+  XCircle,
+  DollarSign
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,7 @@ import { familyService } from '../lib/familyService';
 import MemberForm from '@/components/members/MemberForm';
 import { formatName, getInitials, formatPhoneNumber } from '@/lib/utils/formatters';
 import { supabase } from '@/lib/supabase';
+import { getDonations } from '@/lib/donationService';
 
 export function MemberProfile() {
   const { id } = useParams();
@@ -57,6 +59,8 @@ export function MemberProfile() {
   const [isGuardiansLoading, setIsGuardiansLoading] = useState(false);
   const [volunteers, setVolunteers] = useState([]);
   const [isVolunteersLoading, setIsVolunteersLoading] = useState(true);
+  const [donations, setDonations] = useState([]);
+  const [isDonationsLoading, setIsDonationsLoading] = useState(true);
 
   useEffect(() => {
     loadMemberData();
@@ -72,6 +76,7 @@ export function MemberProfile() {
         loadGroups(foundMember.id);
         loadFamilyInfo(foundMember.id);
         loadVolunteers(foundMember.id);
+        loadDonations(foundMember.id);
         if (foundMember.member_type === 'child') {
           loadGuardians(foundMember.id);
         }
@@ -143,6 +148,23 @@ export function MemberProfile() {
       });
     } finally {
       setIsVolunteersLoading(false);
+    }
+  };
+
+  const loadDonations = async (memberId) => {
+    setIsDonationsLoading(true);
+    try {
+      const data = await getDonations({ donorId: memberId });
+      setDonations(data);
+    } catch (error) {
+      console.error('Error loading donations:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load donation history",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDonationsLoading(false);
     }
   };
 
@@ -654,6 +676,10 @@ export function MemberProfile() {
                 <Church className="h-4 w-4 mr-2" />
                 Attendance
               </TabsTrigger>
+              <TabsTrigger value="giving">
+                <DollarSign className="h-4 w-4 mr-2" />
+                Giving
+              </TabsTrigger>
               <TabsTrigger value="family">
                 <Users className="h-4 w-4 mr-2" />
                 Family
@@ -836,6 +862,208 @@ export function MemberProfile() {
                       <p className="text-muted-foreground mb-2">No attendance records found</p>
                       <p className="text-sm text-muted-foreground">
                         This person hasn't attended any events yet.
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="giving">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Giving History</CardTitle>
+                  <CardDescription>
+                    View {member?.firstname} {member?.lastname}'s donation records and statistics
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {isDonationsLoading ? (
+                    <div className="text-center py-4">
+                      <p className="text-muted-foreground">Loading giving history...</p>
+                    </div>
+                  ) : donations.length > 0 ? (
+                    <div className="space-y-6">
+                      {/* Giving Statistics */}
+                      <div>
+                        <h3 className="text-lg font-semibold mb-4">Giving Statistics</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                          {(() => {
+                            const totalAmount = donations.reduce((sum, donation) => sum + (donation.amount || 0), 0);
+                            const thisYear = new Date().getFullYear();
+                            const thisYearDonations = donations.filter(d => 
+                              new Date(d.date).getFullYear() === thisYear
+                            );
+                            const thisYearAmount = thisYearDonations.reduce((sum, donation) => sum + (donation.amount || 0), 0);
+                            const averageDonation = donations.length > 0 ? totalAmount / donations.length : 0;
+                            const fundDesignations = [...new Set(donations.map(d => d.fund_designation).filter(Boolean))];
+
+                            return (
+                              <>
+                                <Card>
+                                  <CardContent className="p-4">
+                                    <div className="flex items-center justify-between">
+                                      <div>
+                                        <p className="text-sm text-muted-foreground">Total Given</p>
+                                        <p className="text-2xl font-bold text-green-600">
+                                          ${totalAmount.toLocaleString()}
+                                        </p>
+                                      </div>
+                                      <DollarSign className="h-8 w-8 text-green-600" />
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                                <Card>
+                                  <CardContent className="p-4">
+                                    <div className="flex items-center justify-between">
+                                      <div>
+                                        <p className="text-sm text-muted-foreground">This Year</p>
+                                        <p className="text-2xl font-bold text-blue-600">
+                                          ${thisYearAmount.toLocaleString()}
+                                        </p>
+                                      </div>
+                                      <Calendar className="h-8 w-8 text-blue-600" />
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                                <Card>
+                                  <CardContent className="p-4">
+                                    <div className="flex items-center justify-between">
+                                      <div>
+                                        <p className="text-sm text-muted-foreground">Average Gift</p>
+                                        <p className="text-2xl font-bold text-purple-600">
+                                          ${averageDonation.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                        </p>
+                                      </div>
+                                      <Heart className="h-8 w-8 text-purple-600" />
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                                <Card>
+                                  <CardContent className="p-4">
+                                    <div className="flex items-center justify-between">
+                                      <div>
+                                        <p className="text-sm text-muted-foreground">Total Gifts</p>
+                                        <p className="text-2xl font-bold text-orange-600">
+                                          {donations.length}
+                                        </p>
+                                      </div>
+                                      <FileText className="h-8 w-8 text-orange-600" />
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              </>
+                            );
+                          })()}
+                        </div>
+                      </div>
+
+                      {/* Giving by Fund Designation */}
+                      {(() => {
+                        const fundStats = {};
+                        donations.forEach(donation => {
+                          const fund = donation.fund_designation || 'General';
+                          if (!fundStats[fund]) {
+                            fundStats[fund] = { total: 0, count: 0 };
+                          }
+                          fundStats[fund].total += donation.amount || 0;
+                          fundStats[fund].count += 1;
+                        });
+
+                        return Object.keys(fundStats).length > 0 && (
+                          <div>
+                            <h3 className="text-lg font-semibold mb-4">Giving by Fund</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {Object.entries(fundStats).map(([fund, stats]) => (
+                                <Card key={fund}>
+                                  <CardContent className="p-4">
+                                    <div className="space-y-2">
+                                      <div className="flex items-center justify-between">
+                                        <h4 className="font-medium">{fund}</h4>
+                                        <DollarSign className="h-4 w-4 text-green-600" />
+                                      </div>
+                                      <div className="text-2xl font-bold text-green-600">
+                                        ${stats.total.toLocaleString()}
+                                      </div>
+                                      <div className="text-sm text-muted-foreground">
+                                        {stats.count} gift{stats.count !== 1 ? 's' : ''}
+                                      </div>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Recent Donations */}
+                      <div>
+                        <h3 className="text-lg font-semibold mb-4">Recent Donations</h3>
+                        <div className="space-y-4">
+                          {donations.slice(0, 10).map((donation) => (
+                            <Card key={donation.id}>
+                              <CardContent className="p-4">
+                                <div className="flex items-center justify-between">
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                      <p className="font-medium">
+                                        ${donation.amount?.toLocaleString()}
+                                      </p>
+                                      {donation.fund_designation && (
+                                        <Badge variant="outline" className="text-xs">
+                                          {donation.fund_designation}
+                                        </Badge>
+                                      )}
+                                      {donation.campaign && (
+                                        <Badge variant="secondary" className="text-xs">
+                                          {donation.campaign.name}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center text-sm text-muted-foreground">
+                                      <Calendar className="h-4 w-4 mr-2" />
+                                      {format(new Date(donation.date), 'MMM d, yyyy')}
+                                    </div>
+                                    {donation.payment_method && (
+                                      <div className="flex items-center text-sm text-muted-foreground">
+                                        <DollarSign className="h-4 w-4 mr-2" />
+                                        {donation.payment_method}
+                                      </div>
+                                    )}
+                                    {donation.notes && (
+                                      <p className="text-sm text-muted-foreground mt-1">
+                                        {donation.notes}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {donation.payment_method === 'Check' && donation.check_number && (
+                                      <Badge variant="outline" className="text-xs">
+                                        #{donation.check_number}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                        {donations.length > 10 && (
+                          <div className="text-center mt-4">
+                            <p className="text-sm text-muted-foreground">
+                              Showing 10 of {donations.length} donations
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <DollarSign className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground mb-2">No donation records found</p>
+                      <p className="text-sm text-muted-foreground">
+                        {member?.firstname} {member?.lastname} hasn't made any donations yet.
                       </p>
                     </div>
                   )}

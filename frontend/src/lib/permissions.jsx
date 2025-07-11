@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { useState, useEffect, useCallback } from 'react';
+import { CustomRolesService } from './customRolesService';
 
 // Permission levels
 export const PERMISSION_LEVELS = {
@@ -175,6 +176,47 @@ export const DEFAULT_ROLE_PERMISSIONS = {
 // Legacy support - will be replaced by dynamic roles
 export const ROLE_PERMISSIONS = DEFAULT_ROLE_PERMISSIONS;
 
+// Helper function to check if a role has admin-level permissions
+export const isAdminRole = (role) => {
+  if (!role) return false;
+  
+  // Only standard admin roles have automatic admin permissions
+  if (role === 'admin' || role === 'owner') return true;
+  
+  // Custom roles are checked based on their actual permissions, not role names
+  return false;
+};
+
+// Helper function to check if a custom role has admin-level permissions
+export const isCustomRoleAdmin = async (roleName, organizationId) => {
+  if (!roleName || !organizationId) return false;
+  
+  try {
+    // Check if the custom role has key admin permissions
+    const adminPermissions = [
+      'users:edit',
+      'users:delete',
+      'users:approve',
+      'settings:admin',
+      'reports:admin'
+    ];
+    
+    for (const permission of adminPermissions) {
+      const hasPermission = await CustomRolesService.customRoleHasPermission(
+        roleName,
+        organizationId,
+        permission
+      );
+      if (hasPermission) return true;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Error checking custom role admin status:', error);
+    return false;
+  }
+};
+
 // Helper function to get user's role in current organization
 export const getUserRole = async () => {
   try {
@@ -223,11 +265,38 @@ export const hasPermission = async (permission) => {
     const userRole = await getUserRole();
     if (!userRole) return false;
 
-    // Admins have all permissions
-    if (userRole === ROLES.ADMIN) return true;
+    // Admin roles have all permissions
+    if (isAdminRole(userRole)) return true;
 
     // Check if the permission is in the user's role permissions
     const rolePermissions = ROLE_PERMISSIONS[userRole] || [];
+    
+    // If it's a custom role, check against custom role permissions in database
+    if (!DEFAULT_ROLES[userRole.toUpperCase()]) {
+      // Get current user's organization
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
+
+      const { data: orgUser } = await supabase
+        .from('organization_users')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!orgUser?.organization_id) return false;
+
+      // Check if the custom role has admin-level permissions
+      const isAdmin = await isCustomRoleAdmin(userRole, orgUser.organization_id);
+      if (isAdmin) return true;
+
+      // Check if the custom role has this specific permission in the database
+      return await CustomRolesService.customRoleHasPermission(
+        userRole, 
+        orgUser.organization_id, 
+        permission
+      );
+    }
+    
     return rolePermissions.includes(permission);
   } catch (error) {
     console.error('Error checking permission:', error);
@@ -261,8 +330,8 @@ export const getPermissionLevel = async (feature) => {
     const userRole = await getUserRole();
     if (!userRole) return PERMISSION_LEVELS.NONE;
 
-    // Admins have full access
-    if (userRole === ROLES.ADMIN) return PERMISSION_LEVELS.ADMIN;
+    // Admin roles have full access
+    if (isAdminRole(userRole)) return PERMISSION_LEVELS.ADMIN;
 
     // Map roles to permission levels
     const roleLevels = {
@@ -270,6 +339,16 @@ export const getPermissionLevel = async (feature) => {
       [ROLES.STAFF]: PERMISSION_LEVELS.WRITE,
       [ROLES.ADMIN]: PERMISSION_LEVELS.ADMIN
     };
+
+    // For custom roles, we need to check specific permissions
+    if (!DEFAULT_ROLES[userRole.toUpperCase()]) {
+      // Check if they have any write-level permissions
+      const hasWritePermission = await hasPermission('members:edit') || 
+                                await hasPermission('events:create') || 
+                                await hasPermission('tasks:create');
+      
+      return hasWritePermission ? PERMISSION_LEVELS.WRITE : PERMISSION_LEVELS.READ;
+    }
 
     return roleLevels[userRole] || PERMISSION_LEVELS.NONE;
   } catch (error) {
@@ -291,7 +370,36 @@ export const usePermissions = () => {
         setUserRole(role);
         
         if (role) {
-          const rolePerms = ROLE_PERMISSIONS[role] || [];
+          let rolePerms = ROLE_PERMISSIONS[role] || [];
+          
+          // If it's a custom role, get permissions from database
+          if (!DEFAULT_ROLES[role.toUpperCase()]) {
+            // Get current user's organization
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              const { data: orgUser } = await supabase
+                .from('organization_users')
+                .select('organization_id')
+                .eq('user_id', user.id)
+                .single();
+
+              if (orgUser?.organization_id) {
+                // Get custom role permissions
+                rolePerms = await CustomRolesService.getCustomRolePermissions(
+                  role, 
+                  orgUser.organization_id
+                );
+                
+                // Check if this custom role has admin-level permissions
+                const isAdmin = await isCustomRoleAdmin(role, orgUser.organization_id);
+                if (isAdmin) {
+                  // Add all permissions for admin-level custom roles
+                  rolePerms = CustomRolesService.getAvailablePermissions();
+                }
+              }
+            }
+          }
+          
           setPermissions(rolePerms);
         }
       } catch (error) {
@@ -306,7 +414,9 @@ export const usePermissions = () => {
 
   const hasPermission = useCallback((permission) => {
     if (!userRole) return false;
-    if (userRole === ROLES.SYSTEM_ADMIN) return true;
+    if (isAdminRole(userRole)) return true;
+    
+    // For custom roles, check against the loaded permissions
     return permissions.includes(permission);
   }, [userRole, permissions]);
 

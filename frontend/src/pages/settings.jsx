@@ -4,7 +4,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ChurchInfoSettings from '@/components/settings/ChurchInfoSettings';
 import AccountSettings from '@/components/settings/AccountSettings';
 import DataManagementSettings from '@/components/settings/DataManagementSettings';
-import UserManagementSettings from '@/components/settings/UserManagementSettings';
 import AutomationSettings from '@/components/settings/AutomationSettings';
 import DemoSystemSettings from '@/components/settings/DemoSystemSettings';
 import { isUserAdmin } from '@/lib/data';
@@ -62,8 +61,6 @@ export function Settings() {
         <div className="overflow-x-auto">
           <TabsList className="mb-4 w-max min-w-full">
             <TabsTrigger value="church">Church Information</TabsTrigger>
-            <TabsTrigger value="users">User Management</TabsTrigger>
-
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="automation">Automation</TabsTrigger>
             {isAdmin && <TabsTrigger value="demo">Demo System</TabsTrigger>}
@@ -74,12 +71,6 @@ export function Settings() {
         <TabsContent value="church">
           <ChurchInfoSettings />
         </TabsContent>
-        
-        <TabsContent value="users">
-          <UserManagementSettings />
-        </TabsContent>
-        
-
         
         <TabsContent value="account">
           <AccountSettings />

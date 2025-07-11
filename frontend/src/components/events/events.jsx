@@ -244,6 +244,18 @@ export function Events() {
     try {
       setIsLoading(true);
       
+      // Get current user's organization ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const { data: orgUser, error: orgError } = await supabase
+        .from('organization_users')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (orgError || !orgUser) throw new Error('Unable to determine organization');
+      
       const { data: events, error } = await supabase
         .from('events')
         .select(`
@@ -258,6 +270,7 @@ export function Events() {
             member_id
           )
         `)
+        .eq('organization_id', orgUser.organization_id)
         .order('start_date', { ascending: true });
 
       if (error) throw error;
@@ -612,9 +625,22 @@ export function Events() {
 
   const fetchMembers = useCallback(async () => {
     try {
+      // Get current user's organization ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const { data: orgUser, error: orgError } = await supabase
+        .from('organization_users')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (orgError || !orgUser) throw new Error('Unable to determine organization');
+
       const { data, error } = await supabase
         .from('members')
         .select('*')
+        .eq('organization_id', orgUser.organization_id)
         .order('firstname', { ascending: true });
       
       if (error) throw error;
@@ -1097,10 +1123,23 @@ export function Events() {
     setIsMemberDialogOpen(true);
     
     try {
+      // Get current user's organization ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const { data: orgUser, error: orgError } = await supabase
+        .from('organization_users')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (orgError || !orgUser) throw new Error('Unable to determine organization');
+
       // Fetch all members
       const { data: allMembers, error: membersError } = await supabase
         .from('members')
         .select('*')
+        .eq('organization_id', orgUser.organization_id)
         .order('firstname');
 
       if (membersError) throw membersError;

@@ -88,6 +88,37 @@ import { Label } from '@/components/ui/label';
 import { formatName, getInitials } from '@/lib/utils/formatters';
 import { useAttendanceStats } from '../lib/data/attendanceStats';
 import LeadershipVerse from '@/components/LeadershipVerse';
+import { PermissionFeature } from '@/components/PermissionGuard';
+import { PERMISSIONS } from '@/lib/permissions';
+
+// Function to check if user has access to any dashboard sections
+const getUserAccessiblePages = (userPermissions) => {
+  const accessiblePages = [];
+  
+  if (userPermissions.includes('members:view')) {
+    accessiblePages.push({ name: 'Members', path: '/members', icon: Users2, color: 'blue' });
+  }
+  if (userPermissions.includes('donations:view')) {
+    accessiblePages.push({ name: 'Donations', path: '/donations', icon: DollarSign, color: 'emerald' });
+  }
+  if (userPermissions.includes('events:view')) {
+    accessiblePages.push({ name: 'Events', path: '/events', icon: Calendar, color: 'blue' });
+  }
+  if (userPermissions.includes('tasks:view')) {
+    accessiblePages.push({ name: 'Tasks', path: '/tasks', icon: CheckSquare, color: 'orange' });
+  }
+  if (userPermissions.includes('children:view')) {
+    accessiblePages.push({ name: 'Children', path: '/children', icon: Baby, color: 'pink' });
+  }
+  if (userPermissions.includes('settings:view')) {
+    accessiblePages.push({ name: 'SMS', path: '/sms', icon: MessageSquare, color: 'teal' });
+  }
+  if (userPermissions.includes('reports:view')) {
+    accessiblePages.push({ name: 'Reports', path: '/reports', icon: BarChart3, color: 'indigo' });
+  }
+  
+  return accessiblePages;
+};
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -735,15 +766,106 @@ export function Dashboard() {
           </div>
         </motion.div>
 
-
+        {/* Check if user has access to any dashboard sections */}
+        {(() => {
+          const userPermissions = user?.user_metadata?.permissions || [];
+          const accessiblePages = getUserAccessiblePages(userPermissions);
+          
+          // Check if any dashboard sections would be visible
+          const hasDashboardAccess = 
+            userPermissions.includes('members:view') ||
+            userPermissions.includes('donations:view') ||
+            userPermissions.includes('events:view') ||
+            userPermissions.includes('tasks:view') ||
+            userPermissions.includes('settings:view') ||
+            userPermissions.includes('reports:view');
+          
+          if (!hasDashboardAccess && accessiblePages.length > 0) {
+            return (
+              <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
+                <div className="group relative">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-slate-500 to-slate-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+                  <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 sm:p-8 lg:p-10 shadow-xl">
+                    <div className="text-center mb-8">
+                      <div className="w-16 h-16 bg-gradient-to-br from-slate-500 to-slate-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                        <Home className="h-8 w-8 text-white" />
+                      </div>
+                      <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">
+                        Welcome to Your Dashboard
+                      </h2>
+                      <p className="text-slate-600 dark:text-slate-400 text-lg">
+                        You have access to the following features:
+                      </p>
+                    </div>
+                    
+                    <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                      {accessiblePages.map((page, index) => {
+                        const IconComponent = page.icon;
+                        const colorClasses = {
+                          blue: 'from-blue-500 to-blue-600 text-blue-600',
+                          emerald: 'from-emerald-500 to-emerald-600 text-emerald-600',
+                          orange: 'from-orange-500 to-orange-600 text-orange-600',
+                          pink: 'from-pink-500 to-pink-600 text-pink-600',
+                          teal: 'from-teal-500 to-teal-600 text-teal-600',
+                          indigo: 'from-indigo-500 to-indigo-600 text-indigo-600'
+                        };
+                        
+                        return (
+                          <motion.div 
+                            key={page.path}
+                            variants={itemVariants}
+                            className="group/card relative"
+                          >
+                            <div className={`absolute -inset-0.5 bg-gradient-to-r ${colorClasses[page.color]}/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300`}></div>
+                            <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+                              <div className="flex items-center gap-4 mb-4">
+                                <div className={`w-12 h-12 bg-gradient-to-br ${colorClasses[page.color]} rounded-xl flex items-center justify-center shadow-lg`}>
+                                  <IconComponent className="h-6 w-6 text-white" />
+                                </div>
+                                <div>
+                                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                                    {page.name}
+                                  </h3>
+                                </div>
+                              </div>
+                              
+                              <Button 
+                                className={`w-full bg-gradient-to-r ${colorClasses[page.color]} hover:opacity-90 transition-all duration-300`}
+                                asChild
+                              >
+                                <a href={page.path} className="flex items-center justify-center space-x-2">
+                                  <span>Access {page.name}</span>
+                                  <ArrowUpRight className="h-4 w-4" />
+                                </a>
+                              </Button>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                    
+                    <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700 text-center">
+                      <p className="text-slate-500 dark:text-slate-400 text-sm">
+                        Contact your administrator if you need access to additional features.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          }
+          
+          return null;
+        })()}
 
         {/* Main Analytics Grid - Next-Gen Design */}
         <div className="grid gap-3 sm:gap-6 lg:gap-8 grid-cols-1 lg:grid-cols-3 mb-6 sm:mb-12">
           {/* People Analytics */}
-          <motion.div variants={itemVariants}>
-            <div className="group relative">
-              <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-              <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+          <PermissionFeature permission={PERMISSIONS.MEMBERS_VIEW}>
+            <motion.div variants={itemVariants}>
+              <div className="group relative">
+                <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+                <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center space-x-3">
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
@@ -803,12 +925,14 @@ export function Dashboard() {
               </div>
             </div>
           </motion.div>
+          </PermissionFeature>
 
           {/* Financial Analytics */}
-          <motion.div variants={itemVariants}>
-            <div className="group relative">
-              <div className="absolute -inset-1 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-              <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+          <PermissionFeature permission={PERMISSIONS.DONATIONS_VIEW}>
+            <motion.div variants={itemVariants}>
+              <div className="group relative">
+                <div className="absolute -inset-1 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+                <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center space-x-3">
                     <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
@@ -860,12 +984,14 @@ export function Dashboard() {
               </div>
             </div>
           </motion.div>
+          </PermissionFeature>
 
         {/* Events & Activities */}
-        <motion.div variants={itemVariants}>
-          <div className="group relative">
-            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-            <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+        <PermissionFeature permission={PERMISSIONS.EVENTS_VIEW}>
+          <motion.div variants={itemVariants}>
+            <div className="group relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+              <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
@@ -927,12 +1053,14 @@ export function Dashboard() {
             </div>
           </div>
         </motion.div>
+        </PermissionFeature>
 
         {/* Celebrations */}
-        <motion.div variants={itemVariants}>
-          <div className="group relative">
-            <div className="absolute -inset-1 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-            <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+        <PermissionFeature permission={PERMISSIONS.REPORTS_VIEW}>
+          <motion.div variants={itemVariants}>
+            <div className="group relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+              <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg">
@@ -993,12 +1121,14 @@ export function Dashboard() {
             </div>
           </div>
         </motion.div>
+        </PermissionFeature>
 
         {/* Tasks & Productivity */}
-        <motion.div variants={itemVariants}>
-          <div className="group relative">
-            <div className="absolute -inset-1 bg-gradient-to-r from-orange-500 to-red-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-            <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+        <PermissionFeature permission={PERMISSIONS.TASKS_VIEW}>
+          <motion.div variants={itemVariants}>
+            <div className="group relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-orange-500 to-red-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+              <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center shadow-lg">
@@ -1056,12 +1186,14 @@ export function Dashboard() {
             </div>
           </div>
         </motion.div>
+        </PermissionFeature>
 
         {/* Communications */}
-        <motion.div variants={itemVariants}>
-          <div className="group relative">
-            <div className="absolute -inset-1 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-            <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+        <PermissionFeature permission={PERMISSIONS.SETTINGS_VIEW}>
+          <motion.div variants={itemVariants}>
+            <div className="group relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+              <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg">
@@ -1119,14 +1251,16 @@ export function Dashboard() {
             </div>
           </div>
         </motion.div>
+        </PermissionFeature>
       </div>
 
       {/* Personal Tasks Section - Only show if user has assigned tasks */}
       {personalTasks && personalTasks.length > 0 && (
-        <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
-          <div className="group relative">
-            <div className="absolute -inset-1 bg-gradient-to-r from-purple-500 to-violet-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-            <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+        <PermissionFeature permission={PERMISSIONS.TASKS_VIEW}>
+          <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
+            <div className="group relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-purple-500 to-violet-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+              <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-violet-500 rounded-2xl flex items-center justify-center shadow-lg">
@@ -1234,13 +1368,15 @@ export function Dashboard() {
             </div>
           </div>
         </motion.div>
+        </PermissionFeature>
       )}
 
  {/* Church Intelligence - Deep Insights */}
-      <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
-        <div className="group relative">
-          <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-          <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+      <PermissionFeature permission={PERMISSIONS.REPORTS_VIEW}>
+        <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
+          <div className="group relative">
+            <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+            <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center shadow-lg">
@@ -1406,11 +1542,13 @@ export function Dashboard() {
           </div>
         </div>
       </motion.div>
+        </PermissionFeature>
       {/* Recent Activity Feed & Attendance by Event Type */}
-      <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
-        <div className="grid gap-3 sm:gap-6 grid-cols-1 lg:grid-cols-2">
-          {/* Recent Activity Feed */}
-          <div className="group relative">
+      <PermissionFeature permission={PERMISSIONS.SETTINGS_VIEW}>
+        <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
+          <div className="grid gap-3 sm:gap-6 grid-cols-1 lg:grid-cols-2">
+            {/* Recent Activity Feed */}
+            <div className="group relative">
             <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
             <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden">
               <div className="flex items-center justify-between mb-8">
@@ -1628,12 +1766,14 @@ export function Dashboard() {
           </div>
         </div>
       </motion.div>
+        </PermissionFeature>
               
       {/* Advanced Analytics Section */}
-      <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
-        <div className="group relative">
-          <div className="absolute -inset-1 bg-gradient-to-r from-slate-500 to-slate-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+      <PermissionFeature permission={PERMISSIONS.REPORTS_VIEW}>
+        <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
+          <div className="group relative">
+            <div className="absolute -inset-1 bg-gradient-to-r from-slate-500 to-slate-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+            <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 bg-gradient-to-br from-slate-500 to-slate-600 rounded-2xl flex items-center justify-center shadow-lg">
@@ -2366,12 +2506,14 @@ export function Dashboard() {
           </div>
         </div>
       </motion.div>
+        </PermissionFeature>
 
       {/* Financial Intelligence */}
-      <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
-        <div className="group relative">
-          <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+      <PermissionFeature permission={PERMISSIONS.DONATIONS_VIEW}>
+        <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
+          <div className="group relative">
+            <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+            <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
@@ -2499,12 +2641,14 @@ export function Dashboard() {
           </div>
         </div>
       </motion.div>
+        </PermissionFeature>
 
       {/* Event Intelligence */}
-      <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
-        <div className="group relative">
-          <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+      <PermissionFeature permission={PERMISSIONS.EVENTS_VIEW}>
+        <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
+          <div className="group relative">
+            <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+            <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
@@ -2624,12 +2768,14 @@ export function Dashboard() {
           </div>
         </div>
       </motion.div>
+        </PermissionFeature>
 
       {/* Membership Intelligence */}
-      <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
-        <div className="group relative">
-          <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+      <PermissionFeature permission={PERMISSIONS.MEMBERS_VIEW}>
+        <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
+          <div className="group relative">
+            <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+            <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
@@ -2752,12 +2898,14 @@ export function Dashboard() {
           </div>
         </div>
       </motion.div>
+        </PermissionFeature>
 
       {/* Demographics Intelligence */}
-      <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
-        <div className="group relative">
-          <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-cyan-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+      <PermissionFeature permission={PERMISSIONS.MEMBERS_VIEW}>
+        <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
+          <div className="group relative">
+            <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-cyan-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+            <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg">
@@ -2886,6 +3034,7 @@ export function Dashboard() {
           </div>
         </div>
       </motion.div>
+        </PermissionFeature>
 
       {/* Person Selection Dialog */}
       <Dialog open={isPersonDialogOpen} onOpenChange={setIsPersonDialogOpen}>

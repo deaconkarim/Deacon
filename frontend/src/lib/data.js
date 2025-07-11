@@ -1869,16 +1869,25 @@ export const updateCurrentUserPassword = async (newPassword) => {
 // Delete a user and all their related records
 export const deleteUser = async (userId, organizationId) => {
   try {
-    // Get the auth user ID from the member record
-    const { data: memberData, error: memberError } = await supabase
-      .from('members')
+    // userId is already the auth user ID from organization_users table
+    const authUserId = userId;
+
+    // Check if user exists in organization_users
+    const { data: orgUserData, error: orgUserError } = await supabase
+      .from('organization_users')
       .select('user_id')
-      .eq('id', userId)
-      .single();
+      .eq('user_id', authUserId)
+      .eq('organization_id', organizationId);
 
-    if (memberError) throw memberError;
+    if (orgUserError) {
+      console.error('Error fetching organization user data:', orgUserError);
+      throw new Error('Failed to fetch user data');
+    }
 
-    const authUserId = memberData.user_id;
+    // Check if user exists in this organization
+    if (!orgUserData || orgUserData.length === 0) {
+      throw new Error('User not found in this organization');
+    }
 
     // Prevent deleting the current user
     const { data: { user: currentUser } } = await supabase.auth.getUser();
@@ -1886,27 +1895,17 @@ export const deleteUser = async (userId, organizationId) => {
       throw new Error('Cannot delete your own account');
     }
 
-    // Delete organization_users record first
-    if (authUserId) {
-      const { error: orgUserError } = await supabase
-        .from('organization_users')
-        .delete()
-        .eq('user_id', authUserId)
-        .eq('organization_id', organizationId);
-
-      if (orgUserError) {
-        console.error('Error deleting organization_users record:', orgUserError);
-        // Continue with member deletion even if org_users deletion fails
-      }
-    }
-
-    // Delete the member record
-    const { error: memberDeleteError } = await supabase
-      .from('members')
+    // Delete only the organization_users record to remove user access
+    const { error: deleteOrgUserError } = await supabase
+      .from('organization_users')
       .delete()
-      .eq('id', userId);
+      .eq('user_id', authUserId)
+      .eq('organization_id', organizationId);
 
-    if (memberDeleteError) throw memberDeleteError;
+    if (deleteOrgUserError) {
+      console.error('Error deleting organization_users record:', deleteOrgUserError);
+      throw new Error('Failed to remove user access');
+    }
 
     return true;
   } catch (error) {

@@ -50,23 +50,34 @@ export function AttendanceReports() {
   }, [isAddingAttendee]);
 
   const loadAttendanceData = async () => {
+    setIsLoading(true);
     try {
       const startDate = startOfMonth(selectedMonth);
       const endDate = endOfMonth(selectedMonth);
-      
-      // Get today's date to filter only past events
       const today = new Date();
-      const todayStr = format(today, 'yyyy-MM-dd');
       const endDateStr = format(endDate, 'yyyy-MM-dd');
 
       // Use the earlier date between endDate and today
       const filterEndDate = endDate < today ? endDate : today;
       const filterEndDateStr = format(filterEndDate, 'yyyy-MM-dd');
 
+      // Get current user's organization ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const { data: orgUser, error: orgError } = await supabase
+        .from('organization_users')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (orgError || !orgUser) throw new Error('Unable to determine organization');
+
       // Fetch events for the selected month - ONLY PAST EVENTS
       const { data: events, error: eventsError } = await supabase
         .from('events')
         .select('*')
+        .eq('organization_id', orgUser.organization_id)
         .gte('start_date', format(startDate, 'yyyy-MM-dd'))
         .lte('start_date', filterEndDateStr) // Only include events up to today
         .order('start_date', { ascending: false }); // Order by date descending
@@ -105,9 +116,23 @@ export function AttendanceReports() {
   const loadMembers = async () => {
     try {
       setIsLoadingMembers(true);
+      
+      // Get current user's organization ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const { data: orgUser, error: orgError } = await supabase
+        .from('organization_users')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (orgError || !orgUser) throw new Error('Unable to determine organization');
+
       const { data, error } = await supabase
         .from('members')
         .select('*')
+        .eq('organization_id', orgUser.organization_id)
         .order('firstname', { ascending: true });
 
       if (error) throw error;
