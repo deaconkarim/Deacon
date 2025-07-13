@@ -807,28 +807,19 @@ export default function Events() {
       setSelectedMembers(prev => [...prev, member.id]);
       setMemberSearchQuery('');
 
+      // Add member to already checked-in list and remove from available list
+      setAlreadyRSVPMembers(prev => [...prev, member]);
+      setMembers(prev => prev.filter(m => m.id !== member.id));
+
       toast({
         title: "Success",
         description: "Member added to the event."
       });
 
-      // Refresh the selected members list
-      const { data: existingRecords, error: fetchError } = await supabase
-        .from('event_attendance')
-        .select('*')
-        .eq('event_id', selectedEvent.id);
-
-      if (!fetchError && existingRecords) {
-        setSelectedMembers(existingRecords.map(record => record.member_id));
-      }
-
       // Refresh the events list to update attendance count
       await fetchEvents();
 
-      // Close the dialog if all members have been added
-      if (selectedEvent?.attendance_type === 'check-in') {
-        setIsMemberDialogOpen(false);
-      }
+      // Keep dialog open for check-in events to allow multiple check-ins
     } catch (error) {
       toast({
         variant: "destructive",
