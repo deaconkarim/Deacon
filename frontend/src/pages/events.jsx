@@ -819,6 +819,51 @@ export default function Events() {
       // Refresh the events list to update attendance count
       await fetchEvents();
 
+      // For check-in events, refresh the available members list to ensure consistency
+      if (selectedEvent?.attendance_type === 'check-in') {
+        try {
+          // Fetch current attendance data to get accurate lists
+          const { data: attendanceData, error: attendanceError } = await supabase
+            .from('event_attendance')
+            .select(`
+              member_id,
+              members (
+                id,
+                firstname,
+                lastname,
+                email,
+                image_url
+              )
+            `)
+            .eq('event_id', selectedEvent.id);
+
+          if (!attendanceError && attendanceData) {
+            // Get IDs of members who have already checked in
+            const attendingMemberIds = attendanceData.map(record => record.member_id);
+            
+            // Get the full member data for already checked in people
+            const alreadyAttendingMembers = attendanceData.map(record => record.members);
+            
+            // Update the already checked-in list
+            setAlreadyRSVPMembers(alreadyAttendingMembers);
+            
+            // Fetch all members and filter out those who have already checked in
+            const { data: allMembers, error: membersError } = await supabase
+              .from('members')
+              .select('*')
+              .order('firstname');
+
+            if (!membersError && allMembers) {
+              // Filter out members who have already checked in
+              const availableMembers = allMembers.filter(member => !attendingMemberIds.includes(member.id));
+              setMembers(availableMembers);
+            }
+          }
+        } catch (error) {
+          console.error('Error refreshing member lists:', error);
+        }
+      }
+
       // Keep dialog open for check-in events to allow multiple check-ins
     } catch (error) {
       toast({
@@ -1108,9 +1153,8 @@ export default function Events() {
         description: `New visitor created and ${selectedEvent?.attendance_type === 'check-in' ? 'checked in' : 'RSVP\'d'} to the event.`
       });
 
-      // Refresh members list
-      const updatedMembers = await getMembers();
-      setMembers(updatedMembers);
+      // For check-in events, the member is already added to the event and lists via handleMemberClick
+      // No need to refresh the entire members list as it would override our local state changes
     } catch (error) {
       console.error('Error creating member:', error);
       toast({
