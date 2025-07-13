@@ -1823,7 +1823,7 @@ export function Dashboard() {
                   stats.sundayServiceRate >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
                   'text-red-600 dark:text-red-400'
                 }`}>
-                  Active members who attend Sunday service (last 30 days)
+                  Active members who attend Sunday service (last 90 days)
                 </p>
                 </div>
                 

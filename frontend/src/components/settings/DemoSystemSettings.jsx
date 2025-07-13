@@ -186,7 +186,7 @@ const DemoSystemSettings = () => {
   };
 
   const resetDemoData = async () => {
-    if (!confirm('Are you sure you want to reset all demo data? This will delete all members, events, attendance, donations, tasks, and other related data.')) {
+    if (!confirm('Are you sure you want to reset all demo data? This will delete all members, events, attendance, donations, tasks, SMS data, and other related data.')) {
       return;
     }
 
@@ -194,46 +194,55 @@ const DemoSystemSettings = () => {
       // Delete data in the correct order to avoid foreign key constraints
       // Start with dependent tables first, then core tables
       
-      // 1. Delete child check-in logs (no organization_id column, delete all)
+      // 1. Delete SMS messages (depends on conversations and members)
+      await supabase.from('sms_messages').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      
+      // 2. Delete SMS conversations (no organization_id column, delete all)
+      await supabase.from('sms_conversations').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      
+      // 3. Delete SMS templates (no organization_id column, delete all demo templates)
+      await supabase.from('sms_templates').delete().like('name', 'Demo%');
+      
+      // 4. Delete child check-in logs (no organization_id column, delete all)
       await supabase.from('child_checkin_logs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       
-      // 2. Delete child guardians (no organization_id column, delete all)
+      // 5. Delete child guardians (no organization_id column, delete all)
       await supabase.from('child_guardians').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       
-      // 3. Delete task comments (depends on tasks)
+      // 6. Delete task comments (depends on tasks)
       await supabase.from('task_comments').delete().eq('organization_id', organizationId);
       
-      // 4. Delete tasks (depends on members)
+      // 7. Delete tasks (depends on members)
       await supabase.from('tasks').delete().eq('organization_id', organizationId);
       
-      // 5. Delete group members (depends on groups and members)
+      // 8. Delete group members (depends on groups and members)
       await supabase.from('group_members').delete().eq('organization_id', organizationId);
       
-      // 6. Delete groups (depends on members)
+      // 9. Delete groups (depends on members)
       await supabase.from('groups').delete().eq('organization_id', organizationId);
       
-      // 7. Delete event attendance (depends on events and members)
+      // 10. Delete event attendance (depends on events and members)
       await supabase.from('event_attendance').delete().eq('organization_id', organizationId);
       
-      // 8. Delete donations (depends on members and batches)
+      // 11. Delete donations (depends on members and batches)
       await supabase.from('donations').delete().eq('organization_id', organizationId);
       
-      // 9. Delete donation batches (depends on organization)
+      // 12. Delete donation batches (depends on organization)
       await supabase.from('donation_batches').delete().eq('organization_id', organizationId);
       
-      // 10. Delete events (depends on organization)
+      // 13. Delete events (depends on organization)
       await supabase.from('events').delete().eq('organization_id', organizationId);
       
-      // 11. Clear family_id references in members before deleting families
+      // 14. Clear family_id references in members before deleting families
       await supabase.from('members').update({ family_id: null }).eq('organization_id', organizationId);
       
-      // 12. Clear primary_contact_id references in families before deleting families
+      // 15. Clear primary_contact_id references in families before deleting families
       await supabase.from('families').update({ primary_contact_id: null }).neq('id', '00000000-0000-0000-0000-000000000000');
       
-      // 13. Delete families (no organization_id column, delete all)
+      // 16. Delete families (no organization_id column, delete all)
       await supabase.from('families').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       
-      // 14. Finally delete members (core table)
+      // 17. Finally delete members (core table)
       await supabase.from('members').delete().eq('organization_id', organizationId);
 
       toast({

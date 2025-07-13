@@ -94,7 +94,8 @@ export default function AddChild() {
         const guardianRelationships = formData.guardian_ids.map(guardian_id => ({
           child_id: childData.id,
           guardian_id: guardian_id,
-          relationship: formData.guardian_relationships[guardian_id] || 'Parent'
+          relationship: formData.guardian_relationships[guardian_id] || 'Parent',
+          organization_id: childData.organization_id
         }));
 
         const { error: guardianError } = await supabase

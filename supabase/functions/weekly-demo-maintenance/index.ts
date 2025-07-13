@@ -381,9 +381,9 @@ class WeeklyDemoMaintenance {
 
   private getExpectedAttendance(eventType: string, eventDate: string): number {
     const baseAttendance = {
-      'Sunday Service': 70,
-      'Bible Study': 24,
-      'Fellowship Activity': 50
+      'Sunday Service': 45, // Reduced from 70 to be more realistic
+      'Bible Study': 15,    // Reduced from 24 to be more realistic
+      'Fellowship Activity': 30 // Reduced from 50 to be more realistic
     }
     
     const date = new Date(eventDate)

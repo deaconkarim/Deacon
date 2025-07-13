@@ -25,9 +25,12 @@ export const getCurrentUserOrganizationId = async () => {
       .select('organization_id')
       .eq('user_id', user.id)
       .eq('approval_status', 'approved')
-      .limit(1);
+      .order('created_at', { ascending: true }); // Get the oldest association first
 
     if (error) throw error;
+    
+    // If user has multiple organizations, use the first one (oldest)
+    // In the future, we could add a UI to let users choose which organization to use
     return data && data.length > 0 ? data[0].organization_id : null;
   } catch (error) {
     console.error('Error getting user organization:', error);

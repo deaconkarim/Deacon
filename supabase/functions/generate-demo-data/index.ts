@@ -11,6 +11,8 @@ interface DemoConfig {
   memberCount: number
   weeksToGenerate: number
   startDate: Date
+  minMembers?: number
+  maxMembers?: number
 }
 
 class DemoDataGenerator {
@@ -19,7 +21,14 @@ class DemoDataGenerator {
 
   constructor(supabaseUrl: string, supabaseKey: string, config: DemoConfig) {
     this.supabase = createClient(supabaseUrl, supabaseKey)
-    this.config = config
+    
+    // Randomize member count if min and max are provided
+    if (config.minMembers && config.maxMembers) {
+      const actualMemberCount = Math.floor(Math.random() * (config.maxMembers - config.minMembers + 1)) + config.minMembers
+      this.config = { ...config, memberCount: actualMemberCount }
+    } else {
+      this.config = config
+    }
   }
 
   // Generate realistic member names and demographics
@@ -323,9 +332,9 @@ class DemoDataGenerator {
 
   private getExpectedAttendance(eventType: string, eventDate: string): number {
     const baseAttendance = {
-      'Sunday Service': 70,
-      'Bible Study': 24,
-      'Fellowship Activity': 50
+      'Sunday Service': 45, // Reduced from 70 to be more realistic
+      'Bible Study': 15,    // Reduced from 24 to be more realistic
+      'Fellowship Activity': 30 // Reduced from 50 to be more realistic
     }
     
     const date = new Date(eventDate)
@@ -696,6 +705,7 @@ class DemoDataGenerator {
             guardian_id: guardian.id,
             relationship: i === 0 ? 'Parent' : 'Parent',
             is_primary: i === 0, // First guardian is primary
+            organization_id: this.config.organizationId, // Add organization_id
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })
@@ -729,6 +739,167 @@ class DemoDataGenerator {
     return notes[Math.floor(Math.random() * notes.length)]
   }
 
+  // Generate SMS templates
+  private generateSMSTemplates() {
+    const timestamp = Date.now()
+    const templates = [
+      {
+        id: crypto.randomUUID(),
+        name: `Demo Welcome Message ${timestamp}`,
+        description: 'Welcome new members to the church',
+        template_text: 'Welcome to {church_name}! We\'re so glad you\'re here. If you have any questions, feel free to reach out.',
+        variables: ['church_name'],
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: crypto.randomUUID(),
+        name: `Demo Event Reminder ${timestamp}`,
+        description: 'Remind members about upcoming events',
+        template_text: 'Reminder: {event_name} is tomorrow at {event_time}. We hope to see you there!',
+        variables: ['event_name', 'event_time'],
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: crypto.randomUUID(),
+        name: `Demo Prayer Request ${timestamp}`,
+        description: 'Send prayer request to prayer team',
+        template_text: 'We\'re praying for you and your family. If you have any specific prayer requests, please let us know.',
+        variables: [],
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: crypto.randomUUID(),
+        name: `Demo Volunteer Opportunity ${timestamp}`,
+        description: 'Notify members of volunteer opportunities',
+        template_text: 'We have a volunteer opportunity coming up: {opportunity_name}. Would you be interested in helping?',
+        variables: ['opportunity_name'],
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: crypto.randomUUID(),
+        name: `Demo Weekly Update ${timestamp}`,
+        description: 'Send weekly church updates',
+        template_text: 'Here\'s this week\'s update from {church_name}: {update_content}. Have a blessed week!',
+        variables: ['church_name', 'update_content'],
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ]
+    return templates
+  }
+
+  // Generate SMS conversations
+  private generateSMSConversations(members: any[], groups: any[]) {
+    const conversations = []
+    const conversationTypes = ['general', 'prayer_request', 'event_reminder', 'emergency', 'pastoral_care']
+    
+    // Generate 10-20 conversations
+    const conversationCount = Math.floor(Math.random() * 11) + 10
+    
+    for (let i = 0; i < conversationCount; i++) {
+      const conversationType = conversationTypes[Math.floor(Math.random() * conversationTypes.length)]
+      const isActive = Math.random() > 0.3 // 70% chance of being active
+      
+      // 30% chance of being a group conversation, but only if we have groups
+      const isGroupConversation = Math.random() > 0.7 && groups.length > 0
+      const groupId = isGroupConversation ? groups[Math.floor(Math.random() * groups.length)].id : null
+      
+      const conversation = {
+        id: crypto.randomUUID(),
+        title: `Conversation ${i + 1}`,
+        conversation_type: conversationType,
+        status: isActive ? 'active' : 'closed',
+        group_id: groupId,
+        created_at: this.getRandomPastDate(60),
+        updated_at: new Date().toISOString()
+      }
+      
+      conversations.push(conversation)
+    }
+    
+    return conversations
+  }
+
+  // Generate SMS messages
+  private generateSMSMessages(conversations: any[], members: any[]) {
+    const messages = []
+    const messageContents = [
+      'Thanks for the reminder!',
+      'I\'ll be there on Sunday',
+      'Can you send me more details?',
+      'I have a prayer request',
+      'I\'d like to volunteer',
+      'What time is the service?',
+      'Is there anything I can help with?',
+      'I won\'t be able to make it this week',
+      'Looking forward to the event!',
+      'Can you add me to the prayer list?',
+      'I have a question about the event',
+      'Thanks for checking in',
+      'I\'ll bring some food for the potluck',
+      'Can you send me the address?',
+      'I\'m running a few minutes late',
+      'I have a family emergency',
+      'Can you pray for my friend?',
+      'I\'d like to join the Bible study',
+      'What should I bring for the event?',
+      'I\'m so grateful for this community'
+    ]
+    
+    conversations.forEach(conversation => {
+      // Generate 2-8 messages per conversation
+      const messageCount = Math.floor(Math.random() * 7) + 2
+      const conversationStart = new Date(conversation.created_at)
+      
+      for (let i = 0; i < messageCount; i++) {
+        const direction = Math.random() > 0.5 ? 'outbound' : 'inbound'
+        const isOutbound = direction === 'outbound'
+        
+        // Generate timestamp within conversation timeframe
+        const messageTime = new Date(conversationStart.getTime() + (i * 24 * 60 * 60 * 1000) + Math.random() * 7 * 24 * 60 * 60 * 1000)
+        
+        // 70% chance of having a member_id, but only if we have members
+        const memberId = Math.random() > 0.3 && members.length > 0 
+          ? members[Math.floor(Math.random() * members.length)].id 
+          : null
+        
+        const message = {
+          id: crypto.randomUUID(),
+          conversation_id: conversation.id,
+          member_id: memberId,
+          sent_by: null, // Set to null for demo data since we don't have real user IDs
+          direction: direction,
+          from_number: isOutbound ? '+15551234567' : this.generatePhoneNumber(),
+          to_number: isOutbound ? this.generatePhoneNumber() : '+15551234567',
+          body: messageContents[Math.floor(Math.random() * messageContents.length)],
+          status: isOutbound ? 'delivered' : 'sent', // Use 'delivered' for outbound, 'sent' for inbound
+          twilio_sid: isOutbound ? `twilio-${Math.random().toString(36).substr(2, 9)}` : null,
+          error_message: null,
+          sent_at: messageTime.toISOString(),
+          delivered_at: isOutbound ? messageTime.toISOString() : null,
+          created_at: messageTime.toISOString()
+        }
+        
+        messages.push(message)
+      }
+    })
+    
+    return messages
+  }
+
+  private generatePhoneNumber() {
+    return `+1${Math.floor(Math.random() * 9000000000) + 1000000000}`
+  }
+
   // Main generation method
   async generateDemoData() {
     try {
@@ -746,6 +917,9 @@ class DemoDataGenerator {
       const tasks = this.generateTasks(members)
       const guardians = this.generateGuardians(members)
       const childrenCheckIns = this.generateChildrenCheckIns(members, events, guardians)
+      const smsTemplates = this.generateSMSTemplates()
+      const smsConversations = this.generateSMSConversations(members, groups)
+      const smsMessages = this.generateSMSMessages(smsConversations, members)
       
       console.log(`📊 Generated:`)
       console.log(`  - ${members.length} members`)
@@ -759,6 +933,9 @@ class DemoDataGenerator {
       console.log(`  - ${tasks.length} tasks`)
       console.log(`  - ${guardians.length} guardian relationships`)
       console.log(`  - ${childrenCheckIns.length} children check-ins`)
+      console.log(`  - ${smsTemplates.length} SMS templates`)
+      console.log(`  - ${smsConversations.length} SMS conversations`)
+      console.log(`  - ${smsMessages.length} SMS messages`)
       
       // Insert members first (without family_id to avoid foreign key constraint)
       const { error: membersError } = await this.supabase
@@ -861,6 +1038,27 @@ class DemoDataGenerator {
       
       if (checkInsError) throw new Error(`Children check-ins insert failed: ${checkInsError.message}`)
       
+      // Insert SMS templates
+      const { error: smsTemplatesError } = await this.supabase
+        .from('sms_templates')
+        .upsert(smsTemplates, { onConflict: 'name' })
+      
+      if (smsTemplatesError) throw new Error(`SMS templates insert failed: ${smsTemplatesError.message}`)
+      
+      // Insert SMS conversations
+      const { error: smsConversationsError } = await this.supabase
+        .from('sms_conversations')
+        .upsert(smsConversations, { onConflict: 'id' })
+      
+      if (smsConversationsError) throw new Error(`SMS conversations insert failed: ${smsConversationsError.message}`)
+      
+      // Insert SMS messages
+      const { error: smsMessagesError } = await this.supabase
+        .from('sms_messages')
+        .upsert(smsMessages, { onConflict: 'id' })
+      
+      if (smsMessagesError) throw new Error(`SMS messages insert failed: ${smsMessagesError.message}`)
+      
       console.log('✅ Demo data generation completed successfully!')
       
       return {
@@ -876,7 +1074,10 @@ class DemoDataGenerator {
           families: families.length,
           tasks: tasks.length,
           guardians: guardians.length,
-          childrenCheckIns: childrenCheckIns.length
+          childrenCheckIns: childrenCheckIns.length,
+          smsTemplates: smsTemplates.length,
+          smsConversations: smsConversations.length,
+          smsMessages: smsMessages.length
         }
       }
     } catch (error) {
@@ -892,7 +1093,7 @@ serve(async (req) => {
   }
 
   try {
-    const { organizationId, memberCount = 50, weeksToGenerate = 26 } = await req.json()
+    const { organizationId, memberCount = 50, weeksToGenerate = 26, minMembers = 80, maxMembers = 150 } = await req.json()
     
     if (!organizationId) {
       throw new Error('organizationId is required')
@@ -905,7 +1106,9 @@ serve(async (req) => {
       organizationId,
       memberCount,
       weeksToGenerate,
-      startDate: new Date(Date.now() - (weeksToGenerate * 7 * 24 * 60 * 60 * 1000)) // Start from weeks ago
+      startDate: new Date(Date.now() - (weeksToGenerate * 7 * 24 * 60 * 60 * 1000)), // Start from weeks ago
+      minMembers,
+      maxMembers
     }
     
     const generator = new DemoDataGenerator(supabaseUrl, supabaseKey, config)

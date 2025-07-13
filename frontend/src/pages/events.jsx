@@ -35,7 +35,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { getMembers } from '../lib/data';
+import { getMembers, getCurrentUserOrganizationId } from '../lib/data';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -313,26 +313,60 @@ export default function Events() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      // Get current user's organization ID
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
+      // Get current user's organization ID (including impersonation)
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) throw new Error('Unable to determine organization');
+      
+      console.log('[Events] Using organization_id:', organizationId);
 
-      const { data: orgUser, error: orgError } = await supabase
-        .from('organization_users')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .single();
+      // Debug: Check all organizations and events in the database
+      const { data: allOrgs, error: orgsError } = await supabase
+        .from('organizations')
+        .select('id, name');
 
-      if (orgError || !orgUser) throw new Error('Unable to determine organization');
+      const { data: allEventsInDB, error: allEventsInDBError } = await supabase
+        .from('events')
+        .select('id, title, start_date, organization_id');
+
+      if (orgsError) {
+        console.error('[Events] Error fetching organizations:', orgsError);
+      } else {
+        console.log('[Events] All organizations:', allOrgs);
+      }
+
+      if (allEventsInDBError) {
+        console.error('[Events] Error fetching all events:', allEventsInDBError);
+      } else {
+        console.log('[Events] All events in database:', allEventsInDB.length);
+        if (allEventsInDB.length > 0) {
+          console.log('[Events] Sample events:', allEventsInDB.slice(0, 3));
+        }
+      }
+
+      // Debug: Check if there are any events at all for this organization
+      const { data: allEvents, error: allEventsError } = await supabase
+        .from('events')
+        .select('id, title, start_date, organization_id')
+        .eq('organization_id', organizationId);
+
+      if (allEventsError) {
+        console.error('[Events] Error fetching all events:', allEventsError);
+      } else {
+        console.log('[Events] Total events for organization:', allEvents.length);
+        if (allEvents.length > 0) {
+          console.log('[Events] Sample events:', allEvents.slice(0, 3));
+        }
+      }
 
       const { data, error } = await supabase
         .from('events')
         .select('*, event_attendance(*)')
-        .eq('organization_id', orgUser.organization_id)
+        .eq('organization_id', organizationId)
         .gte('start_date', today.toISOString())
         .order('start_date', { ascending: true });
 
       if (error) throw error;
+      console.log('[Events] Upcoming events count:', data.length);
 
       // Process events to only show next instance of recurring events and add attendance count
       const processedEvents = data.reduce((acc, event) => {
@@ -391,27 +425,22 @@ export default function Events() {
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
       oneWeekAgo.setHours(0, 0, 0, 0);
 
-      // Get current user's organization ID
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      const { data: orgUser, error: orgError } = await supabase
-        .from('organization_users')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (orgError || !orgUser) throw new Error('Unable to determine organization');
+      // Get current user's organization ID (including impersonation)
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) throw new Error('Unable to determine organization');
+      
+      console.log('[Events] Using organization_id (past):', organizationId);
 
       const { data, error } = await supabase
         .from('events')
         .select('*, event_attendance(*)')
-        .eq('organization_id', orgUser.organization_id)
+        .eq('organization_id', organizationId)
         .gte('start_date', oneWeekAgo.toISOString())
         .lt('start_date', today.toISOString())
         .order('start_date', { ascending: false });
 
       if (error) throw error;
+      console.log('[Events] Past events count:', data.length);
 
       // Process past events and add attendance count
       const processedPastEvents = data.map(event => ({
@@ -632,22 +661,14 @@ export default function Events() {
 
   const fetchMembers = useCallback(async () => {
     try {
-      // Get current user's organization ID
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      const { data: orgUser, error: orgError } = await supabase
-        .from('organization_users')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (orgError || !orgUser) throw new Error('Unable to determine organization');
+      // Get current user's organization ID (including impersonation)
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) throw new Error('Unable to determine organization');
 
       const { data, error } = await supabase
         .from('members')
         .select('*')
-        .eq('organization_id', orgUser.organization_id)
+        .eq('organization_id', organizationId)
         .order('firstname', { ascending: true });
       
       if (error) throw error;
@@ -747,25 +768,8 @@ export default function Events() {
       // Trigger automation for event attendance
       console.log('🔍 User object for event attendance:', user);
       
-      // Get organization_id from organization_users table
-      let organizationId = null;
-      try {
-        const { data: orgData, error: orgError } = await supabase
-          .from('organization_users')
-          .select('organization_id')
-          .eq('user_id', user.id)
-
-          .limit(1);
-        
-        if (orgError) {
-          console.error('Error fetching organization_id for event attendance:', orgError);
-        } else {
-          organizationId = orgData?.length > 0 ? orgData[0].organization_id : null;
-          console.log('🔍 Found organization_id for event attendance:', organizationId);
-        }
-      } catch (error) {
-        console.error('Error fetching organization_id for event attendance:', error);
-      }
+      // Get organization_id (including impersonation)
+      const organizationId = await getCurrentUserOrganizationId();
       
       if (organizationId) {
         try {
@@ -891,7 +895,8 @@ export default function Events() {
       if (error) throw error;
 
       // Trigger automation for each attendance record
-      if (user?.organization_id && attendanceData) {
+      const organizationId = await getCurrentUserOrganizationId();
+      if (organizationId && attendanceData) {
         for (const attendance of attendanceData) {
           try {
             // Get member details for automation
@@ -912,7 +917,7 @@ export default function Events() {
                   lastname: member.lastname,
                   phone: member.phone
                 },
-                user.organization_id
+                organizationId
               );
             }
           } catch (automationError) {
@@ -1069,25 +1074,8 @@ export default function Events() {
       console.log('🔍 User object:', user);
       console.log('🔍 Automation service:', automationService);
       
-      // Get organization_id from organization_users table
-      let organizationId = null;
-      try {
-        const { data: orgData, error: orgError } = await supabase
-          .from('organization_users')
-          .select('organization_id')
-          .eq('user_id', user.id)
-
-          .limit(1);
-        
-        if (orgError) {
-          console.error('Error fetching organization_id:', orgError);
-        } else {
-          organizationId = orgData?.length > 0 ? orgData[0].organization_id : null;
-          console.log('🔍 Found organization_id:', organizationId);
-        }
-      } catch (error) {
-        console.error('Error fetching organization_id:', error);
-      }
+      // Get organization_id (including impersonation)
+      const organizationId = await getCurrentUserOrganizationId();
       
       if (organizationId) {
         try {

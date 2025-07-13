@@ -398,42 +398,42 @@ export default function MemberProfile() {
         <div className="relative">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
             <div className="flex items-center gap-4 min-w-0">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate('/members')}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/members')}
                 className="hover:bg-muted/50 transition-colors flex-shrink-0"
-              >
+          >
                 <ArrowLeft className="h-5 w-5" />
-              </Button>
+          </Button>
               <div className="min-w-0">
                 <h1 className="text-2xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent truncate">
                   {formatName(member.firstname, member.lastname)}
                 </h1>
                 <p className="text-muted-foreground mt-2 text-base sm:text-lg">
                   Member Profile & Information
-                </p>
-              </div>
-            </div>
+            </p>
+          </div>
+        </div>
             <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-              <Button
-                variant="outline"
-                onClick={() => setIsEditDialogOpen(true)}
+          <Button
+            variant="outline"
+            onClick={() => setIsEditDialogOpen(true)}
                 className="shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex-1 sm:flex-none"
-              >
-                <Edit className="h-4 w-4 mr-2" />
+          >
+            <Edit className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">Edit Profile</span>
                 <span className="sm:hidden">Edit</span>
-              </Button>
-              <Button
-                variant="outline"
+          </Button>
+          <Button
+            variant="outline"
                 className="text-red-500 hover:text-red-700 hover:bg-red-50 border-red-200 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex-1 sm:flex-none"
-                onClick={() => setIsDeleteDialogOpen(true)}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
+            onClick={() => setIsDeleteDialogOpen(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">Delete</span>
                 <span className="sm:hidden">Delete</span>
-              </Button>
+          </Button>
             </div>
           </div>
         </div>
@@ -527,11 +527,11 @@ export default function MemberProfile() {
                   <div className="relative mb-6">
                     <div className="relative">
                       <Avatar className="h-32 w-32 ring-8 ring-background shadow-2xl">
-                        <AvatarImage src={member.image_url} />
+                  <AvatarImage src={member.image_url} />
                         <AvatarFallback className="text-4xl font-bold bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
-                          {getInitials(member.firstname, member.lastname)}
-                        </AvatarFallback>
-                      </Avatar>
+                    {getInitials(member.firstname, member.lastname)}
+                  </AvatarFallback>
+                </Avatar>
                       <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-green-500 rounded-full border-4 border-background flex items-center justify-center shadow-lg">
                         <div className="w-4 h-4 bg-white rounded-full"></div>
                       </div>
@@ -545,35 +545,35 @@ export default function MemberProfile() {
                       variant={member.status === 'active' ? 'default' : 'secondary'} 
                       className="font-semibold shadow-sm text-sm px-3 py-1"
                     >
-                      {member.status}
-                    </Badge>
-                    {member.member_type === 'child' ? (
+                    {member.status}
+                  </Badge>
+                  {member.member_type === 'child' ? (
                       <Badge variant="secondary" className="text-xs font-semibold shadow-sm px-3 py-1">
                         <Baby className="w-3 h-3 mr-1" />
                         Child
                       </Badge>
-                    ) : (
+                  ) : (
                       <Badge variant="outline" className="text-xs font-semibold shadow-sm px-3 py-1">
                         <User className="w-3 h-3 mr-1" />
                         Adult
                       </Badge>
-                    )}
-                    {member.role !== 'member' && (
+                  )}
+                  {member.role !== 'member' && (
                       <Badge variant="outline" className="text-xs capitalize font-semibold shadow-sm px-3 py-1">
                         <Crown className="w-3 h-3 mr-1" />
                         {member.role}
                       </Badge>
-                    )}
-                  </div>
-                  {member.occupation && (
+                  )}
+                </div>
+                {member.occupation && (
                     <div className="bg-muted/50 px-4 py-2 rounded-full">
                       <p className="text-sm text-muted-foreground font-medium">
                         {member.occupation}
                       </p>
                     </div>
-                  )}
-                </div>
-              </CardHeader>
+                )}
+              </div>
+            </CardHeader>
               
               <CardContent className="p-6 space-y-6">
                 {/* Contact Information */}
@@ -584,18 +584,18 @@ export default function MemberProfile() {
                       Contact Information
                     </h4>
                     <div className="space-y-3">
-                      {member.email && (
+                {member.email && (
                         <div className="flex items-center p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800 hover:shadow-md transition-all duration-200">
                           <Mail className="mr-3 h-4 w-4 text-blue-600" />
                           <span className="font-medium text-blue-900 dark:text-blue-100">{member.email}</span>
-                        </div>
-                      )}
-                      {member.phone && (
+                  </div>
+                )}
+                {member.phone && (
                         <div className="flex items-center p-4 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 rounded-xl border border-green-200 dark:border-green-800 hover:shadow-md transition-all duration-200">
                           <Phone className="mr-3 h-4 w-4 text-green-600" />
                           <span className="font-medium text-green-900 dark:text-green-100">{formatPhoneNumber(member.phone)}</span>
-                        </div>
-                      )}
+                  </div>
+                )}
                     </div>
                   </div>
                 )}
@@ -607,13 +607,13 @@ export default function MemberProfile() {
                     Personal Information
                   </h4>
                   <div className="space-y-3">
-                    {member.gender && (
+                  {member.gender && (
                       <div className="flex items-center p-4 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
                         <User className="mr-3 h-4 w-4 text-purple-600" />
                         <span className="font-medium text-purple-900 dark:text-purple-100 capitalize">{member.gender}</span>
-                      </div>
-                    )}
-                    {member.birth_date && (
+                    </div>
+                  )}
+                  {member.birth_date && (
                       <div className="flex items-center p-4 bg-gradient-to-r from-pink-50 to-pink-100 dark:from-pink-950/20 dark:to-pink-900/20 rounded-xl border border-pink-200 dark:border-pink-800">
                         <CalendarIcon className="mr-3 h-4 w-4 text-pink-600" />
                         <div>
@@ -622,14 +622,14 @@ export default function MemberProfile() {
                             <div className="text-sm text-pink-600 dark:text-pink-400">({calculateAge(member.birth_date)} years old)</div>
                           )}
                         </div>
-                      </div>
-                    )}
-                    {member.join_date && (
+                    </div>
+                  )}
+                  {member.join_date && (
                       <div className="flex items-center p-4 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 rounded-xl border border-orange-200 dark:border-orange-800">
                         <Calendar className="mr-3 h-4 w-4 text-orange-600" />
                         <span className="font-medium text-orange-900 dark:text-orange-100">Joined: {format(new Date(member.join_date), 'MMM d, yyyy')}</span>
-                      </div>
-                    )}
+                    </div>
+                  )}
                   </div>
                 </div>
 
@@ -646,18 +646,18 @@ export default function MemberProfile() {
                         <div className="space-y-1">
                           <div className="font-medium text-indigo-900 dark:text-indigo-100">{member.address.street}</div>
                           <div className="text-indigo-600 dark:text-indigo-400">
-                            {[
-                              member.address.city,
-                              member.address.state,
-                              member.address.zip
-                            ].filter(Boolean).join(', ')}
-                          </div>
-                          {member.address.country && (
+                          {[
+                        member.address.city,
+                        member.address.state,
+                        member.address.zip
+                      ].filter(Boolean).join(', ')}
+                  </div>
+                        {member.address.country && (
                             <div className="text-indigo-600 dark:text-indigo-400">{member.address.country}</div>
-                          )}
+                )}
                         </div>
-                      </div>
-                    </div>
+                </div>
+              </div>
                   </div>
                 )}
 
@@ -669,25 +669,25 @@ export default function MemberProfile() {
                       Communication Preferences
                     </h4>
                     <div className="p-4 bg-gradient-to-r from-teal-50 to-teal-100 dark:from-teal-950/20 dark:to-teal-900/20 rounded-xl border border-teal-200 dark:border-teal-800">
-                      <div className="flex flex-wrap gap-2">
-                        {member.communication_preferences.sms && (
+                    <div className="flex flex-wrap gap-2">
+                      {member.communication_preferences.sms && (
                           <Badge variant="default" className="text-xs font-medium shadow-sm bg-teal-500 hover:bg-teal-600">
                             <MessageSquare className="w-3 h-3 mr-1" />
                             SMS
                           </Badge>
-                        )}
-                        {member.communication_preferences.email && (
+                      )}
+                      {member.communication_preferences.email && (
                           <Badge variant="default" className="text-xs font-medium shadow-sm bg-blue-500 hover:bg-blue-600">
                             <Mail className="w-3 h-3 mr-1" />
                             Email
                           </Badge>
-                        )}
-                        {member.communication_preferences.mail && (
+                      )}
+                      {member.communication_preferences.mail && (
                           <Badge variant="default" className="text-xs font-medium shadow-sm bg-gray-500 hover:bg-gray-600">
                             <FileText className="w-3 h-3 mr-1" />
                             Mail
                           </Badge>
-                        )}
+                      )}
                       </div>
                     </div>
                   </div>
@@ -701,12 +701,12 @@ export default function MemberProfile() {
                       Ministry Involvement
                     </h4>
                     <div className="p-4 bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-950/20 dark:to-yellow-900/20 rounded-xl border border-yellow-200 dark:border-yellow-800">
-                      <div className="flex flex-wrap gap-2">
-                        {member.ministry_involvement.map((ministry, index) => (
+                    <div className="flex flex-wrap gap-2">
+                      {member.ministry_involvement.map((ministry, index) => (
                           <Badge key={index} variant="secondary" className="text-xs font-medium shadow-sm bg-yellow-500 text-yellow-900">
                             {ministry}
                           </Badge>
-                        ))}
+                      ))}
                       </div>
                     </div>
                   </div>
@@ -720,19 +720,19 @@ export default function MemberProfile() {
                       Tags
                     </h4>
                     <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-950/20 dark:to-gray-900/20 rounded-xl border border-gray-200 dark:border-gray-800">
-                      <div className="flex flex-wrap gap-2">
-                        {member.tags.map((tag, index) => (
+                    <div className="flex flex-wrap gap-2">
+                      {member.tags.map((tag, index) => (
                           <Badge key={index} variant="outline" className="text-xs font-medium shadow-sm">
                             {tag}
                           </Badge>
-                        ))}
+                      ))}
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Family Information for Adults */}
-                {member.member_type === 'adult' && (member.marital_status || member.spouse_name || member.anniversary_date) && (
+              {/* Family Information for Adults */}
+              {member.member_type === 'adult' && (member.marital_status || member.spouse_name || member.anniversary_date) && (
                   <div className="space-y-4">
                     <h4 className="text-sm font-semibold text-primary flex items-center gap-2">
                       <Heart className="h-4 w-4" />
@@ -740,37 +740,37 @@ export default function MemberProfile() {
                     </h4>
                     <div className="p-4 bg-gradient-to-r from-pink-50 to-pink-100 dark:from-pink-950/20 dark:to-pink-900/20 rounded-xl border border-pink-200 dark:border-pink-800">
                       <div className="space-y-3">
-                        {member.marital_status && (
+                    {member.marital_status && (
                           <div className="flex items-center gap-3 p-3 bg-white/50 dark:bg-pink-900/20 rounded-lg">
                             <Heart className="h-4 w-4 text-pink-600" />
                             <span className="font-medium text-pink-900 dark:text-pink-100 capitalize">{member.marital_status}</span>
-                          </div>
-                        )}
-                        {member.spouse_name && (
+                      </div>
+                    )}
+                    {member.spouse_name && (
                           <div className="flex items-center gap-3 p-3 bg-white/50 dark:bg-pink-900/20 rounded-lg">
                             <User className="h-4 w-4 text-pink-600" />
                             <span className="font-medium text-pink-900 dark:text-pink-100">Spouse: {member.spouse_name}</span>
-                          </div>
-                        )}
-                        {member.anniversary_date && (
+                      </div>
+                    )}
+                    {member.anniversary_date && (
                           <div className="flex items-center gap-3 p-3 bg-white/50 dark:bg-pink-900/20 rounded-lg">
                             <Calendar className="h-4 w-4 text-pink-600" />
                             <span className="font-medium text-pink-900 dark:text-pink-100">Anniversary: {format(new Date(member.anniversary_date), 'MMM d, yyyy')}</span>
-                          </div>
-                        )}
-                        {member.has_children && (
+                      </div>
+                    )}
+                    {member.has_children && (
                           <div className="flex items-center gap-3 p-3 bg-white/50 dark:bg-pink-900/20 rounded-lg">
                             <Users className="h-4 w-4 text-pink-600" />
                             <span className="font-medium text-pink-900 dark:text-pink-100">Has Children</span>
-                          </div>
-                        )}
                       </div>
-                    </div>
+                    )}
+                      </div>
                   </div>
-                )}
+                </div>
+              )}
 
-                {/* Emergency Contact */}
-                {member.emergency_contact && (member.emergency_contact.name || member.emergency_contact.phone) && (
+              {/* Emergency Contact */}
+              {member.emergency_contact && (member.emergency_contact.name || member.emergency_contact.phone) && (
                   <div className="space-y-4">
                     <h4 className="text-sm font-semibold text-primary flex items-center gap-2">
                       <Shield className="h-4 w-4" />
@@ -778,92 +778,92 @@ export default function MemberProfile() {
                     </h4>
                     <div className="p-4 bg-gradient-to-r from-red-50 to-red-100 dark:from-red-950/20 dark:to-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
                       <div className="space-y-3">
-                        {member.emergency_contact.name && (
+                    {member.emergency_contact.name && (
                           <div className="flex items-center gap-3 p-3 bg-white/50 dark:bg-red-900/20 rounded-lg">
                             <Shield className="h-4 w-4 text-red-600" />
                             <span className="font-medium text-red-900 dark:text-red-100">{member.emergency_contact.name}</span>
-                          </div>
-                        )}
-                        {member.emergency_contact.phone && (
+                      </div>
+                    )}
+                    {member.emergency_contact.phone && (
                           <div className="flex items-center gap-3 p-3 bg-white/50 dark:bg-red-900/20 rounded-lg">
                             <Phone className="h-4 w-4 text-red-600" />
                             <span className="font-medium text-red-900 dark:text-red-100">{formatPhoneNumber(member.emergency_contact.phone)}</span>
-                          </div>
-                        )}
-                        {member.emergency_contact.relationship && (
+                      </div>
+                    )}
+                    {member.emergency_contact.relationship && (
                           <div className="flex items-center gap-3 p-3 bg-white/50 dark:bg-red-900/20 rounded-lg">
                             <User className="h-4 w-4 text-red-600" />
                             <span className="font-medium text-red-900 dark:text-red-100 capitalize">{member.emergency_contact.relationship}</span>
-                          </div>
-                        )}
                       </div>
-                    </div>
+                    )}
+                      </div>
                   </div>
-                )}
+                </div>
+              )}
 
-                {/* Guardian Information for Children */}
-                {member.member_type === 'child' && (
+              {/* Guardian Information for Children */}
+              {member.member_type === 'child' && (
                   <div className="space-y-4">
                     <h4 className="text-sm font-semibold text-primary flex items-center gap-2">
                       <Shield className="h-4 w-4" />
                       Guardians
                     </h4>
                     <div className="p-4 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 rounded-xl border border-orange-200 dark:border-orange-800">
-                      {isGuardiansLoading ? (
+                  {isGuardiansLoading ? (
                         <div className="text-sm text-orange-700 dark:text-orange-300">Loading guardians...</div>
-                      ) : guardians.length > 0 ? (
-                        <div className="space-y-3">
-                          {guardians.map((guardian, index) => (
+                  ) : guardians.length > 0 ? (
+                    <div className="space-y-3">
+                      {guardians.map((guardian, index) => (
                             <div key={guardian.id} className="flex items-start gap-3 p-3 bg-white/50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
-                              <Avatar className="h-8 w-8 flex-shrink-0">
-                                <AvatarImage src={guardian.image_url} />
-                                <AvatarFallback className="text-xs">
-                                  {getInitials(guardian.firstname, guardian.lastname)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <button
-                                    onClick={() => navigate(`/members/${guardian.id}`)}
-                                    className="font-medium text-orange-900 dark:text-orange-100 hover:text-orange-700 dark:hover:text-orange-300 text-sm transition-colors"
-                                  >
-                                    {guardian.firstname} {guardian.lastname}
-                                  </button>
-                                  {guardian.is_primary && (
-                                    <Badge variant="outline" className="text-xs">Primary</Badge>
-                                  )}
-                                </div>
-                                <div className="space-y-1 text-xs text-orange-700 dark:text-orange-300">
-                                  <div className="flex items-center gap-2">
-                                    <User className="h-3 w-3" />
-                                    <span className="capitalize">{guardian.relationship}</span>
-                                  </div>
-                                  {guardian.email && (
-                                    <div className="flex items-center gap-2">
-                                      <Mail className="h-3 w-3" />
-                                      <span className="truncate">{guardian.email}</span>
-                                    </div>
-                                  )}
-                                  {guardian.phone && (
-                                    <div className="flex items-center gap-2">
-                                      <Phone className="h-3 w-3" />
-                                      <span>{formatPhoneNumber(guardian.phone)}</span>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
+                          <Avatar className="h-8 w-8 flex-shrink-0">
+                            <AvatarImage src={guardian.image_url} />
+                            <AvatarFallback className="text-xs">
+                              {getInitials(guardian.firstname, guardian.lastname)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <button
+                                onClick={() => navigate(`/members/${guardian.id}`)}
+                                className="font-medium text-orange-900 dark:text-orange-100 hover:text-orange-700 dark:hover:text-orange-300 text-sm transition-colors"
+                              >
+                                {guardian.firstname} {guardian.lastname}
+                              </button>
+                              {guardian.is_primary && (
+                                <Badge variant="outline" className="text-xs">Primary</Badge>
+                              )}
                             </div>
-                          ))}
+                            <div className="space-y-1 text-xs text-orange-700 dark:text-orange-300">
+                              <div className="flex items-center gap-2">
+                                <User className="h-3 w-3" />
+                                <span className="capitalize">{guardian.relationship}</span>
+                              </div>
+                              {guardian.email && (
+                                <div className="flex items-center gap-2">
+                                  <Mail className="h-3 w-3" />
+                                  <span className="truncate">{guardian.email}</span>
+                                </div>
+                              )}
+                              {guardian.phone && (
+                                <div className="flex items-center gap-2">
+                                  <Phone className="h-3 w-3" />
+                                  <span>{formatPhoneNumber(guardian.phone)}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      ) : (
-                        <div className="text-sm text-orange-700 dark:text-orange-300">No guardians assigned</div>
-                      )}
+                      ))}
                     </div>
-                  </div>
-                )}
+                  ) : (
+                        <div className="text-sm text-orange-700 dark:text-orange-300">No guardians assigned</div>
+                  )}
+                    </div>
+                </div>
+              )}
 
-                {/* Notes */}
-                {member.notes && (
+              {/* Notes */}
+              {member.notes && (
                   <div className="space-y-4">
                     <h4 className="text-sm font-semibold text-primary flex items-center gap-2">
                       <FileText className="h-4 w-4" />
@@ -872,10 +872,10 @@ export default function MemberProfile() {
                     <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-950/20 dark:to-gray-900/20 rounded-xl border border-gray-200 dark:border-gray-800">
                       <p className="text-sm text-gray-700 dark:text-gray-300">{member.notes}</p>
                     </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                </div>
+              )}
+            </CardContent>
+          </Card>
           </motion.div>
         </div>
 
@@ -885,13 +885,21 @@ export default function MemberProfile() {
             <Tabs defaultValue="attendance" className="w-full">
               <TabsList className="mb-4 w-full h-auto min-h-[48px] bg-muted p-1 rounded-lg">
                 <TabsTrigger
+                  value="details"
+                  className="flex-1 h-10 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                >
+                  <FileText className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">All Details</span>
+                  <span className="sm:hidden">Details</span>
+                </TabsTrigger>
+                <TabsTrigger
                   value="attendance"
                   className="flex-1 h-10 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
                 >
                   <Church className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   <span className="hidden sm:inline">Attendance</span>
                   <span className="sm:hidden">Attend</span>
-                </TabsTrigger>
+              </TabsTrigger>
                 <TabsTrigger
                   value="giving"
                   className="flex-1 h-10 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
@@ -899,7 +907,7 @@ export default function MemberProfile() {
                   <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   <span className="hidden sm:inline">Giving</span>
                   <span className="sm:hidden">Giving</span>
-                </TabsTrigger>
+              </TabsTrigger>
                 <TabsTrigger
                   value="groups"
                   className="flex-1 h-10 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
@@ -907,7 +915,7 @@ export default function MemberProfile() {
                   <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   <span className="hidden sm:inline">Groups</span>
                   <span className="sm:hidden">Groups</span>
-                </TabsTrigger>
+              </TabsTrigger>
                 <TabsTrigger
                   value="family"
                   className="flex-1 h-10 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
@@ -915,7 +923,7 @@ export default function MemberProfile() {
                   <Heart className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   <span className="hidden sm:inline">Family</span>
                   <span className="sm:hidden">Family</span>
-                </TabsTrigger>
+              </TabsTrigger>
                 <TabsTrigger
                   value="volunteering"
                   className="flex-1 h-10 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
@@ -923,8 +931,176 @@ export default function MemberProfile() {
                   <Handshake className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   <span className="hidden sm:inline">Volunteering</span>
                   <span className="sm:hidden">Volunteer</span>
-                </TabsTrigger>
-              </TabsList>
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="details">
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-background to-muted/20 print:bg-white print:shadow-none">
+                <CardHeader className="pb-6 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border-b border-blue-200 dark:border-blue-800 print:bg-white print:border-none">
+                  <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent print:text-black">
+                    All Member Details
+                  </CardTitle>
+                  <CardDescription className="text-blue-600 dark:text-blue-400 mt-1 print:text-black">
+                    Complete information for {formatName(member.firstname, member.lastname)}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-6 space-y-8 print:p-4">
+                  {/* Basic Information */}
+                  <section>
+                    <h3 className="text-lg font-semibold flex items-center gap-2 mb-2 text-blue-900 dark:text-blue-100 print:text-black">
+                      <User className="h-5 w-5" /> Basic Information
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <div className="text-sm text-muted-foreground print:text-black">Full Name:</div>
+                        <div className="font-medium text-base print:font-normal">{formatName(member.firstname, member.lastname)}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground print:text-black">Member Type:</div>
+                        <div className="font-medium text-base print:font-normal capitalize">{member.member_type}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground print:text-black">Status:</div>
+                        <div className="font-medium text-base print:font-normal capitalize">{member.status}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground print:text-black">Role:</div>
+                        <div className="font-medium text-base print:font-normal capitalize">{member.role}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground print:text-black">Gender:</div>
+                        <div className="font-medium text-base print:font-normal capitalize">{member.gender}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground print:text-black">Occupation:</div>
+                        <div className="font-medium text-base print:font-normal">{member.occupation || '—'}</div>
+                      </div>
+                    </div>
+                  </section>
+                  {/* Important Dates */}
+                  <section>
+                    <h3 className="text-lg font-semibold flex items-center gap-2 mb-2 text-green-900 dark:text-green-100 print:text-black">
+                      <Calendar className="h-5 w-5" /> Important Dates
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <div className="text-sm text-muted-foreground print:text-black">Birth Date:</div>
+                        <div className="font-medium text-base print:font-normal">
+                          {member.birth_date ? `${format(new Date(member.birth_date), 'MMM d, yyyy')} (${calculateAge(member.birth_date)} years old)` : '—'}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground print:text-black">Join Date:</div>
+                        <div className="font-medium text-base print:font-normal">
+                          {member.join_date ? format(new Date(member.join_date), 'MMM d, yyyy') : member.created_at ? format(new Date(member.created_at), 'MMM d, yyyy') : '—'}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground print:text-black">Anniversary:</div>
+                        <div className="font-medium text-base print:font-normal">
+                          {member.anniversary_date ? format(new Date(member.anniversary_date), 'MMM d, yyyy') : '—'}
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                  {/* Contact Information */}
+                  <section>
+                    <h3 className="text-lg font-semibold flex items-center gap-2 mb-2 text-green-900 dark:text-green-100 print:text-black">
+                      <Mail className="h-5 w-5" /> Contact Information
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <div className="text-sm text-muted-foreground print:text-black">Email:</div>
+                        <div className="font-medium text-base print:font-normal">{member.email || '—'}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground print:text-black">Phone:</div>
+                        <div className="font-medium text-base print:font-normal">{member.phone ? formatPhoneNumber(member.phone) : '—'}</div>
+                      </div>
+                    </div>
+                  </section>
+                  {/* Address */}
+                  <section>
+                    <h3 className="text-lg font-semibold flex items-center gap-2 mb-2 text-purple-900 dark:text-purple-100 print:text-black">
+                      <MapPin className="h-5 w-5" /> Address
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <div className="text-sm text-muted-foreground print:text-black">Street:</div>
+                        <div className="font-medium text-base print:font-normal">{member.address?.street || '—'}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground print:text-black">City:</div>
+                        <div className="font-medium text-base print:font-normal">{member.address?.city || '—'}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground print:text-black">State:</div>
+                        <div className="font-medium text-base print:font-normal">{member.address?.state || '—'}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground print:text-black">ZIP:</div>
+                        <div className="font-medium text-base print:font-normal">{member.address?.zip || '—'}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground print:text-black">Country:</div>
+                        <div className="font-medium text-base print:font-normal">{member.address?.country || '—'}</div>
+                      </div>
+                    </div>
+                  </section>
+                  {/* Family Information */}
+                  <section>
+                    <h3 className="text-lg font-semibold flex items-center gap-2 mb-2 text-pink-900 dark:text-pink-100 print:text-black">
+                      <Heart className="h-5 w-5" /> Family Information
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <div className="text-sm text-muted-foreground print:text-black">Marital Status:</div>
+                        <div className="font-medium text-base print:font-normal capitalize">{member.marital_status || '—'}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground print:text-black">Spouse:</div>
+                        <div className="font-medium text-base print:font-normal">{member.spouse_name || '—'}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground print:text-black">Has Children:</div>
+                        <div className="font-medium text-base print:font-normal">{member.has_children ? 'Yes' : 'No'}</div>
+                      </div>
+                    </div>
+                  </section>
+                  {/* Communication Preferences */}
+                  <section>
+                    <h3 className="text-lg font-semibold flex items-center gap-2 mb-2 text-indigo-900 dark:text-indigo-100 print:text-black">
+                      <MessageSquare className="h-5 w-5" /> Communication Preferences
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <div className="text-sm text-muted-foreground print:text-black">SMS:</div>
+                        <div className="font-medium text-base print:font-normal">{member.communication_preferences?.sms ? 'Enabled' : 'Disabled'}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground print:text-black">Email:</div>
+                        <div className="font-medium text-base print:font-normal">{member.communication_preferences?.email ? 'Enabled' : 'Disabled'}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground print:text-black">Mail:</div>
+                        <div className="font-medium text-base print:font-normal">{member.communication_preferences?.mail ? 'Enabled' : 'Disabled'}</div>
+                      </div>
+                    </div>
+                  </section>
+                  {/* Notes */}
+                  {member.notes && (
+                    <section>
+                      <h3 className="text-lg font-semibold flex items-center gap-2 mb-2 text-gray-900 dark:text-gray-100 print:text-black">
+                        <FileText className="h-5 w-5" /> Notes
+                      </h3>
+                      <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-950/20 dark:to-gray-900/20 rounded-xl border border-gray-200 dark:border-gray-800 print:bg-white print:border print:border-gray-300">
+                        <p className="text-sm text-gray-700 dark:text-gray-300 print:text-black">{member.notes}</p>
+                      </div>
+                    </section>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
 
             <TabsContent value="attendance">
               <Card className="border-0 shadow-lg bg-gradient-to-br from-background to-muted/20">
@@ -936,19 +1112,19 @@ export default function MemberProfile() {
                       </CardTitle>
                       <CardDescription className="text-green-600 dark:text-green-400 mt-1">
                         View {member?.firstname}'s attendance records and engagement statistics
-                      </CardDescription>
-                    </div>
-                    <Button
-                      onClick={() => {
-                        loadPastEvents();
-                        setIsRetroCheckInOpen(true);
-                      }}
+                    </CardDescription>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      loadPastEvents();
+                      setIsRetroCheckInOpen(true);
+                    }}
                       className="bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 w-full sm:w-auto"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
                       <span className="hidden sm:inline">Check In to Past Event</span>
                       <span className="sm:hidden">Check In</span>
-                    </Button>
+                  </Button>
                   </div>
                 </CardHeader>
                 <CardContent className="p-6">
@@ -1066,34 +1242,34 @@ export default function MemberProfile() {
                           <Clock className="h-5 w-5" />
                           Recent Attendance
                         </h3>
-                        <div className="space-y-4">
+                    <div className="space-y-4">
                           {attendance.slice(0, 10).map((record) => (
                             <Card key={record.id} className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 border-green-200 dark:border-green-800 hover:shadow-lg transition-all duration-200">
                               <CardContent className="p-6">
-                                <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between">
                                   <div className="space-y-2">
                                     <p className="font-semibold text-green-900 dark:text-green-100 text-lg">{record.events.title}</p>
                                     <div className="flex items-center text-sm text-green-600 dark:text-green-400">
-                                      <Calendar className="h-4 w-4 mr-2" />
-                                      {format(new Date(record.events.start_date), 'MMM d, yyyy • h:mm a')}
-                                    </div>
-                                    {record.events.location && (
+                                  <Calendar className="h-4 w-4 mr-2" />
+                                  {format(new Date(record.events.start_date), 'MMM d, yyyy • h:mm a')}
+                                </div>
+                                {record.events.location && (
                                       <div className="flex items-center text-sm text-green-600 dark:text-green-400">
-                                        <MapPin className="h-4 w-4 mr-2" />
-                                        {record.events.location}
-                                      </div>
-                                    )}
+                                    <MapPin className="h-4 w-4 mr-2" />
+                                    {record.events.location}
                                   </div>
+                                )}
+                              </div>
                                   {volunteers.some(v => v.event_id === record.events.id) && (
                                     <Badge className="bg-orange-500 hover:bg-orange-600 text-white shadow-sm">
                                       <Heart className="h-3 w-3 mr-1" />
                                       Volunteered
-                                    </Badge>
+                              </Badge>
                                   )}
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
                         </div>
                         {attendance.length > 10 && (
                           <div className="text-center mt-6">
@@ -1126,7 +1302,7 @@ export default function MemberProfile() {
                     </CardTitle>
                     <CardDescription className="text-emerald-600 dark:text-emerald-400 mt-1">
                       View {member?.firstname}'s donation records and financial engagement
-                    </CardDescription>
+                  </CardDescription>
                   </div>
                 </CardHeader>
                 <CardContent className="p-6">
@@ -1615,15 +1791,15 @@ export default function MemberProfile() {
 
                             return Object.entries(volunteerTypeStats).map(([eventType, stats]) => (
                               <Card key={eventType}>
-                                <CardContent className="p-4">
+                          <CardContent className="p-4">
                                   <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between">
                                       <h4 className="font-medium capitalize">{eventType}</h4>
                                       <div className="flex items-center gap-2">
                                         <Heart className="h-4 w-4 text-red-600" />
                                         <span className="text-lg font-bold text-red-600">{stats.total}</span>
-                                      </div>
-                                    </div>
+                                </div>
+                              </div>
                                     
                                     {Object.keys(stats.roles).length > 0 && (
                                       <div className="space-y-1">
@@ -1631,22 +1807,22 @@ export default function MemberProfile() {
                                           <div key={role} className="flex items-center justify-between text-sm">
                                             <span className="text-muted-foreground capitalize">{role}</span>
                                             <span className="font-medium">{count}</span>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    )}
+                            </div>
+                      ))}
+                    </div>
+                  )}
                                   </div>
-                                </CardContent>
-                              </Card>
+                </CardContent>
+              </Card>
                             ));
                           })()}
-                        </div>
                       </div>
+                    </div>
 
                       {/* Recent Volunteering */}
                       <div>
                         <h3 className="text-lg font-semibold mb-4">Recent Volunteering</h3>
-                        <div className="space-y-4">
+                    <div className="space-y-4">
                           {volunteers.slice(0, 10).map((volunteer) => (
                             <Card key={volunteer.id}>
                               <CardContent className="p-4">
@@ -1656,43 +1832,43 @@ export default function MemberProfile() {
                                     <div className="flex items-center text-sm text-muted-foreground">
                                       <Handshake className="h-4 w-4 mr-2" />
                                       {format(new Date(volunteer.events.start_date), 'MMM d, yyyy • h:mm a')}
-                                    </div>
+                          </div>
                                     {volunteer.events.location && (
                                       <div className="flex items-center text-sm text-muted-foreground">
                                         <MapPin className="h-4 w-4 mr-2" />
                                         {volunteer.events.location}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
+                          </div>
+                        )}
+                          </div>
+                          </div>
                               </CardContent>
                             </Card>
                           ))}
-                        </div>
+                      </div>
                         {volunteers.length > 10 && (
                           <div className="text-center mt-4">
                             <p className="text-sm text-muted-foreground">
                               Showing 10 of {volunteers.length} volunteering roles
                             </p>
+                            </div>
+                          )}
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
+                        ) : (
                     <div className="text-center py-8">
                       <Handshake className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                       <p className="text-muted-foreground mb-2">No volunteering history found</p>
                       <p className="text-sm text-muted-foreground">
                         {member?.firstname} {member?.lastname} hasn't volunteered yet.
                       </p>
-                    </div>
-                  )}
+                      </div>
+                    )}
                 </CardContent>
               </Card>
             </TabsContent>
           </Tabs>
             </motion.div>
-          </div>
+        </div>
       </div>
 
       {/* Edit Member Dialog */}
@@ -1707,14 +1883,14 @@ export default function MemberProfile() {
             </DialogDescription>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[70vh] pr-2">
-            <MemberForm
-              initialData={{
+          <MemberForm
+            initialData={{
                 id: member.id,
-                firstname: member.firstname,
-                lastname: member.lastname,
-                email: member.email,
-                phone: member.phone,
-                status: member.status,
+              firstname: member.firstname,
+              lastname: member.lastname,
+              email: member.email,
+              phone: member.phone,
+              status: member.status,
                 image_url: member.image_url,
                 member_type: member.member_type,
                 birth_date: member.birth_date,
@@ -1733,10 +1909,10 @@ export default function MemberProfile() {
                 ministry_involvement: member.ministry_involvement,
                 communication_preferences: member.communication_preferences,
                 tags: member.tags
-              }}
-              onSave={handleEditMember}
-              onCancel={() => setIsEditDialogOpen(false)}
-            />
+            }}
+            onSave={handleEditMember}
+            onCancel={() => setIsEditDialogOpen(false)}
+          />
           </div>
         </DialogContent>
       </Dialog>

@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabaseClient';
-import { getMembers } from '@/lib/data';
+import { getMembers, getCurrentUserOrganizationId } from '@/lib/data';
 import {
   Dialog,
   DialogContent,
@@ -77,18 +77,9 @@ export function Tasks() {
   // Fetch tasks
   const fetchTasks = async () => {
     try {
-      // Get the current user's organization ID
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      const { data: orgData } = await supabase
-        .from('organization_users')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .single();
-
-      if (!orgData?.organization_id) throw new Error('User not associated with any organization');
+      // Get the current user's organization ID (including impersonation)
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) throw new Error('User not associated with any organization');
 
       const { data, error } = await supabase
         .from('tasks')
@@ -97,7 +88,7 @@ export function Tasks() {
           requestor:requestor_id (id, firstname, lastname),
           assignee:assignee_id (id, firstname, lastname)
         `)
-        .eq('organization_id', orgData.organization_id)
+        .eq('organization_id', organizationId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -140,32 +131,23 @@ export function Tasks() {
 
   const fetchUsers = async () => {
     try {
-      // Get the current user's organization ID
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      const { data: orgData } = await supabase
-        .from('organization_users')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .single();
-
-      if (!orgData?.organization_id) throw new Error('User not associated with any organization');
+      // Get the current user's organization ID (including impersonation)
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) throw new Error('User not associated with any organization');
 
       // Get organization users with member data
       const [orgUsersResult, membersResult] = await Promise.all([
         supabase
           .from('organization_users')
           .select('user_id, role, approval_status')
-          .eq('organization_id', orgData.organization_id)
+          .eq('organization_id', organizationId)
           .eq('status', 'active')
           .eq('approval_status', 'approved')
           .order('created_at', { ascending: false }),
         supabase
           .from('members')
           .select('id, firstname, lastname, email, user_id')
-          .eq('organization_id', orgData.organization_id)
+          .eq('organization_id', organizationId)
           .order('firstname', { ascending: true })
       ]);
 
@@ -218,24 +200,15 @@ export function Tasks() {
     }
 
     try {
-      // Get the current user's organization ID
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      const { data: orgData } = await supabase
-        .from('organization_users')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .single();
-
-      if (!orgData?.organization_id) throw new Error('User not associated with any organization');
+      // Get the current user's organization ID (including impersonation)
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) throw new Error('User not associated with any organization');
 
       const { data, error } = await supabase
         .from('tasks')
         .insert([{
           ...newTask,
-          organization_id: orgData.organization_id,
+          organization_id: organizationId,
           created_at: new Date().toISOString()
         }])
         .select()

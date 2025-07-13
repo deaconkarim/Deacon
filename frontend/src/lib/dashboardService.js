@@ -664,58 +664,61 @@ export const dashboardService = {
     const fellowshipStats = eventTypeStats['Fellowship'] || { averageAttendance: 0, eventCount: 0, totalAttendance: 0 };
 
     // Calculate Sunday Service Rate (percentage of active members who attend each week)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
+    // Use last 90 days instead of 30 days to get more data points
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    const ninetyDaysAgoStr = ninetyDaysAgo.toISOString().split('T')[0];
 
-    // Look for Sunday Service events in the last 30 days - ONLY PAST EVENTS
-    const recentSundayEvents = events.filter(e => 
-      e.event_type === 'Sunday Service' && 
-      e.start_date >= thirtyDaysAgoStr && 
-      e.start_date <= todayStr  // Only past events
-    );
+    // Look for Sunday Service events in the last 90 days - ONLY PAST EVENTS
+    const recentSundayEvents = events.filter(e => {
+      const normalizedType = normalizeEventType(e.event_type);
+      const isSundayService = normalizedType === 'Sunday Service';
+      const isInLast90Days = e.start_date >= ninetyDaysAgoStr && e.start_date <= todayStr;
+      const isPastEvent = e.start_date <= todayStr;
+      
+      return isSundayService && isInLast90Days && isPastEvent;
+    });
 
-    // Debug logging
-    console.log('=== SUNDAY SERVICE RATE DEBUG ===');
-    console.log('Active member count:', activeMemberCount);
-    console.log('Total events found:', events.length);
-    console.log('Event types found:', [...new Set(events.map(e => e.event_type))]);
-    console.log('Recent Sunday events (last 30 days):', recentSundayEvents.length);
-    console.log('Recent Sunday events:', recentSundayEvents.map(e => ({ id: e.id, title: e.title, date: e.start_date, type: e.event_type })));
-    console.log('Total attendance records:', attendance.length);
-    console.log('Attendance statuses:', [...new Set(attendance.map(a => a.status))]);
-
-    // Get unique active members who attended Sunday services in the last 30 days
+    // Get unique active members who attended Sunday services in the last 90 days
     const sundayAttendees = new Set();
     const activeMemberIds = new Set(activeMembers.map(m => m.id));
     
     recentSundayEvents.forEach(event => {
       const eventAttendance = attendance.filter(a => a.event_id === event.id);
-      console.log(`Event ${event.title} (${event.id}): ${eventAttendance.length} attendance records`);
       
-      eventAttendance
-        .filter(a => (a.status === 'checked-in' || a.status === 'attending') && a.member_id && activeMemberIds.has(a.member_id))
-        .forEach(a => sundayAttendees.add(a.member_id));
+      const attendingMembers = eventAttendance.filter(a => 
+        (a.status === 'checked-in' || a.status === 'attending') && 
+        a.member_id && 
+        activeMemberIds.has(a.member_id)
+      );
+      
+      attendingMembers.forEach(a => sundayAttendees.add(a.member_id));
     });
-
-    console.log('Unique active members who attended Sunday services:', sundayAttendees.size);
-    console.log('Sunday attendees:', Array.from(sundayAttendees));
 
     // Calculate percentage of active members who attend Sunday services
-    const sundayServiceRate = activeMemberCount > 0 ? 
+    let sundayServiceRate = activeMemberCount > 0 ? 
       Math.round((sundayAttendees.size / activeMemberCount) * 100) : 0;
 
-    console.log('Final Sunday Service Rate:', sundayServiceRate + '%');
-    console.log('=== END SUNDAY SERVICE RATE DEBUG ===');
-
-    console.log('Sunday Service Rate calculation (past events only):', {
-      activeMemberCount,
-      sundayAttendees: sundayAttendees.size,
-      sundayServiceRate: `${sundayServiceRate}%`,
-      sundayServiceEvents: recentSundayEvents.length,
-      activeMemberIds: activeMemberIds.size,
-      pastEventsOnly: true
-    });
+    // If no recent Sunday events but we have historical data, calculate based on all Sunday events
+    if (sundayServiceRate === 0 && sundayServiceStats.eventCount > 0) {
+      // Get all Sunday Service events (not just recent ones)
+      const allSundayEvents = events.filter(e => {
+        const normalizedType = normalizeEventType(e.event_type);
+        return normalizedType === 'Sunday Service' && e.start_date <= todayStr;
+      });
+      
+      const allSundayAttendees = new Set();
+      allSundayEvents.forEach(event => {
+        const eventAttendance = attendance.filter(a => a.event_id === event.id);
+        eventAttendance
+          .filter(a => (a.status === 'checked-in' || a.status === 'attending') && 
+                      a.member_id && activeMemberIds.has(a.member_id))
+          .forEach(a => allSundayAttendees.add(a.member_id));
+      });
+      
+      sundayServiceRate = activeMemberCount > 0 ? 
+        Math.round((allSundayAttendees.size / activeMemberCount) * 100) : 0;
+    }
 
     return {
       sundayServiceRate: sundayServiceRate,

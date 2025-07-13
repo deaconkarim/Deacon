@@ -955,24 +955,24 @@ export function People() {
                             });
                             
                             return sortedMembers.slice(0, 3).map((member) => (
-                              <div key={member.id} className="flex items-center justify-between text-sm">
-                                <div className="flex items-center gap-2">
-                                  <Avatar className="h-6 w-6">
-                                    <AvatarImage src={member.image_url} />
-                                    <AvatarFallback className="text-xs">
-                                      {getInitials(member.firstname, member.lastname)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div className="flex items-center gap-1">
-                                    <span>{member.firstname} {member.lastname}</span>
-                                    {member.id === family.primary_contact_id && (
-                                      <Crown className="w-3 h-3 text-yellow-500" />
-                                    )}
-                                  </div>
-                                  {getMemberTypeBadge(member.member_type)}
-                                  {getRelationshipBadge(member.relationship_type)}
+                            <div key={member.id} className="flex items-center justify-between text-sm">
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-6 w-6">
+                                  <AvatarImage src={member.image_url} />
+                                  <AvatarFallback className="text-xs">
+                                    {getInitials(member.firstname, member.lastname)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex items-center gap-1">
+                                  <span>{member.firstname} {member.lastname}</span>
+                                  {member.id === family.primary_contact_id && (
+                                    <Crown className="w-3 h-3 text-yellow-500" />
+                                  )}
                                 </div>
+                                {getMemberTypeBadge(member.member_type)}
+                                {getRelationshipBadge(member.relationship_type)}
                               </div>
+                            </div>
                             ));
                           })()}
                           {family.members.length > 3 && (
@@ -1298,14 +1298,14 @@ export function People() {
                           <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground bg-muted">
                             Adults
                           </div>
-                          {selectedFamily.members
-                            .filter(member => member.member_type === 'adult')
-                            .sort((a, b) => `${a.firstname} ${a.lastname}`.localeCompare(`${b.firstname} ${b.lastname}`))
-                            .map((member) => (
-                              <SelectItem key={member.id} value={member.id}>
-                                {member.firstname} {member.lastname}
-                              </SelectItem>
-                            ))}
+                      {selectedFamily.members
+                        .filter(member => member.member_type === 'adult')
+                        .sort((a, b) => `${a.firstname} ${a.lastname}`.localeCompare(`${b.firstname} ${b.lastname}`))
+                        .map((member) => (
+                          <SelectItem key={member.id} value={member.id}>
+                            {member.firstname} {member.lastname}
+                          </SelectItem>
+                        ))}
                         </>
                       )}
                       
@@ -1686,7 +1686,7 @@ export function People() {
                         // First sort by member type (adults before children)
                         if (a.member_type !== b.member_type) {
                           return a.member_type === 'adult' ? -1 : 1;
-                        }
+  }
                         // Then sort alphabetically by name
                         return `${a.firstname} ${a.lastname}`.localeCompare(`${b.firstname} ${b.lastname}`);
                       });
