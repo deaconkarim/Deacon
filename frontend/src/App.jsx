@@ -1,7 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Analytics } from '@vercel/analytics/react';
-import { SpeedInsights } from "@vercel/speed-insights/next"
+import { SpeedInsights } from "@vercel/speed-insights/react"
 import { Layout } from './components/layout';
 import { Dashboard } from './pages/dashboard';
 import { People } from './pages/members';
@@ -35,6 +35,7 @@ function App() {
   return (
     <>
       <Analytics />
+      <SpeedInsights />
       <Routes>
         {/* Public routes */}
         <Route path="/" element={<PublicLayout><Login /></PublicLayout>} />
