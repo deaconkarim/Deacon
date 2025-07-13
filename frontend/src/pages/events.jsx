@@ -856,7 +856,66 @@ export default function Events() {
             if (!membersError && allMembers) {
               // Filter out members who have already checked in
               const availableMembers = allMembers.filter(member => !attendingMemberIds.includes(member.id));
-              setMembers(availableMembers);
+              
+              // Recalculate suggested members based on available members only
+              let suggestedMembers = [];
+              let attendanceCounts = {};
+              
+              if (selectedEvent.is_recurring || selectedEvent.recurrence_pattern) {
+                try {
+                  // Get previous instances of this event (or similar events of the same type)
+                  const { data: previousAttendance, error: prevError } = await supabase
+                    .from('event_attendance')
+                    .select(`
+                      member_id,
+                      status,
+                      events!inner (
+                        id,
+                        title,
+                        event_type,
+                        start_date,
+                        is_recurring,
+                        recurrence_pattern
+                      )
+                    `)
+                    .eq('events.event_type', selectedEvent.event_type)
+                    .eq('events.is_recurring', true)
+                    .gte('events.start_date', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()); // Last 90 days
+
+                  if (!prevError && previousAttendance) {
+                    // Count attendance frequency for each member
+                    previousAttendance.forEach(record => {
+                      const memberId = record.member_id;
+                      attendanceCounts[memberId] = (attendanceCounts[memberId] || 0) + 1;
+                    });
+
+                    // Sort members by attendance frequency (most frequent first)
+                    const sortedMemberIds = Object.keys(attendanceCounts)
+                      .sort((a, b) => attendanceCounts[b] - attendanceCounts[a]);
+
+                    // Get the top 10 most frequent attendees who are available
+                    const topAttendees = sortedMemberIds
+                      .slice(0, 10)
+                      .map(memberId => availableMembers.find(m => m.id === memberId))
+                      .filter(Boolean);
+
+                    suggestedMembers = topAttendees;
+                  }
+                } catch (error) {
+                  console.error('Error fetching attendance suggestions:', error);
+                  // Continue without suggestions if there's an error
+                }
+              }
+
+              // Sort available members: suggested members first, then alphabetically
+              const sortedAvailableMembers = [
+                ...suggestedMembers,
+                ...availableMembers.filter(member => !suggestedMembers.find(s => s.id === member.id))
+              ];
+
+              setMembers(sortedAvailableMembers);
+              setSuggestedMembers(suggestedMembers);
+              setMemberAttendanceCount(attendanceCounts);
             }
           }
         } catch (error) {
