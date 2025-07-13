@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// SVG content for the favicon (using the church icon from Logo component)
+// SVG content for the favicon (using the church icon from Logo component, now larger)
 const svgContent = `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <defs>
@@ -16,7 +16,7 @@ const svgContent = `
     </linearGradient>
   </defs>
   <rect width="100" height="100" rx="20" fill="url(#grad)"/>
-  <g transform="translate(20, 20) scale(2.5)">
+  <g transform="translate(10, 10) scale(4)">
     <path d="m18 7 4 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9l4-2" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
     <path d="M14 22v-4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
     <path d="M18 22V5l-6-3-6 3v17" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
@@ -26,7 +26,7 @@ const svgContent = `
 </svg>
 `;
 
-// SVG content for larger icons (apple-touch-icon, etc.)
+// SVG content for larger icons (apple-touch-icon, etc., now larger)
 const largeSvgContent = `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
   <defs>
@@ -36,7 +36,7 @@ const largeSvgContent = `
     </linearGradient>
   </defs>
   <rect width="180" height="180" rx="36" fill="url(#grad)"/>
-  <g transform="translate(36, 36) scale(4.5)">
+  <g transform="translate(18, 18) scale(7)">
     <path d="m18 7 4 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9l4-2" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
     <path d="M14 22v-4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
     <path d="M18 22V5l-6-3-6 3v17" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
