@@ -802,23 +802,39 @@ class DemoDataGenerator {
     const conversations = []
     const conversationTypes = ['general', 'prayer_request', 'event_reminder', 'emergency', 'pastoral_care']
     
-    // Generate 10-20 conversations
-    const conversationCount = Math.floor(Math.random() * 11) + 10
+    // Generate 8-15 conversations
+    const conversationCount = Math.floor(Math.random() * 8) + 8
     
     for (let i = 0; i < conversationCount; i++) {
       const conversationType = conversationTypes[Math.floor(Math.random() * conversationTypes.length)]
-      const isActive = Math.random() > 0.3 // 70% chance of being active
+      const isActive = Math.random() > 0.2 // 80% chance of being active
       
-      // 30% chance of being a group conversation, but only if we have groups
-      const isGroupConversation = Math.random() > 0.7 && groups.length > 0
+      // 40% chance of being a group conversation, but only if we have groups
+      const isGroupConversation = Math.random() > 0.6 && groups.length > 0
       const groupId = isGroupConversation ? groups[Math.floor(Math.random() * groups.length)].id : null
+      
+      // Create realistic conversation titles based on the app's format
+      let conversationTitle = ''
+      if (isGroupConversation && groupId) {
+        const group = groups.find(g => g.id === groupId)
+        const groupName = group ? group.name : 'Group'
+        const truncatedMessage = this.getRandomMessageContent().substring(0, 30)
+        conversationTitle = `Group: ${groupName} - ${truncatedMessage}`
+      } else {
+        // Individual conversation - simulate member name and message
+        const member = members[Math.floor(Math.random() * members.length)]
+        const memberName = member ? `${member.firstname} ${member.lastname}` : 'Unknown Contact'
+        const truncatedMessage = this.getRandomMessageContent().substring(0, 50)
+        conversationTitle = `${memberName}: ${truncatedMessage}`
+      }
       
       const conversation = {
         id: crypto.randomUUID(),
-        title: `Conversation ${i + 1}`,
+        title: conversationTitle,
         conversation_type: conversationType,
         status: isActive ? 'active' : 'closed',
         group_id: groupId,
+        organization_id: this.config.organizationId,
         created_at: this.getRandomPastDate(60),
         updated_at: new Date().toISOString()
       }
@@ -827,6 +843,33 @@ class DemoDataGenerator {
     }
     
     return conversations
+  }
+
+  // Helper method to get random message content for conversation titles
+  private getRandomMessageContent(): string {
+    const messageContents = [
+      'Thanks for the reminder!',
+      'I\'ll be there on Sunday',
+      'Can you send me more details?',
+      'I have a prayer request',
+      'I\'d like to volunteer',
+      'What time is the service?',
+      'Is there anything I can help with?',
+      'I won\'t be able to make it this week',
+      'Looking forward to the event!',
+      'Can you add me to the prayer list?',
+      'I have a question about the event',
+      'Thanks for checking in',
+      'I\'ll bring some food for the potluck',
+      'Can you send me the address?',
+      'I\'m running a few minutes late',
+      'I have a family emergency',
+      'Can you pray for my friend?',
+      'I\'d like to join the Bible study',
+      'What should I bring for the event?',
+      'I\'m so grateful for this community'
+    ]
+    return messageContents[Math.floor(Math.random() * messageContents.length)]
   }
 
   // Generate SMS messages
@@ -856,21 +899,32 @@ class DemoDataGenerator {
     ]
     
     conversations.forEach(conversation => {
-      // Generate 2-8 messages per conversation
-      const messageCount = Math.floor(Math.random() * 7) + 2
+      // Generate 3-10 messages per conversation
+      const messageCount = Math.floor(Math.random() * 8) + 3
       const conversationStart = new Date(conversation.created_at)
       
+      // Always start with an outbound message (app user starts the conversation)
+      let firstMessage = true
+      
       for (let i = 0; i < messageCount; i++) {
-        const direction = Math.random() > 0.5 ? 'outbound' : 'inbound'
+        // First message is always outbound (app user starts)
+        // Subsequent messages alternate between outbound and inbound
+        let direction = 'outbound'
+        if (!firstMessage) {
+          direction = i % 2 === 0 ? 'outbound' : 'inbound'
+        }
         const isOutbound = direction === 'outbound'
         
         // Generate timestamp within conversation timeframe
-        const messageTime = new Date(conversationStart.getTime() + (i * 24 * 60 * 60 * 1000) + Math.random() * 7 * 24 * 60 * 60 * 1000)
+        // Messages should be closer together for a realistic conversation flow
+        const messageTime = new Date(conversationStart.getTime() + (i * 2 * 60 * 60 * 1000) + Math.random() * 24 * 60 * 60 * 1000)
         
-        // 70% chance of having a member_id, but only if we have members
-        const memberId = Math.random() > 0.3 && members.length > 0 
-          ? members[Math.floor(Math.random() * members.length)].id 
-          : null
+        // For outbound messages, always have a member_id (app user sending to members)
+        // For inbound messages, 80% chance of having a member_id (members responding)
+        let memberId = null
+        if (isOutbound || Math.random() > 0.2) {
+          memberId = members.length > 0 ? members[Math.floor(Math.random() * members.length)].id : null
+        }
         
         const message = {
           id: crypto.randomUUID(),
@@ -884,12 +938,14 @@ class DemoDataGenerator {
           status: isOutbound ? 'delivered' : 'sent', // Use 'delivered' for outbound, 'sent' for inbound
           twilio_sid: isOutbound ? `twilio-${Math.random().toString(36).substr(2, 9)}` : null,
           error_message: null,
+          organization_id: this.config.organizationId,
           sent_at: messageTime.toISOString(),
           delivered_at: isOutbound ? messageTime.toISOString() : null,
           created_at: messageTime.toISOString()
         }
         
         messages.push(message)
+        firstMessage = false
       }
     })
     

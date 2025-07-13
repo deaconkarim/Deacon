@@ -302,6 +302,7 @@ export function Dashboard() {
       const growthRate = donationsData.stats.growthRate;
       const lastMonthDonations = donationsData.stats.lastMonth;
       const twoMonthsAgoDonations = donationsData.stats.twoMonthsAgo;
+      const thisWeekDonations = donationsData.stats.thisWeek;
       const lastWeekDonations = donationsData.stats.lastWeek;
       const lastSundayDonations = donationsData.stats.lastSunday;
 
@@ -355,6 +356,7 @@ export function Dashboard() {
         children: family.children,
         lastMonthDonations,
         twoMonthsAgoDonations,
+        thisWeekDonations,
         lastWeekDonations,
         lastSundayDonations,
         totalTasks: tasks.stats.total,
@@ -873,7 +875,6 @@ export function Dashboard() {
                     </div>
                     <div>
                       <h3 className="text-xl font-bold text-slate-900 dark:text-white">People</h3>
-                      <p className="text-slate-600 dark:text-slate-400 text-sm">Community Analytics</p>
                     </div>
                   </div>
                   <div className="text-right">
@@ -939,9 +940,7 @@ export function Dashboard() {
                       <DollarSign className="h-6 w-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-slate-900 dark:text-white">Donations</h3>
-                      <p className="text-slate-600 dark:text-slate-400 text-sm">Financial Health</p>
-                    </div>
+                      <h3 className="text-xl font-bold text-slate-900 dark:text-white">Donations</h3>                    </div>
                   </div>
                   <div className="text-right">
                     <div className="text-3xl font-bold text-emerald-600 mb-1">
@@ -999,7 +998,6 @@ export function Dashboard() {
                   </div>
                   <div>
                     <h3 className="text-xl font-bold text-slate-900 dark:text-white">Events</h3>
-                    <p className="text-slate-600 dark:text-slate-400 text-sm">Activities & Engagement</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -1068,7 +1066,6 @@ export function Dashboard() {
                   </div>
                   <div>
                     <h3 className="text-xl font-bold text-slate-900 dark:text-white">Celebrations</h3>
-                    <p className="text-slate-600 dark:text-slate-400 text-sm">Special Occasions</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -1136,7 +1133,6 @@ export function Dashboard() {
                   </div>
                   <div>
                     <h3 className="text-xl font-bold text-slate-900 dark:text-white">Tasks</h3>
-                    <p className="text-slate-600 dark:text-slate-400 text-sm">Progress & Completion</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -1201,7 +1197,6 @@ export function Dashboard() {
                   </div>
                   <div>
                     <h3 className="text-xl font-bold text-slate-900 dark:text-white">SMS</h3>
-                    <p className="text-slate-600 dark:text-slate-400 text-sm">Communication Hub</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -1268,7 +1263,6 @@ export function Dashboard() {
                   </div>
                   <div>
                     <h3 className="text-2xl font-bold text-slate-900 dark:text-white">My Tasks</h3>
-                    <p className="text-slate-600 dark:text-slate-400">Tasks assigned to you</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -1656,8 +1650,8 @@ export function Dashboard() {
                   <BarChart3 className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">Attendance by Event Type</h3>
-                  <p className="text-slate-600 dark:text-slate-400 text-sm">Average attendance per event (last 6 months)</p>
+                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Attendance by Event Type</h3>
+                  <p className="text-slate-600 dark:text-slate-400">Average attendance per event (last 6 months)</p>
                 </div>
               </div>
               
@@ -2526,7 +2520,70 @@ export function Dashboard() {
               </div>
             </div>
             
-            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 mb-8">
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 mb-8">
+              {/* This Week */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500/20 to-purple-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3">
+                    This Week
+                  </h4>
+                  <div className="text-center">
+                    <div className="text-xl sm:text-2xl font-bold text-purple-600 mb-2">
+                      {isLoading ? '...' : `$${(stats.thisWeekDonations || 0).toFixed(2)}`}
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Current week
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Last Week */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-indigo-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3">
+                    Last Week
+                  </h4>
+                  <div className="text-center">
+                    <div className="text-xl sm:text-2xl font-bold text-indigo-600 mb-2">
+                      {isLoading ? '...' : `$${(stats.lastWeekDonations || 0).toFixed(2)}`}
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Previous week
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Weekly Average */}
+              <motion.div 
+                className="group/card relative"
+                variants={itemVariants}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-teal-500/20 to-teal-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3">
+                    Weekly Average
+                  </h4>
+                  <div className="text-center">
+                    <div className="text-xl sm:text-2xl font-bold text-teal-600 mb-2">
+                      {isLoading ? '...' : `$${(stats.weeklyAverage || 0).toFixed(2)}`}
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Weekly avg
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+
               {/* This Month */}
               <motion.div 
                 className="group/card relative"
@@ -2591,48 +2648,6 @@ export function Dashboard() {
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       Monthly avg
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Last Week */}
-              <motion.div 
-                className="group/card relative"
-                variants={itemVariants}
-              >
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-indigo-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3">
-                    Last Week
-                  </h4>
-                  <div className="text-center">
-                    <div className="text-xl sm:text-2xl font-bold text-indigo-600 mb-2">
-                      {isLoading ? '...' : `$${(stats.lastWeekDonations || 0).toFixed(2)}`}
-                    </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Previous week
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Weekly Average */}
-              <motion.div 
-                className="group/card relative"
-                variants={itemVariants}
-              >
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-teal-500/20 to-teal-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3">
-                    Weekly Average
-                  </h4>
-                  <div className="text-center">
-                    <div className="text-xl sm:text-2xl font-bold text-teal-600 mb-2">
-                      {isLoading ? '...' : `$${(stats.weeklyAverage || 0).toFixed(2)}`}
-                    </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Weekly avg
                     </p>
                   </div>
                 </div>

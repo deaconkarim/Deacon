@@ -191,17 +191,65 @@ const DemoSystemSettings = () => {
     }
 
     try {
+      // Check current SMS data count before deletion
+      const [smsMessagesCount, smsConversationsCount, smsTemplatesCount] = await Promise.all([
+        supabase.from('sms_messages').select('*', { count: 'exact', head: true }),
+        supabase.from('sms_conversations').select('*', { count: 'exact', head: true }),
+        supabase.from('sms_templates').select('*', { count: 'exact', head: true })
+      ]);
+      
+      console.log(`Before reset - SMS Messages: ${smsMessagesCount.count}, Conversations: ${smsConversationsCount.count}, Templates: ${smsTemplatesCount.count}`);
       // Delete data in the correct order to avoid foreign key constraints
       // Start with dependent tables first, then core tables
       
       // 1. Delete SMS messages (depends on conversations and members)
-      await supabase.from('sms_messages').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      const { count: smsMessagesDeleted } = await supabase
+        .from('sms_messages')
+        .delete()
+        .eq('organization_id', organizationId)
+        .select('*', { count: 'exact', head: true });
       
-      // 2. Delete SMS conversations (no organization_id column, delete all)
-      await supabase.from('sms_conversations').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      console.log(`Deleted ${smsMessagesDeleted} SMS messages`);
+      
+      // 2. Delete SMS conversations (depends on organization)
+      const { count: smsConversationsDeleted } = await supabase
+        .from('sms_conversations')
+        .delete()
+        .eq('organization_id', organizationId)
+        .select('*', { count: 'exact', head: true });
+      
+      console.log(`Deleted ${smsConversationsDeleted} SMS conversations`);
       
       // 3. Delete SMS templates (no organization_id column, delete all demo templates)
-      await supabase.from('sms_templates').delete().like('name', 'Demo%');
+      const { count: smsTemplatesDeleted } = await supabase
+        .from('sms_templates')
+        .delete()
+        .like('name', 'Demo%')
+        .select('*', { count: 'exact', head: true });
+      
+      console.log(`Deleted ${smsTemplatesDeleted} SMS templates`);
+      
+      // 3b. Fallback: Delete any SMS messages/conversations that might not have organization_id
+      // This handles cases where SMS data was created before organization_id was properly set
+      const { count: smsMessagesFallbackDeleted } = await supabase
+        .from('sms_messages')
+        .delete()
+        .is('organization_id', null)
+        .select('*', { count: 'exact', head: true });
+      
+      if (smsMessagesFallbackDeleted > 0) {
+        console.log(`Deleted ${smsMessagesFallbackDeleted} SMS messages without organization_id`);
+      }
+      
+      const { count: smsConversationsFallbackDeleted } = await supabase
+        .from('sms_conversations')
+        .delete()
+        .is('organization_id', null)
+        .select('*', { count: 'exact', head: true });
+      
+      if (smsConversationsFallbackDeleted > 0) {
+        console.log(`Deleted ${smsConversationsFallbackDeleted} SMS conversations without organization_id`);
+      }
       
       // 4. Delete child check-in logs (no organization_id column, delete all)
       await supabase.from('child_checkin_logs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
@@ -244,6 +292,15 @@ const DemoSystemSettings = () => {
       
       // 17. Finally delete members (core table)
       await supabase.from('members').delete().eq('organization_id', organizationId);
+
+      // Check SMS data count after deletion
+      const [smsMessagesAfter, smsConversationsAfter, smsTemplatesAfter] = await Promise.all([
+        supabase.from('sms_messages').select('*', { count: 'exact', head: true }),
+        supabase.from('sms_conversations').select('*', { count: 'exact', head: true }),
+        supabase.from('sms_templates').select('*', { count: 'exact', head: true })
+      ]);
+      
+      console.log(`After reset - SMS Messages: ${smsMessagesAfter.count}, Conversations: ${smsConversationsAfter.count}, Templates: ${smsTemplatesAfter.count}`);
 
       toast({
         title: 'Demo Data Reset',

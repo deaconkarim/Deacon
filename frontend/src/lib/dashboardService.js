@@ -177,6 +177,17 @@ export const dashboardService = {
       .filter(d => d.date >= twoMonthsAgoStr && d.date <= twoMonthsAgoEndStr)
       .reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0) * 100) / 100;
 
+    // This week calculations (current week starting from Sunday)
+    const currentDayOfWeek = now.getDay();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - currentDayOfWeek);
+    startOfWeek.setHours(0, 0, 0, 0);
+    const startOfWeekStr = startOfWeek.toISOString().split('T')[0];
+    
+    const thisWeekDonations = Math.round(donations
+      .filter(d => d.date >= startOfWeekStr)
+      .reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0) * 100) / 100;
+
     // Last week calculations (previous 7 days)
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
@@ -200,8 +211,8 @@ export const dashboardService = {
           if (isNaN(date.getTime())) return;
           
           const startOfWeek = new Date(date);
-          const dayOfWeek = date.getDay();
-          startOfWeek.setDate(date.getDate() - dayOfWeek);
+          const donationDayOfWeek = date.getDay();
+          startOfWeek.setDate(date.getDate() - donationDayOfWeek);
           startOfWeek.setHours(0, 0, 0, 0);
           
           const weekKey = startOfWeek.toISOString().split('T')[0];
@@ -255,8 +266,8 @@ export const dashboardService = {
 
     // Last Sunday calculations
     const lastSunday = new Date();
-    const dayOfWeek = lastSunday.getDay();
-    const daysToSubtract = dayOfWeek === 0 ? 7 : dayOfWeek;
+    const lastSundayDayOfWeek = lastSunday.getDay();
+    const daysToSubtract = lastSundayDayOfWeek === 0 ? 7 : lastSundayDayOfWeek;
     lastSunday.setDate(lastSunday.getDate() - daysToSubtract);
     lastSunday.setHours(0, 0, 0, 0);
     
@@ -281,6 +292,7 @@ export const dashboardService = {
         monthly: monthlyDonations,
         lastMonth: lastMonthDonations,
         twoMonthsAgo: twoMonthsAgoDonations,
+        thisWeek: thisWeekDonations,
         lastWeek: lastWeekDonations,
         lastSunday: lastSundayDonations,
         weeklyAverage,

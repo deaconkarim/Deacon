@@ -79,14 +79,19 @@ export function SMS() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      const { data: orgData } = await supabase
+      const { data: orgData, error: orgError } = await supabase
         .from('organization_users')
         .select('organization_id')
         .eq('user_id', user.id)
         .eq('status', 'active')
-        .single();
+        .eq('approval_status', 'approved')
+        .order('created_at', { ascending: true }) // Get the oldest association first
+        .limit(1);
 
-      if (!orgData?.organization_id) throw new Error('User not associated with any organization');
+      if (orgError) throw orgError;
+      if (!orgData || orgData.length === 0) throw new Error('User not associated with any organization');
+
+      const organizationId = orgData[0].organization_id;
 
       // Try to load conversations, templates, members, and groups
       const [conversationsData, templatesData, membersData, groupsData] = await Promise.all([
@@ -102,7 +107,7 @@ export function SMS() {
           .from('members')
           .select('id, firstname, lastname, phone, status')
           .eq('status', 'active')
-          .eq('organization_id', orgData.organization_id)
+          .eq('organization_id', organizationId)
           .not('phone', 'is', null)
           .order('firstname', { ascending: true })
           .then(({ data, error }) => {
@@ -115,7 +120,7 @@ export function SMS() {
         supabase
           .from('groups')
           .select('id, name, description')
-          .eq('organization_id', orgData.organization_id)
+          .eq('organization_id', organizationId)
           .order('name', { ascending: true })
           .then(({ data, error }) => {
             if (error) {
@@ -134,7 +139,7 @@ export function SMS() {
             .from('group_members')
             .select('*', { count: 'exact', head: true })
             .eq('group_id', group.id)
-            .eq('organization_id', orgData.organization_id);
+            .eq('organization_id', organizationId);
 
           return {
             ...group,
