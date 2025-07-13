@@ -46,6 +46,7 @@ import { PermissionNavItem } from '@/components/PermissionGuard';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabaseClient';
+import { useIsMobile } from '@/lib/utils/useIsMobile';
 
 export function Layout() {
   const { user, signOut } = useAuth();
@@ -61,6 +62,8 @@ export function Layout() {
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [isImpersonating, setIsImpersonating] = useState(false);
   const [impersonationData, setImpersonationData] = useState(null);
+
+  const isMobile = useIsMobile();
 
   // Generate navigation items based on user permissions
   const generateNavigation = () => {
@@ -373,7 +376,11 @@ export function Layout() {
         <header className="bg-card border-b px-4 py-3 flex justify-between items-center sticky top-0 z-40">
           <div className="flex items-center gap-2">
             <Logo showText={false} size={40} />
-            <span className="font-semibold text-lg text-foreground">Deacon - {organizationName}</span>
+            {isMobile ? (
+              <span className="font-semibold text-lg text-foreground">{organizationName}</span>
+            ) : (
+              <span className="font-semibold text-lg text-foreground">Deacon - {organizationName}</span>
+            )}
           </div>
           {user && (
             <div className="flex items-center gap-2">
