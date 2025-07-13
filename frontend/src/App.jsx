@@ -1,5 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import { Layout } from './components/layout';
 import { Dashboard } from './pages/dashboard';
 import { People } from './pages/members';
@@ -31,40 +32,43 @@ import Landing from './pages/landing';
 
 function App() {
   return (
-    <Routes>
-      {/* Public routes */}
-      <Route path="/" element={<PublicLayout><Login /></PublicLayout>} />
-      <Route path="/login" element={<PublicLayout><Login /></PublicLayout>} />
-      <Route path="/register" element={<PublicLayout><Register /></PublicLayout>} />
-      <Route path="/invite/:invitationId" element={<PublicLayout><Invite /></PublicLayout>} />
-      <Route path="/privacy-policy" element={<PublicLayout><PrivacyPolicy /></PublicLayout>} />
-      <Route path="/terms-of-service" element={<PublicLayout><TermsOfService /></PublicLayout>} />
-      
-      {/* Approval status route */}
-      <Route path="/approval-status" element={<ApprovalStatus />} />
-      
-      {/* Protected routes */}
-      <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/members" element={<People />} />
-        <Route path="/members/:id" element={<MemberProfile />} />
-        <Route path="/events" element={<Events />} />
-        <Route path="/donations" element={<Donations />} />
-        <Route path="/groups" element={<Groups />} />
-        <Route path="/tasks" element={<Tasks />} />
-        <Route path="/children-check-in" element={<ChildrenCheckin />} />
-        <Route path="/children-check-in/add" element={<AddChild />} />
-        <Route path="/edit-child/:childId" element={<EditChild />} />
-        <Route path="/reports" element={<Reports />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/permissions" element={<Permissions />} />
-        <Route path="/sms" element={<SMS />} />
-        <Route path="/alerts" element={<AlertsPage />} />
-      </Route>
-      
-      {/* System Admin only routes */}
-      <Route path="/admin-center" element={<AdminRoute><AdminCenter /></AdminRoute>} />
-    </Routes>
+    <>
+      <Analytics />
+      <Routes>
+        {/* Public routes */}
+        <Route path="/" element={<PublicLayout><Login /></PublicLayout>} />
+        <Route path="/login" element={<PublicLayout><Login /></PublicLayout>} />
+        <Route path="/register" element={<PublicLayout><Register /></PublicLayout>} />
+        <Route path="/invite/:invitationId" element={<PublicLayout><Invite /></PublicLayout>} />
+        <Route path="/privacy-policy" element={<PublicLayout><PrivacyPolicy /></PublicLayout>} />
+        <Route path="/terms-of-service" element={<PublicLayout><TermsOfService /></PublicLayout>} />
+        
+        {/* Approval status route */}
+        <Route path="/approval-status" element={<ApprovalStatus />} />
+        
+        {/* Protected routes */}
+        <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/members" element={<People />} />
+          <Route path="/members/:id" element={<MemberProfile />} />
+          <Route path="/events" element={<Events />} />
+          <Route path="/donations" element={<Donations />} />
+          <Route path="/groups" element={<Groups />} />
+          <Route path="/tasks" element={<Tasks />} />
+          <Route path="/children-check-in" element={<ChildrenCheckin />} />
+          <Route path="/children-check-in/add" element={<AddChild />} />
+          <Route path="/edit-child/:childId" element={<EditChild />} />
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/permissions" element={<Permissions />} />
+          <Route path="/sms" element={<SMS />} />
+          <Route path="/alerts" element={<AlertsPage />} />
+        </Route>
+        
+        {/* System Admin only routes */}
+        <Route path="/admin-center" element={<AdminRoute><AdminCenter /></AdminRoute>} />
+      </Routes>
+    </>
   );
 }
 
