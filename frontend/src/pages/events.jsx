@@ -807,28 +807,123 @@ export default function Events() {
       setSelectedMembers(prev => [...prev, member.id]);
       setMemberSearchQuery('');
 
+      // Add member to already checked-in list and remove from available list
+      setAlreadyRSVPMembers(prev => [...prev, member]);
+      setMembers(prev => prev.filter(m => m.id !== member.id));
+
       toast({
         title: "Success",
         description: "Member added to the event."
       });
 
-      // Refresh the selected members list
-      const { data: existingRecords, error: fetchError } = await supabase
-        .from('event_attendance')
-        .select('*')
-        .eq('event_id', selectedEvent.id);
-
-      if (!fetchError && existingRecords) {
-        setSelectedMembers(existingRecords.map(record => record.member_id));
-      }
-
       // Refresh the events list to update attendance count
       await fetchEvents();
 
-      // Close the dialog if all members have been added
+      // For check-in events, refresh the available members list to ensure consistency
       if (selectedEvent?.attendance_type === 'check-in') {
-        setIsMemberDialogOpen(false);
+        try {
+          // Fetch current attendance data to get accurate lists
+          const { data: attendanceData, error: attendanceError } = await supabase
+            .from('event_attendance')
+            .select(`
+              member_id,
+              members (
+                id,
+                firstname,
+                lastname,
+                email,
+                image_url
+              )
+            `)
+            .eq('event_id', selectedEvent.id);
+
+          if (!attendanceError && attendanceData) {
+            // Get IDs of members who have already checked in
+            const attendingMemberIds = attendanceData.map(record => record.member_id);
+            
+            // Get the full member data for already checked in people
+            const alreadyAttendingMembers = attendanceData.map(record => record.members);
+            
+            // Update the already checked-in list
+            setAlreadyRSVPMembers(alreadyAttendingMembers);
+            
+            // Fetch all members and filter out those who have already checked in
+            const { data: allMembers, error: membersError } = await supabase
+              .from('members')
+              .select('*')
+              .order('firstname');
+
+            if (!membersError && allMembers) {
+              // Filter out members who have already checked in
+              const availableMembers = allMembers.filter(member => !attendingMemberIds.includes(member.id));
+              
+              // Recalculate suggested members based on available members only
+              let suggestedMembers = [];
+              let attendanceCounts = {};
+              
+              if (selectedEvent.is_recurring || selectedEvent.recurrence_pattern) {
+                try {
+                  // Get previous instances of this event (or similar events of the same type)
+                  const { data: previousAttendance, error: prevError } = await supabase
+                    .from('event_attendance')
+                    .select(`
+                      member_id,
+                      status,
+                      events!inner (
+                        id,
+                        title,
+                        event_type,
+                        start_date,
+                        is_recurring,
+                        recurrence_pattern
+                      )
+                    `)
+                    .eq('events.event_type', selectedEvent.event_type)
+                    .eq('events.is_recurring', true)
+                    .gte('events.start_date', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()); // Last 90 days
+
+                  if (!prevError && previousAttendance) {
+                    // Count attendance frequency for each member
+                    previousAttendance.forEach(record => {
+                      const memberId = record.member_id;
+                      attendanceCounts[memberId] = (attendanceCounts[memberId] || 0) + 1;
+                    });
+
+                    // Sort members by attendance frequency (most frequent first)
+                    const sortedMemberIds = Object.keys(attendanceCounts)
+                      .sort((a, b) => attendanceCounts[b] - attendanceCounts[a]);
+
+                    // Get the top 10 most frequent attendees who are available
+                    const topAttendees = sortedMemberIds
+                      .slice(0, 10)
+                      .map(memberId => availableMembers.find(m => m.id === memberId))
+                      .filter(Boolean);
+
+                    suggestedMembers = topAttendees;
+                  }
+                } catch (error) {
+                  console.error('Error fetching attendance suggestions:', error);
+                  // Continue without suggestions if there's an error
+                }
+              }
+
+              // Sort available members: suggested members first, then alphabetically
+              const sortedAvailableMembers = [
+                ...suggestedMembers,
+                ...availableMembers.filter(member => !suggestedMembers.find(s => s.id === member.id))
+              ];
+
+              setMembers(sortedAvailableMembers);
+              setSuggestedMembers(suggestedMembers);
+              setMemberAttendanceCount(attendanceCounts);
+            }
+          }
+        } catch (error) {
+          console.error('Error refreshing member lists:', error);
+        }
       }
+
+      // Keep dialog open for check-in events to allow multiple check-ins
     } catch (error) {
       toast({
         variant: "destructive",
@@ -1117,9 +1212,8 @@ export default function Events() {
         description: `New visitor created and ${selectedEvent?.attendance_type === 'check-in' ? 'checked in' : 'RSVP\'d'} to the event.`
       });
 
-      // Refresh members list
-      const updatedMembers = await getMembers();
-      setMembers(updatedMembers);
+      // For check-in events, the member is already added to the event and lists via handleMemberClick
+      // No need to refresh the entire members list as it would override our local state changes
     } catch (error) {
       console.error('Error creating member:', error);
       toast({
