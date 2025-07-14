@@ -306,6 +306,8 @@ export default function Events() {
   const [memberAttendanceCount, setMemberAttendanceCount] = useState({});
   const [activeTab, setActiveTab] = useState('upcoming');
   const [isEditingPastEvent, setIsEditingPastEvent] = useState(false);
+  const [isAnonymousCheckinOpen, setIsAnonymousCheckinOpen] = useState(false);
+  const [anonymousName, setAnonymousName] = useState('');
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -933,28 +935,150 @@ export default function Events() {
     }
   };
 
-  const handleRemoveMember = async (memberId) => {
+  const handleAnonymousCheckin = async () => {
+    if (!anonymousName.trim()) {
+      toast({
+        title: "Missing Information",
+        description: "Please provide a name for the anonymous attendee.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
-      const { error } = await supabase
+      // Add anonymous person to event attendance
+      const { data: attendanceData, error } = await supabase
         .from('event_attendance')
-        .delete()
-        .eq('event_id', selectedEvent.id)
-        .eq('member_id', memberId);
+        .upsert({
+          event_id: selectedEvent.id,
+          member_id: null,
+          anonymous_name: anonymousName.trim(),
+          status: 'attending'
+        })
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Trigger automation for anonymous event attendance
+      console.log('🔍 User object for anonymous event attendance:', user);
+      
+      // Get organization_id (including impersonation)
+      const organizationId = await getCurrentUserOrganizationId();
+      
+      if (organizationId) {
+        try {
+          console.log('🚀 Triggering event_attendance automation for anonymous attendee:', anonymousName);
+          console.log('🎯 Event data:', selectedEvent);
+          const triggerData = {
+            id: attendanceData.id,
+            event_id: selectedEvent.id,
+            member_id: null,
+            anonymous_name: anonymousName.trim(),
+            status: 'attending',
+            event_type: selectedEvent.event_type,
+            member_type: 'anonymous',
+            attendance_status: 'attended',
+            is_first_visit: true,
+            event_date: selectedEvent.start_date,
+            firstname: anonymousName.trim(),
+            lastname: '',
+            phone: null
+          };
+          console.log('📊 Trigger data:', triggerData);
+          await automationService.triggerAutomation(
+            'event_attendance',
+            triggerData,
+            organizationId
+          );
+        } catch (automationError) {
+          console.error('Automation trigger failed:', automationError);
+          // Don't fail the main operation if automation fails
+        }
+      } else {
+        console.log('❌ No organization_id found for anonymous event attendance, skipping automation');
+      }
+
+      // Update local state
+      setMemberSearchQuery('');
+
+      // Add anonymous attendee to already checked-in list
+      const anonymousAttendee = {
+        id: `anonymous-${Date.now()}`,
+        firstname: anonymousName.trim(),
+        lastname: '',
+        email: null,
+        image_url: null,
+        isAnonymous: true
+      };
+
+      setAlreadyRSVPMembers(prev => [...prev, anonymousAttendee]);
+
+      // Reset form and close dialog
+      setAnonymousName('');
+      setIsAnonymousCheckinOpen(false);
+
+      toast({
+        title: "Success",
+        description: "Anonymous attendee checked in to the event."
+      });
+
+      // Refresh the events list to update attendance count
+      await fetchEvents();
+
+      // Keep dialog open for check-in events to allow multiple check-ins
+    } catch (error) {
+      console.error('Error checking in anonymous attendee:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to check in anonymous attendee. Please try again."
+      });
+    }
+  };
+
+  const handleRemoveMember = async (memberId) => {
+    try {
+      // Check if this is an anonymous attendee
+      const isAnonymous = memberId.startsWith('anonymous-');
+      
+      if (isAnonymous) {
+        // For anonymous attendees, we need to find them by anonymous_name
+        const member = alreadyRSVPMembers.find(m => m.id === memberId);
+        if (member) {
+          const { error } = await supabase
+            .from('event_attendance')
+            .delete()
+            .eq('event_id', selectedEvent.id)
+            .eq('anonymous_name', member.firstname);
+
+          if (error) throw error;
+        }
+      } else {
+        // For regular members
+        const { error } = await supabase
+          .from('event_attendance')
+          .delete()
+          .eq('event_id', selectedEvent.id)
+          .eq('member_id', memberId);
+
+        if (error) throw error;
+      }
 
       // Update the alreadyRSVPMembers list
       setAlreadyRSVPMembers(alreadyRSVPMembers.filter(member => member.id !== memberId));
       
-      // Refresh the members list to include the removed member
-      const { data: memberData } = await supabase
-        .from('members')
-        .select('*')
-        .eq('id', memberId)
-        .single();
+      // Refresh the members list to include the removed member (only for regular members)
+      if (!isAnonymous) {
+        const { data: memberData } = await supabase
+          .from('members')
+          .select('*')
+          .eq('id', memberId)
+          .single();
 
-      if (memberData) {
-        setMembers(prev => [...prev, memberData]);
+        if (memberData) {
+          setMembers(prev => [...prev, memberData]);
+        }
       }
 
       // Refresh the events list to update attendance count
@@ -962,14 +1086,14 @@ export default function Events() {
 
       toast({
         title: "Success",
-        description: "Member removed successfully"
+        description: isAnonymous ? "Anonymous attendee removed successfully" : "Member removed successfully"
       });
     } catch (error) {
       console.error('Error removing member:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to remove member. Please try again."
+        description: "Failed to remove attendee. Please try again."
       });
     }
   };
@@ -1101,6 +1225,7 @@ export default function Events() {
         .from('event_attendance')
         .select(`
           member_id,
+          anonymous_name,
           members (
             id,
             firstname,
@@ -1113,12 +1238,34 @@ export default function Events() {
         .eq('status', 'attending');
 
       if (error) throw error;
-      // Transform the data to camelCase for the frontend
-      setAttendingMembers(data.map(item => ({
-        ...item.members,
-        firstName: item.members.firstname,
-        lastName: item.members.lastname
-      })));
+      
+      // Transform the data to include both members and anonymous attendees
+      const transformedData = data.map(item => {
+        if (item.members) {
+          // Regular member
+          return {
+            ...item.members,
+            firstName: item.members.firstname,
+            lastName: item.members.lastname,
+            isAnonymous: false
+          };
+        } else if (item.anonymous_name) {
+          // Anonymous attendee
+          return {
+            id: `anonymous-${item.anonymous_name}-${item.id}`,
+            firstname: item.anonymous_name,
+            lastname: '',
+            email: null,
+            phone: null,
+            firstName: item.anonymous_name,
+            lastName: '',
+            isAnonymous: true
+          };
+        }
+        return null;
+      }).filter(Boolean);
+      
+      setAttendingMembers(transformedData);
     } catch (error) {
       console.error('Error fetching attending members:', error);
     }
@@ -1294,11 +1441,12 @@ export default function Events() {
       setSelectedEvent(event);
       setIsMemberDialogOpen(true);
       
-      // First get all members who have already RSVP'd/checked in
+      // First get all members who have already RSVP'd/checked in (including anonymous attendees)
       const { data: attendingMembers, error: attendanceError } = await supabase
         .from('event_attendance')
         .select(`
           member_id,
+          anonymous_name,
           members (
             id,
             firstname,
@@ -1312,7 +1460,9 @@ export default function Events() {
       if (attendanceError) throw attendanceError;
       
       // Get the IDs of members who have already RSVP'd/checked in
-      const attendingMemberIds = attendingMembers?.map(a => a.member_id) || [];
+      const attendingMemberIds = attendingMembers
+        ?.filter(a => a.member_id) // Only include records with member_id
+        .map(a => a.member_id) || [];
       
       // Then get all members who haven't RSVP'd/checked in
       const { data: availableMembers, error: membersError } = await supabase
@@ -1322,8 +1472,27 @@ export default function Events() {
 
       if (membersError) throw membersError;
       
+      // Get the full member data for already RSVP'd/Checked In People
+      const alreadyAttendingMembers = attendingMembers
+        ?.filter(a => a.members) // Only include records with member data
+        .map(a => a.members) || [];
+      
+      // Add anonymous attendees to the already attending list
+      const anonymousAttendees = attendingMembers
+        ?.filter(a => a.anonymous_name && !a.member_id)
+        .map(a => ({
+          id: `anonymous-${a.anonymous_name}-${a.id}`,
+          firstname: a.anonymous_name,
+          lastname: '',
+          email: null,
+          image_url: null,
+          isAnonymous: true
+        })) || [];
+      
+      const allAttendingMembers = [...alreadyAttendingMembers, ...anonymousAttendees];
+      
       setMembers(availableMembers || []);
-      setAlreadyRSVPMembers(attendingMembers?.map(a => a.members) || []);
+      setAlreadyRSVPMembers(allAttendingMembers || []);
     } catch (error) {
       console.error('Error fetching attendance:', error);
       toast({
@@ -1381,11 +1550,12 @@ export default function Events() {
 
       if (membersError) throw membersError;
 
-      // Fetch already RSVP'd/Checked In People
+      // Fetch already RSVP'd/Checked In People (including anonymous attendees)
       const { data: attendanceData, error: attendanceError } = await supabase
         .from('event_attendance')
         .select(`
           member_id,
+          anonymous_name,
           members (
             id,
             firstname,
@@ -1399,13 +1569,31 @@ export default function Events() {
       if (attendanceError) throw attendanceError;
 
       // Get IDs of members who have already RSVP'd/checked in
-      const attendingMemberIds = attendanceData.map(record => record.member_id);
+      const attendingMemberIds = attendanceData
+        .filter(record => record.member_id) // Only include records with member_id
+        .map(record => record.member_id);
       
       // Filter out members who have already RSVP'd/checked in
       const availableMembers = allMembers.filter(member => !attendingMemberIds.includes(member.id));
       
       // Get the full member data for already RSVP'd/Checked In People
-      const alreadyAttendingMembers = attendanceData.map(record => record.members);
+      const alreadyAttendingMembers = attendanceData
+        .filter(record => record.members) // Only include records with member data
+        .map(record => record.members);
+      
+      // Add anonymous attendees to the already attending list
+      const anonymousAttendees = attendanceData
+        .filter(record => record.anonymous_name && !record.member_id)
+        .map(record => ({
+          id: `anonymous-${record.anonymous_name}-${record.id}`,
+          firstname: record.anonymous_name,
+          lastname: '',
+          email: null,
+          image_url: null,
+          isAnonymous: true
+        }));
+      
+      const allAttendingMembers = [...alreadyAttendingMembers, ...anonymousAttendees];
 
       // If this is a recurring event, get attendance suggestions based on previous instances
       let suggestedMembers = [];
@@ -1465,7 +1653,7 @@ export default function Events() {
       setMembers(sortedAvailableMembers);
       setSuggestedMembers(suggestedMembers);
       setMemberAttendanceCount(attendanceCounts);
-      setAlreadyRSVPMembers(alreadyAttendingMembers || []);
+      setAlreadyRSVPMembers(allAttendingMembers || []);
     } catch (error) {
       console.error('Error fetching members:', error);
       toast({
@@ -1485,6 +1673,8 @@ export default function Events() {
     setSuggestedMembers([]);
     setMemberAttendanceCount({});
     setIsEditingPastEvent(false);
+    setIsAnonymousCheckinOpen(false);
+    setAnonymousName('');
   };
 
   const handlePotluckRSVP = useCallback(async (event) => {
@@ -1869,6 +2059,15 @@ export default function Events() {
                       <Plus className="mr-2 h-4 w-4" />
                       Add New Person
                     </Button>
+                    {selectedEvent?.attendance_type === 'check-in' && (
+                      <Button
+                        onClick={() => setIsAnonymousCheckinOpen(true)}
+                        className="w-full md:w-auto h-14 text-lg bg-orange-600 hover:bg-orange-700"
+                      >
+                        <UserPlus className="mr-2 h-4 w-4" />
+                        Anonymous Check-in
+                      </Button>
+                    )}
                   </div>
                   <div className="space-y-2">
                     {suggestedMembers.length > 0 && (
@@ -1962,13 +2161,18 @@ export default function Events() {
                         <Avatar className="h-12 w-12 md:h-16 md:w-16">
                           <AvatarImage src={member.image_url} />
                           <AvatarFallback className="text-lg md:text-xl">
-                            {getInitials(member.firstname, member.lastname)}
+                            {member.isAnonymous ? member.firstname.charAt(0) : getInitials(member.firstname, member.lastname)}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <p className="text-lg md:text-xl font-medium">
                             {member.firstname} {member.lastname}
                           </p>
+                          {member.isAnonymous && (
+                            <Badge variant="outline" className="text-xs text-orange-600 border-orange-600">
+                              Anonymous Attendee
+                            </Badge>
+                          )}
                         </div>
                       </div>
                       <Button
@@ -2220,6 +2424,49 @@ export default function Events() {
               className="w-full md:w-auto text-lg h-14"
             >
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Anonymous Check-in Dialog */}
+      <Dialog open={isAnonymousCheckinOpen} onOpenChange={setIsAnonymousCheckinOpen}>
+        <DialogContent className="w-full max-w-full h-full md:h-auto md:max-w-2xl p-0">
+          <DialogHeader className="p-3 md:p-6 border-b">
+            <DialogTitle className="text-2xl md:text-3xl">Anonymous Check-in</DialogTitle>
+            <DialogDescription className="text-lg mt-2">
+              Check in an anonymous attendee to {selectedEvent?.title}. This will update the event attendance but won't create a member record.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="p-3 md:p-6">
+            <form onSubmit={(e) => { e.preventDefault(); handleAnonymousCheckin(); }} className="space-y-4 md:space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="anonymousName" className="text-lg">Attendee Name</Label>
+                <Input
+                  id="anonymousName"
+                  name="anonymousName"
+                  value={anonymousName}
+                  onChange={(e) => setAnonymousName(e.target.value)}
+                  placeholder="Enter the attendee's name"
+                  className="h-14 text-lg"
+                  required
+                />
+                <p className="text-sm text-gray-600">
+                  This name will be recorded for attendance tracking but won't create a permanent member record.
+                </p>
+              </div>
+            </form>
+          </div>
+
+          <DialogFooter className="p-3 md:p-6 border-t">
+            <Button
+              type="submit"
+              onClick={handleAnonymousCheckin}
+              className="w-full md:w-auto text-lg h-14 bg-orange-600 hover:bg-orange-700"
+            >
+              <UserPlus className="mr-2 h-4 w-4" />
+              Check In Anonymous Attendee
             </Button>
           </DialogFooter>
         </DialogContent>
