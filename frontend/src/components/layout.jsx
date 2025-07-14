@@ -65,7 +65,7 @@ export function Layout() {
 
   const isMobile = useIsMobile();
 
-  // Generate navigation items based on user permissions
+  // Generate navigation items based on user permissions - this runs immediately
   const generateNavigation = () => {
     const baseNavigation = [
       { 
@@ -177,8 +177,11 @@ export function Layout() {
   
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+  // Load admin data in the background after initial render
   useEffect(() => {
-    const checkAdminAndNotifications = async () => {
+    const loadAdminData = async () => {
+      if (!user) return;
+      
       try {
         const [adminStatus, systemAdminStatus] = await Promise.all([
           isUserAdmin(),
@@ -204,23 +207,19 @@ export function Layout() {
 
     const fetchOrganizationName = async () => {
       try {
-        // console.log('Fetching organization name...');
         const name = await getOrganizationName();
-        // console.log('Organization name received:', name);
         if (name) {
           setOrganizationName(name);
-          // console.log('Organization name set to:', name);
-        } else {
-          // console.log('No organization name received, keeping default');
         }
       } catch (error) {
         console.error('Error fetching organization name:', error);
       }
     };
 
-    checkAdminAndNotifications();
+    // Load data in the background
+    loadAdminData();
     fetchOrganizationName();
-  }, []);
+  }, [user]);
 
   // Check for admin center redirect flag
   useEffect(() => {

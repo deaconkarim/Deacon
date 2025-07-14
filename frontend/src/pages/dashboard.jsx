@@ -72,7 +72,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { addMember, updateMember, deleteMember, getMemberAttendance, updateDonation, deleteDonation, addEventAttendance, getEventAttendance, getVolunteerStats } from '../lib/data';
 import { getAlertStats } from '../lib/alertsService';
 import { smsService } from '../lib/smsService';
-import { dashboardService } from '../lib/dashboardService';
+import { dashboardService, clearAllCaches } from '../lib/dashboardService';
+import { userCacheService } from '../lib/userCache';
 
 import { familyService } from '../lib/familyService';
 import {
@@ -220,6 +221,8 @@ export function Dashboard() {
   const [attendanceTimeRange, setAttendanceTimeRange] = useState('week'); // 'week' or 'month'
   const [recentSMSConversations, setRecentSMSConversations] = useState([]);
   const [personalTasks, setPersonalTasks] = useState([]);
+  const [donationTrendAnalysis, setDonationTrendAnalysis] = useState({});
+  const [weeklyDonationBreakdown, setWeeklyDonationBreakdown] = useState([]);
 
   // SMS Conversation Dialog state
   const [selectedSMSConversation, setSelectedSMSConversation] = useState(null);
@@ -243,11 +246,19 @@ export function Dashboard() {
     };
   }, []); // Empty dependency array - only calculate once
 
-  // Attendance stats for last 30 days
-  const { isLoading: attendanceLoading, serviceBreakdown, memberStats, dailyData, eventDetails, error } = useAttendanceStats(
+  // Attendance stats for last 30 days - only load if user has permission
+  const { isLoading: attendanceLoading, serviceBreakdown, memberStats, dailyData, eventDetails, error, clearCache: clearAttendanceCache } = useAttendanceStats(
     attendanceDateRange.startDate, 
     attendanceDateRange.endDate
   );
+
+  // Make attendance cache clearing function available globally
+  useEffect(() => {
+    window.clearAttendanceCache = clearAttendanceCache;
+    return () => {
+      delete window.clearAttendanceCache;
+    };
+  }, [clearAttendanceCache]);
 
   if (error) {
     console.error('Attendance stats error:', error);
@@ -255,14 +266,22 @@ export function Dashboard() {
 
   const loadDashboardData = useCallback(async () => {
     try {
+      setIsLoading(true);
+      
       // Use the consolidated dashboard service instead of multiple API calls
       const dashboardData = await dashboardService.getDashboardData();
       
       // Extract data from the consolidated response
       const { members, donations: donationsData, events: eventsData, tasks, sms, celebrations, attendance, family } = dashboardData;
       
-      // Load personal tasks for current user
-      const personalTasksData = await dashboardService.getPersonalTasks(dashboardData.organizationId);
+      // Load personal tasks for current user (only if user has task permissions)
+      let personalTasksData = [];
+      try {
+        personalTasksData = await dashboardService.getPersonalTasks(dashboardData.organizationId);
+      } catch (error) {
+        console.warn('Could not load personal tasks:', error);
+        // Don't fail the entire dashboard load for personal tasks
+      }
       setPersonalTasks(personalTasksData);
       
       // Transform members data to match existing structure
@@ -286,14 +305,6 @@ export function Dashboard() {
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
         .slice(0, 5);
 
-      // Debug: Log a few sample donations to see the data structure
-      console.log('Sample donations:', donationsData.all.slice(0, 3).map(d => ({
-        id: d.id,
-        date: d.date,
-        amount: d.amount,
-        dateType: typeof d.date
-      })));
-
       // Use pre-calculated stats from the service
       const totalDonations = donationsData.stats.total;
       const monthlyDonations = donationsData.stats.monthly;
@@ -305,6 +316,10 @@ export function Dashboard() {
       const thisWeekDonations = donationsData.stats.thisWeek;
       const lastWeekDonations = donationsData.stats.lastWeek;
       const lastSundayDonations = donationsData.stats.lastSunday;
+      
+      // Get sophisticated donation trend analysis
+      const donationTrendAnalysis = donationsData.trendAnalysis;
+      const weeklyDonationBreakdown = donationsData.weeklyBreakdown;
 
       // Use pre-calculated event stats
       const upcomingEvents = eventsData.upcoming;
@@ -387,18 +402,28 @@ export function Dashboard() {
       setWeeklyDonations(weeklyDonations);
       setDonations(donationsData.all);
       setRecentSMSConversations(sms.recentConversations || []);
+      setDonationTrendAnalysis(donationTrendAnalysis || {});
+      setWeeklyDonationBreakdown(weeklyDonationBreakdown || []);
 
     } catch (error) {
       console.error('Error loading dashboard data:', error);
       toast({
         title: "Error",
-        description: "Failed to load dashboard data",
+        description: "Failed to load dashboard data. Please try refreshing the page.",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   }, [toast]);
+
+  // Clear cache when component unmounts or user changes
+  useEffect(() => {
+    return () => {
+      // Clear cache when component unmounts to prevent stale data
+      dashboardService.clearCache();
+    };
+  }, []);
 
   useEffect(() => {
     loadDashboardData();
@@ -594,53 +619,15 @@ export function Dashboard() {
     setSelectedSMSConversation(null);
   };
 
-  const now = new Date();
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const dayOfMonth = now.getDate();
-  const percentMonth = dayOfMonth / daysInMonth;
-  const projectedDonations = percentMonth > 0 ? (stats.monthlyDonations / percentMonth) : 0;
-  const lastMonthDonations = stats.lastMonthDonations || 0; // You may need to fetch/calculate this if not present
-  const twoMonthsAgoDonations = stats.twoMonthsAgoDonations || 0;
+  // Use sophisticated donation trend analysis from state
+  const trendAnalysis = donationTrendAnalysis || {};
+  const donationTrend = trendAnalysis.primaryTrend;
+  const canCalculateTrend = trendAnalysis.canCalculateTrend || false;
+  const trendDescription = trendAnalysis.trendDescription || '';
+  const trendContext = trendAnalysis.trendContext || '';
+  const currentWeekOfMonth = trendAnalysis.currentWeekOfMonth || 0;
   
-  // Calculate donation trend, but handle cases where we can't calculate it
-  let donationTrend = null;
-  let canCalculateTrend = false;
-  let trendDescription = '';
-  
-  console.log('Donation trend debug:', {
-    lastMonthDonations,
-    twoMonthsAgoDonations,
-    monthlyDonations: stats.monthlyDonations,
-    projectedDonations,
-    percentMonth
-  });
-  
-  if (lastMonthDonations > 0 && stats.monthlyDonations > 0) {
-    // Calculate trend between current month (projected) and last month
-    donationTrend = ((projectedDonations - lastMonthDonations) / lastMonthDonations) * 100;
-    canCalculateTrend = true;
-    trendDescription = `Projected: $${projectedDonations.toLocaleString(undefined, {maximumFractionDigits: 0})} vs Last Month: $${lastMonthDonations.toLocaleString(undefined, {maximumFractionDigits: 0})}`;
-    console.log('Calculated trend (current vs last month):', donationTrend);
-  } else if (lastMonthDonations === 0 && stats.monthlyDonations > 0) {
-    // If we have donations this month but none last month, it's a positive trend
-    donationTrend = 100;
-    canCalculateTrend = true;
-    trendDescription = `This Month: $${stats.monthlyDonations.toLocaleString(undefined, {maximumFractionDigits: 0})} vs Last Month: $0`;
-    console.log('No last month donations, but current month has donations. Trend set to 100%');
-  } else if (lastMonthDonations > 0 && stats.monthlyDonations === 0 && twoMonthsAgoDonations > 0) {
-    // If no current month donations, compare last month vs two months ago
-    donationTrend = ((lastMonthDonations - twoMonthsAgoDonations) / twoMonthsAgoDonations) * 100;
-    canCalculateTrend = true;
-    trendDescription = `Last Month: $${lastMonthDonations.toLocaleString(undefined, {maximumFractionDigits: 0})} vs Two Months Ago: $${twoMonthsAgoDonations.toLocaleString(undefined, {maximumFractionDigits: 0})}`;
-    console.log('Calculated trend (last month vs two months ago):', donationTrend);
-  } else if (lastMonthDonations > 0 && stats.monthlyDonations === 0 && twoMonthsAgoDonations === 0) {
-    // If we have last month donations but no current month or two months ago donations, show waiting message
-    console.log('Last month had donations but no current month or two months ago donations, showing waiting message');
-  } else {
-    console.log('No donations in any of the last 3 months, cannot calculate trend');
-  }
-  
-  console.log('Final values:', { donationTrend, canCalculateTrend, trendDescription });
+  console.log('📊 [Dashboard] Sophisticated donation trend analysis:', trendAnalysis);
 
   // SMS Helper Functions
   const getUniqueMessageCount = (messages) => {
@@ -723,6 +710,34 @@ export function Dashboard() {
     }
   };
 
+  // Refresh function that clears cache and reloads data
+  const refreshDashboard = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      clearAllCaches();
+      // Also clear attendance cache if available
+      if (window.clearAttendanceCache) {
+        window.clearAttendanceCache();
+      }
+      // Clear user cache to ensure fresh data
+      userCacheService.clearCache();
+      await loadDashboardData();
+      toast({
+        title: "Success",
+        description: "Dashboard data refreshed",
+      });
+    } catch (error) {
+      console.error('Error refreshing dashboard:', error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh dashboard data",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [loadDashboardData, toast]);
+
   return (
     <motion.div 
       className="min-h-screen w-full max-w-full overflow-x-hidden"
@@ -763,6 +778,16 @@ export function Dashboard() {
                 <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/90 border border-white/40 dark:border-slate-700/60 rounded-2xl p-4 shadow-lg">
                   <LeadershipVerse />
                 </div>
+                <Button
+                  onClick={refreshDashboard}
+                  disabled={isLoading}
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 w-full bg-white/60 dark:bg-slate-800/60 border-white/40 dark:border-slate-700/60 hover:bg-white/80 dark:hover:bg-slate-800/80 transition-all duration-300"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                  Refresh Data
+                </Button>
               </div>
             </div>
           </div>
@@ -1421,17 +1446,20 @@ export function Dashboard() {
                     <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center">
                       <DollarSign className="h-4 w-4 text-white" />
                     </div>
-                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Giving Pattern</h4>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Weekly Giving</h4>
                   </div>
                   <div className="space-y-2">
                     <div className="text-2xl font-bold text-emerald-600">
-                      {isLoading ? '...' : canCalculateTrend ? (donationTrend > 0 ? 'Improving' : 'Declining') : 'Building'}
+                      {isLoading ? '...' : canCalculateTrend ? (donationTrend > 0 ? 'Improving' : 'Declining') : 'Week ' + currentWeekOfMonth}
                     </div>
                     <p className="text-sm text-slate-600 dark:text-slate-400">
-                      {canCalculateTrend ? `${Math.abs(donationTrend).toFixed(1)}% trend vs last month` : 'Establishing baseline data'}
+                      {canCalculateTrend ? `${Math.abs(donationTrend).toFixed(1)}% vs previous pattern` : trendContext}
                     </p>
                     <div className="text-xs text-slate-500 dark:text-slate-500">
-                      Next step: {canCalculateTrend && donationTrend < 0 ? 'Share impact stories' : 'Continue steady stewardship'}
+                      {currentWeekOfMonth === 1 ? 'First week typically highest' : 
+                       currentWeekOfMonth === 2 ? 'Second week pattern' :
+                       currentWeekOfMonth === 3 ? 'Mid-month giving' :
+                       currentWeekOfMonth === 4 ? 'Late month pattern' : 'Final week'}
                     </div>
                   </div>
                 </div>
@@ -1843,13 +1871,13 @@ export function Dashboard() {
                     donationTrend > 5 ? 'text-green-900 dark:text-green-100' :
                     donationTrend > 0 ? 'text-yellow-900 dark:text-yellow-100' :
                     'text-red-900 dark:text-red-100'
-                  }`}>Donation Trend</h4>
+                  }`}>Weekly Trend</h4>
                 </div>
                 {isLoading ? (
                   <Skeleton className="h-4 w-32 mb-2" />
                 ) : !canCalculateTrend ? (
                   <p className="text-xl sm:text-2xl font-bold text-blue-700 dark:text-blue-300 mb-1">
-                    Waiting for data
+                    Week {currentWeekOfMonth}
                   </p>
                 ) : (
                   <p className={`text-xl sm:text-2xl font-bold mb-1 ${
@@ -1872,7 +1900,7 @@ export function Dashboard() {
                   'text-red-600 dark:text-red-400'
                 }`}>
                   {!canCalculateTrend ? 
-                    'Waiting for first donation of the month to calculate trend' :
+                    `Week ${currentWeekOfMonth} - ${trendContext}` :
                     trendDescription
                   }
                 </p>
@@ -2125,8 +2153,8 @@ export function Dashboard() {
                           },
                           { 
                             name: 'Donation Growth', 
-                            value: stats.growthRate > 0 ? Math.abs(stats.growthRate) : 0,
-                            condition: stats.growthRate > 0,
+                            value: donationTrend > 0 ? Math.abs(donationTrend) : 0,
+                            condition: donationTrend > 0,
                             recommendation: 'Keep communicating the impact of giving.'
                           },
                           { 
@@ -2264,7 +2292,7 @@ export function Dashboard() {
                         if (stats.eventsStillNeedingVolunteers > 0) return 'Volunteer Recruitment';
                     
                         // Priority 2: Donation trends
-                        if (stats.growthRate < 0) return 'Donation Growth';
+                        if (donationTrend < 0) return 'Donation Growth';
 
                         // Priority 4: Sunday service attendance
                         if (stats.sundayServiceRate < 50) return 'Sunday Service Attendance';
@@ -2294,7 +2322,7 @@ export function Dashboard() {
                         if (stats.eventsStillNeedingVolunteers > 0) return 'Reach out for volunteer sign-ups.';
                    
                         // Priority 2: Donation trends
-                        if (stats.growthRate < 0) return 'Share impact stories to encourage giving.';
+                        if (donationTrend < 0) return 'Share impact stories to encourage giving.';
 
                         // Priority 3: Member engagement issues
                         if (stats.totalPeople > 0 && (stats.activeMembers / stats.totalPeople) < 0.7) return 'Focus on engaging inactive members.';

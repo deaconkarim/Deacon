@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { getCurrentUserMember, updateCurrentUserMember, updateCurrentUserEmail, updateCurrentUserPassword } from '@/lib/data';
 import { supabase } from '@/lib/supabaseClient';
+import { userCacheService } from '@/lib/userCache';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -50,7 +51,7 @@ const AccountSettings = () => {
           });
         } else {
           // If no member record, try to get email from auth user
-          const { data: { user } } = await supabase.auth.getUser();
+          const user = await userCacheService.getCurrentUser();
           if (user) {
             setUserSettings({
               firstname: '',

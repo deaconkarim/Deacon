@@ -1,6 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { format, parseISO } from 'date-fns';
 import { supabase } from '../supabaseClient';
+
+// Cache for attendance data
+let attendanceCache = null;
+let attendanceCacheTimestamp = null;
+const ATTENDANCE_CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 
 export function useAttendanceStats(startDate, endDate) {
   const [isLoading, setIsLoading] = useState(false);
@@ -9,7 +14,7 @@ export function useAttendanceStats(startDate, endDate) {
   const [dailyData, setDailyData] = useState([]);
   const [eventDetails, setEventDetails] = useState([]);
   const [error, setError] = useState(null);
-
+  const abortControllerRef = useRef(null);
 
   // Memoize the loadAttendanceData function to prevent infinite loops
   const loadAttendanceData = useCallback(async () => {
@@ -17,6 +22,30 @@ export function useAttendanceStats(startDate, endDate) {
       console.log('No startDate or endDate provided');
       return;
     }
+
+    // Check cache first
+    const now = Date.now();
+    const cacheKey = `${startDate.toISOString()}-${endDate.toISOString()}`;
+    
+    if (attendanceCache && attendanceCacheTimestamp && 
+        (now - attendanceCacheTimestamp) < ATTENDANCE_CACHE_DURATION &&
+        attendanceCache.cacheKey === cacheKey) {
+      console.log('📊 [AttendanceStats] Using cached data');
+      setServiceBreakdown(attendanceCache.serviceBreakdown);
+      setMemberStats(attendanceCache.memberStats);
+      setDailyData(attendanceCache.dailyData);
+      setEventDetails(attendanceCache.eventDetails);
+      setError(null);
+      return;
+    }
+
+    // Cancel any ongoing request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new abort controller
+    abortControllerRef.current = new AbortController();
 
     setIsLoading(true);
     setError(null);
@@ -40,14 +69,19 @@ export function useAttendanceStats(startDate, endDate) {
       if (eventsError) throw eventsError;
       if (!events || events.length === 0) {
         console.log('No past events found for date range');
-        setServiceBreakdown([]);
-        setMemberStats([]);
-        setDailyData([]);
-        setEventDetails([]);
+        const emptyData = { serviceBreakdown: [], memberStats: [], dailyData: [], eventDetails: [] };
+        
+        // Cache empty result
+        attendanceCache = { ...emptyData, cacheKey };
+        attendanceCacheTimestamp = now;
+        
+        setServiceBreakdown(emptyData.serviceBreakdown);
+        setMemberStats(emptyData.memberStats);
+        setDailyData(emptyData.dailyData);
+        setEventDetails(emptyData.eventDetails);
         setIsLoading(false);
         return;
       }
-      
       
       // Fetch attendance records for these events
       const { data: attendance, error: attendanceError } = await supabase
@@ -126,11 +160,26 @@ export function useAttendanceStats(startDate, endDate) {
         };
       });
       
+      const result = {
+        serviceBreakdown: formattedServiceBreakdown,
+        memberStats,
+        dailyData,
+        eventDetails
+      };
+
+      // Cache the result
+      attendanceCache = { ...result, cacheKey };
+      attendanceCacheTimestamp = now;
+      
       setServiceBreakdown(formattedServiceBreakdown);
       setMemberStats(memberStats);
       setDailyData(dailyData);
       setEventDetails(eventDetails);
     } catch (err) {
+      if (err.name === 'AbortError') {
+        console.log('Attendance stats request was cancelled');
+        return;
+      }
       console.error('Error in useAttendanceStats:', err);
       setError(err);
       setServiceBreakdown([]);
@@ -142,9 +191,31 @@ export function useAttendanceStats(startDate, endDate) {
     }
   }, [startDate, endDate]);
 
+  // Clear cache function
+  const clearAttendanceCache = useCallback(() => {
+    attendanceCache = null;
+    attendanceCacheTimestamp = null;
+    console.log('📊 [AttendanceStats] Cache cleared');
+  }, []);
+
   useEffect(() => {
     loadAttendanceData();
+    
+    // Cleanup function to abort ongoing requests
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [loadAttendanceData]);
 
-  return { isLoading, serviceBreakdown, memberStats, dailyData, eventDetails, error };
+  return { 
+    isLoading, 
+    serviceBreakdown, 
+    memberStats, 
+    dailyData, 
+    eventDetails, 
+    error,
+    clearCache: clearAttendanceCache
+  };
 } 

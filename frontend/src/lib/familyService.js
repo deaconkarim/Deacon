@@ -1,34 +1,9 @@
 import { supabase } from './supabaseClient';
+import { userCacheService } from './userCache';
 
 // Helper function to get the current organization ID (including impersonation)
 const getCurrentOrganizationId = async () => {
-  // Check if we're impersonating a user and use that organization ID
-  const impersonatingUser = localStorage.getItem('impersonating_user');
-  if (impersonatingUser) {
-    const impersonationData = JSON.parse(impersonatingUser);
-    return impersonationData.organization_id;
-  }
-
-  // Check if we're impersonating an organization directly
-  const impersonatingOrg = localStorage.getItem('impersonating_organization');
-  if (impersonatingOrg) {
-    const impersonationData = JSON.parse(impersonatingOrg);
-    return impersonationData.organization_id;
-  }
-
-  // Get organization from current user
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('User not authenticated');
-
-  const { data: orgUsers, error: orgError } = await supabase
-    .from('organization_users')
-    .select('organization_id')
-    .eq('user_id', user.id)
-    .limit(1);
-
-  if (orgError || !orgUsers || orgUsers.length === 0) throw new Error('Unable to determine organization');
-  
-  return orgUsers[0].organization_id;
+  return await userCacheService.getCurrentUserOrganizationId();
 };
 
 export const familyService = {

@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { userCacheService } from './userCache';
 import { useState, useEffect, useCallback } from 'react';
 import { CustomRolesService } from './customRolesService';
 
@@ -220,7 +221,7 @@ export const isCustomRoleAdmin = async (roleName, organizationId) => {
 // Helper function to get user's role in current organization
 export const getUserRole = async () => {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await userCacheService.getCurrentUser();
     if (!user) return null;
 
     // Check for impersonation
@@ -234,7 +235,6 @@ export const getUserRole = async () => {
         .select('role')
         .eq('user_id', impersonationData.user_id)
         .eq('organization_id', impersonationData.organization_id)
-
         .single();
       
       return orgUser?.role || ROLES.MEMBER;
@@ -244,15 +244,8 @@ export const getUserRole = async () => {
       return ROLES.ADMIN;
     }
 
-    // Get current user's organization and role
-    const { data: orgUser } = await supabase
-      .from('organization_users')
-      .select('role, organization_id')
-      .eq('user_id', user.id)
-
-      .single();
-
-    return orgUser?.role || ROLES.MEMBER;
+    // Get role from cache
+    return await userCacheService.getUserRole();
   } catch (error) {
     console.error('Error getting user role:', error);
     return ROLES.MEMBER;
@@ -372,33 +365,25 @@ export const usePermissions = () => {
         if (role) {
           let rolePerms = ROLE_PERMISSIONS[role] || [];
           
-          // If it's a custom role, get permissions from database
-          if (!DEFAULT_ROLES[role.toUpperCase()]) {
-            // Get current user's organization
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-              const { data: orgUser } = await supabase
-                .from('organization_users')
-                .select('organization_id')
-                .eq('user_id', user.id)
-                .single();
-
-              if (orgUser?.organization_id) {
-                // Get custom role permissions
-                rolePerms = await CustomRolesService.getCustomRolePermissions(
-                  role, 
-                  orgUser.organization_id
-                );
-                
-                // Check if this custom role has admin-level permissions
-                const isAdmin = await isCustomRoleAdmin(role, orgUser.organization_id);
-                if (isAdmin) {
-                  // Add all permissions for admin-level custom roles
-                  rolePerms = CustomRolesService.getAvailablePermissions();
-                }
-              }
-            }
-          }
+              // If it's a custom role, get permissions from database
+    if (!DEFAULT_ROLES[role.toUpperCase()]) {
+      // Get current user's organization from cache
+      const org = await userCacheService.getCurrentUserOrganization();
+      if (org?.organization_id) {
+        // Get custom role permissions
+        rolePerms = await CustomRolesService.getCustomRolePermissions(
+          role, 
+          org.organization_id
+        );
+        
+        // Check if this custom role has admin-level permissions
+        const isAdmin = await isCustomRoleAdmin(role, org.organization_id);
+        if (isAdmin) {
+          // Add all permissions for admin-level custom roles
+          rolePerms = CustomRolesService.getAvailablePermissions();
+        }
+      }
+    }
           
           setPermissions(rolePerms);
         }

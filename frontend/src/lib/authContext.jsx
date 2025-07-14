@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
+import { userCacheService } from './userCache';
 
 const AuthContext = createContext({});
 
@@ -17,6 +18,8 @@ export function AuthProvider({ children }) {
     // Listen for changes on auth state (logged in, signed out, etc.)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      // Clear user cache when auth state changes
+      userCacheService.clearCache();
       setLoading(false);
     });
 

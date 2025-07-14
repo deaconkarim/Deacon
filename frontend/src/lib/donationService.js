@@ -1,40 +1,9 @@
 import { supabase } from './supabaseClient';
+import { userCacheService } from './userCache';
 
 // Helper function to get current user's organization ID
 const getCurrentUserOrganizationId = async () => {
-  try {
-    // Check if we're impersonating a user and use that organization ID
-    const impersonatingUser = localStorage.getItem('impersonating_user');
-    if (impersonatingUser) {
-      const impersonationData = JSON.parse(impersonatingUser);
-      console.log('🔍 [DonationService] Using impersonated organization ID:', impersonationData.organization_id);
-      return impersonationData.organization_id;
-    }
-
-    // Check if we're impersonating an organization directly
-    const impersonatingOrg = localStorage.getItem('impersonating_organization');
-    if (impersonatingOrg) {
-      const impersonationData = JSON.parse(impersonatingOrg);
-      console.log('🔍 [DonationService] Using impersonated organization ID:', impersonationData.organization_id);
-      return impersonationData.organization_id;
-    }
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
-
-    const { data, error } = await supabase
-      .from('organization_users')
-      .select('organization_id')
-      .eq('user_id', user.id)
-      .eq('approval_status', 'approved')
-      .limit(1);
-
-    if (error) throw error;
-    return data && data.length > 0 ? data[0].organization_id : null;
-  } catch (error) {
-    console.error('Error getting user organization:', error);
-    return null;
-  }
+  return await userCacheService.getCurrentUserOrganizationId();
 };
 
 // ================== DONATIONS ==================

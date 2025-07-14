@@ -1,45 +1,9 @@
 import { supabase } from './supabaseClient';
+import { userCacheService } from './userCache';
 
 // Helper function to get current user's organization ID
 async function getCurrentUserOrganizationId() {
-  try {
-    // Check if we're impersonating a user and use that organization ID
-    const impersonatingUser = localStorage.getItem('impersonating_user');
-    if (impersonatingUser) {
-      const impersonationData = JSON.parse(impersonatingUser);
-      console.log('🔍 [AlertsService] Using impersonated organization ID:', impersonationData.organization_id);
-      return impersonationData.organization_id;
-    }
-
-    // Check if we're impersonating an organization directly
-    const impersonatingOrg = localStorage.getItem('impersonating_organization');
-    if (impersonatingOrg) {
-      const impersonationData = JSON.parse(impersonatingOrg);
-      console.log('🔍 [AlertsService] Using impersonated organization ID:', impersonationData.organization_id);
-      return impersonationData.organization_id;
-    }
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-
-    const { data: orgUser, error: orgError } = await supabase
-      .from('organization_users')
-      .select('organization_id')
-      .eq('user_id', user.id)
-      .eq('approval_status', 'approved')
-      .limit(1);
-
-    if (orgError || !orgUser || orgUser.length === 0) {
-      throw new Error('User not associated with any organization');
-    }
-
-    return orgUser[0].organization_id;
-  } catch (error) {
-    console.error('Error getting organization ID:', error);
-    throw error;
-  }
+  return await userCacheService.getCurrentUserOrganizationId();
 }
 
 // Get all alerts for the current organization

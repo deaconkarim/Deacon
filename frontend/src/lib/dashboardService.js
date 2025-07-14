@@ -1,47 +1,45 @@
 import { supabase } from './supabaseClient';
 import { smsService } from './smsService';
 import { familyService } from './familyService';
+import { userCacheService } from './userCache';
+import { calculateDonationTrend, getWeeklyDonationBreakdown } from './donationTrendAnalysis';
+
+// Cache for dashboard data to prevent redundant requests
+let dashboardCache = null;
+let cacheTimestamp = null;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+// Cache for donation trend analysis
+let donationTrendCache = null;
+let donationTrendCacheTimestamp = null;
+const DONATION_TREND_CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+
+// Clear all caches function
+export const clearAllCaches = () => {
+  dashboardCache = null;
+  cacheTimestamp = null;
+  donationTrendCache = null;
+  donationTrendCacheTimestamp = null;
+  userCacheService.clearCache();
+  console.log('📊 [DashboardService] All caches cleared');
+};
 
 // Get current user's organization ID
 const getCurrentUserOrganizationId = async () => {
-  try {
-    // Check if we're impersonating a user and use that organization ID
-    const impersonatingUser = localStorage.getItem('impersonating_user');
-    if (impersonatingUser) {
-      const impersonationData = JSON.parse(impersonatingUser);
-      console.log('🔍 [DashboardService] Using impersonated organization ID:', impersonationData.organization_id);
-      return impersonationData.organization_id;
-    }
-
-    // Check if we're impersonating an organization directly
-    const impersonatingOrg = localStorage.getItem('impersonating_organization');
-    if (impersonatingOrg) {
-      const impersonationData = JSON.parse(impersonatingOrg);
-      console.log('🔍 [DashboardService] Using impersonated organization ID:', impersonationData.organization_id);
-      return impersonationData.organization_id;
-    }
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
-
-    const { data: userProfile } = await supabase
-      .from('organization_users')
-      .select('organization_id')
-      .eq('user_id', user.id)
-      .eq('approval_status', 'approved')
-      .limit(1);
-
-    return userProfile && userProfile.length > 0 ? userProfile[0].organization_id : null;
-  } catch (error) {
-    console.error('Error getting user organization ID:', error);
-    return null;
-  }
+  return await userCacheService.getCurrentUserOrganizationId();
 };
 
 export const dashboardService = {
   // Consolidated dashboard data fetch - reduces multiple API calls to just a few
   async getDashboardData() {
     try {
+      // Check cache first
+      const now = Date.now();
+      if (dashboardCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
+        console.log('📊 [DashboardService] Using cached data');
+        return dashboardCache;
+      }
+
       const organizationId = await getCurrentUserOrganizationId();
       console.log('🔍 [DashboardService] Organization ID:', organizationId);
       
@@ -49,7 +47,7 @@ export const dashboardService = {
         throw new Error('User not associated with any organization');
       }
 
-      // Fetch all data in parallel for better performance
+      // Fetch all data in parallel with optimized queries
       const [membersData, donationsData, eventsData, tasksData, smsData, celebrationsData, attendanceData, familyData] = await Promise.all([
         this.getMembersData(organizationId),
         this.getDonationsData(organizationId),
@@ -61,15 +59,7 @@ export const dashboardService = {
         this.getFamilyData(organizationId)
       ]);
 
-      console.log('📊 [DashboardService] Data loaded:', {
-        members: membersData.counts?.total || 0,
-        donations: donationsData.all?.length || 0,
-        events: eventsData.all?.length || 0,
-        tasks: tasksData.all?.length || 0,
-        attendance: attendanceData
-      });
-
-      return {
+      const result = {
         organizationId,
         members: membersData,
         donations: donationsData,
@@ -80,30 +70,36 @@ export const dashboardService = {
         attendance: attendanceData,
         family: familyData
       };
+
+      // Cache the result
+      dashboardCache = result;
+      cacheTimestamp = now;
+
+      console.log('📊 [DashboardService] Data loaded and cached:', {
+        members: membersData.counts?.total || 0,
+        donations: donationsData.all?.length || 0,
+        events: eventsData.all?.length || 0,
+        tasks: tasksData.all?.length || 0,
+        attendance: attendanceData
+      });
+
+      return result;
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       throw error;
     }
   },
 
-  // Members data - single API call instead of multiple
+  // Clear cache when data changes
+  clearCache() {
+    dashboardCache = null;
+    cacheTimestamp = null;
+    console.log('📊 [DashboardService] Cache cleared');
+  },
+
+  // Members data - single optimized API call
   async getMembersData(organizationId) {
     console.log('🔍 [DashboardService] Fetching members for organization:', organizationId);
-    
-    // First, let's see what organizations have members
-    const { data: allMembers, error: allMembersError } = await supabase
-      .from('members')
-      .select('organization_id, id, firstname, lastname')
-      .order('created_at', { ascending: false });
-
-    if (allMembersError) throw allMembersError;
-    
-    console.log('📊 [DashboardService] All members by organization:', 
-      allMembers?.reduce((acc, member) => {
-        acc[member.organization_id] = (acc[member.organization_id] || 0) + 1;
-        return acc;
-      }, {})
-    );
     
     const { data: members, error } = await supabase
       .from('members')
@@ -114,7 +110,6 @@ export const dashboardService = {
     if (error) throw error;
 
     console.log('📊 [DashboardService] Members found:', members?.length || 0);
-    console.log('📊 [DashboardService] Sample members:', members?.slice(0, 3));
 
     const activeMembers = members.filter(m => m.status === 'active');
     const inactiveMembers = members.filter(m => m.status === 'inactive');
@@ -136,7 +131,7 @@ export const dashboardService = {
     };
   },
 
-  // Donations data with all calculations - single API call instead of multiple
+  // Donations data with all calculations - single API call
   async getDonationsData(organizationId) {
     const { data: donations, error } = await supabase
       .from('donations')
@@ -146,9 +141,9 @@ export const dashboardService = {
 
     if (error) throw error;
 
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth();
 
     // Calculate various donation metrics
     const totalDonations = Math.round(donations.reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0) * 100) / 100;
@@ -178,9 +173,9 @@ export const dashboardService = {
       .reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0) * 100) / 100;
 
     // This week calculations (current week starting from Sunday)
-    const currentDayOfWeek = now.getDay();
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - currentDayOfWeek);
+    const currentDayOfWeek = currentDate.getDay();
+    const startOfWeek = new Date(currentDate);
+    startOfWeek.setDate(currentDate.getDate() - currentDayOfWeek);
     startOfWeek.setHours(0, 0, 0, 0);
     const startOfWeekStr = startOfWeek.toISOString().split('T')[0];
     
@@ -194,7 +189,7 @@ export const dashboardService = {
     const oneWeekAgoStr = oneWeekAgo.toISOString().split('T')[0];
     
     const lastWeekDonations = Math.round(donations
-      .filter(d => d.date >= oneWeekAgoStr && d.date < now.toISOString().split('T')[0])
+      .filter(d => d.date >= oneWeekAgoStr && d.date < currentDate.toISOString().split('T')[0])
       .reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0) * 100) / 100;
 
     // Weekly average calculations (last 90 days)
@@ -227,48 +222,47 @@ export const dashboardService = {
         }
       });
 
-    const weeklyTotals = Object.values(weeklyDonationTotals);
-    const weeklyAverage = weeklyTotals.length > 0 ? 
-      Math.round((weeklyTotals.reduce((sum, total) => sum + total, 0) / weeklyTotals.length) * 100) / 100 : 0;
+    const weeklyValues = Object.values(weeklyDonationTotals);
+    const weeklyAverage = weeklyValues.length > 0 ? 
+      Math.round(weeklyValues.reduce((sum, val) => sum + val, 0) / weeklyValues.length * 100) / 100 : 0;
 
-    // Monthly average calculation
-    const donationDates = donations.map(d => d.date);
-    const uniqueMonths = new Set();
-    const avgCurrentYear = new Date().getFullYear();
-    const avgCurrentMonth = new Date().getMonth();
+    // Monthly average calculations (last 12 months)
+    const twelveMonthsAgo = new Date();
+    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+    const twelveMonthsAgoStr = twelveMonthsAgo.toISOString().split('T')[0];
     
-    const totalDonationsExcludingCurrent = donations.reduce((sum, donation) => {
-      try {
-        const donationDate = new Date(donation.date + 'T00:00:00');
-        if (donationDate.getFullYear() !== avgCurrentYear || donationDate.getMonth() !== avgCurrentMonth) {
+    const monthlyDonationTotals = {};
+    donations
+      .filter(d => d.date >= twelveMonthsAgoStr) // Only last 12 months
+      .forEach(donation => {
+        try {
+          const date = new Date(donation.date);
+          if (isNaN(date.getTime())) return;
+          
+          const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
           const amount = parseFloat(donation.amount) || 0;
-          return sum + amount;
+          
+          if (!monthlyDonationTotals[monthKey]) {
+            monthlyDonationTotals[monthKey] = 0;
+          }
+          monthlyDonationTotals[monthKey] += amount;
+        } catch (error) {
+          console.error('Error processing donation for monthly average:', donation, error);
         }
-        return sum;
-      } catch (error) {
-        return sum;
-      }
-    }, 0);
-    
-    donationDates.forEach(dateStr => {
-      const date = new Date(dateStr);
-      const yearMonth = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-      if (date.getFullYear() !== avgCurrentYear || date.getMonth() !== avgCurrentMonth) {
-        uniqueMonths.add(yearMonth);
-      }
-    });
-    
-    const actualMonthsWithData = uniqueMonths.size;
-    const monthlyAverage = actualMonthsWithData > 0 ? 
-      Math.round((totalDonationsExcludingCurrent / actualMonthsWithData) * 100) / 100 : 0;
-    const growthRate = monthlyAverage > 0 ? 
-      Math.round(((monthlyDonations - monthlyAverage) / monthlyAverage) * 100 * 10) / 10 : 0;
+      });
 
-    // Last Sunday calculations
-    const lastSunday = new Date();
-    const lastSundayDayOfWeek = lastSunday.getDay();
-    const daysToSubtract = lastSundayDayOfWeek === 0 ? 7 : lastSundayDayOfWeek;
-    lastSunday.setDate(lastSunday.getDate() - daysToSubtract);
+    const monthlyValues = Object.values(monthlyDonationTotals);
+    const monthlyAverage = monthlyValues.length > 0 ? 
+      Math.round(monthlyValues.reduce((sum, val) => sum + val, 0) / monthlyValues.length * 100) / 100 : 0;
+
+    // Growth rate calculation (current month vs last month)
+    const growthRate = lastMonthDonations > 0 ? 
+      Math.round(((monthlyDonations - lastMonthDonations) / lastMonthDonations) * 100) : 0;
+
+    // Last Sunday donations
+    const lastSunday = new Date(currentDate);
+    const daysSinceSunday = currentDate.getDay();
+    lastSunday.setDate(currentDate.getDate() - daysSinceSunday);
     lastSunday.setHours(0, 0, 0, 0);
     
     const lastSundayDonations = Math.round(donations.filter(donation => {
@@ -284,6 +278,30 @@ export const dashboardService = {
       }
     }).reduce((sum, donation) => sum + (parseFloat(donation.amount) || 0), 0) * 100) / 100;
 
+    // Calculate sophisticated donation trend analysis with caching
+    let donationTrendAnalysis;
+    let weeklyDonationBreakdown;
+    
+    // Check cache for donation trend analysis
+    const currentTime = Date.now();
+    if (donationTrendCache && donationTrendCacheTimestamp && 
+        (currentTime - donationTrendCacheTimestamp) < DONATION_TREND_CACHE_DURATION) {
+      console.log('📊 [DashboardService] Using cached donation trend analysis');
+      donationTrendAnalysis = donationTrendCache.trendAnalysis;
+      weeklyDonationBreakdown = donationTrendCache.weeklyBreakdown;
+    } else {
+      console.log('📊 [DashboardService] Calculating fresh donation trend analysis');
+      donationTrendAnalysis = await calculateDonationTrend();
+      weeklyDonationBreakdown = await getWeeklyDonationBreakdown();
+      
+      // Cache the results
+      donationTrendCache = {
+        trendAnalysis: donationTrendAnalysis,
+        weeklyBreakdown: weeklyDonationBreakdown
+      };
+      donationTrendCacheTimestamp = currentTime;
+    }
+
     return {
       all: donations,
       recent: donations.slice(0, 7),
@@ -298,11 +316,13 @@ export const dashboardService = {
         weeklyAverage,
         monthlyAverage,
         growthRate
-      }
+      },
+      trendAnalysis: donationTrendAnalysis,
+      weeklyBreakdown: weeklyDonationBreakdown
     };
   },
 
-  // Events data - single API call instead of multiple
+  // Events data - single API call
   async getEventsData(organizationId) {
     const { data: events, error } = await supabase
       .from('events')
@@ -410,8 +430,8 @@ export const dashboardService = {
   // Personal tasks for current user
   async getPersonalTasks(organizationId) {
     try {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
+      // Get current user from cache
+      const user = await userCacheService.getCurrentUser();
       if (!user) return [];
 
       // Get user's member record - use maybeSingle() to handle no results gracefully
@@ -465,7 +485,7 @@ export const dashboardService = {
     }
   },
 
-  // SMS data - single API call instead of multiple
+  // SMS data - single API call
   async getSMSData(organizationId) {
     const { data: messages, error: messagesError } = await supabase
       .from('sms_messages')
@@ -566,7 +586,7 @@ export const dashboardService = {
     };
   },
 
-  // Attendance data by event type
+  // Attendance data by event type - optimized single query
   async getAttendanceData(organizationId) {
     // Get active members count first
     const { data: activeMembers, error: membersError } = await supabase
@@ -746,7 +766,7 @@ export const dashboardService = {
     };
   },
 
-  // Family data
+  // Family data - optimized single query
   async getFamilyData(organizationId) {
     // Get active adult members only
     const { data: activeAdults, error: activeAdultsError } = await supabase
@@ -797,19 +817,6 @@ export const dashboardService = {
     // Count adults vs children
     const adults = activeAdults.length;
     const children = allChildren.length;
-
-    console.log('Family calculation debug:', {
-      totalActiveAdults: adults,
-      totalChildren: children,
-      totalFamilies,
-      familyIdsWithActiveMembers: Array.from(familyIdsWithActiveMembers),
-      membersInFamilies,
-      unassignedMembers,
-      sampleFamilyRelationships: familyRelationships.slice(0, 5),
-      sampleActiveAdults: activeAdults.slice(0, 5).map(m => ({ id: m.id, member_type: m.member_type })),
-      sampleChildren: allChildren.slice(0, 5).map(m => ({ id: m.id, member_type: m.member_type })),
-      familiesData: families.slice(0, 5)
-    });
 
     return {
       totalFamilies,
