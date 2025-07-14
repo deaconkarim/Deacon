@@ -309,7 +309,7 @@ export function Layout() {
       });
     }
   };
-  
+
   return (
     <div className="min-h-screen bg-background flex">
       {/* Overlaying Expand-on-hover Sidebar for Desktop/Tablet */}
