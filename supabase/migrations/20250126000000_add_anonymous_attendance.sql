@@ -11,7 +11,7 @@ ALTER COLUMN member_id DROP NOT NULL;
 
 -- Add anonymous_name column
 ALTER TABLE public.event_attendance 
-ADD COLUMN anonymous_name TEXT;
+ADD COLUMN anonymous_name TEXT DEFAULT 'Anonymous';
 
 -- Add check constraint to ensure either member_id or anonymous_name is provided
 ALTER TABLE public.event_attendance 

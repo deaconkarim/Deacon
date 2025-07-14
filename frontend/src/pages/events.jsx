@@ -936,15 +936,6 @@ export default function Events() {
   };
 
   const handleAnonymousCheckin = async () => {
-    if (!anonymousName.trim()) {
-      toast({
-        title: "Missing Information",
-        description: "Please provide a name for the anonymous attendee.",
-        variant: "destructive"
-      });
-      return;
-    }
-
     try {
       // Add anonymous person to event attendance
       const { data: attendanceData, error } = await supabase
@@ -952,7 +943,7 @@ export default function Events() {
         .upsert({
           event_id: selectedEvent.id,
           member_id: null,
-          anonymous_name: anonymousName.trim(),
+          anonymous_name: 'Anonymous',
           status: 'attending'
         })
         .select()
@@ -968,20 +959,20 @@ export default function Events() {
       
       if (organizationId) {
         try {
-          console.log('🚀 Triggering event_attendance automation for anonymous attendee:', anonymousName);
+          console.log('🚀 Triggering event_attendance automation for anonymous attendee');
           console.log('🎯 Event data:', selectedEvent);
           const triggerData = {
             id: attendanceData.id,
             event_id: selectedEvent.id,
             member_id: null,
-            anonymous_name: anonymousName.trim(),
+            anonymous_name: 'Anonymous',
             status: 'attending',
             event_type: selectedEvent.event_type,
             member_type: 'anonymous',
             attendance_status: 'attended',
             is_first_visit: true,
             event_date: selectedEvent.start_date,
-            firstname: anonymousName.trim(),
+            firstname: 'Anonymous',
             lastname: '',
             phone: null
           };
@@ -1005,7 +996,7 @@ export default function Events() {
       // Add anonymous attendee to already checked-in list
       const anonymousAttendee = {
         id: `anonymous-${Date.now()}`,
-        firstname: anonymousName.trim(),
+        firstname: 'Anonymous',
         lastname: '',
         email: null,
         image_url: null,
@@ -1043,14 +1034,15 @@ export default function Events() {
       const isAnonymous = memberId.startsWith('anonymous-');
       
       if (isAnonymous) {
-        // For anonymous attendees, we need to find them by anonymous_name
+        // For anonymous attendees, we need to find them by their attendance record ID
         const member = alreadyRSVPMembers.find(m => m.id === memberId);
         if (member) {
+          // Extract the attendance record ID from the anonymous ID
+          const attendanceId = memberId.replace('anonymous-', '');
           const { error } = await supabase
             .from('event_attendance')
             .delete()
-            .eq('event_id', selectedEvent.id)
-            .eq('anonymous_name', member.firstname);
+            .eq('id', attendanceId);
 
           if (error) throw error;
         }
@@ -1224,6 +1216,7 @@ export default function Events() {
       const { data, error } = await supabase
         .from('event_attendance')
         .select(`
+          id,
           member_id,
           anonymous_name,
           members (
@@ -1249,18 +1242,18 @@ export default function Events() {
             lastName: item.members.lastname,
             isAnonymous: false
           };
-        } else if (item.anonymous_name) {
-          // Anonymous attendee
-          return {
-            id: `anonymous-${item.anonymous_name}-${item.id}`,
-            firstname: item.anonymous_name,
-            lastname: '',
-            email: null,
-            phone: null,
-            firstName: item.anonymous_name,
-            lastName: '',
-            isAnonymous: true
-          };
+                 } else if (item.anonymous_name) {
+           // Anonymous attendee
+           return {
+             id: `anonymous-${item.id}`,
+             firstname: 'Anonymous',
+             lastname: '',
+             email: null,
+             phone: null,
+             firstName: 'Anonymous',
+             lastName: '',
+             isAnonymous: true
+           };
         }
         return null;
       }).filter(Boolean);
@@ -1445,6 +1438,7 @@ export default function Events() {
       const { data: attendingMembers, error: attendanceError } = await supabase
         .from('event_attendance')
         .select(`
+          id,
           member_id,
           anonymous_name,
           members (
@@ -1481,8 +1475,8 @@ export default function Events() {
       const anonymousAttendees = attendingMembers
         ?.filter(a => a.anonymous_name && !a.member_id)
         .map(a => ({
-          id: `anonymous-${a.anonymous_name}-${a.id}`,
-          firstname: a.anonymous_name,
+          id: `anonymous-${a.id}`,
+          firstname: 'Anonymous',
           lastname: '',
           email: null,
           image_url: null,
@@ -1554,6 +1548,7 @@ export default function Events() {
       const { data: attendanceData, error: attendanceError } = await supabase
         .from('event_attendance')
         .select(`
+          id,
           member_id,
           anonymous_name,
           members (
@@ -1585,8 +1580,8 @@ export default function Events() {
       const anonymousAttendees = attendanceData
         .filter(record => record.anonymous_name && !record.member_id)
         .map(record => ({
-          id: `anonymous-${record.anonymous_name}-${record.id}`,
-          firstname: record.anonymous_name,
+          id: `anonymous-${record.id}`,
+          firstname: 'Anonymous',
           lastname: '',
           email: null,
           image_url: null,
@@ -2435,38 +2430,40 @@ export default function Events() {
           <DialogHeader className="p-3 md:p-6 border-b">
             <DialogTitle className="text-2xl md:text-3xl">Anonymous Check-in</DialogTitle>
             <DialogDescription className="text-lg mt-2">
-              Check in an anonymous attendee to {selectedEvent?.title}. This will update the event attendance but won't create a member record.
+              Check in an anonymous attendee to {selectedEvent?.title}. This will update the event attendance count but won't create a member record.
             </DialogDescription>
           </DialogHeader>
 
           <div className="p-3 md:p-6">
-            <form onSubmit={(e) => { e.preventDefault(); handleAnonymousCheckin(); }} className="space-y-4 md:space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="anonymousName" className="text-lg">Attendee Name</Label>
-                <Input
-                  id="anonymousName"
-                  name="anonymousName"
-                  value={anonymousName}
-                  onChange={(e) => setAnonymousName(e.target.value)}
-                  placeholder="Enter the attendee's name"
-                  className="h-14 text-lg"
-                  required
-                />
-                <p className="text-sm text-gray-600">
-                  This name will be recorded for attendance tracking but won't create a permanent member record.
+            <div className="text-center space-y-4">
+              <div className="flex items-center justify-center w-16 h-16 mx-auto bg-orange-100 rounded-full">
+                <UserPlus className="h-8 w-8 text-orange-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Add Anonymous Attendee
+                </h3>
+                <p className="text-gray-600">
+                  This will add one anonymous attendee to the event attendance count.
                 </p>
               </div>
-            </form>
+            </div>
           </div>
 
           <DialogFooter className="p-3 md:p-6 border-t">
             <Button
-              type="submit"
+              variant="outline"
+              onClick={() => setIsAnonymousCheckinOpen(false)}
+              className="w-full md:w-auto text-lg h-14"
+            >
+              Cancel
+            </Button>
+            <Button
               onClick={handleAnonymousCheckin}
               className="w-full md:w-auto text-lg h-14 bg-orange-600 hover:bg-orange-700"
             >
               <UserPlus className="mr-2 h-4 w-4" />
-              Check In Anonymous Attendee
+              Add Anonymous Attendee
             </Button>
           </DialogFooter>
         </DialogContent>
