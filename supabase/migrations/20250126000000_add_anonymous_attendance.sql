@@ -13,6 +13,17 @@ ALTER COLUMN member_id DROP NOT NULL;
 ALTER TABLE public.event_attendance 
 ADD COLUMN anonymous_name TEXT DEFAULT 'Anonymous';
 
+-- Clean up existing data to ensure constraint compliance
+-- Set anonymous_name to 'Anonymous' for rows where both member_id and anonymous_name are NULL
+UPDATE public.event_attendance 
+SET anonymous_name = 'Anonymous' 
+WHERE member_id IS NULL AND anonymous_name IS NULL;
+
+-- Set anonymous_name to NULL for rows where member_id is NOT NULL but anonymous_name is set
+UPDATE public.event_attendance 
+SET anonymous_name = NULL 
+WHERE member_id IS NOT NULL AND anonymous_name IS NOT NULL;
+
 -- Add check constraint to ensure either member_id or anonymous_name is provided
 ALTER TABLE public.event_attendance 
 ADD CONSTRAINT event_attendance_member_or_anonymous_check 
