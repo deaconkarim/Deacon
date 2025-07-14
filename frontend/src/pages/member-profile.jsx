@@ -13,6 +13,7 @@ import {
   Clock,
   Church,
   User,
+  Baby,
   Trash2,
   Plus,
   Calendar as CalendarIcon,
