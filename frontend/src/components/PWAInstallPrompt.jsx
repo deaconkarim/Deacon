@@ -53,17 +53,28 @@ const PWAInstallPrompt = () => {
   }, []);
 
   const handleInstall = async () => {
-    if (!deferredPrompt) return;
+    if (!deferredPrompt || typeof deferredPrompt.prompt !== 'function') {
+      console.warn('Invalid deferred prompt - showing manual instructions');
+      setShowManualPrompt(true);
+      setShowPrompt(false);
+      return;
+    }
 
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    
-    if (outcome === 'accepted') {
-      setIsInstalled(true);
+    try {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      
+      if (outcome === 'accepted') {
+        setIsInstalled(true);
+        setShowPrompt(false);
+      }
+      
+      setDeferredPrompt(null);
+    } catch (error) {
+      console.error('Error during PWA install:', error);
+      setShowManualPrompt(true);
       setShowPrompt(false);
     }
-    
-    setDeferredPrompt(null);
   };
 
   const handleDismiss = () => {
@@ -75,6 +86,9 @@ const PWAInstallPrompt = () => {
   if (isInstalled || (!showPrompt && !showManualPrompt)) {
     return null;
   }
+
+  // Don't show install button if we don't have a valid prompt
+  const hasValidPrompt = deferredPrompt && typeof deferredPrompt.prompt === 'function';
 
   return (
     <div className="fixed bottom-4 left-4 right-4 z-[9999] bg-gradient-to-r from-blue-600 to-blue-700 border border-blue-700 rounded-lg shadow-lg p-4 animate-in slide-in-from-bottom-4 duration-300">
@@ -94,7 +108,7 @@ const PWAInstallPrompt = () => {
           </p>
           
           <div className="flex gap-2">
-            {deferredPrompt ? (
+            {hasValidPrompt ? (
               <button
                 onClick={handleInstall}
                 className="flex-1 bg-gradient-to-r from-emerald-500 to-blue-500 text-white text-xs font-medium px-3 py-2 rounded-md hover:from-emerald-600 hover:to-blue-600 transition-colors flex items-center justify-center gap-1"

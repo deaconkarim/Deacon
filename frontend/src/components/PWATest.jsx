@@ -58,28 +58,35 @@ const PWATest = () => {
   }, []);
 
   const handleInstall = async () => {
-    if (!deferredPrompt) {
-      console.log('No deferred prompt available');
+    if (!deferredPrompt || typeof deferredPrompt.prompt !== 'function') {
+      console.log('No valid deferred prompt available');
       return;
     }
 
-    console.log('Triggering install prompt');
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    console.log('Install outcome:', outcome);
-    
-    if (outcome === 'accepted') {
-      setIsInstalled(true);
-      setIsStandalone(true);
+    try {
+      console.log('Triggering install prompt');
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log('Install outcome:', outcome);
+      
+      if (outcome === 'accepted') {
+        setIsInstalled(true);
+        setIsStandalone(true);
+      }
+      
+      setDeferredPrompt(null);
+    } catch (error) {
+      console.error('Error during PWA install:', error);
     }
-    
-    setDeferredPrompt(null);
   };
 
   const forceShowPrompt = () => {
-    // Simulate the beforeinstallprompt event for testing
-    const event = new Event('beforeinstallprompt');
-    window.dispatchEvent(event);
+    // Don't create fake events - just log the current state
+    console.log('Current PWA state:');
+    console.log('- Deferred prompt:', deferredPrompt);
+    console.log('- Is installed:', isInstalled);
+    console.log('- Is standalone:', isStandalone);
+    console.log('- Supports PWA:', supportsPWA);
   };
 
   return (
@@ -165,7 +172,7 @@ const PWATest = () => {
           onClick={forceShowPrompt}
           className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
         >
-          Force Show Prompt (Test)
+          Log PWA State
         </button>
 
         <button

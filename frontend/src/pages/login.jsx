@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Logo } from '@/components/ui/logo';
 import { 
@@ -764,9 +764,9 @@ export function Login() {
             <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
               Welcome Back
             </DialogTitle>
-            <p className="text-gray-600 mt-2">
+            <DialogDescription className="text-gray-600 mt-2">
               Sign in to your Deacon command center
-            </p>
+            </DialogDescription>
           </DialogHeader>
           
           <form onSubmit={handleLogin} className="space-y-4">
@@ -815,6 +815,9 @@ export function Login() {
       {/* Lightbox Modal */}
       <Dialog open={showLightbox} onOpenChange={setShowLightbox}>
         <DialogContent className="max-w-4xl max-h-[90vh] p-0 bg-black/95 border-0">
+          <DialogDescription className="sr-only">
+            Image preview: {selectedImageAlt}
+          </DialogDescription>
           <div className="relative">
             <Button
               variant="ghost"
@@ -842,7 +845,7 @@ export function Login() {
             <DialogTitle className="text-3xl font-bold text-center bg-gradient-to-r from-blue-500 to-blue-600 bg-clip-text text-transparent">
               Apply for Beta Access
             </DialogTitle>
-            <div className="text-center space-y-4">
+            <DialogDescription className="text-center space-y-4">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/10 text-blue-700 rounded-full text-sm font-semibold border border-blue-200/50">
                 <AlertCircle className="h-4 w-4" />
                 Limited Beta Availability
@@ -851,7 +854,7 @@ export function Login() {
                 We're currently accepting a limited number of churches for our beta program. 
                 Tell us about your church and ministry needs, and we'll get back to you within 48 hours.
               </p>
-            </div>
+            </DialogDescription>
           </DialogHeader>
           
           <form onSubmit={handleBetaSignup} className="space-y-6">
