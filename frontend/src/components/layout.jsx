@@ -27,7 +27,9 @@ import {
   Clock,
   XCircle,
   AlertCircle,
-  Shield
+  Shield,
+  Download,
+  Smartphone
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
@@ -62,6 +64,8 @@ export function Layout() {
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [isImpersonating, setIsImpersonating] = useState(false);
   const [impersonationData, setImpersonationData] = useState(null);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [isInstalled, setIsInstalled] = useState(false);
 
   const isMobile = useIsMobile();
 
@@ -253,6 +257,51 @@ export function Layout() {
     };
   }, []);
 
+  // PWA Install functionality
+  useEffect(() => {
+    // Check if app is installed
+    const checkInstallation = () => {
+      const standalone = window.matchMedia('(display-mode: standalone)').matches || 
+                       window.navigator.standalone === true;
+      setIsInstalled(standalone);
+    };
+
+    checkInstallation();
+
+    // Listen for install prompt
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    // Listen for app installed
+    const handleAppInstalled = () => {
+      setIsInstalled(true);
+      setDeferredPrompt(null);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const handlePWAInstall = async () => {
+    if (!deferredPrompt) return;
+
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    
+    if (outcome === 'accepted') {
+      setIsInstalled(true);
+    }
+    
+    setDeferredPrompt(null);
+  };
+
   const handleReturnToAdminCenter = async () => {
     try {
       // Clear impersonation flags
@@ -397,6 +446,19 @@ export function Layout() {
                     <User className="h-4 w-4" />
                     <span className="text-sm text-muted-foreground">{user.email}</span>
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {!isInstalled && deferredPrompt && (
+                    <DropdownMenuItem onClick={handlePWAInstall} className="flex items-center gap-2 text-blue-600">
+                      <Download className="h-4 w-4" />
+                      Install App
+                    </DropdownMenuItem>
+                  )}
+                  {!isInstalled && !deferredPrompt && (
+                    <DropdownMenuItem className="flex items-center gap-2 text-gray-500">
+                      <Smartphone className="h-4 w-4" />
+                      <span className="text-sm">App installed</span>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut} className="flex items-center gap-2 text-red-600">
                     <LogOut className="h-4 w-4" />

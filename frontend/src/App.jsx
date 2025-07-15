@@ -32,6 +32,7 @@ import PublicLayout from './components/PublicLayout';
 import Landing from './pages/landing';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import PWAUpdateNotification from './components/PWAUpdateNotification';
+import PWATest from './components/PWATest';
 
 function App() {
   return (
@@ -69,6 +70,7 @@ function App() {
           <Route path="/permissions" element={<Permissions />} />
           <Route path="/sms" element={<SMS />} />
           <Route path="/alerts" element={<AlertsPage />} />
+          <Route path="/pwa-test" element={<PWATest />} />
         </Route>
         
         {/* System Admin only routes */}
