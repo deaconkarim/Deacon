@@ -30,12 +30,17 @@ import PrivacyPolicy from './pages/privacy-policy';
 import { TermsOfService } from './pages/terms-of-service';
 import PublicLayout from './components/PublicLayout';
 import Landing from './pages/landing';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
+import PWAUpdateNotification from './components/PWAUpdateNotification';
+import PWATest from './components/PWATest';
 
 function App() {
   return (
     <>
       <Analytics />
       <SpeedInsights />
+      <PWAInstallPrompt />
+      <PWAUpdateNotification />
       <Routes>
         {/* Public routes */}
         <Route path="/" element={<PublicLayout><Login /></PublicLayout>} />
@@ -65,6 +70,7 @@ function App() {
           <Route path="/permissions" element={<Permissions />} />
           <Route path="/sms" element={<SMS />} />
           <Route path="/alerts" element={<AlertsPage />} />
+          <Route path="/pwa-test" element={<PWATest />} />
         </Route>
         
         {/* System Admin only routes */}

@@ -27,7 +27,9 @@ import {
   Clock,
   XCircle,
   AlertCircle,
-  Shield
+  Shield,
+  Download,
+  Smartphone
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
@@ -62,6 +64,8 @@ export function Layout() {
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [isImpersonating, setIsImpersonating] = useState(false);
   const [impersonationData, setImpersonationData] = useState(null);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [isInstalled, setIsInstalled] = useState(false);
 
   const isMobile = useIsMobile();
 
@@ -253,6 +257,74 @@ export function Layout() {
     };
   }, []);
 
+  // PWA Install functionality
+  useEffect(() => {
+    // Check if app is installed
+    const checkInstallation = () => {
+      const standalone = window.matchMedia('(display-mode: standalone)').matches || 
+                       window.navigator.standalone === true;
+      setIsInstalled(standalone);
+      
+      // Debug logging
+      console.log('PWA Debug Info:', {
+        isStandalone: standalone,
+        isInstalled: standalone,
+        protocol: window.location.protocol,
+        hostname: window.location.hostname,
+        isLocalhost: window.location.hostname === 'localhost',
+        isSecure: window.location.protocol === 'https:',
+        hasServiceWorker: 'serviceWorker' in navigator,
+        hasPushManager: 'PushManager' in window,
+        userAgent: navigator.userAgent
+      });
+    };
+
+    checkInstallation();
+
+    // Listen for install prompt
+    const handleBeforeInstallPrompt = (e) => {
+      console.log('beforeinstallprompt event fired!');
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    // Listen for app installed
+    const handleAppInstalled = () => {
+      console.log('appinstalled event fired!');
+      setIsInstalled(true);
+      setDeferredPrompt(null);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const handlePWAInstall = async () => {
+    if (!deferredPrompt) return;
+
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    
+    if (outcome === 'accepted') {
+      setIsInstalled(true);
+    }
+    
+    setDeferredPrompt(null);
+  };
+
+  const handleLaunchApp = () => {
+    // If the app is installed, try to launch it in standalone mode
+    if (isInstalled) {
+      // Try to open in a new window with standalone display mode
+      window.open(window.location.href, '_blank', 'standalone=yes');
+    }
+  };
+
   const handleReturnToAdminCenter = async () => {
     try {
       // Clear impersonation flags
@@ -397,6 +469,25 @@ export function Layout() {
                     <User className="h-4 w-4" />
                     <span className="text-sm text-muted-foreground">{user.email}</span>
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {!isInstalled && deferredPrompt && (
+                    <DropdownMenuItem onClick={handlePWAInstall} className="flex items-center gap-2 text-blue-600">
+                      <Download className="h-4 w-4" />
+                      Install App
+                    </DropdownMenuItem>
+                  )}
+                  {isInstalled && (
+                    <DropdownMenuItem onClick={handleLaunchApp} className="flex items-center gap-2 text-green-600">
+                      <Smartphone className="h-4 w-4" />
+                      <span className="text-sm">Launch App</span>
+                    </DropdownMenuItem>
+                  )}
+                  {!isInstalled && !deferredPrompt && (
+                    <DropdownMenuItem className="flex items-center gap-2 text-gray-500">
+                      <Smartphone className="h-4 w-4" />
+                      <span className="text-sm">Install not available</span>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut} className="flex items-center gap-2 text-red-600">
                     <LogOut className="h-4 w-4" />
