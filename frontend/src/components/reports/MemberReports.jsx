@@ -85,7 +85,7 @@ import {
   Scatter
 } from 'recharts';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { getMembers } from '@/lib/data';
+import { memberReportService } from '@/lib/memberReportService';
 import { supabase } from '@/lib/supabaseClient';
 
 export function MemberReports() {
@@ -119,9 +119,9 @@ export function MemberReports() {
   const loadMemberData = async () => {
     setIsLoading(true);
     try {
-      const members = await getMembers();
-      const processedData = processMemberData(members);
-      setMemberData(processedData);
+      // Use the new real data service
+      const data = await memberReportService.getMemberData(selectedMonth);
+      setMemberData(data);
     } catch (error) {
       console.error('Error loading member data:', error);
       toast({
@@ -132,138 +132,6 @@ export function MemberReports() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const processMemberData = (members) => {
-    const totalMembers = members.length;
-    const activeMembers = members.filter(m => m.status === 'active').length;
-    const newMembers = members.filter(m => {
-      const joinDate = parseISO(m.join_date);
-      const threeMonthsAgo = subMonths(new Date(), 3);
-      return joinDate > threeMonthsAgo;
-    }).length;
-    const inactiveMembers = members.filter(m => m.status === 'inactive').length;
-
-    // Demographics
-    const demographics = {
-      gender: {
-        male: members.filter(m => m.gender === 'male').length,
-        female: members.filter(m => m.gender === 'female').length,
-        other: members.filter(m => !m.gender || m.gender === 'other').length
-      },
-      ageGroups: {
-        '18-25': members.filter(m => {
-          const age = m.birth_date ? differenceInYears(new Date(), parseISO(m.birth_date)) : 0;
-          return age >= 18 && age <= 25;
-        }).length,
-        '26-35': members.filter(m => {
-          const age = m.birth_date ? differenceInYears(new Date(), parseISO(m.birth_date)) : 0;
-          return age >= 26 && age <= 35;
-        }).length,
-        '36-50': members.filter(m => {
-          const age = m.birth_date ? differenceInYears(new Date(), parseISO(m.birth_date)) : 0;
-          return age >= 36 && age <= 50;
-        }).length,
-        '51-65': members.filter(m => {
-          const age = m.birth_date ? differenceInYears(new Date(), parseISO(m.birth_date)) : 0;
-          return age >= 51 && age <= 65;
-        }).length,
-        '65+': members.filter(m => {
-          const age = m.birth_date ? differenceInYears(new Date(), parseISO(m.birth_date)) : 0;
-          return age > 65;
-        }).length
-      },
-      memberTypes: {
-        adult: members.filter(m => m.member_type === 'adult').length,
-        child: members.filter(m => m.member_type === 'child').length,
-        visitor: members.filter(m => m.member_type === 'visitor').length
-      }
-    };
-
-    // Growth trend (mock data for last 12 months)
-    const growthTrend = Array.from({ length: 12 }, (_, i) => {
-      const date = subMonths(new Date(), i);
-      return {
-        month: format(date, 'MMM yyyy'),
-        total: Math.floor(totalMembers * (0.8 + Math.random() * 0.4)),
-        new: Math.floor(Math.random() * 10),
-        active: Math.floor(totalMembers * (0.7 + Math.random() * 0.3))
-      };
-    }).reverse();
-
-    // Engagement metrics
-    const engagementMetrics = [
-      { name: 'Highly Engaged', count: Math.floor(activeMembers * 0.3), color: '#10b981' },
-      { name: 'Moderately Engaged', count: Math.floor(activeMembers * 0.5), color: '#3b82f6' },
-      { name: 'Low Engagement', count: Math.floor(activeMembers * 0.2), color: '#f59e0b' },
-      { name: 'Inactive', count: inactiveMembers, color: '#ef4444' }
-    ];
-
-    // Age distribution
-    const ageDistribution = Object.entries(demographics.ageGroups).map(([range, count]) => ({
-      range,
-      count
-    }));
-
-    // Location data (mock)
-    const locationData = [
-      { city: 'Downtown', count: Math.floor(totalMembers * 0.4) },
-      { city: 'North Side', count: Math.floor(totalMembers * 0.25) },
-      { city: 'South Side', count: Math.floor(totalMembers * 0.2) },
-      { city: 'East Side', count: Math.floor(totalMembers * 0.1) },
-      { city: 'West Side', count: Math.floor(totalMembers * 0.05) }
-    ];
-
-    // Family composition
-    const familyComposition = [
-      { type: 'Single Adults', count: Math.floor(totalMembers * 0.3) },
-      { type: 'Married Couples', count: Math.floor(totalMembers * 0.4) },
-      { type: 'Families with Children', count: Math.floor(totalMembers * 0.2) },
-      { type: 'Empty Nesters', count: Math.floor(totalMembers * 0.1) }
-    ];
-
-    // Attendance stats (mock)
-    const attendanceStats = [
-      { member: 'John Smith', attendance: 95, lastAttendance: '2024-12-15' },
-      { member: 'Sarah Johnson', attendance: 88, lastAttendance: '2024-12-15' },
-      { member: 'Mike Davis', attendance: 82, lastAttendance: '2024-12-08' },
-      { member: 'Lisa Wilson', attendance: 78, lastAttendance: '2024-12-01' },
-      { member: 'David Brown', attendance: 75, lastAttendance: '2024-12-08' }
-    ];
-
-    // Volunteer stats (mock)
-    const volunteerStats = [
-      { area: 'Worship Team', volunteers: 12, needed: 15 },
-      { area: 'Children\'s Ministry', volunteers: 8, needed: 10 },
-      { area: 'Greeting Team', volunteers: 6, needed: 8 },
-      { area: 'Technical Support', volunteers: 4, needed: 6 },
-      { area: 'Prayer Team', volunteers: 10, needed: 12 }
-    ];
-
-    // Communication stats (mock)
-    const communicationStats = [
-      { method: 'Email', subscribed: Math.floor(totalMembers * 0.8), active: Math.floor(totalMembers * 0.6) },
-      { method: 'SMS', subscribed: Math.floor(totalMembers * 0.6), active: Math.floor(totalMembers * 0.4) },
-      { method: 'Newsletter', subscribed: Math.floor(totalMembers * 0.7), active: Math.floor(totalMembers * 0.5) },
-      { method: 'App Notifications', subscribed: Math.floor(totalMembers * 0.5), active: Math.floor(totalMembers * 0.3) }
-    ];
-
-    return {
-      totalMembers,
-      activeMembers,
-      newMembers,
-      inactiveMembers,
-      demographics,
-      growthTrend,
-      engagementMetrics,
-      memberTypes: Object.entries(demographics.memberTypes).map(([type, count]) => ({ type, count })),
-      ageDistribution,
-      locationData,
-      familyComposition,
-      attendanceStats,
-      volunteerStats,
-      communicationStats
-    };
   };
 
   const handleExport = (type) => {
@@ -320,10 +188,23 @@ export function MemberReports() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Member Analytics</h2>
-          <p className="text-muted-foreground">Comprehensive member insights and demographics</p>
+          <h2 className="text-2xl font-bold">Member Reports</h2>
+          <p className="text-muted-foreground">Comprehensive member analytics and demographics</p>
+          <p className="text-xs text-amber-600 mt-1">
+            📊 Real data: Member counts, demographics, growth trends, family composition. 
+            📍 Attendance patterns and volunteer tracking coming soon.
+          </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={loadMemberData}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
           <Select value={format(selectedMonth, 'yyyy-MM')} onValueChange={(value) => setSelectedMonth(parseISO(value))}>
             <SelectTrigger className="w-[180px]">
               <SelectValue />
@@ -605,28 +486,26 @@ export function MemberReports() {
             <TabsContent value="attendance" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Top Attendees</CardTitle>
-                  <CardDescription>Members with highest attendance rates</CardDescription>
+                  <CardTitle>Attendance Categories</CardTitle>
+                  <CardDescription>Member attendance distribution</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     {memberData.attendanceStats?.map((stat, index) => (
                       <div key={index} className="flex items-center justify-between p-4 rounded-lg border">
                         <div className="flex items-center space-x-4">
-                          <Avatar className="h-10 w-10">
-                            <AvatarFallback className="text-sm">
-                              {stat.member.split(' ').map(n => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
+                          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                            <Users className="w-5 h-5 text-blue-600" />
+                          </div>
                           <div>
-                            <p className="font-semibold">{stat.member}</p>
+                            <p className="font-semibold">{stat.category}</p>
                             <p className="text-sm text-muted-foreground">
-                              Last: {stat.lastAttendance && format(parseISO(stat.lastAttendance), 'MMM d, yyyy')}
+                              {stat.count} members
                             </p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-lg font-bold">{stat.attendance}%</p>
+                          <p className="text-lg font-bold">{stat.percentage}%</p>
                           <Badge variant="outline">Attendance Rate</Badge>
                         </div>
                       </div>
@@ -639,8 +518,8 @@ export function MemberReports() {
             <TabsContent value="volunteers" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Volunteer Needs</CardTitle>
-                  <CardDescription>Volunteer requirements by ministry area</CardDescription>
+                  <CardTitle>Volunteer Distribution</CardTitle>
+                  <CardDescription>Volunteer participation by ministry area</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -648,24 +527,24 @@ export function MemberReports() {
                       <div key={index} className="p-4 rounded-lg border">
                         <div className="flex items-center justify-between mb-3">
                           <h4 className="font-semibold">{area.area}</h4>
-                          <Badge variant={area.volunteers >= area.needed ? "default" : "secondary"}>
-                            {area.volunteers >= area.needed ? "Filled" : "Needs Help"}
+                          <Badge variant="outline">
+                            {area.percentage}% participation
                           </Badge>
                         </div>
                         <div className="space-y-2">
                           <div className="flex items-center justify-between text-sm">
-                            <span>Current Volunteers</span>
-                            <span>{area.volunteers} / {area.needed}</span>
+                            <span>Volunteers</span>
+                            <span>{area.count} members</span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div 
                               className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                              style={{ width: `${Math.min((area.volunteers / area.needed) * 100, 100)}%` }}
+                              style={{ width: `${area.percentage}%` }}
                             ></div>
                           </div>
                           <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>{Math.round((area.volunteers / area.needed) * 100)}% filled</span>
-                            <span>{area.needed - area.volunteers} more needed</span>
+                            <span>{area.percentage}% of active members</span>
+                            <span>{area.count} volunteers</span>
                           </div>
                         </div>
                       </div>
@@ -682,7 +561,7 @@ export function MemberReports() {
       <Dialog open={isMemberDialogOpen} onOpenChange={setIsMemberDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{selectedMember?.name}</DialogTitle>
+            <DialogTitle>{selectedMember?.name || 'Member Details'}</DialogTitle>
             <DialogDescription>Detailed member information and statistics</DialogDescription>
           </DialogHeader>
           {selectedMember && (
@@ -690,12 +569,18 @@ export function MemberReports() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 rounded-lg bg-muted">
                   <p className="text-sm text-muted-foreground">Attendance Rate</p>
-                  <p className="text-2xl font-bold">{selectedMember.attendance}%</p>
+                  <p className="text-2xl font-bold">{selectedMember.attendance || 0}%</p>
                 </div>
                 <div className="p-4 rounded-lg bg-muted">
                   <p className="text-sm text-muted-foreground">Last Attendance</p>
                   <p className="text-lg font-semibold">
-                    {selectedMember.lastAttendance && format(parseISO(selectedMember.lastAttendance), 'MMM d, yyyy')}
+                    {selectedMember.lastAttendance ? (() => {
+                      try {
+                        return format(parseISO(selectedMember.lastAttendance), 'MMM d, yyyy');
+                      } catch (error) {
+                        return 'Not available';
+                      }
+                    })() : 'Not available'}
                   </p>
                 </div>
               </div>

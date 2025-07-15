@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, parseISO, subMonths } from 'date-fns';
-import { Calendar, Download, Users, TrendingUp, Loader2, ChevronUp, ChevronDown } from 'lucide-react';
+import { Calendar, Download, Users, TrendingUp, Loader2, ChevronUp, ChevronDown, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -20,6 +20,7 @@ import {
 } from 'recharts';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useNavigate } from 'react-router-dom';
+import { attendanceReportService } from '@/lib/attendanceReportService';
 
 export function AttendanceReports() {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
@@ -52,57 +53,12 @@ export function AttendanceReports() {
   const loadAttendanceData = async () => {
     setIsLoading(true);
     try {
-      const startDate = startOfMonth(selectedMonth);
-      const endDate = endOfMonth(selectedMonth);
-      const today = new Date();
-      const endDateStr = format(endDate, 'yyyy-MM-dd');
-
-      // Use the earlier date between endDate and today
-      const filterEndDate = endDate < today ? endDate : today;
-      const filterEndDateStr = format(filterEndDate, 'yyyy-MM-dd');
-
-      // Get current user's organization ID
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      const { data: orgUser, error: orgError } = await supabase
-        .from('organization_users')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (orgError || !orgUser) throw new Error('Unable to determine organization');
-
-      // Fetch events for the selected month - ONLY PAST EVENTS
-      const { data: events, error: eventsError } = await supabase
-        .from('events')
-        .select('*')
-        .eq('organization_id', orgUser.organization_id)
-        .gte('start_date', format(startDate, 'yyyy-MM-dd'))
-        .lte('start_date', filterEndDateStr) // Only include events up to today
-        .order('start_date', { ascending: false }); // Order by date descending
-
-      if (eventsError) throw eventsError;
-
-      // Fetch attendance records for these events
-      const { data: attendance, error: attendanceError } = await supabase
-        .from('event_attendance')
-        .select(`
-          *,
-          members (
-            firstname,
-            lastname
-          )
-        `)
-        .in('event_id', events.map(e => e.id));
-
-      if (attendanceError) throw attendanceError;
-
-      const processedData = processAttendanceData(events, attendance);
-      setDailyData(processedData.dailyData);
-      setServiceBreakdown(processedData.serviceBreakdown);
-      setMemberStats(processedData.memberStats);
-      setEventDetails(processedData.eventDetails);
+      // Use the new real data service
+      const data = await attendanceReportService.getAttendanceData(selectedMonth);
+      setDailyData(data.dailyData);
+      setServiceBreakdown(data.serviceBreakdown);
+      setMemberStats(data.memberStats);
+      setEventDetails(data.eventDetails);
     } catch (error) {
       console.error('Error loading attendance data:', error);
       toast({
@@ -110,14 +66,14 @@ export function AttendanceReports() {
         description: 'Failed to load attendance data',
         variant: 'destructive'
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const loadMembers = async () => {
+    setIsLoadingMembers(true);
     try {
-      setIsLoadingMembers(true);
-      
-      // Get current user's organization ID
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
@@ -129,21 +85,14 @@ export function AttendanceReports() {
 
       if (orgError || !orgUser) throw new Error('Unable to determine organization');
 
-      const { data, error } = await supabase
+      const { data: members, error } = await supabase
         .from('members')
-        .select('*')
+        .select('id, firstname, lastname')
         .eq('organization_id', orgUser.organization_id)
         .order('firstname', { ascending: true });
 
       if (error) throw error;
-
-      // Filter out members who have already attended
-      const filteredMembers = data.filter(member => {
-        const memberName = `${member.firstname} ${member.lastname}`;
-        return !selectedEvent?.attendingMembers?.includes(memberName);
-      });
-
-      setMembers(filteredMembers);
+      setMembers(members);
     } catch (error) {
       console.error('Error loading members:', error);
       toast({
@@ -154,91 +103,6 @@ export function AttendanceReports() {
     } finally {
       setIsLoadingMembers(false);
     }
-  };
-
-  const processAttendanceData = (events, attendance) => {
-    // Events are already sorted by date from the database query
-    const sortedEvents = events;
-
-    // Process daily attendance data
-    const dailyData = sortedEvents.map(event => {
-      const eventAttendance = attendance.filter(a => a.event_id === event.id);
-      const attendingCount = eventAttendance.filter(a => 
-        a.status === 'checked-in' || a.status === 'attending'
-      ).length;
-
-      return {
-        date: format(parseISO(event.start_date), 'MMM d'),
-        count: attendingCount
-      };
-    });
-
-    // Process service breakdown
-    const serviceBreakdown = sortedEvents.reduce((acc, event) => {
-      const eventAttendance = attendance.filter(a => a.event_id === event.id);
-      const attendingCount = eventAttendance.filter(a => 
-        a.status === 'checked-in' || a.status === 'attending'
-      ).length;
-
-      const type = event.event_type || 'Other';
-      if (!acc[type]) {
-        acc[type] = 0;
-      }
-      acc[type] += attendingCount;
-      return acc;
-    }, {});
-
-    // Format service breakdown data for the chart
-    const formattedServiceBreakdown = Object.entries(serviceBreakdown)
-      .map(([name, value]) => ({
-        name,
-        value: value || 0
-      }))
-      .filter(item => item.value > 0)
-      .sort((a, b) => b.value - a.value);
-
-    // Process member statistics
-    const memberStatsObj = attendance.reduce((acc, record) => {
-      if ((record.status === 'checked-in' || record.status === 'attending') && record.members) {
-        const memberName = `${record.members.firstname} ${record.members.lastname}`;
-        if (!acc[memberName]) {
-          acc[memberName] = 0;
-        }
-        acc[memberName]++;
-      }
-      return acc;
-    }, {});
-
-    // Convert member stats object to array and sort by attendance count
-    const memberStats = Object.entries(memberStatsObj)
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10); // Get top 10 attendees
-
-    // Process event details
-    const eventDetails = sortedEvents.map(event => {
-      const eventAttendance = attendance.filter(a => a.event_id === event.id);
-      const attendingMembers = eventAttendance
-        .filter(a => (a.status === 'checked-in' || a.status === 'attending') && a.members)
-        .map(a => `${a.members.firstname} ${a.members.lastname}`)
-        .sort();
-
-      return {
-        id: event.id,
-        title: event.title,
-        date: event.start_date,
-        type: event.event_type || 'Other',
-        attendees: attendingMembers.length,
-        attendingMembers
-      };
-    });
-
-    return {
-      dailyData,
-      serviceBreakdown: formattedServiceBreakdown,
-      memberStats,
-      eventDetails
-    };
   };
 
   const handleExport = () => {
@@ -319,6 +183,28 @@ export function AttendanceReports() {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Attendance Reports</h2>
+          <p className="text-muted-foreground">Track attendance patterns and engagement</p>
+          <p className="text-xs text-amber-600 mt-1">
+            📊 Real data: Event attendance, member statistics, service breakdown. 
+            📍 Volunteer tracking and feedback data coming soon.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={loadAttendanceData}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
+      </div>
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Select
@@ -432,7 +318,7 @@ export function AttendanceReports() {
                         className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-100"
                       >
                         <span>{member.name}</span>
-                        <span>{member.count} events</span>
+                        <span>{member.events} events attended</span>
                       </div>
                     ))}
                   </div>
@@ -469,11 +355,11 @@ export function AttendanceReports() {
                         <div>
                           <div className="font-medium">{event.title}</div>
                           <div className="text-sm text-gray-500">
-                            {event.date && format(parseISO(event.date), 'MMMM d, yyyy')}
+                            {event.date || 'Date not available'}
                           </div>
                         </div>
                         <div className="text-sm text-gray-500">
-                          {event.attendees} attended
+                          {event.attendance} attended
                         </div>
                       </div>
                     ))}
@@ -500,7 +386,7 @@ export function AttendanceReports() {
           <DialogHeader>
             <DialogTitle>{selectedEvent?.title}</DialogTitle>
             <DialogDescription>
-              {selectedEvent?.date && format(parseISO(selectedEvent.date), 'MMMM d, yyyy')}
+              {selectedEvent?.date || 'Date not available'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -509,7 +395,7 @@ export function AttendanceReports() {
                 {selectedEvent?.type}
               </div>
               <div className="text-sm font-medium">
-                {selectedEvent?.attendees} attended
+                {selectedEvent?.attendance} attended
               </div>
             </div>
             <div className="space-y-2">

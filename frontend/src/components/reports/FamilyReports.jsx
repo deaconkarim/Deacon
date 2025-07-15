@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { format, startOfMonth, endOfMonth, subMonths, parseISO, differenceInYears } from 'date-fns';
 import { 
   Users2, 
+  Users, 
   Home, 
   Heart, 
   Baby, 
@@ -84,6 +85,7 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { familyService } from '@/lib/familyService';
 import { getMembers } from '@/lib/data';
+import { familyReportService } from '@/lib/familyReportService';
 import { supabase } from '@/lib/supabaseClient';
 
 export function FamilyReports() {
@@ -117,10 +119,9 @@ export function FamilyReports() {
   const loadFamilyData = async () => {
     setIsLoading(true);
     try {
-      const families = await familyService.getFamilies();
-      const members = await getMembers();
-      const processedData = processFamilyData(families, members);
-      setFamilyData(processedData);
+      // Use the new real data service instead of mock data
+      const realData = await familyReportService.getComprehensiveFamilyData();
+      setFamilyData(realData);
     } catch (error) {
       console.error('Error loading family data:', error);
       toast({
@@ -131,123 +132,6 @@ export function FamilyReports() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const processFamilyData = (families, members) => {
-    const totalFamilies = families.length;
-    const totalMembers = members.length;
-    const averageFamilySize = totalFamilies > 0 ? (totalMembers / totalFamilies).toFixed(1) : 0;
-
-    // Family composition by type
-    const familyComposition = [
-      { type: 'Nuclear Families', count: Math.floor(totalFamilies * 0.6) },
-      { type: 'Single Parent', count: Math.floor(totalFamilies * 0.2) },
-      { type: 'Blended Families', count: Math.floor(totalFamilies * 0.1) },
-      { type: 'Empty Nesters', count: Math.floor(totalFamilies * 0.05) },
-      { type: 'Young Couples', count: Math.floor(totalFamilies * 0.05) }
-    ];
-
-    // Family sizes distribution
-    const familySizes = [
-      { size: '1-2 members', count: Math.floor(totalFamilies * 0.3) },
-      { size: '3-4 members', count: Math.floor(totalFamilies * 0.4) },
-      { size: '5-6 members', count: Math.floor(totalFamilies * 0.2) },
-      { size: '7+ members', count: Math.floor(totalFamilies * 0.1) }
-    ];
-
-    // Family growth trend (mock data)
-    const familyGrowth = Array.from({ length: 12 }, (_, i) => {
-      const date = subMonths(new Date(), i);
-      return {
-        month: format(date, 'MMM yyyy'),
-        families: Math.floor(totalFamilies * (0.8 + Math.random() * 0.4)),
-        members: Math.floor(totalMembers * (0.8 + Math.random() * 0.4)),
-        newFamilies: Math.floor(Math.random() * 5)
-      };
-    }).reverse();
-
-    // Family types
-    const familyTypes = [
-      { type: 'With Children', count: Math.floor(totalFamilies * 0.7) },
-      { type: 'Without Children', count: Math.floor(totalFamilies * 0.3) }
-    ];
-
-    // Family locations (mock)
-    const familyLocations = [
-      { area: 'Downtown', families: Math.floor(totalFamilies * 0.4) },
-      { area: 'North Side', families: Math.floor(totalFamilies * 0.25) },
-      { area: 'South Side', families: Math.floor(totalFamilies * 0.2) },
-      { area: 'East Side', families: Math.floor(totalFamilies * 0.1) },
-      { area: 'West Side', families: Math.floor(totalFamilies * 0.05) }
-    ];
-
-    // Family engagement levels
-    const familyEngagement = [
-      { level: 'Highly Engaged', count: Math.floor(totalFamilies * 0.3), color: '#10b981' },
-      { level: 'Moderately Engaged', count: Math.floor(totalFamilies * 0.5), color: '#3b82f6' },
-      { level: 'Low Engagement', count: Math.floor(totalFamilies * 0.2), color: '#f59e0b' }
-    ];
-
-    // Family attendance stats (mock)
-    const familyAttendance = [
-      { family: 'Smith Family', members: 4, avgAttendance: 95, lastAttendance: '2024-12-15' },
-      { family: 'Johnson Family', members: 3, avgAttendance: 88, lastAttendance: '2024-12-15' },
-      { family: 'Davis Family', members: 5, avgAttendance: 82, lastAttendance: '2024-12-08' },
-      { family: 'Wilson Family', members: 2, avgAttendance: 78, lastAttendance: '2024-12-01' },
-      { family: 'Brown Family', members: 4, avgAttendance: 75, lastAttendance: '2024-12-08' }
-    ];
-
-    // Family volunteering stats (mock)
-    const familyVolunteering = [
-      { area: 'Worship Team', families: 8, totalMembers: 12 },
-      { area: 'Children\'s Ministry', families: 6, totalMembers: 10 },
-      { area: 'Greeting Team', families: 4, totalMembers: 6 },
-      { area: 'Technical Support', families: 3, totalMembers: 4 },
-      { area: 'Prayer Team', families: 7, totalMembers: 10 }
-    ];
-
-    // Family giving stats (mock)
-    const familyGiving = [
-      { family: 'Smith Family', totalGiven: 2500, frequency: 'Monthly', lastGift: '2024-12-01' },
-      { family: 'Johnson Family', totalGiven: 1800, frequency: 'Monthly', lastGift: '2024-12-01' },
-      { family: 'Davis Family', totalGiven: 1200, frequency: 'Weekly', lastGift: '2024-12-08' },
-      { family: 'Wilson Family', totalGiven: 900, frequency: 'Monthly', lastGift: '2024-11-15' },
-      { family: 'Brown Family', totalGiven: 600, frequency: 'Monthly', lastGift: '2024-12-01' }
-    ];
-
-    // Family events participation (mock)
-    const familyEvents = [
-      { event: 'Sunday Service', families: Math.floor(totalFamilies * 0.9), avgMembers: 3.2 },
-      { event: 'Youth Group', families: Math.floor(totalFamilies * 0.4), avgMembers: 1.5 },
-      { event: 'Bible Study', families: Math.floor(totalFamilies * 0.6), avgMembers: 2.1 },
-      { event: 'Prayer Meeting', families: Math.floor(totalFamilies * 0.3), avgMembers: 1.8 },
-      { event: 'Social Events', families: Math.floor(totalFamilies * 0.7), avgMembers: 2.5 }
-    ];
-
-    // Family communication preferences (mock)
-    const familyCommunication = [
-      { method: 'Email', families: Math.floor(totalFamilies * 0.8), active: Math.floor(totalFamilies * 0.6) },
-      { method: 'SMS', families: Math.floor(totalFamilies * 0.6), active: Math.floor(totalFamilies * 0.4) },
-      { method: 'Newsletter', families: Math.floor(totalFamilies * 0.7), active: Math.floor(totalFamilies * 0.5) },
-      { method: 'App Notifications', families: Math.floor(totalFamilies * 0.5), active: Math.floor(totalFamilies * 0.3) }
-    ];
-
-    return {
-      totalFamilies,
-      totalMembers,
-      averageFamilySize,
-      familyComposition,
-      familyGrowth,
-      familyTypes,
-      familySizes,
-      familyLocations,
-      familyEngagement,
-      familyAttendance,
-      familyVolunteering,
-      familyGiving,
-      familyEvents,
-      familyCommunication
-    };
   };
 
   const handleExport = (type) => {
@@ -306,8 +190,21 @@ export function FamilyReports() {
         <div>
           <h2 className="text-2xl font-bold">Family Reports</h2>
           <p className="text-muted-foreground">Comprehensive family analytics and insights</p>
+          <p className="text-xs text-amber-600 mt-1">
+            📊 Real data: Family counts, sizes, composition, attendance, giving. 
+            📍 Location, volunteering, and communication data coming soon.
+          </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={loadFamilyData}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
           <Select value={format(selectedMonth, 'yyyy-MM')} onValueChange={(value) => setSelectedMonth(parseISO(value))}>
             <SelectTrigger className="w-[180px]">
               <SelectValue />
@@ -332,11 +229,13 @@ export function FamilyReports() {
 
       {isLoading ? (
         <div className="flex items-center justify-center h-64">
-          <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+          <div className="flex items-center space-x-2">
+            <RefreshCw className="w-6 h-6 animate-spin" />
+            <span>Loading family data...</span>
+          </div>
         </div>
       ) : (
         <>
-          {/* Quick Stats */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <StatCard
               title="Total Families"
@@ -462,17 +361,25 @@ export function FamilyReports() {
                     <CardDescription>Families by location</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-3">
-                      {familyData.familyLocations?.map((location, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 rounded-lg border">
-                          <div className="flex items-center space-x-3">
-                            <MapPin className="w-4 h-4 text-muted-foreground" />
-                            <span className="font-medium">{location.area}</span>
+                    {familyData.familyLocations && familyData.familyLocations.length > 0 ? (
+                      <div className="space-y-3">
+                        {familyData.familyLocations?.map((location, index) => (
+                          <div key={index} className="flex items-center justify-between p-3 rounded-lg border">
+                            <div className="flex items-center space-x-3">
+                              <MapPin className="w-4 h-4 text-muted-foreground" />
+                              <span className="font-medium">{location.area}</span>
+                            </div>
+                            <Badge variant="outline">{location.families} families</Badge>
                           </div>
-                          <Badge variant="outline">{location.families} families</Badge>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <MapPin className="w-8 h-8 mx-auto mb-2" />
+                        <p>Location data not available yet</p>
+                        <p className="text-sm">Address analysis coming soon</p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -537,26 +444,24 @@ export function FamilyReports() {
                   <CardDescription>Engagement distribution and metrics</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RechartsPieChart>
-                        <Pie
-                          data={familyData.familyEngagement}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ level, percent }) => `${level} ${(percent * 100).toFixed(0)}%`}
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="count"
-                        >
-                          {familyData.familyEngagement.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </RechartsPieChart>
-                    </ResponsiveContainer>
+                  <div className="space-y-4">
+                    {familyData.familyEngagement?.map((level, index) => (
+                      <div key={index} className="flex items-center justify-between p-4 rounded-lg border">
+                        <div className="flex items-center space-x-3">
+                          <div 
+                            className="w-4 h-4 rounded-full" 
+                            style={{ backgroundColor: level.color }}
+                          />
+                          <span className="font-medium">{level.level}</span>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold">{level.count}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {Math.round((level.count / familyData.totalFamilies) * 100)}% of families
+                          </p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
@@ -566,28 +471,22 @@ export function FamilyReports() {
               <Card>
                 <CardHeader>
                   <CardTitle>Family Attendance</CardTitle>
-                  <CardDescription>Families with highest attendance rates</CardDescription>
+                  <CardDescription>Attendance patterns by family</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     {familyData.familyAttendance?.map((family, index) => (
                       <div key={index} className="flex items-center justify-between p-4 rounded-lg border">
-                        <div className="flex items-center space-x-4">
-                          <Avatar className="h-10 w-10">
-                            <AvatarFallback className="text-sm">
-                              {family.family.split(' ').map(n => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
+                        <div className="flex items-center space-x-3">
+                          <Users className="w-4 h-4 text-muted-foreground" />
                           <div>
-                            <p className="font-semibold">{family.family}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {family.members} members • Last: {family.lastAttendance && format(parseISO(family.lastAttendance), 'MMM d, yyyy')}
-                            </p>
+                            <span className="font-medium">{family.family}</span>
+                            <p className="text-sm text-muted-foreground">{family.members} members</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-lg font-bold">{family.avgAttendance}%</p>
-                          <Badge variant="outline">Avg Attendance</Badge>
+                          <p className="font-semibold">{family.avgAttendance}%</p>
+                          <p className="text-sm text-muted-foreground">avg attendance</p>
                         </div>
                       </div>
                     ))}
@@ -600,35 +499,31 @@ export function FamilyReports() {
               <Card>
                 <CardHeader>
                   <CardTitle>Family Volunteering</CardTitle>
-                  <CardDescription>Volunteer participation by families</CardDescription>
+                  <CardDescription>Volunteer participation by family</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {familyData.familyVolunteering?.map((area, index) => (
-                      <div key={index} className="p-4 rounded-lg border">
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="font-semibold">{area.area}</h4>
-                          <Badge variant="outline">{area.families} families</Badge>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-sm">
-                            <span>Total Volunteers</span>
-                            <span>{area.totalMembers} members</span>
+                  {familyData.familyVolunteering && familyData.familyVolunteering.length > 0 ? (
+                    <div className="space-y-4">
+                      {familyData.familyVolunteering?.map((area, index) => (
+                        <div key={index} className="flex items-center justify-between p-4 rounded-lg border">
+                          <div className="flex items-center space-x-3">
+                            <Heart className="w-4 h-4 text-muted-foreground" />
+                            <span className="font-medium">{area.area}</span>
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                              style={{ width: `${Math.min((area.totalMembers / (area.families * 2)) * 100, 100)}%` }}
-                            ></div>
-                          </div>
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>Avg {Math.round(area.totalMembers / area.families)} per family</span>
-                            <span>{area.totalMembers} total volunteers</span>
+                          <div className="text-right">
+                            <p className="font-semibold">{area.families} families</p>
+                            <p className="text-sm text-muted-foreground">{area.totalMembers} members</p>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Heart className="w-8 h-8 mx-auto mb-2" />
+                      <p>Volunteer data not available yet</p>
+                      <p className="text-sm">Volunteer tracking coming soon</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
