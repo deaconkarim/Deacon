@@ -71,7 +71,7 @@ import {
   ComposedChart
 } from 'recharts';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { getDonations, getDonationAnalytics } from '@/lib/donationService';
+import { donationReportService } from '@/lib/donationReportService';
 import { supabase } from '@/lib/supabaseClient';
 
 export function FinancialReports() {
@@ -100,19 +100,18 @@ export function FinancialReports() {
   const loadFinancialData = async () => {
     setIsLoading(true);
     try {
-      // Load financial data based on selected date range
-      const startDate = startOfMonth(selectedMonth);
-      const endDate = endOfMonth(selectedMonth);
-      
-      // Get donations for the selected period
-      const donations = await getDonations({
-        startDate: format(startDate, 'yyyy-MM-dd'),
-        endDate: format(endDate, 'yyyy-MM-dd')
+      // Use the new real data service
+      const data = await donationReportService.getDonationData(selectedMonth);
+      setFinancialData({
+        totalDonations: data.totalDonations,
+        monthlyTrend: data.givingTrends,
+        categoryBreakdown: data.donationCategories,
+        topDonors: data.topDonors,
+        givingGoals: data.givingGoals,
+        recurringDonations: data.recurringDonations,
+        campaignPerformance: data.campaignPerformance,
+        budgetVsActual: []
       });
-
-      // Process the data
-      const processedData = processFinancialData(donations);
-      setFinancialData(processedData);
     } catch (error) {
       console.error('Error loading financial data:', error);
       toast({
@@ -123,108 +122,6 @@ export function FinancialReports() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const processFinancialData = (donations) => {
-    // Calculate total donations
-    const totalDonations = donations.reduce((sum, donation) => sum + (donation.amount || 0), 0);
-
-    // Process monthly trend (last 12 months)
-    const monthlyTrend = Array.from({ length: 12 }, (_, i) => {
-      const date = subMonths(new Date(), i);
-      const monthDonations = donations.filter(d => {
-        const donationDate = parseISO(d.created_at);
-        return donationDate.getMonth() === date.getMonth() && 
-               donationDate.getFullYear() === date.getFullYear();
-      });
-      return {
-        month: format(date, 'MMM yyyy'),
-        amount: monthDonations.reduce((sum, d) => sum + (d.amount || 0), 0),
-        count: monthDonations.length
-      };
-    }).reverse();
-
-    // Process category breakdown
-    const categoryBreakdown = donations.reduce((acc, donation) => {
-      const category = donation.category || 'General';
-      if (!acc[category]) {
-        acc[category] = { amount: 0, count: 0 };
-      }
-      acc[category].amount += donation.amount || 0;
-      acc[category].count += 1;
-      return acc;
-    }, {});
-
-    const categoryData = Object.entries(categoryBreakdown).map(([category, data]) => ({
-      name: category,
-      value: data.amount,
-      count: data.count
-    }));
-
-    // Process top donors
-    const donorStats = donations.reduce((acc, donation) => {
-      const donorName = donation.donor_name || 'Anonymous';
-      if (!acc[donorName]) {
-        acc[donorName] = { total: 0, count: 0, lastDonation: null };
-      }
-      acc[donorName].total += donation.amount || 0;
-      acc[donorName].count += 1;
-      if (!acc[donorName].lastDonation || donation.created_at > acc[donorName].lastDonation) {
-        acc[donorName].lastDonation = donation.created_at;
-      }
-      return acc;
-    }, {});
-
-    const topDonors = Object.entries(donorStats)
-      .map(([name, data]) => ({
-        name,
-        total: data.total,
-        count: data.count,
-        lastDonation: data.lastDonation
-      }))
-      .sort((a, b) => b.total - a.total)
-      .slice(0, 10);
-
-    // Mock data for other sections
-    const givingGoals = [
-      { name: 'Monthly Goal', target: 15000, actual: 12450, percentage: 83 },
-      { name: 'Building Fund', target: 50000, actual: 32000, percentage: 64 },
-      { name: 'Missions', target: 10000, actual: 8500, percentage: 85 },
-      { name: 'Youth Ministry', target: 5000, actual: 4200, percentage: 84 }
-    ];
-
-    const recurringDonations = [
-      { donor: 'John Smith', amount: 500, frequency: 'Monthly', status: 'Active' },
-      { donor: 'Sarah Johnson', amount: 250, frequency: 'Monthly', status: 'Active' },
-      { donor: 'Mike Davis', amount: 100, frequency: 'Weekly', status: 'Active' },
-      { donor: 'Lisa Wilson', amount: 300, frequency: 'Monthly', status: 'Paused' }
-    ];
-
-    const campaignPerformance = [
-      { name: 'Christmas Offering', goal: 10000, raised: 8500, donors: 45 },
-      { name: 'Building Fund', goal: 50000, raised: 32000, donors: 23 },
-      { name: 'Missions Trip', goal: 8000, raised: 6500, donors: 18 },
-      { name: 'Youth Camp', goal: 3000, raised: 2800, donors: 12 }
-    ];
-
-    const budgetVsActual = [
-      { category: 'Ministry Programs', budget: 20000, actual: 18500, variance: -1500 },
-      { category: 'Facilities', budget: 15000, actual: 14200, variance: -800 },
-      { category: 'Staff Salaries', budget: 80000, actual: 80000, variance: 0 },
-      { category: 'Missions', budget: 12000, actual: 13500, variance: 1500 },
-      { category: 'Administration', budget: 8000, actual: 7500, variance: -500 }
-    ];
-
-    return {
-      totalDonations,
-      monthlyTrend,
-      categoryBreakdown: categoryData,
-      topDonors,
-      givingGoals,
-      recurringDonations,
-      campaignPerformance,
-      budgetVsActual
-    };
   };
 
   const handleExport = (type) => {
@@ -282,9 +179,22 @@ export function FinancialReports() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Financial Reports</h2>
-          <p className="text-muted-foreground">Comprehensive financial analytics and insights</p>
+          <p className="text-muted-foreground">Comprehensive financial insights and budget tracking</p>
+          <p className="text-xs text-amber-600 mt-1">
+            📊 Real data: Donation amounts, giving trends, donor analytics. 
+            📍 Budget tracking and expense management coming soon.
+          </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={loadFinancialData}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
           <Select value={format(selectedMonth, 'yyyy-MM')} onValueChange={(value) => setSelectedMonth(parseISO(value))}>
             <SelectTrigger className="w-[180px]">
               <SelectValue />

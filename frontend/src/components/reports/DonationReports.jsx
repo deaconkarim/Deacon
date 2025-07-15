@@ -45,7 +45,8 @@ import {
   Camera,
   Music,
   BookOpen,
-  Shield
+  Shield,
+  CreditCard
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -76,7 +77,7 @@ import {
   Scatter
 } from 'recharts';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { getDonations, getDonationAnalytics } from '@/lib/donationService';
+import { donationReportService } from '@/lib/donationReportService';
 import { supabase } from '@/lib/supabaseClient';
 
 export function DonationReports() {
@@ -110,17 +111,9 @@ export function DonationReports() {
   const loadDonationData = async () => {
     setIsLoading(true);
     try {
-      const startDate = startOfMonth(selectedMonth);
-      const endDate = endOfMonth(selectedMonth);
-      
-      // Get donations for the selected period
-      const donations = await getDonations({
-        startDate: format(startDate, 'yyyy-MM-dd'),
-        endDate: format(endDate, 'yyyy-MM-dd')
-      });
-
-      const processedData = processDonationData(donations);
-      setDonationData(processedData);
+      // Use the new real data service
+      const data = await donationReportService.getDonationData(selectedMonth);
+      setDonationData(data);
     } catch (error) {
       console.error('Error loading donation data:', error);
       toast({
@@ -131,161 +124,6 @@ export function DonationReports() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const processDonationData = (donations) => {
-    const totalDonations = donations.length;
-    const totalAmount = donations.reduce((sum, donation) => sum + (donation.amount || 0), 0);
-    const averageGift = totalDonations > 0 ? Math.round(totalAmount / totalDonations) : 0;
-    
-    // Get unique donors
-    const uniqueDonors = new Set(donations.map(d => d.donor_name || 'Anonymous'));
-    const donorCount = uniqueDonors.size;
-
-    // Giving trends (last 12 months)
-    const givingTrends = Array.from({ length: 12 }, (_, i) => {
-      const date = subMonths(new Date(), i);
-      const monthDonations = donations.filter(d => {
-        const donationDate = parseISO(d.created_at);
-        return donationDate.getMonth() === date.getMonth() && 
-               donationDate.getFullYear() === date.getFullYear();
-      });
-      return {
-        month: format(date, 'MMM yyyy'),
-        amount: monthDonations.reduce((sum, d) => sum + (d.amount || 0), 0),
-        count: monthDonations.length,
-        donors: new Set(monthDonations.map(d => d.donor_name || 'Anonymous')).size
-      };
-    }).reverse();
-
-    // Donation categories
-    const donationCategories = donations.reduce((acc, donation) => {
-      const category = donation.category || 'General';
-      if (!acc[category]) {
-        acc[category] = { amount: 0, count: 0 };
-      }
-      acc[category].amount += donation.amount || 0;
-      acc[category].count += 1;
-      return acc;
-    }, {});
-
-    const categoryData = Object.entries(donationCategories).map(([category, data]) => ({
-      category,
-      amount: data.amount,
-      count: data.count,
-      avgAmount: Math.round(data.amount / data.count)
-    }));
-
-    // Top donors
-    const donorStats = donations.reduce((acc, donation) => {
-      const donorName = donation.donor_name || 'Anonymous';
-      if (!acc[donorName]) {
-        acc[donorName] = { total: 0, count: 0, lastDonation: null };
-      }
-      acc[donorName].total += donation.amount || 0;
-      acc[donorName].count += 1;
-      if (!acc[donorName].lastDonation || donation.created_at > acc[donorName].lastDonation) {
-        acc[donorName].lastDonation = donation.created_at;
-      }
-      return acc;
-    }, {});
-
-    const topDonors = Object.entries(donorStats)
-      .map(([name, data]) => ({
-        name,
-        total: data.total,
-        count: data.count,
-        lastDonation: data.lastDonation,
-        avgGift: Math.round(data.total / data.count)
-      }))
-      .sort((a, b) => b.total - a.total)
-      .slice(0, 10);
-
-    // Giving goals (mock)
-    const givingGoals = [
-      { name: 'Monthly Goal', target: 15000, actual: 12450, percentage: 83 },
-      { name: 'Building Fund', target: 50000, actual: 32000, percentage: 64 },
-      { name: 'Missions', target: 10000, actual: 8500, percentage: 85 },
-      { name: 'Youth Ministry', target: 5000, actual: 4200, percentage: 84 },
-      { name: 'Emergency Fund', target: 8000, actual: 6500, percentage: 81 }
-    ];
-
-    // Recurring donations (mock)
-    const recurringDonations = [
-      { donor: 'John Smith', amount: 500, frequency: 'Monthly', status: 'Active', startDate: '2024-01-01' },
-      { donor: 'Sarah Johnson', amount: 250, frequency: 'Monthly', status: 'Active', startDate: '2024-02-15' },
-      { donor: 'Mike Davis', amount: 100, frequency: 'Weekly', status: 'Active', startDate: '2024-03-01' },
-      { donor: 'Lisa Wilson', amount: 300, frequency: 'Monthly', status: 'Paused', startDate: '2024-01-15' },
-      { donor: 'David Brown', amount: 150, frequency: 'Monthly', status: 'Active', startDate: '2024-04-01' }
-    ];
-
-    // Campaign performance (mock)
-    const campaignPerformance = [
-      { name: 'Christmas Offering', goal: 10000, raised: 8500, donors: 45, endDate: '2024-12-25' },
-      { name: 'Building Fund', goal: 50000, raised: 32000, donors: 23, endDate: '2024-06-30' },
-      { name: 'Missions Trip', goal: 8000, raised: 6500, donors: 18, endDate: '2024-05-15' },
-      { name: 'Youth Camp', goal: 3000, raised: 2800, donors: 12, endDate: '2024-07-01' },
-      { name: 'Emergency Relief', goal: 5000, raised: 4200, donors: 15, endDate: '2024-04-30' }
-    ];
-
-    // Donor retention (mock)
-    const donorRetention = [
-      { period: 'New Donors', count: 25, retained: 18, rate: 72 },
-      { period: '1-6 months', count: 45, retained: 38, rate: 84 },
-      { period: '6-12 months', count: 30, retained: 25, rate: 83 },
-      { period: '1-2 years', count: 20, retained: 18, rate: 90 },
-      { period: '2+ years', count: 15, retained: 14, rate: 93 }
-    ];
-
-    // Giving methods (mock)
-    const givingMethods = [
-      { method: 'Online Giving', amount: Math.floor(totalAmount * 0.6), count: Math.floor(totalDonations * 0.7) },
-      { method: 'Cash/Check', amount: Math.floor(totalAmount * 0.25), count: Math.floor(totalDonations * 0.2) },
-      { method: 'Bank Transfer', amount: Math.floor(totalAmount * 0.1), count: Math.floor(totalDonations * 0.08) },
-      { method: 'Mobile App', amount: Math.floor(totalAmount * 0.05), count: Math.floor(totalDonations * 0.02) }
-    ];
-
-    // Donor demographics (mock)
-    const donorDemographics = [
-      { age: '18-25', donors: 8, avgGift: 75, totalAmount: 600 },
-      { age: '26-35', donors: 15, avgGift: 120, totalAmount: 1800 },
-      { age: '36-50', donors: 25, avgGift: 200, totalAmount: 5000 },
-      { age: '51-65', donors: 20, avgGift: 300, totalAmount: 6000 },
-      { age: '65+', donors: 12, avgGift: 250, totalAmount: 3000 }
-    ];
-
-    // Seasonal giving (mock)
-    const seasonalGiving = [
-      { month: 'January', amount: Math.floor(totalAmount * 0.08), donors: Math.floor(donorCount * 0.1) },
-      { month: 'February', amount: Math.floor(totalAmount * 0.07), donors: Math.floor(donorCount * 0.09) },
-      { month: 'March', amount: Math.floor(totalAmount * 0.08), donors: Math.floor(donorCount * 0.1) },
-      { month: 'April', amount: Math.floor(totalAmount * 0.09), donors: Math.floor(donorCount * 0.11) },
-      { month: 'May', amount: Math.floor(totalAmount * 0.08), donors: Math.floor(donorCount * 0.1) },
-      { month: 'June', amount: Math.floor(totalAmount * 0.07), donors: Math.floor(donorCount * 0.09) },
-      { month: 'July', amount: Math.floor(totalAmount * 0.06), donors: Math.floor(donorCount * 0.08) },
-      { month: 'August', amount: Math.floor(totalAmount * 0.07), donors: Math.floor(donorCount * 0.09) },
-      { month: 'September', amount: Math.floor(totalAmount * 0.08), donors: Math.floor(donorCount * 0.1) },
-      { month: 'October', amount: Math.floor(totalAmount * 0.09), donors: Math.floor(donorCount * 0.11) },
-      { month: 'November', amount: Math.floor(totalAmount * 0.1), donors: Math.floor(donorCount * 0.12) },
-      { month: 'December', amount: Math.floor(totalAmount * 0.13), donors: Math.floor(donorCount * 0.15) }
-    ];
-
-    return {
-      totalDonations,
-      totalAmount,
-      averageGift,
-      donorCount,
-      givingTrends,
-      donationCategories: categoryData,
-      topDonors,
-      givingGoals,
-      recurringDonations,
-      campaignPerformance,
-      donorRetention,
-      givingMethods,
-      donorDemographics,
-      seasonalGiving
-    };
   };
 
   const handleExport = (type) => {
@@ -342,10 +180,23 @@ export function DonationReports() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Donation Analytics</h2>
-          <p className="text-muted-foreground">Comprehensive giving insights and donor analytics</p>
+          <h2 className="text-2xl font-bold">Donation Reports</h2>
+          <p className="text-muted-foreground">Track giving patterns and donor engagement</p>
+          <p className="text-xs text-amber-600 mt-1">
+            📊 Real data: Donation amounts, donor counts, giving trends, categories. 
+            📍 Campaign performance and recurring donations coming soon.
+          </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={loadDonationData}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
           <Select value={format(selectedMonth, 'yyyy-MM')} onValueChange={(value) => setSelectedMonth(parseISO(value))}>
             <SelectTrigger className="w-[180px]">
               <SelectValue />

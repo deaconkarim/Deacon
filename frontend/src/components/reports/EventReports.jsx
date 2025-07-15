@@ -82,6 +82,7 @@ import {
   Scatter
 } from 'recharts';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { eventReportService } from '@/lib/eventReportService';
 import { supabase } from '@/lib/supabaseClient';
 
 export function EventReports() {
@@ -115,48 +116,9 @@ export function EventReports() {
   const loadEventData = async () => {
     setIsLoading(true);
     try {
-      const startDate = startOfMonth(selectedMonth);
-      const endDate = endOfMonth(selectedMonth);
-      
-      // Get current user's organization ID
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      const { data: orgUser, error: orgError } = await supabase
-        .from('organization_users')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (orgError || !orgUser) throw new Error('Unable to determine organization');
-      
-      // Fetch events for the selected period and organization
-      const { data: events, error: eventsError } = await supabase
-        .from('events')
-        .select('*')
-        .eq('organization_id', orgUser.organization_id)
-        .gte('start_date', format(startDate, 'yyyy-MM-dd'))
-        .lte('start_date', format(endDate, 'yyyy-MM-dd'))
-        .order('start_date', { ascending: false });
-
-      if (eventsError) throw eventsError;
-
-      // Fetch attendance records for these events
-      const { data: attendance, error: attendanceError } = await supabase
-        .from('event_attendance')
-        .select(`
-          *,
-          members (
-            firstname,
-            lastname
-          )
-        `)
-        .in('event_id', events.map(e => e.id));
-
-      if (attendanceError) throw attendanceError;
-
-      const processedData = processEventData(events, attendance);
-      setEventData(processedData);
+      // Use the new real data service
+      const data = await eventReportService.getEventData(selectedMonth);
+      setEventData(data);
     } catch (error) {
       console.error('Error loading event data:', error);
       toast({
@@ -167,160 +129,6 @@ export function EventReports() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const processEventData = (events, attendance) => {
-    const totalEvents = events.length;
-    const totalAttendance = attendance.filter(a => 
-      a.status === 'checked-in' || a.status === 'attending'
-    ).length;
-    const averageAttendance = totalEvents > 0 ? Math.round(totalAttendance / totalEvents) : 0;
-
-    // Event types breakdown
-    const eventTypes = events.reduce((acc, event) => {
-      const type = event.event_type || 'Other';
-      if (!acc[type]) {
-        acc[type] = { count: 0, attendance: 0 };
-      }
-      acc[type].count += 1;
-      
-      const eventAttendance = attendance.filter(a => 
-        a.event_id === event.id && (a.status === 'checked-in' || a.status === 'attending')
-      );
-      acc[type].attendance += eventAttendance.length;
-      return acc;
-    }, {});
-
-    const eventTypesData = Object.entries(eventTypes).map(([type, data]) => ({
-      type,
-      count: data.count,
-      attendance: data.attendance,
-      avgAttendance: Math.round(data.attendance / data.count)
-    }));
-
-    // Event performance (last 12 months)
-    const eventPerformance = Array.from({ length: 12 }, (_, i) => {
-      const date = subMonths(new Date(), i);
-      const monthEvents = events.filter(e => {
-        const eventDate = parseISO(e.start_date);
-        return eventDate.getMonth() === date.getMonth() && 
-               eventDate.getFullYear() === date.getFullYear();
-      });
-      const monthAttendance = attendance.filter(a => {
-        const event = events.find(e => e.id === a.event_id);
-        if (!event) return false;
-        const eventDate = parseISO(event.start_date);
-        return eventDate.getMonth() === date.getMonth() && 
-               eventDate.getFullYear() === date.getFullYear() &&
-               (a.status === 'checked-in' || a.status === 'attending');
-      });
-      
-      return {
-        month: format(date, 'MMM yyyy'),
-        events: monthEvents.length,
-        attendance: monthAttendance.length,
-        avgAttendance: monthEvents.length > 0 ? Math.round(monthAttendance.length / monthEvents.length) : 0
-      };
-    }).reverse();
-
-    // Attendance trend
-    const attendanceTrend = events.map(event => {
-      const eventAttendance = attendance.filter(a => 
-        a.event_id === event.id && (a.status === 'checked-in' || a.status === 'attending')
-      );
-      return {
-        event: event.title,
-        date: format(parseISO(event.start_date), 'MMM d'),
-        attendance: eventAttendance.length,
-        capacity: event.capacity || 100,
-        percentage: Math.round((eventAttendance.length / (event.capacity || 100)) * 100)
-      };
-    }).sort((a, b) => parseISO(a.date) - parseISO(b.date));
-
-    // Event categories
-    const eventCategories = [
-      { category: 'Worship Services', count: Math.floor(totalEvents * 0.4), avgAttendance: 85 },
-      { category: 'Bible Study', count: Math.floor(totalEvents * 0.2), avgAttendance: 15 },
-      { category: 'Youth Events', count: Math.floor(totalEvents * 0.15), avgAttendance: 25 },
-      { category: 'Social Events', count: Math.floor(totalEvents * 0.1), avgAttendance: 40 },
-      { category: 'Prayer Meetings', count: Math.floor(totalEvents * 0.1), avgAttendance: 12 },
-      { category: 'Special Events', count: Math.floor(totalEvents * 0.05), avgAttendance: 60 }
-    ];
-
-    // Top events by attendance
-    const topEvents = events.map(event => {
-      const eventAttendance = attendance.filter(a => 
-        a.event_id === event.id && (a.status === 'checked-in' || a.status === 'attending')
-      );
-      return {
-        title: event.title,
-        date: event.start_date,
-        type: event.event_type || 'Other',
-        attendance: eventAttendance.length,
-        capacity: event.capacity || 100,
-        percentage: Math.round((eventAttendance.length / (event.capacity || 100)) * 100)
-      };
-    }).sort((a, b) => b.attendance - a.attendance).slice(0, 10);
-
-    // Event locations (mock)
-    const eventLocations = [
-      { location: 'Main Sanctuary', events: Math.floor(totalEvents * 0.6), avgAttendance: 75 },
-      { location: 'Fellowship Hall', events: Math.floor(totalEvents * 0.2), avgAttendance: 30 },
-      { location: 'Youth Room', events: Math.floor(totalEvents * 0.1), avgAttendance: 20 },
-      { location: 'Prayer Room', events: Math.floor(totalEvents * 0.05), avgAttendance: 12 },
-      { location: 'Outdoor Area', events: Math.floor(totalEvents * 0.05), avgAttendance: 50 }
-    ];
-
-    // Event engagement levels
-    const eventEngagement = [
-      { level: 'High Engagement', count: Math.floor(totalEvents * 0.3), color: '#10b981' },
-      { level: 'Medium Engagement', count: Math.floor(totalEvents * 0.5), color: '#3b82f6' },
-      { level: 'Low Engagement', count: Math.floor(totalEvents * 0.2), color: '#f59e0b' }
-    ];
-
-    // Volunteer stats (mock)
-    const volunteerStats = [
-      { area: 'Worship Team', events: 12, volunteers: 8, avgPerEvent: 2.5 },
-      { area: 'Children\'s Ministry', events: 8, volunteers: 6, avgPerEvent: 3.2 },
-      { area: 'Greeting Team', events: 15, volunteers: 4, avgPerEvent: 1.8 },
-      { area: 'Technical Support', events: 10, volunteers: 3, avgPerEvent: 1.5 },
-      { area: 'Prayer Team', events: 5, volunteers: 5, avgPerEvent: 2.0 }
-    ];
-
-    // Event feedback (mock)
-    const eventFeedback = [
-      { event: 'Sunday Service', rating: 4.8, feedback: 15, positive: 14 },
-      { event: 'Youth Group', rating: 4.6, feedback: 8, positive: 7 },
-      { event: 'Bible Study', rating: 4.7, feedback: 12, positive: 11 },
-      { event: 'Prayer Meeting', rating: 4.9, feedback: 6, positive: 6 },
-      { event: 'Social Event', rating: 4.5, feedback: 10, positive: 9 }
-    ];
-
-    // Event costs and revenue (mock)
-    const eventCosts = [
-      { category: 'Worship Services', cost: 1200, revenue: 0, net: -1200 },
-      { category: 'Youth Events', cost: 800, revenue: 200, net: -600 },
-      { category: 'Social Events', cost: 500, revenue: 300, net: -200 },
-      { category: 'Special Events', cost: 1500, revenue: 800, net: -700 },
-      { category: 'Bible Study', cost: 200, revenue: 0, net: -200 }
-    ];
-
-    return {
-      totalEvents,
-      totalAttendance,
-      averageAttendance,
-      eventTypes: eventTypesData,
-      eventPerformance,
-      attendanceTrend,
-      eventCategories,
-      topEvents,
-      eventLocations,
-      eventEngagement,
-      volunteerStats,
-      eventFeedback,
-      eventCosts,
-      eventRevenue: eventCosts // Using same data for demo
-    };
   };
 
   const handleExport = (type) => {
@@ -378,9 +186,22 @@ export function EventReports() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Event Reports</h2>
-          <p className="text-muted-foreground">Comprehensive event analytics and performance insights</p>
+          <p className="text-muted-foreground">Track event performance and engagement</p>
+          <p className="text-xs text-amber-600 mt-1">
+            📊 Real data: Event counts, attendance, performance, locations. 
+            📍 Volunteer stats and event feedback coming soon.
+          </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={loadEventData}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
           <Select value={format(selectedMonth, 'yyyy-MM')} onValueChange={(value) => setSelectedMonth(parseISO(value))}>
             <SelectTrigger className="w-[180px]">
               <SelectValue />
@@ -461,17 +282,13 @@ export function EventReports() {
                   <CardContent>
                     <div className="h-[300px]">
                       <ResponsiveContainer width="100%" height="100%">
-                        <ComposedChart data={eventData.eventPerformance}>
+                        <BarChart data={eventData.eventPerformance}>
                           <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="month" />
-                          <YAxis yAxisId="left" />
-                          <YAxis yAxisId="right" orientation="right" />
+                          <XAxis dataKey="date" />
+                          <YAxis />
                           <Tooltip />
-                          <Legend />
-                          <Bar yAxisId="left" dataKey="events" fill="#8884d8" name="Events" />
-                          <Line yAxisId="right" type="monotone" dataKey="attendance" stroke="#82ca9d" name="Attendance" />
-                          <Line yAxisId="right" type="monotone" dataKey="avgAttendance" stroke="#ffc658" name="Avg Attendance" />
-                        </ComposedChart>
+                          <Bar dataKey="attendance" fill="#8884d8" name="Attendance" />
+                        </BarChart>
                       </ResponsiveContainer>
                     </div>
                   </CardContent>
@@ -511,22 +328,22 @@ export function EventReports() {
               <div className="grid gap-6 md:grid-cols-2">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Top Events</CardTitle>
-                    <CardDescription>Events with highest attendance</CardDescription>
+                    <CardTitle>Event Types Summary</CardTitle>
+                    <CardDescription>Total and average attendance by event type</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {eventData.topEvents?.slice(0, 5).map((event, index) => (
+                      {eventData.eventTypes?.map((eventType, index) => (
                         <div key={index} className="flex items-center justify-between p-3 rounded-lg border">
                           <div>
-                            <p className="font-medium">{event.title}</p>
+                            <p className="font-medium">{eventType.type}</p>
                             <p className="text-sm text-muted-foreground">
-                              {event.date && format(parseISO(event.date), 'MMM d, yyyy')} • {event.type}
+                              {eventType.count} events
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="font-semibold">{event.attendance} attendees</p>
-                            <Badge variant="outline">{event.percentage}% capacity</Badge>
+                            <p className="font-semibold">{eventType.attendance} total</p>
+                            <p className="text-sm text-muted-foreground">Avg {eventType.avgAttendance} per event</p>
                           </div>
                         </div>
                       ))}
@@ -537,18 +354,18 @@ export function EventReports() {
                 <Card>
                   <CardHeader>
                     <CardTitle>Event Locations</CardTitle>
-                    <CardDescription>Events by location</CardDescription>
+                    <CardDescription>Events by location (with attendance &gt; 0)</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {eventData.eventLocations?.map((location, index) => (
+                      {eventData.eventLocations?.filter(location => location.avgAttendance > 0).map((location, index) => (
                         <div key={index} className="flex items-center justify-between p-3 rounded-lg border">
                           <div className="flex items-center space-x-3">
                             <MapPin className="w-4 h-4 text-muted-foreground" />
                             <span className="font-medium">{location.location}</span>
                           </div>
                           <div className="text-right">
-                            <p className="font-semibold">{location.events} events</p>
+                            <p className="font-semibold">{location.count} events</p>
                             <p className="text-sm text-muted-foreground">Avg {location.avgAttendance} attendees</p>
                           </div>
                         </div>
@@ -568,7 +385,7 @@ export function EventReports() {
                 <CardContent>
                   <div className="h-[400px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={eventData.eventPerformance}>
+                      <AreaChart data={eventData.attendanceTrend}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="month" />
                         <YAxis />
@@ -595,7 +412,7 @@ export function EventReports() {
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={eventData.attendanceTrend}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="date" />
+                        <XAxis dataKey="month" />
                         <YAxis />
                         <Tooltip />
                         <Bar dataKey="attendance" fill="#8884d8" />
