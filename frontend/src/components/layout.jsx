@@ -335,11 +335,9 @@ export function Layout() {
     console.log('Is installed:', isInstalled);
     console.log('Is standalone:', window.matchMedia('(display-mode: standalone)').matches);
     
-    // Try to manually trigger the beforeinstallprompt event for testing
+    // Don't create fake events - just log the current state
     if (!deferredPrompt) {
-      console.log('No deferred prompt available. Creating test event...');
-      const testEvent = new Event('beforeinstallprompt');
-      window.dispatchEvent(testEvent);
+      console.log('No deferred prompt available. PWA install prompt will show manual instructions.');
     }
   };
 
