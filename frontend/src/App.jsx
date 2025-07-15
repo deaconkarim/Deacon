@@ -39,7 +39,7 @@ function App() {
     <>
       <Analytics />
       <SpeedInsights />
-      {/* <PWAInstallPrompt /> */}
+      <PWAInstallPrompt />
       <PWAUpdateNotification />
       <Routes>
         {/* Public routes */}
