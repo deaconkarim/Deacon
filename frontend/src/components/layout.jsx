@@ -264,18 +264,33 @@ export function Layout() {
       const standalone = window.matchMedia('(display-mode: standalone)').matches || 
                        window.navigator.standalone === true;
       setIsInstalled(standalone);
+      
+      // Debug logging
+      console.log('PWA Debug Info:', {
+        isStandalone: standalone,
+        isInstalled: standalone,
+        protocol: window.location.protocol,
+        hostname: window.location.hostname,
+        isLocalhost: window.location.hostname === 'localhost',
+        isSecure: window.location.protocol === 'https:',
+        hasServiceWorker: 'serviceWorker' in navigator,
+        hasPushManager: 'PushManager' in window,
+        userAgent: navigator.userAgent
+      });
     };
 
     checkInstallation();
 
     // Listen for install prompt
     const handleBeforeInstallPrompt = (e) => {
+      console.log('beforeinstallprompt event fired!');
       e.preventDefault();
       setDeferredPrompt(e);
     };
 
     // Listen for app installed
     const handleAppInstalled = () => {
+      console.log('appinstalled event fired!');
       setIsInstalled(true);
       setDeferredPrompt(null);
     };
@@ -300,6 +315,14 @@ export function Layout() {
     }
     
     setDeferredPrompt(null);
+  };
+
+  const handleLaunchApp = () => {
+    // If the app is installed, try to launch it in standalone mode
+    if (isInstalled) {
+      // Try to open in a new window with standalone display mode
+      window.open(window.location.href, '_blank', 'standalone=yes');
+    }
   };
 
   const handleReturnToAdminCenter = async () => {
@@ -453,10 +476,16 @@ export function Layout() {
                       Install App
                     </DropdownMenuItem>
                   )}
+                  {isInstalled && (
+                    <DropdownMenuItem onClick={handleLaunchApp} className="flex items-center gap-2 text-green-600">
+                      <Smartphone className="h-4 w-4" />
+                      <span className="text-sm">Launch App</span>
+                    </DropdownMenuItem>
+                  )}
                   {!isInstalled && !deferredPrompt && (
                     <DropdownMenuItem className="flex items-center gap-2 text-gray-500">
                       <Smartphone className="h-4 w-4" />
-                      <span className="text-sm">App installed</span>
+                      <span className="text-sm">Install not available</span>
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />

@@ -2,11 +2,17 @@ const CACHE_NAME = 'deacon-app-v1';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/manifest.json',
+  '/site.webmanifest',
   '/favicon.ico',
+  '/favicon.svg',
   '/apple-touch-icon.png',
+  '/apple-touch-icon-180x180.png',
+  '/apple-touch-icon-167x167.png',
+  '/apple-touch-icon-152x152.png',
   '/android-chrome-192x192.png',
-  '/android-chrome-512x512.png'
+  '/android-chrome-512x512.png',
+  '/favicon-32x32.png',
+  '/favicon-16x16.png'
 ];
 
 // Install event - cache resources
