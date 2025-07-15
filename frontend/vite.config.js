@@ -3,6 +3,7 @@ import { dirname, resolve } from 'path';
 // import react from '@vitejs/plugin-react';
 import { createLogger, defineConfig } from 'vite';
 import path from 'path';
+import { VitePWA } from 'vite-plugin-pwa';
 
 const configHorizonsViteErrorHandler = `
 const observer = new MutationObserver((mutations) => {
@@ -185,7 +186,76 @@ logger.error = (msg, options) => {
 
 export default defineConfig({
 	customLogger: logger,
-	plugins: [addTransformIndexHtml],
+	plugins: [
+		addTransformIndexHtml,
+		VitePWA({
+			registerType: 'autoUpdate',
+			includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+			manifest: {
+				name: 'Deacon: Church Command Center',
+				short_name: 'Deacon',
+				description: 'Comprehensive church management system built by someone who understands ministry needs.',
+				theme_color: '#10b981',
+				background_color: '#ffffff',
+				display: 'standalone',
+				orientation: 'portrait-primary',
+				scope: '/',
+				start_url: '/',
+				icons: [
+					{
+						src: 'android-chrome-192x192.png',
+						sizes: '192x192',
+						type: 'image/png',
+						purpose: 'maskable any'
+					},
+					{
+						src: 'android-chrome-512x512.png',
+						sizes: '512x512',
+						type: 'image/png',
+						purpose: 'maskable any'
+					},
+					{
+						src: 'apple-touch-icon.png',
+						sizes: '180x180',
+						type: 'image/png'
+					},
+					{
+						src: 'favicon-32x32.png',
+						sizes: '32x32',
+						type: 'image/png'
+					},
+					{
+						src: 'favicon-16x16.png',
+						sizes: '16x16',
+						type: 'image/png'
+					}
+				],
+				shortcuts: [
+					{
+						name: 'Dashboard',
+						short_name: 'Dashboard',
+						description: 'View church dashboard',
+						url: '/dashboard',
+						icons: [{ src: 'favicon-32x32.png', sizes: '32x32' }]
+					},
+					{
+						name: 'People',
+						short_name: 'People',
+						description: 'Manage church members',
+						url: '/people',
+						icons: [{ src: 'favicon-32x32.png', sizes: '32x32' }]
+					},
+					{
+						name: 'Events',
+						short_name: 'Events',
+						description: 'Manage church events',
+						url: '/events',
+						icons: [{ src: 'favicon-32x32.png', sizes: '32x32' }]
+					}
+				]
+			}
+		})
+	],
 	server: {
 		cors: true,
 		headers: {
