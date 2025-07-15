@@ -2,7 +2,7 @@ const CACHE_NAME = 'deacon-app-v1';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/manifest.webmanifest',
+  '/manifest.json',
   '/favicon.ico',
   '/favicon.svg',
   '/apple-touch-icon.png',

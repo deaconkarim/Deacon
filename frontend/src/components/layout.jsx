@@ -275,7 +275,11 @@ export function Layout() {
         isSecure: window.location.protocol === 'https:',
         hasServiceWorker: 'serviceWorker' in navigator,
         hasPushManager: 'PushManager' in window,
-        userAgent: navigator.userAgent
+        userAgent: navigator.userAgent,
+        displayMode: window.matchMedia('(display-mode: standalone)').matches ? 'standalone' : 'browser',
+        navigatorStandalone: window.navigator.standalone,
+        hasBeforeInstallPrompt: 'beforeinstallprompt' in window,
+        hasAppInstalled: 'appinstalled' in window
       });
     };
 
@@ -322,6 +326,18 @@ export function Layout() {
     if (isInstalled) {
       // Try to open in a new window with standalone display mode
       window.open(window.location.href, '_blank', 'standalone=yes');
+    }
+  };
+
+  const testPWAInstall = () => {
+    console.log('Testing PWA install...');
+    console.log('Deferred prompt:', deferredPrompt);
+    console.log('Is installed:', isInstalled);
+    console.log('Is standalone:', window.matchMedia('(display-mode: standalone)').matches);
+    
+    // Don't create fake events - just log the current state
+    if (!deferredPrompt) {
+      console.log('No deferred prompt available. PWA install prompt will show manual instructions.');
     }
   };
 
@@ -488,6 +504,10 @@ export function Layout() {
                       <span className="text-sm">Install not available</span>
                     </DropdownMenuItem>
                   )}
+                  <DropdownMenuItem onClick={testPWAInstall} className="flex items-center gap-2 text-gray-600">
+                    <Smartphone className="h-4 w-4" />
+                    <span className="text-sm">Test PWA Install</span>
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut} className="flex items-center gap-2 text-red-600">
                     <LogOut className="h-4 w-4" />
