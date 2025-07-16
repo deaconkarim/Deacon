@@ -45,6 +45,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { getMembers, getMemberAttendance, getMemberGroups, getMemberVolunteers, updateMember, deleteMember } from '../lib/data';
 import { familyService } from '../lib/familyService';
 import MemberForm from '@/components/members/MemberForm';
+import FamilyAssignment from '@/components/members/FamilyAssignment';
 import { formatName, getInitials, formatPhoneNumber } from '@/lib/utils/formatters';
 import { supabase } from '@/lib/supabase';
 import { getDonations } from '@/lib/donationService';
@@ -317,7 +318,7 @@ export default function MemberProfile() {
         .insert({
           event_id: selectedEvent.id,
           member_id: member.id,
-          status: 'attended'  // Changed from 'present' to 'attended' which should be a valid status
+          status: 'checked-in'  // Valid status values: 'attending', 'checked-in', 'declined'
         });
       
       if (error) throw error;
@@ -716,7 +717,10 @@ export default function MemberProfile() {
                   <DollarSign className="h-5 w-5 text-white" />
                 </div>
                 <div className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">
-                  {donations.length}
+                  {(() => {
+                    const donationData = getDonationDisplayData();
+                    return donationData.donations.length;
+                  })()}
                 </div>
                 <p className="text-xs text-emerald-600 dark:text-emerald-400">Total gifts</p>
               </CardContent>
@@ -864,22 +868,22 @@ export default function MemberProfile() {
         )}
 
         {/* Family Information */}
-        {familyInfo && (
-          <motion.div variants={itemVariants}>
-            <Card className="border-0 shadow-md">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Users className="h-4 w-4 text-teal-500" />
-                  Family
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+        <motion.div variants={itemVariants}>
+          <Card className="border-0 shadow-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Users className="h-4 w-4 text-teal-500" />
+                Family
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {familyInfo ? (
                 <div className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg">
                   <div className="flex items-start">
                     <Users className="mr-3 h-4 w-4 text-teal-500 mt-0.5" />
                     <div className="space-y-2">
                       <div className="text-sm font-medium text-slate-900 dark:text-white">
-                        {familyInfo.name || 'Family'}
+                        {familyInfo.name || familyInfo.family_name || 'Family'}
                       </div>
                       <div className="text-xs text-teal-500 dark:text-teal-400">
                         {familyInfo.members.length} members
@@ -889,7 +893,12 @@ export default function MemberProfile() {
                           .filter(m => m.id !== member.id)
                           .slice(0, 3)
                           .map((familyMember) => (
-                            <Badge key={familyMember.id} variant="outline" className="text-xs">
+                            <Badge 
+                              key={familyMember.id} 
+                              variant="outline" 
+                              className="text-xs cursor-pointer hover:bg-teal-100 dark:hover:bg-teal-800 transition-colors"
+                              onClick={() => navigate(`/members/${familyMember.id}`)}
+                            >
                               {formatName(familyMember.firstname, familyMember.lastname)}
                             </Badge>
                           ))}
@@ -902,10 +911,19 @@ export default function MemberProfile() {
                     </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
+              ) : (
+                <div className="p-3 bg-slate-50 dark:bg-slate-900/20 rounded-lg">
+                  <div className="flex items-start">
+                    <Users className="mr-3 h-4 w-4 text-slate-500 mt-0.5" />
+                    <div className="text-sm text-slate-600 dark:text-slate-400">
+                      Not assigned to a family
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {/* Child Guardians */}
         {member.member_type === 'child' && guardians.length > 0 && (
@@ -918,19 +936,24 @@ export default function MemberProfile() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {guardians.map((guardian) => (
-                  <div key={guardian.id} className="flex items-center p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-                    <Shield className="mr-3 h-4 w-4 text-amber-500" />
-                    <div>
-                      <div className="text-sm font-medium text-slate-900 dark:text-white">
-                        {formatName(guardian.guardian.firstname, guardian.guardian.lastname)}
-                      </div>
-                      <div className="text-xs text-amber-500 dark:text-amber-400">
-                        {guardian.relationship || 'Guardian'}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                                        {guardians.map((guardian) => (
+                          <div 
+                            key={guardian.id} 
+                            className="flex items-center p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-800 transition-all"
+                            onClick={() => navigate(`/members/${guardian.guardian.id}`)}
+                          >
+                            <Shield className="mr-3 h-4 w-4 text-amber-500" />
+                            <div className="flex-1">
+                              <div className="text-sm font-medium text-slate-900 dark:text-white">
+                                {formatName(guardian.guardian.firstname, guardian.guardian.lastname)}
+                              </div>
+                              <div className="text-xs text-amber-500 dark:text-amber-400">
+                                {guardian.relationship || 'Guardian'}
+                              </div>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-amber-400" />
+                          </div>
+                        ))}
               </CardContent>
             </Card>
           </motion.div>
@@ -1074,15 +1097,15 @@ export default function MemberProfile() {
                     )}
 
                     {/* Family Information */}
-                    {familyInfo && (
-                      <div className="pt-6 border-t border-slate-200 dark:border-slate-700">
-                        <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Family</h4>
+                    <div className="pt-6 border-t border-slate-200 dark:border-slate-700">
+                      <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Family</h4>
+                      {familyInfo ? (
                         <div className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg">
                           <div className="flex items-start">
                             <Users className="mr-3 h-4 w-4 text-teal-500 mt-0.5" />
                             <div className="space-y-2">
                               <div className="text-sm font-medium text-slate-900 dark:text-white">
-                                {familyInfo.name || 'Family'}
+                                {familyInfo.name || familyInfo.family_name || 'Family'}
                               </div>
                               <div className="text-xs text-teal-500 dark:text-teal-400">
                                 {familyInfo.members.length} members
@@ -1092,7 +1115,12 @@ export default function MemberProfile() {
                                   .filter(m => m.id !== member.id)
                                   .slice(0, 3)
                                   .map((familyMember) => (
-                                    <Badge key={familyMember.id} variant="outline" className="text-xs">
+                                    <Badge 
+                                      key={familyMember.id} 
+                                      variant="outline" 
+                                      className="text-xs cursor-pointer hover:bg-teal-100 dark:hover:bg-teal-800 transition-colors"
+                                      onClick={() => navigate(`/members/${familyMember.id}`)}
+                                    >
                                       {formatName(familyMember.firstname, familyMember.lastname)}
                                     </Badge>
                                   ))}
@@ -1105,8 +1133,17 @@ export default function MemberProfile() {
                             </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      ) : (
+                        <div className="p-3 bg-slate-50 dark:bg-slate-900/20 rounded-lg">
+                          <div className="flex items-start">
+                            <Users className="mr-3 h-4 w-4 text-slate-500 mt-0.5" />
+                            <div className="text-sm text-slate-600 dark:text-slate-400">
+                              Not assigned to a family
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
 
                     {/* Child Guardians */}
                     {member.member_type === 'child' && guardians.length > 0 && (
@@ -1114,9 +1151,13 @@ export default function MemberProfile() {
                         <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Guardians</h4>
                         <div className="space-y-3">
                           {guardians.map((guardian) => (
-                            <div key={guardian.id} className="flex items-center p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                            <div 
+                              key={guardian.id} 
+                              className="flex items-center p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-800 transition-all"
+                              onClick={() => navigate(`/members/${guardian.guardian.id}`)}
+                            >
                               <Shield className="mr-3 h-4 w-4 text-amber-500" />
-                              <div>
+                              <div className="flex-1">
                                 <div className="text-sm font-medium text-slate-900 dark:text-white">
                                   {formatName(guardian.guardian.firstname, guardian.guardian.lastname)}
                                 </div>
@@ -1124,6 +1165,7 @@ export default function MemberProfile() {
                                   {guardian.relationship || 'Guardian'}
                                 </div>
                               </div>
+                              <ChevronRight className="h-4 w-4 text-amber-400" />
                             </div>
                           ))}
                         </div>
@@ -1734,105 +1776,13 @@ export default function MemberProfile() {
                   )}
 
                   {activeTab === 'family' && (
-                    <div className="space-y-6">
-                      {/* Family Overview */}
-                      <Card className="border-0 shadow-lg">
-                        <CardHeader className="pb-4 bg-gradient-to-r from-pink-50 to-pink-100 dark:from-pink-950/20 dark:to-pink-900/20 border-b border-pink-200 dark:border-pink-800">
-                          <CardTitle className="text-lg font-bold text-pink-900 dark:text-pink-100 flex items-center gap-2">
-                            <Heart className="h-5 w-5" />
-                            Family Information
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-4">
-                          {isFamilyLoading ? (
-                            <div className="text-center py-8">
-                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600 mx-auto mb-2"></div>
-                              <p className="text-sm text-pink-600">Loading family information...</p>
-                            </div>
-                          ) : familyInfo ? (
-                            <div className="flex items-center justify-between mb-4">
-                              <div>
-                                <h4 className="text-lg font-semibold text-pink-900 dark:text-pink-100">
-                                  {familyInfo.name || familyInfo.family_name || 'Family'}
-                                </h4>
-                                <p className="text-sm text-pink-600 dark:text-pink-400">
-                                  {familyInfo.members?.length || 0} member{(familyInfo.members?.length || 0) !== 1 ? 's' : ''}
-                                </p>
-                              </div>
-                              <Button variant="outline" size="sm">
-                                <Users className="mr-2 h-4 w-4" />
-                                View Family
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="text-center py-8">
-                              <Users className="h-12 w-12 text-pink-400 mx-auto mb-3" />
-                              <p className="text-pink-600 dark:text-pink-400 mb-2">Not in a family</p>
-                              <p className="text-sm text-pink-500 dark:text-pink-300">
-                                {member?.firstname} {member?.lastname} is not currently assigned to any family.
-                              </p>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-
-                      {/* Family Members */}
-                      {familyInfo && familyInfo.members && familyInfo.members.length > 0 && (
-                        <Card className="border-0 shadow-lg">
-                          <CardHeader className="pb-4 bg-gradient-to-r from-teal-50 to-teal-100 dark:from-teal-950/20 dark:to-teal-900/20 border-b border-teal-200 dark:border-teal-800">
-                            <CardTitle className="text-lg font-bold text-teal-900 dark:text-teal-100 flex items-center gap-2">
-                              <Users className="h-5 w-5" />
-                              Family Members
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="p-4">
-                            <div className="space-y-4">
-                              {familyInfo.members.map((familyMember) => (
-                                <div key={familyMember.id} className="flex items-center p-4 bg-teal-50 dark:bg-teal-900/20 rounded-lg">
-                                  <Avatar className="h-12 w-12 mr-4">
-                                    <AvatarImage src={familyMember.image_url} />
-                                    <AvatarFallback className="text-sm font-bold bg-gradient-to-br from-teal-500 to-teal-600 text-white">
-                                      {getInitials(familyMember.firstname, familyMember.lastname)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div className="flex-1">
-                                    <div className="font-semibold text-teal-900 dark:text-teal-100">
-                                      {formatName(familyMember.firstname, familyMember.lastname)}
-                                    </div>
-                                    <div className="text-sm text-teal-600 dark:text-teal-400">
-                                      {familyMember.member_type || 'member'} • {familyMember.relationship_type || 'family member'}
-                                      {familyMember.birth_date && ` • ${calculateAge(familyMember.birth_date)} years old`}
-                                    </div>
-                                    {familyMember.email && (
-                                      <div className="text-sm text-teal-600 dark:text-teal-400">
-                                        {familyMember.email}
-                                      </div>
-                                    )}
-                                    {familyMember.phone && (
-                                      <div className="text-sm text-teal-600 dark:text-teal-400">
-                                        {formatPhoneNumber(familyMember.phone)}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className="flex flex-col items-end gap-2">
-                                    {familyMember.id === member?.id && (
-                                      <Badge variant="default" className="text-xs">
-                                        Current Member
-                                      </Badge>
-                                    )}
-                                    {familyMember.is_primary && (
-                                      <Badge variant="outline" className="text-xs">
-                                        Primary
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )}
-                    </div>
+                    <FamilyAssignment 
+                      member={member} 
+                      onFamilyUpdate={() => {
+                        loadFamilyInfo(member.id);
+                        loadFamilyDonations();
+                      }}
+                    />
                   )}
 
                   {activeTab === 'volunteering' && (
@@ -1846,24 +1796,18 @@ export default function MemberProfile() {
                           </CardTitle>
                         </CardHeader>
                         <CardContent className="p-4">
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
                               <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">
                                 {volunteers.length}
                               </div>
-                              <div className="text-sm text-orange-600 dark:text-orange-400">Active Roles</div>
+                              <div className="text-sm text-orange-600 dark:text-orange-400">Total Assignments</div>
                             </div>
                             <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
                               <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">
-                                {volunteers.filter(v => v.role === 'leader').length}
+                                {new Set(volunteers.map(v => v.events?.id)).size}
                               </div>
-                              <div className="text-sm text-orange-600 dark:text-orange-400">Leadership Roles</div>
-                            </div>
-                            <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
-                              <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">
-                                {volunteers.filter(v => v.role === 'volunteer').length}
-                              </div>
-                              <div className="text-sm text-orange-600 dark:text-orange-400">Support Roles</div>
+                              <div className="text-sm text-orange-600 dark:text-orange-400">Events Volunteered</div>
                             </div>
                           </div>
                         </CardContent>
@@ -1882,7 +1826,7 @@ export default function MemberProfile() {
                             <div className="space-y-3">
                               {volunteers.map((volunteer) => {
                                 // Safely get the date value
-                                const dateValue = volunteer.start_date || volunteer.created_at;
+                                const dateValue = volunteer.created_at;
                                 const isValidDate = dateValue && !isNaN(new Date(dateValue).getTime());
                                 
                                 return (
@@ -1891,18 +1835,23 @@ export default function MemberProfile() {
                                       <Handshake className="h-5 w-5 text-white" />
                                     </div>
                                     <div className="flex-1">
-                                      <div className="font-medium text-blue-900 dark:text-blue-100">{volunteer.role_name}</div>
+                                      <div className="font-medium text-blue-900 dark:text-blue-100">{volunteer.role}</div>
                                       <div className="text-sm text-blue-600 dark:text-blue-400">
-                                        {volunteer.description || 'No description available'}
+                                        {volunteer.events?.title || 'Event'}
                                       </div>
+                                      {volunteer.notes && (
+                                        <div className="text-xs text-blue-500 dark:text-blue-400 mt-1">
+                                          {volunteer.notes}
+                                        </div>
+                                      )}
                                     </div>
                                     <div className="text-right">
-                                      <Badge variant={volunteer.role === 'leader' ? 'default' : 'secondary'} className="text-xs">
-                                        {volunteer.role}
+                                      <Badge variant="secondary" className="text-xs">
+                                        Volunteer
                                       </Badge>
                                       <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                                        Since {isValidDate 
-                                          ? format(new Date(dateValue), 'MMM yyyy')
+                                        {isValidDate 
+                                          ? format(new Date(dateValue), 'MMM d, yyyy')
                                           : 'Date not available'
                                         }
                                       </div>
@@ -1937,8 +1886,8 @@ export default function MemberProfile() {
         <motion.div variants={itemVariants}>
           <Accordion type="single" collapsible className="space-y-4">
             <AccordionItem value="overview">
-              <AccordionTrigger className="text-lg font-semibold">
-                <FileText className="h-5 w-5 mr-2" />
+              <AccordionTrigger className="text-lg font-semibold px-4">
+                <FileText className="h-5 w-5 mr-3" />
                 Overview
               </AccordionTrigger>
               <AccordionContent>
@@ -2146,13 +2095,24 @@ export default function MemberProfile() {
             </AccordionItem>
 
             <AccordionItem value="attendance">
-              <AccordionTrigger className="text-lg font-semibold">
-                <Church className="h-5 w-5 mr-2" />
+              <AccordionTrigger className="text-lg font-semibold px-4">
+                <Church className="h-5 w-5 mr-3" />
                 Attendance ({attendance.length})
               </AccordionTrigger>
               <AccordionContent>
                 <Card className="border-0 shadow-md">
                   <CardContent className="p-4">
+                    {/* Add Check In to Past Event button for mobile */}
+                    <div className="mb-4">
+                      <Button 
+                        onClick={() => member && setIsRetroCheckInOpen(true)}
+                        disabled={!member}
+                        className="w-full"
+                      >
+                        <Calendar className="mr-2 h-4 w-4" />
+                        Check In to Past Event
+                      </Button>
+                    </div>
                     {isAttendanceLoading ? (
                       <div className="text-center py-8">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-2"></div>
@@ -2251,8 +2211,8 @@ export default function MemberProfile() {
             </AccordionItem>
 
             <AccordionItem value="giving">
-              <AccordionTrigger className="text-lg font-semibold">
-                <DollarSign className="h-5 w-5 mr-2" />
+              <AccordionTrigger className="text-lg font-semibold px-4">
+                <DollarSign className="h-5 w-5 mr-3" />
                 Giving ({(() => {
                   const donationData = getDonationDisplayData();
                   return donationData.donations.length;
@@ -2353,8 +2313,8 @@ export default function MemberProfile() {
             </AccordionItem>
 
             <AccordionItem value="groups">
-              <AccordionTrigger className="text-lg font-semibold">
-                <Users className="h-5 w-5 mr-2" />
+              <AccordionTrigger className="text-lg font-semibold px-4">
+                <Users className="h-5 w-5 mr-3" />
                 Groups ({groups.length})
               </AccordionTrigger>
               <AccordionContent>
@@ -2452,8 +2412,8 @@ export default function MemberProfile() {
             </AccordionItem>
 
             <AccordionItem value="volunteering">
-              <AccordionTrigger className="text-lg font-semibold">
-                <Handshake className="h-5 w-5 mr-2" />
+              <AccordionTrigger className="text-lg font-semibold px-4">
+                <Handshake className="h-5 w-5 mr-3" />
                 Volunteering ({volunteers.length})
               </AccordionTrigger>
               <AccordionContent>
@@ -2469,24 +2429,18 @@ export default function MemberProfile() {
                         {/* Volunteering Overview */}
                         <div>
                           <h4 className="text-sm font-semibold mb-3 text-orange-900 dark:text-orange-100">Volunteering Overview</h4>
-                          <div className="grid grid-cols-3 gap-2">
+                          <div className="grid grid-cols-2 gap-2">
                             <div className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-center">
                               <div className="text-lg font-bold text-orange-900 dark:text-orange-100">
                                 {volunteers.length}
                               </div>
-                              <div className="text-xs text-orange-600 dark:text-orange-400">Active Roles</div>
+                              <div className="text-xs text-orange-600 dark:text-orange-400">Total Assignments</div>
                             </div>
                             <div className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-center">
                               <div className="text-lg font-bold text-orange-900 dark:text-orange-100">
-                                {volunteers.filter(v => v.role === 'leader').length}
+                                {new Set(volunteers.map(v => v.events?.id)).size}
                               </div>
-                              <div className="text-xs text-orange-600 dark:text-orange-400">Leadership</div>
-                            </div>
-                            <div className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-center">
-                              <div className="text-lg font-bold text-orange-900 dark:text-orange-100">
-                                {volunteers.filter(v => v.role === 'volunteer').length}
-                              </div>
-                              <div className="text-xs text-orange-600 dark:text-orange-400">Support</div>
+                              <div className="text-xs text-orange-600 dark:text-orange-400">Events Volunteered</div>
                             </div>
                           </div>
                         </div>
@@ -2496,25 +2450,30 @@ export default function MemberProfile() {
                           <h4 className="text-sm font-semibold mb-3 text-blue-900 dark:text-blue-100">Volunteer Roles</h4>
                           <div className="space-y-2">
                             {volunteers.slice(0, 5).map((volunteer) => {
-                              const dateValue = volunteer.start_date || volunteer.created_at;
+                              const dateValue = volunteer.created_at;
                               const isValidDate = dateValue && !isNaN(new Date(dateValue).getTime());
                               
                               return (
                                 <div key={volunteer.id} className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                                   <div className="flex items-center justify-between mb-1">
                                     <div className="font-medium text-blue-900 dark:text-blue-100">
-                                      {volunteer.role_name || volunteer.events?.title || 'Event'}
-                                    </div>
-                                    <Badge variant={volunteer.role === 'leader' ? 'default' : 'secondary'} className="text-xs">
                                       {volunteer.role}
+                                    </div>
+                                    <Badge variant="secondary" className="text-xs">
+                                      Volunteer
                                     </Badge>
                                   </div>
                                   <div className="text-sm text-blue-600 dark:text-blue-400">
-                                    {volunteer.description || 'No description available'}
+                                    {volunteer.events?.title || 'Event'}
                                   </div>
+                                  {volunteer.notes && (
+                                    <div className="text-xs text-blue-500 dark:text-blue-400 mt-1">
+                                      {volunteer.notes}
+                                    </div>
+                                  )}
                                   <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                                    Since {isValidDate 
-                                      ? format(new Date(dateValue), 'MMM yyyy')
+                                    {isValidDate 
+                                      ? format(new Date(dateValue), 'MMM d, yyyy')
                                       : 'Date not available'
                                     }
                                   </div>
@@ -2540,84 +2499,18 @@ export default function MemberProfile() {
             </AccordionItem>
 
             <AccordionItem value="family">
-              <AccordionTrigger className="text-lg font-semibold">
-                <Heart className="h-5 w-5 mr-2" />
+              <AccordionTrigger className="text-lg font-semibold px-4">
+                <Heart className="h-5 w-5 mr-3" />
                 Family
               </AccordionTrigger>
               <AccordionContent>
-                <Card className="border-0 shadow-md">
-                  <CardContent className="p-4">
-                    {isFamilyLoading ? (
-                      <div className="text-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600 mx-auto mb-2"></div>
-                        <p className="text-sm text-pink-600">Loading...</p>
-                      </div>
-                    ) : familyInfo ? (
-                      <div className="space-y-4">
-                        {/* Family Overview */}
-                        <div>
-                          <h4 className="text-sm font-semibold mb-3 text-pink-900 dark:text-pink-100">Family Information</h4>
-                          <div className="p-3 bg-pink-50 dark:bg-pink-900/20 rounded-lg">
-                            <div className="text-sm font-medium text-pink-900 dark:text-pink-100">
-                              {familyInfo.name || familyInfo.family_name || 'Family'}
-                            </div>
-                            <div className="text-xs text-pink-600 dark:text-pink-400">
-                              {familyInfo.members?.length || 0} member{(familyInfo.members?.length || 0) !== 1 ? 's' : ''}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Family Members */}
-                        {familyInfo.members && familyInfo.members.length > 0 && (
-                          <div>
-                            <h4 className="text-sm font-semibold mb-3 text-teal-900 dark:text-teal-100">Family Members</h4>
-                            <div className="space-y-2">
-                              {familyInfo.members.map((familyMember) => (
-                                <div key={familyMember.id} className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg">
-                                  <div className="flex items-center justify-between mb-1">
-                                    <div className="font-medium text-teal-900 dark:text-teal-100">
-                                      {formatName(familyMember.firstname, familyMember.lastname)}
-                                    </div>
-                                    <div className="flex gap-1">
-                                      {familyMember.id === member?.id && (
-                                        <Badge variant="default" className="text-xs">
-                                          Current
-                                        </Badge>
-                                      )}
-                                      {familyMember.is_primary && (
-                                        <Badge variant="outline" className="text-xs">
-                                          Primary
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div className="text-sm text-teal-600 dark:text-teal-400">
-                                    {familyMember.member_type || 'member'} • {familyMember.relationship_type || 'family member'}
-                                    {familyMember.birth_date && ` • ${calculateAge(familyMember.birth_date)} years old`}
-                                  </div>
-                                  {familyMember.email && (
-                                    <div className="text-xs text-teal-600 dark:text-teal-400">
-                                      {familyMember.email}
-                                    </div>
-                                  )}
-                                  {familyMember.phone && (
-                                    <div className="text-xs text-teal-600 dark:text-teal-400">
-                                      {formatPhoneNumber(familyMember.phone)}
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="text-center py-4">
-                        <p className="text-sm text-muted-foreground">Not in a family</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                <FamilyAssignment 
+                  member={member} 
+                  onFamilyUpdate={() => {
+                    loadFamilyInfo(member.id);
+                    loadFamilyDonations();
+                  }}
+                />
               </AccordionContent>
             </AccordionItem>
           </Accordion>

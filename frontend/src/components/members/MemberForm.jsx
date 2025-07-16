@@ -691,6 +691,32 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
                 />
               </div>
             )}
+
+            {/* Personal Information */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="birth_date" className="text-sm font-medium">Birth Date</Label>
+                <Input
+                  id="birth_date"
+                  name="birth_date"
+                  type="date"
+                  value={formData.birth_date}
+                  onChange={handleFormChange}
+                  className="border-gray-300 dark:border-gray-600 focus:border-blue-500"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="join_date" className="text-sm font-medium">Join Date</Label>
+                <Input
+                  id="join_date"
+                  name="join_date"
+                  type="date"
+                  value={formData.join_date}
+                  onChange={handleFormChange}
+                  className="border-gray-300 dark:border-gray-600 focus:border-blue-500"
+                />
+              </div>
+            </div>
           </CardContent>
         </Card>
           </TabsContent>
@@ -837,42 +863,6 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
 
           {/* Family Information Tab */}
           <TabsContent value="family" className="flex-1 space-y-6 overflow-y-auto pr-2">
-        {/* Personal Information */}
-            <Card className="border-l-4 border-l-green-500 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-green-900 dark:text-green-100">
-              <User className="h-5 w-5" />
-              Personal Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="birth_date" className="text-sm font-medium">Birth Date</Label>
-                <Input
-                  id="birth_date"
-                  name="birth_date"
-                  type="date"
-                  value={formData.birth_date}
-                  onChange={handleFormChange}
-                  className="border-gray-300 dark:border-gray-600 focus:border-green-500"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="join_date" className="text-sm font-medium">Join Date</Label>
-                <Input
-                  id="join_date"
-                  name="join_date"
-                  type="date"
-                  value={formData.join_date}
-                  onChange={handleFormChange}
-                  className="border-gray-300 dark:border-gray-600 focus:border-green-500"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Guardian Information - Only for Children */}
         {isChild && (
               <Card className="border-l-4 border-l-orange-500 shadow-lg">
