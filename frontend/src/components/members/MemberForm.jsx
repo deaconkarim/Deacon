@@ -33,46 +33,38 @@ function centerAspectCrop(mediaWidth, mediaHeight, aspect) {
   );
 }
 
-const MemberForm = ({ initialData, onSave, onCancel }) => {
-  const [memberData, setMemberData] = useState({
-    ...initialData,
-    firstname: initialData.firstname || '',
-    lastname: initialData.lastname || '',
-    email: initialData.email || '',
-    phone: initialData.phone || '',
-    status: initialData.status || 'active',
-    image_url: initialData.image_url || '',
-    member_type: initialData.member_type || 'adult',
-    birth_date: initialData.birth_date || '',
-    gender: initialData.gender || 'male',
-    join_date: initialData.join_date || '',
-    anniversary_date: initialData.anniversary_date || '',
-    spouse_name: initialData.spouse_name || '',
-    has_children: initialData.has_children || false,
-    marital_status: initialData.marital_status || 'single',
-    occupation: initialData.occupation || '',
-    address: initialData.address || {
+export default function MemberForm({ member, onSubmit, onCancel }) {
+  // Add default values and null checks
+  const [formData, setFormData] = useState({
+    firstname: member?.firstname || '',
+    lastname: member?.lastname || '',
+    email: member?.email || '',
+    phone: member?.phone || '',
+    status: member?.status || 'active',
+    member_type: member?.member_type || 'adult',
+    gender: member?.gender || '',
+    birth_date: member?.birth_date || '',
+    join_date: member?.join_date || '',
+    occupation: member?.occupation || '',
+    address: member?.address || {
       street: '',
       city: '',
       state: '',
-      zip: '',
-      country: ''
+      zip: ''
     },
-    emergency_contact: initialData.emergency_contact || {
+    emergency_contact: member?.emergency_contact || {
       name: '',
       phone: '',
       relationship: ''
     },
-    notes: initialData.notes || '',
-    last_attendance_date: initialData.last_attendance_date || '',
-    attendance_frequency: initialData.attendance_frequency || 'regular',
-    ministry_involvement: initialData.ministry_involvement || [],
-    communication_preferences: initialData.communication_preferences || {
-      sms: true,
-      email: true,
+    notes: member?.notes || '',
+    communication_preferences: member?.communication_preferences || {
+      sms: false,
+      email: false,
       mail: false
     },
-    tags: initialData.tags || []
+    ministry_involvement: member?.ministry_involvement || [],
+    tags: member?.tags || []
   });
   
   const [isUploading, setIsUploading] = useState(false);
@@ -90,52 +82,52 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
   // Update memberData when initialData changes (for edit mode)
   useEffect(() => {
     const updatedMemberData = {
-      ...initialData,
-      firstname: initialData.firstname || '',
-      lastname: initialData.lastname || '',
-      email: initialData.email || '',
-      phone: initialData.phone || '',
-      status: initialData.status || 'active',
-      image_url: initialData.image_url || '',
-      member_type: initialData.member_type || 'adult',
-      birth_date: initialData.birth_date || '',
-      gender: initialData.gender || 'male',
-      join_date: initialData.join_date || '',
-      anniversary_date: initialData.anniversary_date || '',
-      spouse_name: initialData.spouse_name || '',
-      has_children: initialData.has_children || false,
-      marital_status: initialData.marital_status || 'single',
-      occupation: initialData.occupation || '',
-      address: initialData.address || {
+      ...member, // Use member data directly
+      firstname: member?.firstname || '',
+      lastname: member?.lastname || '',
+      email: member?.email || '',
+      phone: member?.phone || '',
+      status: member?.status || 'active',
+      image_url: member?.image_url || '',
+      member_type: member?.member_type || 'adult',
+      birth_date: member?.birth_date || '',
+      gender: member?.gender || 'male',
+      join_date: member?.join_date || '',
+      anniversary_date: member?.anniversary_date || '',
+      spouse_name: member?.spouse_name || '',
+      has_children: member?.has_children || false,
+      marital_status: member?.marital_status || 'single',
+      occupation: member?.occupation || '',
+      address: member?.address || {
         street: '',
         city: '',
         state: '',
         zip: '',
         country: ''
       },
-      emergency_contact: initialData.emergency_contact || {
+      emergency_contact: member?.emergency_contact || {
         name: '',
         phone: '',
         relationship: ''
       },
-      notes: initialData.notes || '',
-      last_attendance_date: initialData.last_attendance_date || '',
-      attendance_frequency: initialData.attendance_frequency || 'regular',
-      ministry_involvement: initialData.ministry_involvement || [],
-      communication_preferences: initialData.communication_preferences || {
+      notes: member?.notes || '',
+      last_attendance_date: member?.last_attendance_date || '',
+      attendance_frequency: member?.attendance_frequency || 'regular',
+      ministry_involvement: member?.ministry_involvement || [],
+      communication_preferences: member?.communication_preferences || {
         sms: true,
         email: true,
         mail: false
       },
-      tags: initialData.tags || []
+      tags: member?.tags || []
     };
-    setMemberData(updatedMemberData);
-  }, [initialData]);
+    setFormData(updatedMemberData);
+  }, [member]);
 
   // Load family addresses when member type changes to child or when member has family_id
   useEffect(() => {
     const loadFamilyAddresses = async () => {
-      if (memberData.member_type === 'child' || initialData.family_id) {
+      if (formData.member_type === 'child' || member?.family_id) {
         setIsLoadingFamilyAddresses(true);
         try {
           const families = await familyService.getFamilies();
@@ -165,12 +157,12 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
     };
 
     loadFamilyAddresses();
-  }, [memberData.member_type, initialData.family_id]);
+  }, [formData.member_type, member?.family_id]);
 
   // Load guardians when member is a child
   useEffect(() => {
     const loadGuardians = async () => {
-      if (memberData.member_type === 'child') {
+      if (formData.member_type === 'child') {
         try {
           // Load potential guardians (adult members)
           const { data: guardiansData, error: guardiansError } = await supabase
@@ -183,11 +175,11 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
           setGuardians(guardiansData);
 
           // If editing an existing child, load their guardian relationships
-          if (initialData.id) {
+          if (member?.id) {
             const { data: relationshipsData, error: relationshipsError } = await supabase
               .from('child_guardians')
               .select('guardian_id, relationship')
-              .eq('child_id', initialData.id);
+              .eq('child_id', member.id);
 
             if (relationshipsError) {
               console.error('Error loading guardian relationships:', relationshipsError);
@@ -210,18 +202,18 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
     };
 
     loadGuardians();
-  }, [memberData.member_type, initialData.id]);
+  }, [formData.member_type, member?.id]);
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
-    setMemberData(prev => ({
+    setFormData(prev => ({
       ...prev,
       [name]: value
     }));
   };
 
   const handleAddressChange = (field, value) => {
-    setMemberData(prev => ({
+    setFormData(prev => ({
       ...prev,
       address: {
         ...prev.address,
@@ -231,7 +223,7 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
   };
 
   const handleEmergencyContactChange = (field, value) => {
-    setMemberData(prev => ({
+    setFormData(prev => ({
       ...prev,
       emergency_contact: {
         ...prev.emergency_contact,
@@ -241,7 +233,7 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
   };
 
   const handleCommunicationPreferenceChange = (preference, value) => {
-    setMemberData(prev => ({
+    setFormData(prev => ({
       ...prev,
       communication_preferences: {
         ...prev.communication_preferences,
@@ -281,7 +273,7 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
   };
 
   const useFamilyAddress = (address) => {
-    setMemberData(prev => ({
+    setFormData(prev => ({
       ...prev,
       address: { ...address }
     }));
@@ -401,7 +393,7 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
       console.log('Got public URL:', urlData);
 
       // Update member data with new image URL
-      setMemberData(prev => ({
+      setFormData(prev => ({
         ...prev,
         image_url: urlData.publicUrl
       }));
@@ -426,7 +418,7 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!memberData.firstname || !memberData.lastname) {
+    if (!formData.firstname || !formData.lastname) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields.",
@@ -437,13 +429,13 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
 
     // Convert empty strings to null for optional fields
     const dataToSave = {
-      ...memberData,
-      email: memberData.email?.trim() || null,
-      phone: memberData.phone?.trim() || null,
-      birth_date: memberData.birth_date || null,
-      anniversary_date: memberData.anniversary_date || null,
-      last_attendance_date: memberData.last_attendance_date || null,
-      join_date: memberData.join_date || null
+      ...formData,
+      email: formData.email?.trim() || null,
+      phone: formData.phone?.trim() || null,
+      birth_date: formData.birth_date || null,
+      anniversary_date: formData.anniversary_date || null,
+      last_attendance_date: formData.last_attendance_date || null,
+      join_date: formData.join_date || null
     };
 
     // Remove guardian data from member data (we'll handle it separately)
@@ -452,11 +444,11 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
 
     try {
       // Save the member data first
-      const savedMember = await onSave(dataToSave);
+      const savedMember = await onSubmit(dataToSave);
 
       // Handle guardian relationships for children
-      if (isChild && savedMember) {
-        const childId = savedMember.id || initialData.id;
+      if (formData.member_type === 'child' && savedMember) {
+        const childId = savedMember.id || member?.id;
         
         if (childId) {
           // Delete existing guardian relationships
@@ -500,7 +492,7 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
   };
 
   // Check if member is a child
-  const isChild = memberData.member_type === 'child';
+  const isChild = formData.member_type === 'child';
 
   return (
     <>
@@ -515,9 +507,9 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-4">
             <Avatar className="h-32 w-32 border-4 border-white dark:border-gray-800 shadow-xl">
-              <AvatarImage src={memberData.image_url} />
+              <AvatarImage src={formData.image_url} />
               <AvatarFallback className="text-2xl font-semibold bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
-                {memberData.firstname?.charAt(0)}{memberData.lastname?.charAt(0)}
+                {formData.firstname?.charAt(0)}{formData.lastname?.charAt(0)}
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col items-center gap-2">
@@ -579,7 +571,7 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
                 <Input
                   id="firstname"
                   name="firstname"
-                  value={memberData.firstname}
+                  value={formData.firstname}
                   onChange={handleFormChange}
                   required
                   className="border-gray-300 dark:border-gray-600 focus:border-blue-500"
@@ -590,7 +582,7 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
                 <Input
                   id="lastname"
                   name="lastname"
-                  value={memberData.lastname}
+                  value={formData.lastname}
                   onChange={handleFormChange}
                   required
                   className="border-gray-300 dark:border-gray-600 focus:border-blue-500"
@@ -602,8 +594,8 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
               <div className="space-y-2">
                 <Label htmlFor="member_type" className="text-sm font-medium">Member Type</Label>
                 <Select
-                  value={memberData.member_type}
-                  onValueChange={(value) => setMemberData(prev => ({ ...prev, member_type: value }))}
+                  value={formData.member_type}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, member_type: value }))}
                 >
                   <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:border-blue-500">
                     <SelectValue placeholder="Select type" />
@@ -623,8 +615,8 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
               <div className="space-y-2">
                 <Label htmlFor="gender" className="text-sm font-medium">Gender</Label>
                 <Select
-                  value={memberData.gender}
-                  onValueChange={(value) => setMemberData(prev => ({ ...prev, gender: value }))}
+                  value={formData.gender}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}
                 >
                   <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:border-blue-500">
                     <SelectValue placeholder="Select gender" />
@@ -640,8 +632,8 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
               <div className="space-y-2">
                 <Label htmlFor="status" className="text-sm font-medium">Status</Label>
                 <Select
-                  value={memberData.status}
-                  onValueChange={(value) => setMemberData(prev => ({ ...prev, status: value }))}
+                  value={formData.status}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
                 >
                   <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:border-blue-500">
                     <SelectValue placeholder="Select status" />
@@ -664,7 +656,7 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
                     id="email"
                     name="email"
                     type="email"
-                    value={memberData.email}
+                    value={formData.email}
                     onChange={handleFormChange}
                     className="border-gray-300 dark:border-gray-600 focus:border-blue-500"
                     placeholder="member@example.com"
@@ -676,7 +668,7 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
                     id="phone"
                     name="phone"
                     type="tel"
-                    value={memberData.phone}
+                    value={formData.phone}
                     onChange={handleFormChange}
                     className="border-gray-300 dark:border-gray-600 focus:border-blue-500"
                     placeholder="(555) 123-4567"
@@ -692,13 +684,39 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
                 <Input
                   id="occupation"
                   name="occupation"
-                  value={memberData.occupation}
+                  value={formData.occupation}
                   onChange={handleFormChange}
                   placeholder="e.g., Teacher, Engineer, Student"
                   className="border-gray-300 dark:border-gray-600 focus:border-blue-500"
                 />
               </div>
             )}
+
+            {/* Personal Information */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="birth_date" className="text-sm font-medium">Birth Date</Label>
+                <Input
+                  id="birth_date"
+                  name="birth_date"
+                  type="date"
+                  value={formData.birth_date}
+                  onChange={handleFormChange}
+                  className="border-gray-300 dark:border-gray-600 focus:border-blue-500"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="join_date" className="text-sm font-medium">Join Date</Label>
+                <Input
+                  id="join_date"
+                  name="join_date"
+                  type="date"
+                  value={formData.join_date}
+                  onChange={handleFormChange}
+                  className="border-gray-300 dark:border-gray-600 focus:border-blue-500"
+                />
+              </div>
+            </div>
           </CardContent>
         </Card>
           </TabsContent>
@@ -722,7 +740,7 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
                         id="email"
                         name="email"
                         type="email"
-                        value={memberData.email}
+                        value={formData.email}
                         onChange={handleFormChange}
                         className="border-gray-300 dark:border-gray-600 focus:border-green-500"
                         placeholder="member@example.com"
@@ -734,7 +752,7 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
                         id="phone"
                         name="phone"
                         type="tel"
-                        value={memberData.phone}
+                        value={formData.phone}
                         onChange={handleFormChange}
                         className="border-gray-300 dark:border-gray-600 focus:border-green-500"
                         placeholder="(555) 123-4567"
@@ -791,7 +809,7 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
               <Label htmlFor="address_street" className="text-sm font-medium">Street Address</Label>
               <Input
                 id="address_street"
-                value={memberData.address.street}
+                value={formData.address.street}
                 onChange={(e) => handleAddressChange('street', e.target.value)}
                 placeholder="123 Main Street"
                 className="border-gray-300 dark:border-gray-600 focus:border-indigo-500"
@@ -802,7 +820,7 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
                 <Label htmlFor="address_city" className="text-sm font-medium">City</Label>
                 <Input
                   id="address_city"
-                  value={memberData.address.city}
+                  value={formData.address.city}
                   onChange={(e) => handleAddressChange('city', e.target.value)}
                   placeholder="City"
                   className="border-gray-300 dark:border-gray-600 focus:border-indigo-500"
@@ -812,7 +830,7 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
                 <Label htmlFor="address_state" className="text-sm font-medium">State</Label>
                 <Input
                   id="address_state"
-                  value={memberData.address.state}
+                  value={formData.address.state}
                   onChange={(e) => handleAddressChange('state', e.target.value)}
                   placeholder="State"
                   className="border-gray-300 dark:border-gray-600 focus:border-indigo-500"
@@ -822,7 +840,7 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
                 <Label htmlFor="address_zip" className="text-sm font-medium">ZIP Code</Label>
                 <Input
                   id="address_zip"
-                  value={memberData.address.zip}
+                  value={formData.address.zip}
                   onChange={(e) => handleAddressChange('zip', e.target.value)}
                   placeholder="12345"
                   className="border-gray-300 dark:border-gray-600 focus:border-indigo-500"
@@ -833,7 +851,7 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
               <Label htmlFor="address_country" className="text-sm font-medium">Country</Label>
               <Input
                 id="address_country"
-                value={memberData.address.country}
+                value={formData.address.country}
                 onChange={(e) => handleAddressChange('country', e.target.value)}
                 placeholder="Country"
                 className="border-gray-300 dark:border-gray-600 focus:border-indigo-500"
@@ -845,42 +863,6 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
 
           {/* Family Information Tab */}
           <TabsContent value="family" className="flex-1 space-y-6 overflow-y-auto pr-2">
-        {/* Personal Information */}
-            <Card className="border-l-4 border-l-green-500 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-green-900 dark:text-green-100">
-              <User className="h-5 w-5" />
-              Personal Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="birth_date" className="text-sm font-medium">Birth Date</Label>
-                <Input
-                  id="birth_date"
-                  name="birth_date"
-                  type="date"
-                  value={memberData.birth_date}
-                  onChange={handleFormChange}
-                  className="border-gray-300 dark:border-gray-600 focus:border-green-500"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="join_date" className="text-sm font-medium">Join Date</Label>
-                <Input
-                  id="join_date"
-                  name="join_date"
-                  type="date"
-                  value={memberData.join_date}
-                  onChange={handleFormChange}
-                  className="border-gray-300 dark:border-gray-600 focus:border-green-500"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Guardian Information - Only for Children */}
         {isChild && (
               <Card className="border-l-4 border-l-orange-500 shadow-lg">
@@ -957,8 +939,8 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
                   <div className="space-y-2">
                     <Label htmlFor="marital_status" className="text-sm font-medium">Marital Status</Label>
                     <Select
-                      value={memberData.marital_status}
-                      onValueChange={(value) => setMemberData(prev => ({ ...prev, marital_status: value }))}
+                      value={formData.marital_status}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, marital_status: value }))}
                     >
                       <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:border-pink-500">
                         <SelectValue placeholder="Select marital status" />
@@ -976,7 +958,7 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
                     <Input
                       id="spouse_name"
                       name="spouse_name"
-                      value={memberData.spouse_name}
+                      value={formData.spouse_name}
                       onChange={handleFormChange}
                       placeholder="Spouse's full name"
                       className="border-gray-300 dark:border-gray-600 focus:border-pink-500"
@@ -991,7 +973,7 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
                       id="anniversary_date"
                       name="anniversary_date"
                       type="date"
-                      value={memberData.anniversary_date}
+                      value={formData.anniversary_date}
                       onChange={handleFormChange}
                       className="border-gray-300 dark:border-gray-600 focus:border-pink-500"
                     />
@@ -999,8 +981,8 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
                   <div className="flex items-center space-x-2 p-3 bg-pink-50 dark:bg-pink-950/20 rounded-lg border border-pink-200 dark:border-pink-800">
                     <Checkbox
                       id="has_children"
-                      checked={memberData.has_children}
-                      onCheckedChange={(checked) => setMemberData(prev => ({ ...prev, has_children: checked }))}
+                      checked={formData.has_children}
+                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, has_children: checked }))}
                       className="border-pink-300 data-[state=checked]:bg-pink-500"
                     />
                     <Label htmlFor="has_children" className="text-sm font-medium text-pink-900 dark:text-pink-100">Has Children</Label>
@@ -1027,7 +1009,7 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
                 <Label htmlFor="emergency_name" className="text-sm font-medium">Emergency Contact Name</Label>
                 <Input
                   id="emergency_name"
-                  value={memberData.emergency_contact.name}
+                  value={formData.emergency_contact.name}
                   onChange={(e) => handleEmergencyContactChange('name', e.target.value)}
                   placeholder="Emergency contact name"
                   className="border-gray-300 dark:border-gray-600 focus:border-red-500"
@@ -1037,7 +1019,7 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
                 <Label htmlFor="emergency_phone" className="text-sm font-medium">Emergency Contact Phone</Label>
                 <Input
                   id="emergency_phone"
-                  value={memberData.emergency_contact.phone}
+                  value={formData.emergency_contact.phone}
                   onChange={(e) => handleEmergencyContactChange('phone', e.target.value)}
                   placeholder="Emergency contact phone"
                   className="border-gray-300 dark:border-gray-600 focus:border-red-500"
@@ -1049,7 +1031,7 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
               <Label htmlFor="emergency_relationship" className="text-sm font-medium">Relationship</Label>
               <Input
                 id="emergency_relationship"
-                value={memberData.emergency_contact.relationship}
+                value={formData.emergency_contact.relationship}
                 onChange={(e) => handleEmergencyContactChange('relationship', e.target.value)}
                 placeholder="e.g., Spouse, Parent, Friend"
                 className="border-gray-300 dark:border-gray-600 focus:border-red-500"
@@ -1071,7 +1053,7 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
               <div className="flex items-center space-x-3 p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
                 <Checkbox
                   id="sms_preference"
-                  checked={memberData.communication_preferences.sms}
+                  checked={formData.communication_preferences.sms}
                   onCheckedChange={(checked) => handleCommunicationPreferenceChange('sms', checked)}
                   className="border-purple-300 data-[state=checked]:bg-purple-500"
                 />
@@ -1080,7 +1062,7 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
               <div className="flex items-center space-x-3 p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
                 <Checkbox
                   id="email_preference"
-                  checked={memberData.communication_preferences.email}
+                  checked={formData.communication_preferences.email}
                   onCheckedChange={(checked) => handleCommunicationPreferenceChange('email', checked)}
                   className="border-purple-300 data-[state=checked]:bg-purple-500"
                 />
@@ -1089,7 +1071,7 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
               <div className="flex items-center space-x-3 p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
                 <Checkbox
                   id="mail_preference"
-                  checked={memberData.communication_preferences.mail}
+                  checked={formData.communication_preferences.mail}
                   onCheckedChange={(checked) => handleCommunicationPreferenceChange('mail', checked)}
                   className="border-purple-300 data-[state=checked]:bg-purple-500"
                 />
@@ -1113,7 +1095,7 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
               <Textarea
                 id="notes"
                 name="notes"
-                value={memberData.notes}
+                value={formData.notes}
                 onChange={handleFormChange}
                 placeholder="Any additional notes about this member..."
                 rows={4}
@@ -1189,6 +1171,4 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
       </Dialog>
     </>
   );
-};
-
-export default MemberForm; 
+}; 

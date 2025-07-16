@@ -26,7 +26,13 @@ import {
   DollarSign,
   MessageSquare,
   Hash,
-  Handshake
+  Handshake,
+  ChevronRight,
+  Star,
+  Activity,
+  Gift,
+  Award,
+  PieChart
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,9 +41,11 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { getMembers, getMemberAttendance, getMemberGroups, getMemberVolunteers, updateMember, deleteMember } from '../lib/data';
 import { familyService } from '../lib/familyService';
 import MemberForm from '@/components/members/MemberForm';
+import FamilyAssignment from '@/components/members/FamilyAssignment';
 import { formatName, getInitials, formatPhoneNumber } from '@/lib/utils/formatters';
 import { supabase } from '@/lib/supabase';
 import { getDonations } from '@/lib/donationService';
@@ -58,6 +66,13 @@ const itemVariants = {
       stiffness: 100
     }
   }
+};
+
+// Helper function to validate dates
+const isValidDate = (dateString) => {
+  if (!dateString) return false;
+  const date = new Date(dateString);
+  return !isNaN(date.getTime());
 };
 
 export default function MemberProfile() {
@@ -84,6 +99,9 @@ export default function MemberProfile() {
   const [isVolunteersLoading, setIsVolunteersLoading] = useState(true);
   const [donations, setDonations] = useState([]);
   const [isDonationsLoading, setIsDonationsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [familyDonations, setFamilyDonations] = useState([]);
+  const [isFamilyDonationsLoading, setIsFamilyDonationsLoading] = useState(false);
 
   useEffect(() => {
     loadMemberData();
@@ -126,15 +144,19 @@ export default function MemberProfile() {
   const loadAttendance = async (memberId) => {
     setIsAttendanceLoading(true);
     try {
-      const data = await getMemberAttendance(memberId);
-      setAttendance(data);
+      const { data, error } = await supabase
+        .from('event_attendance')
+        .select(`
+          *,
+          events (*)
+        `)
+        .eq('member_id', memberId)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setAttendance(data || []);
     } catch (error) {
       console.error('Error loading attendance:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load attendance history",
-        variant: "destructive",
-      });
     } finally {
       setIsAttendanceLoading(false);
     }
@@ -143,15 +165,41 @@ export default function MemberProfile() {
   const loadGroups = async (memberId) => {
     setIsGroupsLoading(true);
     try {
-      const data = await getMemberGroups(memberId);
-      setGroups(data);
+      const { data, error } = await supabase
+        .from('group_members')
+        .select(`
+          *,
+          groups (
+            *,
+            leader:members!groups_leader_id_fkey(firstname, lastname)
+          )
+        `)
+        .eq('member_id', memberId);
+      
+      if (error) throw error;
+      
+      // Process the data to determine actual roles
+      const processedGroups = (data || []).map(groupMembership => {
+        const group = groupMembership.groups;
+        
+        // Check if this member is the leader of the group
+        const isLeader = group?.leader_id === memberId;
+        
+        return {
+          ...groupMembership,
+          role: isLeader ? 'leader' : (groupMembership.role || 'member'),
+          groups: {
+            ...group,
+            leader_name: group?.leader ? 
+              `${group.leader.firstname} ${group.leader.lastname}` : 
+              'No leader assigned'
+          }
+        };
+      });
+      
+      setGroups(processedGroups);
     } catch (error) {
       console.error('Error loading groups:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load group memberships",
-        variant: "destructive",
-      });
     } finally {
       setIsGroupsLoading(false);
     }
@@ -199,14 +247,12 @@ export default function MemberProfile() {
       const memberFamily = families.find(family => 
         family.members.some(member => member.id === memberId)
       );
-      setFamilyInfo(memberFamily);
+      
+      if (memberFamily) {
+        setFamilyInfo(memberFamily);
+      }
     } catch (error) {
       console.error('Error loading family info:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load family information",
-        variant: "destructive",
-      });
     } finally {
       setIsFamilyLoading(false);
     }
@@ -215,44 +261,18 @@ export default function MemberProfile() {
   const loadGuardians = async (childId) => {
     setIsGuardiansLoading(true);
     try {
-      const { data: guardianRelationships, error } = await supabase
+      const { data, error } = await supabase
         .from('child_guardians')
         .select(`
-          guardian_id,
-          relationship,
-          is_primary,
-          guardians:guardian_id (
-            id,
-            firstname,
-            lastname,
-            email,
-            phone,
-            image_url
-          )
+          *,
+          guardian:members!child_guardians_guardian_id_fkey(*)
         `)
         .eq('child_id', childId);
-
+      
       if (error) throw error;
-
-      const guardianData = guardianRelationships.map(rel => ({
-        id: rel.guardians.id,
-        firstname: rel.guardians.firstname,
-        lastname: rel.guardians.lastname,
-        email: rel.guardians.email,
-        phone: rel.guardians.phone,
-        image_url: rel.guardians.image_url,
-        relationship: rel.relationship,
-        is_primary: rel.is_primary
-      }));
-
-      setGuardians(guardianData);
+      setGuardians(data || []);
     } catch (error) {
       console.error('Error loading guardians:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load guardian information",
-        variant: "destructive",
-      });
     } finally {
       setIsGuardiansLoading(false);
     }
@@ -273,64 +293,49 @@ export default function MemberProfile() {
   const loadPastEvents = async () => {
     setIsEventsLoading(true);
     try {
-      const { data: events, error } = await supabase
+      const { data, error } = await supabase
         .from('events')
         .select('*')
         .lt('start_date', new Date().toISOString())
-        .eq('attendance_type', 'check-in')
-        .order('start_date', { ascending: false });
-
+        .order('start_date', { ascending: false })
+        .limit(20);
+      
       if (error) throw error;
-
-      // Filter out events the member has already attended
-      const attendedEventIds = attendance.map(a => a.events.id);
-      const availableEvents = events.filter(event => !attendedEventIds.includes(event.id));
-      setPastEvents(availableEvents);
+      setPastEvents(data || []);
     } catch (error) {
       console.error('Error loading past events:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load past events",
-        variant: "destructive",
-      });
     } finally {
       setIsEventsLoading(false);
     }
   };
 
   const handleRetroCheckIn = async () => {
-    if (!selectedEvent || !member) return;
-
+    if (!selectedEvent) return;
+    
     try {
       const { error } = await supabase
         .from('event_attendance')
         .insert({
           event_id: selectedEvent.id,
           member_id: member.id,
-          status: 'checked-in'
+          status: 'checked-in'  // Valid status values: 'attending', 'checked-in', 'declined'
         });
-
+      
       if (error) throw error;
-
-      // Refresh attendance data
-      await loadAttendance(member.id);
       
-      // Remove the event from available past events
-      setPastEvents(prev => prev.filter(e => e.id !== selectedEvent.id));
-      
-      // Close dialog and reset selection
-      setIsRetroCheckInOpen(false);
-      setSelectedEvent(null);
-
       toast({
         title: "Success",
-        description: `Successfully checked in to ${selectedEvent.title}`
+        description: `Marked as attended for ${selectedEvent.title}`,
       });
+      
+      setIsRetroCheckInOpen(false);
+      setSelectedEvent(null);
+      loadAttendance(member.id);
     } catch (error) {
-      console.error('Error checking in:', error);
+      console.error('Error marking attendance:', error);
       toast({
         title: "Error",
-        description: "Failed to check in to event",
+        description: "Failed to mark attendance",
         variant: "destructive",
       });
     }
@@ -338,18 +343,18 @@ export default function MemberProfile() {
 
   const handleEditMember = async (memberData) => {
     try {
-      const updatedMember = await updateMember(member.id, memberData);
-      setMember(updatedMember);
+      await updateMember(member.id, memberData);
+      setMember({ ...member, ...memberData });
       setIsEditDialogOpen(false);
       toast({
         title: "Success",
-        description: "Member updated successfully"
+        description: "Profile updated successfully",
       });
     } catch (error) {
       console.error('Error updating member:', error);
       toast({
         title: "Error",
-        description: "Failed to update member",
+        description: "Failed to update profile",
         variant: "destructive",
       });
     }
@@ -358,10 +363,9 @@ export default function MemberProfile() {
   const handleDeleteMember = async () => {
     try {
       await deleteMember(member.id);
-      setIsDeleteDialogOpen(false);
       toast({
         title: "Success",
-        description: "Member deleted successfully"
+        description: "Member deleted successfully",
       });
       navigate('/members');
     } catch (error) {
@@ -374,1557 +378,2176 @@ export default function MemberProfile() {
     }
   };
 
+  // Load family donations when family info is available
+  useEffect(() => {
+    if (familyInfo && donations.length === 0) {
+      loadFamilyDonations();
+    }
+  }, [familyInfo, donations]);
+
+  const loadFamilyDonations = async () => {
+    if (!familyInfo || !familyInfo.members) return;
+    
+    setIsFamilyDonationsLoading(true);
+    try {
+      // Get all family member IDs
+      const familyMemberIds = familyInfo.members.map(member => member.id);
+      
+      // First, let's check what columns exist in the donations table
+      const { data: donationsData, error } = await supabase
+        .from('donations')
+        .select('*')
+        .limit(1);
+      
+      if (error) {
+        console.error('Error checking donations table structure:', error);
+        return;
+      }
+      
+      // If we have data, let's see what columns are available
+      if (donationsData && donationsData.length > 0) {
+        console.log('Donations table columns:', Object.keys(donationsData[0]));
+      }
+      
+      // Try different possible column names for member relationship
+      let familyDonationsData = [];
+      
+      // Try 'donor_id' first (common naming convention)
+      try {
+        const { data, error: donorError } = await supabase
+          .from('donations')
+          .select('*')
+          .in('donor_id', familyMemberIds)
+          .order('date', { ascending: false });
+        
+        if (!donorError && data) {
+          familyDonationsData = data;
+        }
+      } catch (e) {
+        console.log('donor_id column not found, trying other options...');
+      }
+      
+      // If no data found with donor_id, try 'user_id'
+      if (familyDonationsData.length === 0) {
+        try {
+          const { data, error: userError } = await supabase
+            .from('donations')
+            .select('*')
+            .in('user_id', familyMemberIds)
+            .order('date', { ascending: false });
+          
+          if (!userError && data) {
+            familyDonationsData = data;
+          }
+        } catch (e) {
+          console.log('user_id column not found, trying other options...');
+        }
+      }
+      
+      // If still no data, try 'member_id' (original attempt)
+      if (familyDonationsData.length === 0) {
+        try {
+          const { data, error: memberError } = await supabase
+            .from('donations')
+            .select('*')
+            .in('member_id', familyMemberIds)
+            .order('date', { ascending: false });
+          
+          if (!memberError && data) {
+            familyDonationsData = data;
+          }
+        } catch (e) {
+          console.log('member_id column not found');
+        }
+      }
+      
+      // If still no data, try without any member filter to see what's available
+      if (familyDonationsData.length === 0) {
+        const { data: allDonations, error: allError } = await supabase
+          .from('donations')
+          .select('*')
+          .limit(5);
+        
+        if (!allError && allDonations && allDonations.length > 0) {
+          console.log('Sample donation record:', allDonations[0]);
+          console.log('Available columns:', Object.keys(allDonations[0]));
+        }
+      }
+      
+      setFamilyDonations(familyDonationsData || []);
+    } catch (error) {
+      console.error('Error loading family donations:', error);
+    } finally {
+      setIsFamilyDonationsLoading(false);
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4">
+        <div className="max-w-md mx-auto space-y-4">
+          <div className="animate-pulse">
+            <div className="h-16 bg-slate-200 dark:bg-slate-700 rounded-lg mb-4"></div>
+            <div className="h-32 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-4"></div>
+            <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded mb-2"></div>
+            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded mb-4"></div>
+            <div className="space-y-2">
+              <div className="h-12 bg-slate-200 dark:bg-slate-700 rounded"></div>
+              <div className="h-12 bg-slate-200 dark:bg-slate-700 rounded"></div>
+              <div className="h-12 bg-slate-200 dark:bg-slate-700 rounded"></div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!member) {
-    return null;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4">
+        <div className="max-w-md mx-auto text-center">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">Member Not Found</h1>
+          <Button onClick={() => navigate('/members')}>Back to Members</Button>
+        </div>
+      </div>
+    );
   }
+
+  // Helper function to get donation display data
+  const getDonationDisplayData = () => {
+    if (donations.length > 0) {
+      return {
+        donations: donations,
+        isLoading: isDonationsLoading,
+        isFamilyData: false,
+        title: "Giving Overview",
+        description: `${member?.firstname || 'Member'}'s donation records and statistics`
+      };
+    } else if (familyDonations.length > 0) {
+      return {
+        donations: familyDonations,
+        isLoading: isFamilyDonationsLoading,
+        isFamilyData: true,
+        title: "Family Giving Overview",
+        description: `${familyInfo?.name || 'Family'} donation records and statistics`
+      };
+    } else {
+      return {
+        donations: [],
+        isLoading: isDonationsLoading,
+        isFamilyData: false,
+        title: "Giving Overview",
+        description: "No donation records found"
+      };
+    }
+  };
 
   return (
     <motion.div 
-      className="space-y-8"
+      className="min-h-screen bg-white dark:bg-slate-900"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
     >
-      {/* Hero Header Section */}
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-background"></div>
-        <div className="relative">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
-            <div className="flex items-center gap-4 min-w-0">
+      {/* Mobile Header - Hidden on Desktop */}
+      <div className="lg:hidden sticky top-0 z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700">
+        <div className="flex items-center justify-between p-4">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate('/members')}
-                className="hover:bg-muted/50 transition-colors flex-shrink-0"
+            className="hover:bg-slate-100 dark:hover:bg-slate-800"
           >
-                <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-5 w-5" />
           </Button>
-              <div className="min-w-0">
-                <h1 className="text-2xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent truncate">
-                  {formatName(member.firstname, member.lastname)}
-                </h1>
-                <p className="text-muted-foreground mt-2 text-base sm:text-lg">
-                  Member Profile & Information
-            </p>
+          <div className="flex-1 text-center">
+            <h1 className="text-lg font-semibold text-slate-900 dark:text-white truncate">
+              {member ? formatName(member.firstname, member.lastname) : 'Loading...'}
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Member Profile</p>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => member && setIsEditDialogOpen(true)}
+              disabled={!member}
+              className="hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => member && setIsDeleteDialogOpen(true)}
+              disabled={!member}
+              className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
           </div>
         </div>
-            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-          <Button
-            variant="outline"
-            onClick={() => setIsEditDialogOpen(true)}
-                className="shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex-1 sm:flex-none"
-          >
-            <Edit className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Edit Profile</span>
-                <span className="sm:hidden">Edit</span>
-          </Button>
-          <Button
-            variant="outline"
-                className="text-red-500 hover:text-red-700 hover:bg-red-50 border-red-200 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex-1 sm:flex-none"
-            onClick={() => setIsDeleteDialogOpen(true)}
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Delete</span>
-                <span className="sm:hidden">Delete</span>
-          </Button>
+      </div>
+
+      {/* Desktop Header - Hidden on Mobile */}
+      <div className="hidden lg:block bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/members')}
+                className="hover:bg-slate-100 dark:hover:bg-slate-700"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Members
+              </Button>
+              <div className="h-6 w-px bg-slate-300 dark:bg-slate-600"></div>
+              <div>
+                <h1 className="text-xl font-semibold text-slate-900 dark:text-white">
+                  {member ? formatName(member.firstname, member.lastname) : 'Loading...'}
+                </h1>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Member Profile</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => member && setIsEditDialogOpen(true)}
+                disabled={!member}
+                className="hover:bg-slate-50 dark:hover:bg-slate-700"
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Profile
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => member && setIsDeleteDialogOpen(true)}
+                disabled={!member}
+                className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Stats Overview Cards */}
-      <motion.div 
-        className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
-        variants={itemVariants}
-      >
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 border-green-200 dark:border-green-800 shadow-lg hover:shadow-xl transition-all duration-200">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-green-700 dark:text-green-300">Attendance</CardTitle>
-            <div className="h-8 w-8 bg-green-500 rounded-lg flex items-center justify-center">
-              <Church className="h-4 w-4 text-white" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-900 dark:text-green-100">
-              {attendance.length}
-            </div>
-            <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-              Events attended
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950/20 dark:to-emerald-900/20 border-emerald-200 dark:border-emerald-800 shadow-lg hover:shadow-xl transition-all duration-200">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-emerald-700 dark:text-emerald-300">Giving</CardTitle>
-            <div className="h-8 w-8 bg-emerald-500 rounded-lg flex items-center justify-center">
-              <DollarSign className="h-4 w-4 text-white" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">
-              {donations.length}
-            </div>
-            <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
-              Total gifts
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border-purple-200 dark:border-purple-800 shadow-lg hover:shadow-xl transition-all duration-200">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-purple-700 dark:text-purple-300">Groups</CardTitle>
-            <div className="h-8 w-8 bg-purple-500 rounded-lg flex items-center justify-center">
-              <Users className="h-4 w-4 text-white" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
-              {groups.length}
-            </div>
-            <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
-              Group memberships
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 border-orange-200 dark:border-orange-800 shadow-lg hover:shadow-xl transition-all duration-200">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-orange-700 dark:text-orange-300">Volunteering</CardTitle>
-            <div className="h-8 w-8 bg-orange-500 rounded-lg flex items-center justify-center">
-              <Handshake className="h-4 w-4 text-white" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">
-              {volunteers.length}
-            </div>
-            <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
-              Volunteer roles
-            </p>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* Main Content Grid */}
-      <div className="grid gap-6 sm:gap-8 lg:grid-cols-3">
+      {/* Mobile Content */}
+      <div className="lg:hidden p-4 space-y-6">
         {/* Profile Card */}
-        <div className="lg:col-span-1">
-          <motion.div variants={itemVariants}>
-            <Card className="overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-background via-background to-muted/20">
-              <div className="relative h-32 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/5">
-                <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent"></div>
-              </div>
-              <CardHeader className="pb-6 relative">
-                <div className="flex flex-col items-center text-center -mt-16">
-                  <div className="relative mb-6">
-                    <div className="relative">
-                      <Avatar className="h-32 w-32 ring-8 ring-background shadow-2xl">
-                  <AvatarImage src={member.image_url} />
-                        <AvatarFallback className="text-4xl font-bold bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
-                    {getInitials(member.firstname, member.lastname)}
-                  </AvatarFallback>
-                </Avatar>
-                      <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-green-500 rounded-full border-4 border-background flex items-center justify-center shadow-lg">
-                        <div className="w-4 h-4 bg-white rounded-full"></div>
-                      </div>
-                    </div>
+        <motion.div variants={itemVariants}>
+          <Card className="overflow-hidden border-0 shadow-lg bg-white dark:bg-slate-800">
+            <div className="relative h-32 bg-gradient-to-r from-blue-500 to-indigo-600">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-indigo-600/20"></div>
+            </div>
+            <CardContent className="p-6 -mt-16">
+              <div className="flex flex-col items-center text-center">
+                <div className="relative mb-4">
+                  <Avatar className="h-28 w-28 ring-4 ring-white dark:ring-slate-800 shadow-lg">
+                    <AvatarImage src={member.image_url} />
+                    <AvatarFallback className="text-2xl font-bold bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+                      {getInitials(member.firstname, member.lastname)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-green-500 rounded-full border-2 border-white dark:border-slate-800 flex items-center justify-center">
+                    <div className="w-2.5 h-2.5 bg-white rounded-full"></div>
                   </div>
-                  <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent mb-2">
-                    {formatName(member.firstname, member.lastname)}
-                  </CardTitle>
-                  <div className="flex flex-wrap gap-2 justify-center mb-4">
-                    <Badge 
-                      variant={member.status === 'active' ? 'default' : 'secondary'} 
-                      className="font-semibold shadow-sm text-sm px-3 py-1"
-                    >
+                </div>
+                
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                  {formatName(member.firstname, member.lastname)}
+                </h2>
+                
+                <div className="flex flex-wrap gap-2 justify-center mb-3">
+                  <Badge 
+                    variant={member.status === 'active' ? 'default' : 'secondary'} 
+                    className="text-sm"
+                  >
                     {member.status}
                   </Badge>
                   {member.member_type === 'child' ? (
-                      <Badge variant="secondary" className="text-xs font-semibold shadow-sm px-3 py-1">
-                        <Baby className="w-3 h-3 mr-1" />
-                        Child
-                      </Badge>
+                    <Badge variant="secondary" className="text-sm">
+                      <Baby className="w-3 h-3 mr-1" />
+                      Child
+                    </Badge>
                   ) : (
-                      <Badge variant="outline" className="text-xs font-semibold shadow-sm px-3 py-1">
-                        <User className="w-3 h-3 mr-1" />
-                        Adult
-                      </Badge>
+                    <Badge variant="outline" className="text-sm">
+                      <User className="w-3 h-3 mr-1" />
+                      Adult
+                    </Badge>
                   )}
                   {member.role !== 'member' && (
-                      <Badge variant="outline" className="text-xs capitalize font-semibold shadow-sm px-3 py-1">
-                        <Crown className="w-3 h-3 mr-1" />
-                        {member.role}
-                      </Badge>
+                    <Badge variant="outline" className="text-sm capitalize">
+                      <Crown className="w-3 h-3 mr-1" />
+                      {member.role}
+                    </Badge>
                   )}
                 </div>
+                
                 {member.occupation && (
-                    <div className="bg-muted/50 px-4 py-2 rounded-full">
-                      <p className="text-sm text-muted-foreground font-medium">
-                        {member.occupation}
-                      </p>
-                    </div>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-full">
+                    {member.occupation}
+                  </p>
                 )}
               </div>
-            </CardHeader>
-              
-              <CardContent className="p-6 space-y-6">
-                {/* Contact Information */}
-                {(member.email || member.phone) && (
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-semibold text-primary flex items-center gap-2">
-                      <Mail className="h-4 w-4" />
-                      Contact Information
-                    </h4>
-                    <div className="space-y-3">
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Activity Stats */}
+        <motion.div variants={itemVariants}>
+          <div className="grid grid-cols-2 gap-3">
+            <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20">
+              <CardContent className="p-4 text-center">
+                <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center mx-auto mb-2">
+                  <Church className="h-5 w-5 text-white" />
+                </div>
+                <div className="text-2xl font-bold text-green-900 dark:text-green-100">
+                  {attendance.length}
+                </div>
+                <p className="text-xs text-green-600 dark:text-green-400">Events attended</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-md bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20">
+              <CardContent className="p-4 text-center">
+                <div className="w-10 h-10 bg-emerald-500 rounded-lg flex items-center justify-center mx-auto mb-2">
+                  <DollarSign className="h-5 w-5 text-white" />
+                </div>
+                <div className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">
+                  {(() => {
+                    const donationData = getDonationDisplayData();
+                    return donationData.donations.length;
+                  })()}
+                </div>
+                <p className="text-xs text-emerald-600 dark:text-emerald-400">Total gifts</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
+              <CardContent className="p-4 text-center">
+                <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center mx-auto mb-2">
+                  <Users className="h-5 w-5 text-white" />
+                </div>
+                <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+                  {groups.length}
+                </div>
+                <p className="text-xs text-purple-600 dark:text-purple-400">Group memberships</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-md bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20">
+              <CardContent className="p-4 text-center">
+                <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center mx-auto mb-2">
+                  <Handshake className="h-5 w-5 text-white" />
+                </div>
+                <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">
+                  {volunteers.length}
+                </div>
+                <p className="text-xs text-orange-600 dark:text-orange-400">Volunteer roles</p>
+              </CardContent>
+            </Card>
+          </div>
+        </motion.div>
+
+        {/* Contact Information */}
+        {(member.email || member.phone) && (
+          <motion.div variants={itemVariants}>
+            <Card className="border-0 shadow-md">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-blue-500" />
+                  Contact Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
                 {member.email && (
-                        <div className="flex items-center p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800 hover:shadow-md transition-all duration-200">
-                          <Mail className="mr-3 h-4 w-4 text-blue-600" />
-                          <span className="font-medium text-blue-900 dark:text-blue-100">{member.email}</span>
+                  <div className="flex items-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <Mail className="mr-3 h-4 w-4 text-blue-500" />
+                    <span className="text-sm font-medium text-slate-900 dark:text-white">{member.email}</span>
                   </div>
                 )}
                 {member.phone && (
-                        <div className="flex items-center p-4 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 rounded-xl border border-green-200 dark:border-green-800 hover:shadow-md transition-all duration-200">
-                          <Phone className="mr-3 h-4 w-4 text-green-600" />
-                          <span className="font-medium text-green-900 dark:text-green-100">{formatPhoneNumber(member.phone)}</span>
+                  <div className="flex items-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                    <Phone className="mr-3 h-4 w-4 text-green-500" />
+                    <span className="text-sm font-medium text-slate-900 dark:text-white">{formatPhoneNumber(member.phone)}</span>
                   </div>
                 )}
-                    </div>
-                  </div>
-                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
-                {/* Personal Information */}
-                <div className="space-y-4">
-                  <h4 className="text-sm font-semibold text-primary flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    Personal Information
-                  </h4>
-                  <div className="space-y-3">
-                  {member.gender && (
-                      <div className="flex items-center p-4 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
-                        <User className="mr-3 h-4 w-4 text-purple-600" />
-                        <span className="font-medium text-purple-900 dark:text-purple-100 capitalize">{member.gender}</span>
-                    </div>
-                  )}
-                  {member.birth_date && (
-                      <div className="flex items-center p-4 bg-gradient-to-r from-pink-50 to-pink-100 dark:from-pink-950/20 dark:to-pink-900/20 rounded-xl border border-pink-200 dark:border-pink-800">
-                        <CalendarIcon className="mr-3 h-4 w-4 text-pink-600" />
-                        <div>
-                          <span className="font-medium text-pink-900 dark:text-pink-100">Birth: {format(new Date(member.birth_date), 'MMM d, yyyy')}</span>
-                          {calculateAge(member.birth_date) && (
-                            <div className="text-sm text-pink-600 dark:text-pink-400">({calculateAge(member.birth_date)} years old)</div>
-                          )}
-                        </div>
-                    </div>
-                  )}
-                  {member.join_date && (
-                      <div className="flex items-center p-4 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 rounded-xl border border-orange-200 dark:border-orange-800">
-                        <Calendar className="mr-3 h-4 w-4 text-orange-600" />
-                        <span className="font-medium text-orange-900 dark:text-orange-100">Joined: {format(new Date(member.join_date), 'MMM d, yyyy')}</span>
-                    </div>
-                  )}
-                  </div>
+        {/* Personal Information */}
+        <motion.div variants={itemVariants}>
+          <Card className="border-0 shadow-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <User className="h-4 w-4 text-purple-500" />
+                Personal Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {member.gender && (
+                <div className="flex items-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                  <User className="mr-3 h-4 w-4 text-purple-500" />
+                  <span className="text-sm font-medium text-slate-900 dark:text-white capitalize">{member.gender}</span>
                 </div>
-
-                {/* Address Information */}
-                {member.address && member.address.street && (
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-semibold text-primary flex items-center gap-2">
-                      <MapPin className="h-4 w-4" />
-                      Address
-                    </h4>
-                    <div className="p-4 bg-gradient-to-r from-indigo-50 to-indigo-100 dark:from-indigo-950/20 dark:to-indigo-900/20 rounded-xl border border-indigo-200 dark:border-indigo-800">
-                      <div className="flex items-start">
-                        <MapPin className="mr-3 h-4 w-4 text-indigo-600 mt-0.5" />
-                        <div className="space-y-1">
-                          <div className="font-medium text-indigo-900 dark:text-indigo-100">{member.address.street}</div>
-                          <div className="text-indigo-600 dark:text-indigo-400">
-                          {[
-                        member.address.city,
-                        member.address.state,
-                        member.address.zip
-                      ].filter(Boolean).join(', ')}
-                  </div>
-                        {member.address.country && (
-                            <div className="text-indigo-600 dark:text-indigo-400">{member.address.country}</div>
-                )}
-                        </div>
-                </div>
-              </div>
-                  </div>
-                )}
-
-                {/* Communication Preferences */}
-                {member.communication_preferences && (
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-semibold text-primary flex items-center gap-2">
-                      <MessageSquare className="h-4 w-4" />
-                      Communication Preferences
-                    </h4>
-                    <div className="p-4 bg-gradient-to-r from-teal-50 to-teal-100 dark:from-teal-950/20 dark:to-teal-900/20 rounded-xl border border-teal-200 dark:border-teal-800">
-                    <div className="flex flex-wrap gap-2">
-                      {member.communication_preferences.sms && (
-                          <Badge variant="default" className="text-xs font-medium shadow-sm bg-teal-500 hover:bg-teal-600">
-                            <MessageSquare className="w-3 h-3 mr-1" />
-                            SMS
-                          </Badge>
-                      )}
-                      {member.communication_preferences.email && (
-                          <Badge variant="default" className="text-xs font-medium shadow-sm bg-blue-500 hover:bg-blue-600">
-                            <Mail className="w-3 h-3 mr-1" />
-                            Email
-                          </Badge>
-                      )}
-                      {member.communication_preferences.mail && (
-                          <Badge variant="default" className="text-xs font-medium shadow-sm bg-gray-500 hover:bg-gray-600">
-                            <FileText className="w-3 h-3 mr-1" />
-                            Mail
-                          </Badge>
-                      )}
-                      </div>
+              )}
+              {member.birth_date && (
+                <div className="flex items-center p-3 bg-pink-50 dark:bg-pink-900/20 rounded-lg">
+                  <Calendar className="mr-3 h-4 w-4 text-pink-500" />
+                  <div>
+                    <div className="text-sm font-medium text-pink-900 dark:text-pink-100">
+                      Birthday: {isValidDate(member.birth_date) 
+                        ? format(new Date(member.birth_date), 'MMM d, yyyy')
+                        : 'Date not available'
+                      }
                     </div>
-                  </div>
-                )}
-
-                {/* Ministry Involvement */}
-                {member.ministry_involvement && member.ministry_involvement.length > 0 && (
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-semibold text-primary flex items-center gap-2">
-                      <Church className="h-4 w-4" />
-                      Ministry Involvement
-                    </h4>
-                    <div className="p-4 bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-950/20 dark:to-yellow-900/20 rounded-xl border border-yellow-200 dark:border-yellow-800">
-                    <div className="flex flex-wrap gap-2">
-                      {member.ministry_involvement.map((ministry, index) => (
-                          <Badge key={index} variant="secondary" className="text-xs font-medium shadow-sm bg-yellow-500 text-yellow-900">
-                            {ministry}
-                          </Badge>
-                      ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Tags */}
-                {member.tags && member.tags.length > 0 && (
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-semibold text-primary flex items-center gap-2">
-                      <Hash className="h-4 w-4" />
-                      Tags
-                    </h4>
-                    <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-950/20 dark:to-gray-900/20 rounded-xl border border-gray-200 dark:border-gray-800">
-                    <div className="flex flex-wrap gap-2">
-                      {member.tags.map((tag, index) => (
-                          <Badge key={index} variant="outline" className="text-xs font-medium shadow-sm">
-                            {tag}
-                          </Badge>
-                      ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-              {/* Family Information for Adults */}
-              {member.member_type === 'adult' && (member.marital_status || member.spouse_name || member.anniversary_date) && (
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-semibold text-primary flex items-center gap-2">
-                      <Heart className="h-4 w-4" />
-                      Family Information
-                    </h4>
-                    <div className="p-4 bg-gradient-to-r from-pink-50 to-pink-100 dark:from-pink-950/20 dark:to-pink-900/20 rounded-xl border border-pink-200 dark:border-pink-800">
-                      <div className="space-y-3">
-                    {member.marital_status && (
-                          <div className="flex items-center gap-3 p-3 bg-white/50 dark:bg-pink-900/20 rounded-lg">
-                            <Heart className="h-4 w-4 text-pink-600" />
-                            <span className="font-medium text-pink-900 dark:text-pink-100 capitalize">{member.marital_status}</span>
+                    {isValidDate(member.birth_date) && calculateAge(member.birth_date) && (
+                      <div className="text-xs text-pink-500 dark:text-pink-400">
+                        {calculateAge(member.birth_date)} years old
                       </div>
                     )}
-                    {member.spouse_name && (
-                          <div className="flex items-center gap-3 p-3 bg-white/50 dark:bg-pink-900/20 rounded-lg">
-                            <User className="h-4 w-4 text-pink-600" />
-                            <span className="font-medium text-pink-900 dark:text-pink-100">Spouse: {member.spouse_name}</span>
-                      </div>
-                    )}
-                    {member.anniversary_date && (
-                          <div className="flex items-center gap-3 p-3 bg-white/50 dark:bg-pink-900/20 rounded-lg">
-                            <Calendar className="h-4 w-4 text-pink-600" />
-                            <span className="font-medium text-pink-900 dark:text-pink-100">Anniversary: {format(new Date(member.anniversary_date), 'MMM d, yyyy')}</span>
-                      </div>
-                    )}
-                    {member.has_children && (
-                          <div className="flex items-center gap-3 p-3 bg-white/50 dark:bg-pink-900/20 rounded-lg">
-                            <Users className="h-4 w-4 text-pink-600" />
-                            <span className="font-medium text-pink-900 dark:text-pink-100">Has Children</span>
-                      </div>
-                    )}
-                      </div>
                   </div>
                 </div>
               )}
-
-              {/* Emergency Contact */}
-              {member.emergency_contact && (member.emergency_contact.name || member.emergency_contact.phone) && (
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-semibold text-primary flex items-center gap-2">
-                      <Shield className="h-4 w-4" />
-                      Emergency Contact
-                    </h4>
-                    <div className="p-4 bg-gradient-to-r from-red-50 to-red-100 dark:from-red-950/20 dark:to-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
-                      <div className="space-y-3">
-                    {member.emergency_contact.name && (
-                          <div className="flex items-center gap-3 p-3 bg-white/50 dark:bg-red-900/20 rounded-lg">
-                            <Shield className="h-4 w-4 text-red-600" />
-                            <span className="font-medium text-red-900 dark:text-red-100">{member.emergency_contact.name}</span>
+              {member.join_date && (
+                <div className="flex items-center p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                  <Calendar className="mr-3 h-4 w-4 text-orange-500" />
+                  <div>
+                    <div className="text-sm font-medium text-orange-900 dark:text-orange-100">
+                      Join Date: {isValidDate(member.join_date) 
+                        ? format(new Date(member.join_date), 'MMM d, yyyy')
+                        : 'Date not available'
+                      }
+                    </div>
+                    {isValidDate(member.join_date) && (
+                      <div className="text-xs text-orange-500 dark:text-orange-400">
+                        Member for {Math.floor((new Date() - new Date(member.join_date)) / (1000 * 60 * 60 * 24 * 365))} years
                       </div>
                     )}
-                    {member.emergency_contact.phone && (
-                          <div className="flex items-center gap-3 p-3 bg-white/50 dark:bg-red-900/20 rounded-lg">
-                            <Phone className="h-4 w-4 text-red-600" />
-                            <span className="font-medium text-red-900 dark:text-red-100">{formatPhoneNumber(member.emergency_contact.phone)}</span>
-                      </div>
-                    )}
-                    {member.emergency_contact.relationship && (
-                          <div className="flex items-center gap-3 p-3 bg-white/50 dark:bg-red-900/20 rounded-lg">
-                            <User className="h-4 w-4 text-red-600" />
-                            <span className="font-medium text-red-900 dark:text-red-100 capitalize">{member.emergency_contact.relationship}</span>
-                      </div>
-                    )}
-                      </div>
                   </div>
-                </div>
-              )}
-
-              {/* Guardian Information for Children */}
-              {member.member_type === 'child' && (
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-semibold text-primary flex items-center gap-2">
-                      <Shield className="h-4 w-4" />
-                      Guardians
-                    </h4>
-                    <div className="p-4 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 rounded-xl border border-orange-200 dark:border-orange-800">
-                  {isGuardiansLoading ? (
-                        <div className="text-sm text-orange-700 dark:text-orange-300">Loading guardians...</div>
-                  ) : guardians.length > 0 ? (
-                    <div className="space-y-3">
-                      {guardians.map((guardian, index) => (
-                            <div key={guardian.id} className="flex items-start gap-3 p-3 bg-white/50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
-                          <Avatar className="h-8 w-8 flex-shrink-0">
-                            <AvatarImage src={guardian.image_url} />
-                            <AvatarFallback className="text-xs">
-                              {getInitials(guardian.firstname, guardian.lastname)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <button
-                                onClick={() => navigate(`/members/${guardian.id}`)}
-                                className="font-medium text-orange-900 dark:text-orange-100 hover:text-orange-700 dark:hover:text-orange-300 text-sm transition-colors"
-                              >
-                                {guardian.firstname} {guardian.lastname}
-                              </button>
-                              {guardian.is_primary && (
-                                <Badge variant="outline" className="text-xs">Primary</Badge>
-                              )}
-                            </div>
-                            <div className="space-y-1 text-xs text-orange-700 dark:text-orange-300">
-                              <div className="flex items-center gap-2">
-                                <User className="h-3 w-3" />
-                                <span className="capitalize">{guardian.relationship}</span>
-                              </div>
-                              {guardian.email && (
-                                <div className="flex items-center gap-2">
-                                  <Mail className="h-3 w-3" />
-                                  <span className="truncate">{guardian.email}</span>
-                                </div>
-                              )}
-                              {guardian.phone && (
-                                <div className="flex items-center gap-2">
-                                  <Phone className="h-3 w-3" />
-                                  <span>{formatPhoneNumber(guardian.phone)}</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                        <div className="text-sm text-orange-700 dark:text-orange-300">No guardians assigned</div>
-                  )}
-                    </div>
-                </div>
-              )}
-
-              {/* Notes */}
-              {member.notes && (
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-semibold text-primary flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      Notes
-                    </h4>
-                    <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-950/20 dark:to-gray-900/20 rounded-xl border border-gray-200 dark:border-gray-800">
-                      <p className="text-sm text-gray-700 dark:text-gray-300">{member.notes}</p>
-                    </div>
                 </div>
               )}
             </CardContent>
           </Card>
-          </motion.div>
-        </div>
+        </motion.div>
 
-        {/* Content Tabs */}
-        <div className="lg:col-span-2">
+        {/* Address Information */}
+        {member.address && member.address.street && (
           <motion.div variants={itemVariants}>
-            <Tabs defaultValue="attendance" className="w-full">
-              <TabsList className="mb-4 w-full h-auto min-h-[48px] bg-muted p-1 rounded-lg">
-                <TabsTrigger
-                  value="details"
-                  className="flex-1 h-10 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-                >
-                  <FileText className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">All Details</span>
-                  <span className="sm:hidden">Details</span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="attendance"
-                  className="flex-1 h-10 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-                >
-                  <Church className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Attendance</span>
-                  <span className="sm:hidden">Attend</span>
-              </TabsTrigger>
-                <TabsTrigger
-                  value="giving"
-                  className="flex-1 h-10 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-                >
-                  <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Giving</span>
-                  <span className="sm:hidden">Giving</span>
-              </TabsTrigger>
-                <TabsTrigger
-                  value="groups"
-                  className="flex-1 h-10 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-                >
-                  <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Groups</span>
-                  <span className="sm:hidden">Groups</span>
-              </TabsTrigger>
-                <TabsTrigger
-                  value="family"
-                  className="flex-1 h-10 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-                >
-                  <Heart className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Family</span>
-                  <span className="sm:hidden">Family</span>
-              </TabsTrigger>
-                <TabsTrigger
-                  value="volunteering"
-                  className="flex-1 h-10 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-                >
-                  <Handshake className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Volunteering</span>
-                  <span className="sm:hidden">Volunteer</span>
-              </TabsTrigger>
-            </TabsList>
+            <Card className="border-0 shadow-md">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-indigo-500" />
+                  Address
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
+                  <div className="flex items-start">
+                    <MapPin className="mr-3 h-4 w-4 text-indigo-500 mt-0.5" />
+                    <div className="space-y-1">
+                      <div className="text-sm font-medium text-slate-900 dark:text-white">{member.address.street}</div>
+                      <div className="text-xs text-indigo-500 dark:text-indigo-400">
+                        {[
+                          member.address.city,
+                          member.address.state,
+                          member.address.zip
+                        ].filter(Boolean).join(', ')}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
-            <TabsContent value="details">
-              <Card className="border-0 shadow-lg bg-gradient-to-br from-background to-muted/20 print:bg-white print:shadow-none">
-                <CardHeader className="pb-6 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border-b border-blue-200 dark:border-blue-800 print:bg-white print:border-none">
-                  <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent print:text-black">
-                    All Member Details
-                  </CardTitle>
-                  <CardDescription className="text-blue-600 dark:text-blue-400 mt-1 print:text-black">
-                    Complete information for {formatName(member.firstname, member.lastname)}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-6 space-y-8 print:p-4">
-                  {/* Basic Information */}
-                  <section>
-                    <h3 className="text-lg font-semibold flex items-center gap-2 mb-2 text-blue-900 dark:text-blue-100 print:text-black">
-                      <User className="h-5 w-5" /> Basic Information
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <div className="text-sm text-muted-foreground print:text-black">Full Name:</div>
-                        <div className="font-medium text-base print:font-normal">{formatName(member.firstname, member.lastname)}</div>
+        {/* Family Information */}
+        <motion.div variants={itemVariants}>
+          <Card className="border-0 shadow-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Users className="h-4 w-4 text-teal-500" />
+                Family
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {familyInfo ? (
+                <div className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg">
+                  <div className="flex items-start">
+                    <Users className="mr-3 h-4 w-4 text-teal-500 mt-0.5" />
+                    <div className="space-y-2">
+                      <div className="text-sm font-medium text-slate-900 dark:text-white">
+                        {familyInfo.name || familyInfo.family_name || 'Family'}
                       </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground print:text-black">Member Type:</div>
-                        <div className="font-medium text-base print:font-normal capitalize">{member.member_type}</div>
+                      <div className="text-xs text-teal-500 dark:text-teal-400">
+                        {familyInfo.members.length} members
                       </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground print:text-black">Status:</div>
-                        <div className="font-medium text-base print:font-normal capitalize">{member.status}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground print:text-black">Role:</div>
-                        <div className="font-medium text-base print:font-normal capitalize">{member.role}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground print:text-black">Gender:</div>
-                        <div className="font-medium text-base print:font-normal capitalize">{member.gender}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground print:text-black">Occupation:</div>
-                        <div className="font-medium text-base print:font-normal">{member.occupation || '—'}</div>
-                      </div>
-                    </div>
-                  </section>
-                  {/* Important Dates */}
-                  <section>
-                    <h3 className="text-lg font-semibold flex items-center gap-2 mb-2 text-green-900 dark:text-green-100 print:text-black">
-                      <Calendar className="h-5 w-5" /> Important Dates
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <div className="text-sm text-muted-foreground print:text-black">Birth Date:</div>
-                        <div className="font-medium text-base print:font-normal">
-                          {member.birth_date ? `${format(new Date(member.birth_date), 'MMM d, yyyy')} (${calculateAge(member.birth_date)} years old)` : '—'}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground print:text-black">Join Date:</div>
-                        <div className="font-medium text-base print:font-normal">
-                          {member.join_date ? format(new Date(member.join_date), 'MMM d, yyyy') : member.created_at ? format(new Date(member.created_at), 'MMM d, yyyy') : '—'}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground print:text-black">Anniversary:</div>
-                        <div className="font-medium text-base print:font-normal">
-                          {member.anniversary_date ? format(new Date(member.anniversary_date), 'MMM d, yyyy') : '—'}
-                        </div>
+                      <div className="flex flex-wrap gap-1">
+                        {familyInfo.members
+                          .filter(m => m.id !== member.id)
+                          .slice(0, 3)
+                          .map((familyMember) => (
+                            <Badge 
+                              key={familyMember.id} 
+                              variant="outline" 
+                              className="text-xs cursor-pointer hover:bg-teal-100 dark:hover:bg-teal-800 transition-colors"
+                              onClick={() => navigate(`/members/${familyMember.id}`)}
+                            >
+                              {formatName(familyMember.firstname, familyMember.lastname)}
+                            </Badge>
+                          ))}
+                        {familyInfo.members.length > 4 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{familyInfo.members.length - 4} more
+                          </Badge>
+                        )}
                       </div>
                     </div>
-                  </section>
-                  {/* Contact Information */}
-                  <section>
-                    <h3 className="text-lg font-semibold flex items-center gap-2 mb-2 text-green-900 dark:text-green-100 print:text-black">
-                      <Mail className="h-5 w-5" /> Contact Information
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <div className="text-sm text-muted-foreground print:text-black">Email:</div>
-                        <div className="font-medium text-base print:font-normal">{member.email || '—'}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground print:text-black">Phone:</div>
-                        <div className="font-medium text-base print:font-normal">{member.phone ? formatPhoneNumber(member.phone) : '—'}</div>
-                      </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-slate-50 dark:bg-slate-900/20 rounded-lg">
+                  <div className="flex items-start">
+                    <Users className="mr-3 h-4 w-4 text-slate-500 mt-0.5" />
+                    <div className="text-sm text-slate-600 dark:text-slate-400">
+                      Not assigned to a family
                     </div>
-                  </section>
-                  {/* Address */}
-                  <section>
-                    <h3 className="text-lg font-semibold flex items-center gap-2 mb-2 text-purple-900 dark:text-purple-100 print:text-black">
-                      <MapPin className="h-5 w-5" /> Address
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <div className="text-sm text-muted-foreground print:text-black">Street:</div>
-                        <div className="font-medium text-base print:font-normal">{member.address?.street || '—'}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground print:text-black">City:</div>
-                        <div className="font-medium text-base print:font-normal">{member.address?.city || '—'}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground print:text-black">State:</div>
-                        <div className="font-medium text-base print:font-normal">{member.address?.state || '—'}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground print:text-black">ZIP:</div>
-                        <div className="font-medium text-base print:font-normal">{member.address?.zip || '—'}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground print:text-black">Country:</div>
-                        <div className="font-medium text-base print:font-normal">{member.address?.country || '—'}</div>
-                      </div>
-                    </div>
-                  </section>
-                  {/* Family Information */}
-                  <section>
-                    <h3 className="text-lg font-semibold flex items-center gap-2 mb-2 text-pink-900 dark:text-pink-100 print:text-black">
-                      <Heart className="h-5 w-5" /> Family Information
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <div className="text-sm text-muted-foreground print:text-black">Marital Status:</div>
-                        <div className="font-medium text-base print:font-normal capitalize">{member.marital_status || '—'}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground print:text-black">Spouse:</div>
-                        <div className="font-medium text-base print:font-normal">{member.spouse_name || '—'}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground print:text-black">Has Children:</div>
-                        <div className="font-medium text-base print:font-normal">{member.has_children ? 'Yes' : 'No'}</div>
-                      </div>
-                    </div>
-                  </section>
-                  {/* Communication Preferences */}
-                  <section>
-                    <h3 className="text-lg font-semibold flex items-center gap-2 mb-2 text-indigo-900 dark:text-indigo-100 print:text-black">
-                      <MessageSquare className="h-5 w-5" /> Communication Preferences
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <div className="text-sm text-muted-foreground print:text-black">SMS:</div>
-                        <div className="font-medium text-base print:font-normal">{member.communication_preferences?.sms ? 'Enabled' : 'Disabled'}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground print:text-black">Email:</div>
-                        <div className="font-medium text-base print:font-normal">{member.communication_preferences?.email ? 'Enabled' : 'Disabled'}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground print:text-black">Mail:</div>
-                        <div className="font-medium text-base print:font-normal">{member.communication_preferences?.mail ? 'Enabled' : 'Disabled'}</div>
-                      </div>
-                    </div>
-                  </section>
-                  {/* Notes */}
-                  {member.notes && (
-                    <section>
-                      <h3 className="text-lg font-semibold flex items-center gap-2 mb-2 text-gray-900 dark:text-gray-100 print:text-black">
-                        <FileText className="h-5 w-5" /> Notes
-                      </h3>
-                      <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-950/20 dark:to-gray-900/20 rounded-xl border border-gray-200 dark:border-gray-800 print:bg-white print:border print:border-gray-300">
-                        <p className="text-sm text-gray-700 dark:text-gray-300 print:text-black">{member.notes}</p>
-                      </div>
-                    </section>
-                  )}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Child Guardians */}
+        {member.member_type === 'child' && guardians.length > 0 && (
+          <motion.div variants={itemVariants}>
+            <Card className="border-0 shadow-md">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-amber-500" />
+                  Guardians
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                                        {guardians.map((guardian) => (
+                          <div 
+                            key={guardian.id} 
+                            className="flex items-center p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-800 transition-all"
+                            onClick={() => navigate(`/members/${guardian.guardian.id}`)}
+                          >
+                            <Shield className="mr-3 h-4 w-4 text-amber-500" />
+                            <div className="flex-1">
+                              <div className="text-sm font-medium text-slate-900 dark:text-white">
+                                {formatName(guardian.guardian.firstname, guardian.guardian.lastname)}
+                              </div>
+                              <div className="text-xs text-amber-500 dark:text-amber-400">
+                                {guardian.relationship || 'Guardian'}
+                              </div>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-amber-400" />
+                          </div>
+                        ))}
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </div>
+
+      {/* Custom Desktop & Tablet Layout - Hidden on Mobile */}
+      <div className="hidden lg:block">
+        <div className="max-w-7xl mx-auto px-8 py-12">
+          <motion.div variants={itemVariants}>
+            {/* Activity Stats Cards */}
+            <div className="grid grid-cols-4 gap-8 mb-12">
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20">
+                <CardContent className="p-8 text-center">
+                  <div className="w-16 h-16 bg-green-500 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <Church className="h-8 w-8 text-white" />
+                  </div>
+                  <div className="text-4xl font-bold text-green-900 dark:text-green-100">
+                    {attendance.length}
+                  </div>
+                  <p className="text-lg text-green-600 dark:text-green-400">Events Attended</p>
                 </CardContent>
               </Card>
-            </TabsContent>
 
-            <TabsContent value="attendance">
-              <Card className="border-0 shadow-lg bg-gradient-to-br from-background to-muted/20">
-                <CardHeader className="pb-6 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 border-b border-green-200 dark:border-green-800">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="min-w-0">
-                      <CardTitle className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-green-600 to-green-700 bg-clip-text text-transparent">
-                        Attendance History
-                      </CardTitle>
-                      <CardDescription className="text-green-600 dark:text-green-400 mt-1">
-                        View {member?.firstname}'s attendance records and engagement statistics
-                    </CardDescription>
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20">
+                <CardContent className="p-8 text-center">
+                  <div className="w-16 h-16 bg-emerald-500 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <DollarSign className="h-8 w-8 text-white" />
                   </div>
-                  <Button
-                    onClick={() => {
-                      loadPastEvents();
-                      setIsRetroCheckInOpen(true);
-                    }}
-                      className="bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 w-full sm:w-auto"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                      <span className="hidden sm:inline">Check In to Past Event</span>
-                      <span className="sm:hidden">Check In</span>
-                  </Button>
+                  <div className="text-4xl font-bold text-emerald-900 dark:text-emerald-100">
+                    {(() => {
+                      const donationData = getDonationDisplayData();
+                      return donationData.donations.length;
+                    })()}
                   </div>
-                </CardHeader>
-                <CardContent className="p-6">
-                  {isAttendanceLoading ? (
-                    <div className="text-center py-12">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-                      <p className="text-green-600 dark:text-green-400">Loading attendance history...</p>
+                  <p className="text-lg text-emerald-600 dark:text-emerald-400">Total Gifts</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
+                <CardContent className="p-8 text-center">
+                  <div className="w-16 h-16 bg-purple-500 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <Users className="h-8 w-8 text-white" />
+                  </div>
+                  <div className="text-4xl font-bold text-purple-900 dark:text-purple-100">
+                    {groups.length}
+                  </div>
+                  <p className="text-lg text-purple-600 dark:text-purple-400">Groups</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20">
+                <CardContent className="p-8 text-center">
+                  <div className="w-16 h-16 bg-orange-500 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <Handshake className="h-8 w-8 text-white" />
+                  </div>
+                  <div className="text-4xl font-bold text-orange-900 dark:text-orange-100">
+                    {volunteers.length}
+                  </div>
+                  <p className="text-lg text-orange-600 dark:text-orange-400">Volunteer Roles</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+              {/* Left Sidebar - Member Overview */}
+              <div className="xl:col-span-1 space-y-8">
+                {/* Member Quick Info Card */}
+                <Card className="border-0 shadow-xl bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900/50 dark:to-slate-800/50 sticky top-8">
+                  <CardHeader className="pb-6 bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-800/50 dark:to-slate-700/50 border-b border-slate-200 dark:border-slate-700">
+                    <CardTitle className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
+                      <User className="h-6 w-6" />
+                      Member Info
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6 space-y-6">
+                    <div className="text-center mb-6">
+                      <Avatar className="h-32 w-32 mx-auto mb-4 ring-4 ring-slate-200 dark:ring-slate-700">
+                        <AvatarImage src={member.image_url} />
+                        <AvatarFallback className="text-3xl font-bold bg-gradient-to-br from-slate-500 to-slate-600 text-white">
+                          {getInitials(member.firstname, member.lastname)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <h3 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">{formatName(member.firstname, member.lastname)}</h3>
+                      <div className="flex flex-wrap gap-2 justify-center mt-3">
+                        <Badge variant={member.status === 'active' ? 'default' : 'secondary'} className="text-sm">
+                          {member.status}
+                        </Badge>
+                        <Badge variant="outline" className="text-sm capitalize">
+                          {member.member_type}
+                        </Badge>
+                      </div>
+                      {member.occupation && (
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-2 bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-full">
+                          {member.occupation}
+                        </p>
+                      )}
                     </div>
-                  ) : attendance.length > 0 ? (
-                    <div className="space-y-8">
-                      {/* Attendance by Event Type */}
-                      <div>
-                        <h3 className="text-xl font-semibold mb-6 text-green-900 dark:text-green-100 flex items-center gap-2">
-                          <Church className="h-5 w-5" />
-                          Attendance by Event Type
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                          {(() => {
-                            const eventTypeStats = {};
-                            attendance.forEach(record => {
-                              const eventType = record.events.event_type || 'Other';
-                              if (!eventTypeStats[eventType]) {
-                                eventTypeStats[eventType] = {
-                                  total: 0,
-                                  attended: 0
-                                };
-                              }
-                              eventTypeStats[eventType].total++;
-                              if (record.status === 'attended' || record.status === 'checked-in') {
-                                eventTypeStats[eventType].attended++;
-                              }
-                            });
 
-                            return Object.entries(eventTypeStats).map(([eventType, stats]) => (
-                              <Card key={eventType} className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 border-green-200 dark:border-green-800 shadow-lg hover:shadow-xl transition-all duration-200">
-                                <CardContent className="p-6">
-                                  <div className="flex items-center justify-between">
-                                    <div>
-                                      <h4 className="font-semibold text-green-900 dark:text-green-100 capitalize text-lg">{eventType}</h4>
-                                      <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-                                        {stats.attended} of {stats.total} events
-                                      </p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <CheckCircle className="h-6 w-6 text-green-600" />
-                                      <span className="text-2xl font-bold text-green-600">{stats.attended}</span>
-                                    </div>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            ));
-                          })()}
+                    {/* Contact Info */}
+                    {(member.email || member.phone) && (
+                      <div className="pt-6 border-t border-slate-200 dark:border-slate-700">
+                        <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Contact</h4>
+                        <div className="space-y-3">
+                          {member.email && (
+                            <div className="flex items-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                              <Mail className="mr-3 h-4 w-4 text-blue-500" />
+                              <span className="text-sm font-medium text-slate-900 dark:text-white">{member.email}</span>
+                            </div>
+                          )}
+                          {member.phone && (
+                            <div className="flex items-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                              <Phone className="mr-3 h-4 w-4 text-green-500" />
+                              <span className="text-sm font-medium text-slate-900 dark:text-white">{formatPhoneNumber(member.phone)}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
+                    )}
 
-                      {/* Volunteer Statistics */}
-                      {volunteers.length > 0 && (
-                        <div>
-                          <h3 className="text-xl font-semibold mb-6 text-orange-900 dark:text-orange-100 flex items-center gap-2">
-                            <Heart className="h-5 w-5" />
-                            Volunteer History
-                          </h3>
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {(() => {
-                              const volunteerTypeStats = {};
-                              volunteers.forEach(record => {
-                                const eventType = record.events.event_type || 'Other';
-                                if (!volunteerTypeStats[eventType]) {
-                                  volunteerTypeStats[eventType] = {
-                                    total: 0,
-                                    roles: {}
-                                  };
-                                }
-                                volunteerTypeStats[eventType].total++;
-                                if (record.role) {
-                                  volunteerTypeStats[eventType].roles[record.role] = 
-                                    (volunteerTypeStats[eventType].roles[record.role] || 0) + 1;
-                                }
-                              });
+                    {/* Address Information */}
+                    {member.address && member.address.street && (
+                      <div className="pt-6 border-t border-slate-200 dark:border-slate-700">
+                        <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Address</h4>
+                        <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
+                          <div className="flex items-start">
+                            <MapPin className="mr-3 h-4 w-4 text-indigo-500 mt-0.5" />
+                            <div className="space-y-1">
+                              <div className="text-sm font-medium text-slate-900 dark:text-white">{member.address.street}</div>
+                              <div className="text-xs text-indigo-500 dark:text-indigo-400">
+                                {[
+                                  member.address.city,
+                                  member.address.state,
+                                  member.address.zip
+                                ].filter(Boolean).join(', ')}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
-                              return Object.entries(volunteerTypeStats).map(([eventType, stats]) => (
-                                <Card key={eventType} className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 border-orange-200 dark:border-orange-800 shadow-lg hover:shadow-xl transition-all duration-200">
-                                  <CardContent className="p-6">
-                                    <div className="space-y-4">
-                                      <div className="flex items-center justify-between">
-                                        <h4 className="font-semibold text-orange-900 dark:text-orange-100 capitalize text-lg">{eventType}</h4>
-                                        <div className="flex items-center gap-2">
-                                          <Heart className="h-6 w-6 text-orange-600" />
-                                          <span className="text-2xl font-bold text-orange-600">{stats.total}</span>
-                                        </div>
-                                      </div>
-                                      
-                                      {Object.keys(stats.roles).length > 0 && (
-                                        <div className="space-y-1">
-                                          {Object.entries(stats.roles).map(([role, count]) => (
-                                            <div key={role} className="flex items-center justify-between text-sm">
-                                              <span className="text-muted-foreground capitalize">{role}</span>
-                                              <span className="font-medium">{count}</span>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      )}
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              ));
-                            })()}
+                    {/* Family Information */}
+                    <div className="pt-6 border-t border-slate-200 dark:border-slate-700">
+                      <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Family</h4>
+                      {familyInfo ? (
+                        <div className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg">
+                          <div className="flex items-start">
+                            <Users className="mr-3 h-4 w-4 text-teal-500 mt-0.5" />
+                            <div className="space-y-2">
+                              <div className="text-sm font-medium text-slate-900 dark:text-white">
+                                {familyInfo.name || familyInfo.family_name || 'Family'}
+                              </div>
+                              <div className="text-xs text-teal-500 dark:text-teal-400">
+                                {familyInfo.members.length} members
+                              </div>
+                              <div className="flex flex-wrap gap-1">
+                                {familyInfo.members
+                                  .filter(m => m.id !== member.id)
+                                  .slice(0, 3)
+                                  .map((familyMember) => (
+                                    <Badge 
+                                      key={familyMember.id} 
+                                      variant="outline" 
+                                      className="text-xs cursor-pointer hover:bg-teal-100 dark:hover:bg-teal-800 transition-colors"
+                                      onClick={() => navigate(`/members/${familyMember.id}`)}
+                                    >
+                                      {formatName(familyMember.firstname, familyMember.lastname)}
+                                    </Badge>
+                                  ))}
+                                {familyInfo.members.length > 4 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{familyInfo.members.length - 4} more
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-3 bg-slate-50 dark:bg-slate-900/20 rounded-lg">
+                          <div className="flex items-start">
+                            <Users className="mr-3 h-4 w-4 text-slate-500 mt-0.5" />
+                            <div className="text-sm text-slate-600 dark:text-slate-400">
+                              Not assigned to a family
+                            </div>
                           </div>
                         </div>
                       )}
+                    </div>
 
-                      {/* Recent Attendance */}
-                      <div>
-                        <h3 className="text-xl font-semibold mb-6 text-green-900 dark:text-green-100 flex items-center gap-2">
-                          <Clock className="h-5 w-5" />
-                          Recent Attendance
-                        </h3>
-                    <div className="space-y-4">
-                          {attendance.slice(0, 10).map((record) => (
-                            <Card key={record.id} className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 border-green-200 dark:border-green-800 hover:shadow-lg transition-all duration-200">
-                              <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                  <div className="space-y-2">
-                                    <p className="font-semibold text-green-900 dark:text-green-100 text-lg">{record.events.title}</p>
-                                    <div className="flex items-center text-sm text-green-600 dark:text-green-400">
-                                  <Calendar className="h-4 w-4 mr-2" />
-                                  {format(new Date(record.events.start_date), 'MMM d, yyyy • h:mm a')}
+                    {/* Child Guardians */}
+                    {member.member_type === 'child' && guardians.length > 0 && (
+                      <div className="pt-6 border-t border-slate-200 dark:border-slate-700">
+                        <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Guardians</h4>
+                        <div className="space-y-3">
+                          {guardians.map((guardian) => (
+                            <div 
+                              key={guardian.id} 
+                              className="flex items-center p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-800 transition-all"
+                              onClick={() => navigate(`/members/${guardian.guardian.id}`)}
+                            >
+                              <Shield className="mr-3 h-4 w-4 text-amber-500" />
+                              <div className="flex-1">
+                                <div className="text-sm font-medium text-slate-900 dark:text-white">
+                                  {formatName(guardian.guardian.firstname, guardian.guardian.lastname)}
                                 </div>
-                                {record.events.location && (
-                                      <div className="flex items-center text-sm text-green-600 dark:text-green-400">
-                                    <MapPin className="h-4 w-4 mr-2" />
-                                    {record.events.location}
+                                <div className="text-xs text-amber-500 dark:text-amber-400">
+                                  {guardian.relationship || 'Guardian'}
+                                </div>
+                              </div>
+                              <ChevronRight className="h-4 w-4 text-amber-400" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Main Content Area */}
+              <div className="xl:col-span-3 space-y-8">
+                {/* Navigation Tabs */}
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700">
+                  <div className="flex flex-wrap border-b border-slate-200 dark:border-slate-700">
+                    {[
+                      { id: 'overview', label: 'Overview', icon: FileText, color: 'blue' },
+                      { id: 'attendance', label: 'Attendance', icon: Church, color: 'green', count: attendance.length },
+                      { 
+                        id: 'giving', 
+                        label: 'Giving', 
+                        icon: DollarSign, 
+                        color: 'emerald', 
+                        count: (() => {
+                          const donationData = getDonationDisplayData();
+                          return donationData.donations.length;
+                        })()
+                      },
+                      { id: 'groups', label: 'Groups', icon: Users, color: 'purple', count: groups.length },
+                      { id: 'volunteering', label: 'Volunteering', icon: Handshake, color: 'orange', count: volunteers.length },
+                      { id: 'family', label: 'Family', icon: Heart, color: 'pink' }
+                    ].map((tab) => (
+                      <button
+                        key={tab.id}
+                        className={`flex items-center gap-3 px-6 py-4 text-base font-medium border-b-2 transition-colors ${
+                          activeTab === tab.id
+                            ? `border-${tab.color}-500 text-${tab.color}-600 dark:text-${tab.color}-400`
+                            : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+                        }`}
+                        onClick={() => setActiveTab(tab.id)}
+                      >
+                        <tab.icon className="h-5 w-5" />
+                        {tab.label}
+                        {tab.count !== undefined && (
+                          <Badge variant="secondary" className="ml-2 text-sm">
+                            {tab.count}
+                          </Badge>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Tab Content */}
+                <div className="min-h-[700px]">
+                  {activeTab === 'overview' && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                      {/* Personal Information */}
+                      <Card className="border-0 shadow-xl">
+                        <CardHeader className="pb-6 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border-b border-blue-200 dark:border-blue-800">
+                          <CardTitle className="text-xl font-bold text-blue-900 dark:text-blue-100 flex items-center gap-3">
+                            <User className="h-6 w-6" />
+                            Personal Information
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-6 space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <div className="text-base text-blue-600 dark:text-blue-400 font-medium">Full Name</div>
+                              <div className="text-lg font-semibold text-blue-900 dark:text-blue-100">{formatName(member.firstname, member.lastname)}</div>
+                            </div>
+                            <div>
+                              <div className="text-base text-blue-600 dark:text-blue-400 font-medium">Member Type</div>
+                              <div className="text-lg font-semibold text-blue-900 dark:text-blue-100 capitalize">{member.member_type}</div>
+                            </div>
+                            <div>
+                              <div className="text-base text-blue-600 dark:text-blue-400 font-medium">Status</div>
+                              <div className="text-lg font-semibold text-blue-900 dark:text-blue-100 capitalize">{member.status}</div>
+                            </div>
+                            <div>
+                              <div className="text-base text-blue-600 dark:text-blue-400 font-medium">Role</div>
+                              <div className="text-lg font-semibold text-blue-900 dark:text-blue-100 capitalize">{member.role}</div>
+                            </div>
+                            {member.gender && (
+                              <div>
+                                <div className="text-base text-blue-600 dark:text-blue-400 font-medium">Gender</div>
+                                <div className="text-lg font-semibold text-blue-900 dark:text-blue-100 capitalize">{member.gender}</div>
+                              </div>
+                            )}
+                            {member.birth_date && (
+                              <div>
+                                <div className="text-base text-blue-600 dark:text-blue-400 font-medium">Age</div>
+                                <div className="text-lg font-semibold text-blue-900 dark:text-blue-100">{calculateAge(member.birth_date)} years old</div>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Contact Information */}
+                      <Card className="border-0 shadow-xl">
+                        <CardHeader className="pb-6 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 border-b border-green-200 dark:border-green-800">
+                          <CardTitle className="text-xl font-bold text-green-900 dark:text-green-100 flex items-center gap-3">
+                            <Mail className="h-6 w-6" />
+                            Contact Information
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-6 space-y-4">
+                          {member.email && (
+                            <div className="flex items-center p-4 bg-green-50 dark:bg-green-900/20 rounded-xl">
+                              <Mail className="mr-4 h-5 w-5 text-green-500" />
+                              <span className="text-base font-medium text-green-900 dark:text-green-100">{member.email}</span>
+                            </div>
+                          )}
+                          {member.phone && (
+                            <div className="flex items-center p-4 bg-green-50 dark:bg-green-900/20 rounded-xl">
+                              <Phone className="mr-4 h-5 w-5 text-green-500" />
+                              <span className="text-base font-medium text-green-900 dark:text-green-100">{formatPhoneNumber(member.phone)}</span>
+                            </div>
+                          )}
+                          {member.address && member.address.street && (
+                            <div className="flex items-start p-4 bg-green-50 dark:bg-green-900/20 rounded-xl">
+                              <MapPin className="mr-4 h-5 w-5 text-green-500 mt-0.5" />
+                              <div className="space-y-1">
+                                <div className="text-base font-medium text-green-900 dark:text-green-100">{member.address.street}</div>
+                                <div className="text-sm text-green-600 dark:text-green-400">
+                                  {[member.address.city, member.address.state, member.address.zip].filter(Boolean).join(', ')}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+
+                      {/* Important Dates */}
+                      <Card className="border-0 shadow-xl">
+                        <CardHeader className="pb-6 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 border-b border-orange-200 dark:border-orange-800">
+                          <CardTitle className="text-xl font-bold text-orange-900 dark:text-orange-100 flex items-center gap-3">
+                            <Calendar className="h-6 w-6" />
+                            Important Dates
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-6 space-y-4">
+                          {member.birth_date && (
+                            <div className="flex items-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-xl">
+                              <Calendar className="mr-4 h-5 w-5 text-orange-500" />
+                              <div>
+                                <div className="text-base font-medium text-orange-900 dark:text-orange-100">
+                                  Birthday: {isValidDate(member.birth_date) 
+                                    ? format(new Date(member.birth_date), 'MMM d, yyyy')
+                                    : 'Date not available'
+                                  }
+                                </div>
+                                {isValidDate(member.birth_date) && calculateAge(member.birth_date) && (
+                                  <div className="text-sm text-orange-600 dark:text-orange-400">
+                                    {calculateAge(member.birth_date)} years old
                                   </div>
                                 )}
                               </div>
-                                  {volunteers.some(v => v.event_id === record.events.id) && (
-                                    <Badge className="bg-orange-500 hover:bg-orange-600 text-white shadow-sm">
-                                      <Heart className="h-3 w-3 mr-1" />
-                                      Volunteered
-                              </Badge>
-                                  )}
                             </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                        </div>
-                        {attendance.length > 10 && (
-                          <div className="text-center mt-6">
-                            <p className="text-sm text-green-600 dark:text-green-400">
-                              Showing 10 of {attendance.length} events
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-12">
-                      <Calendar className="h-16 w-16 text-green-400 mx-auto mb-4" />
-                      <p className="text-green-900 dark:text-green-100 text-lg font-semibold mb-2">No attendance records found</p>
-                      <p className="text-green-600 dark:text-green-400">
-                        {member?.firstname} hasn't attended any events yet.
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="giving">
-              <Card className="border-0 shadow-lg bg-gradient-to-br from-background to-muted/20">
-                <CardHeader className="pb-6 bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-950/20 dark:to-emerald-900/20 border-b border-emerald-200 dark:border-emerald-800">
-                  <div>
-                    <CardTitle className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-700 bg-clip-text text-transparent">
-                      Giving History
-                    </CardTitle>
-                    <CardDescription className="text-emerald-600 dark:text-emerald-400 mt-1">
-                      View {member?.firstname}'s donation records and financial engagement
-                  </CardDescription>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-6">
-                  {isDonationsLoading ? (
-                    <div className="text-center py-12">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
-                      <p className="text-emerald-600 dark:text-emerald-400">Loading giving history...</p>
-                    </div>
-                  ) : donations.length > 0 ? (
-                    <div className="space-y-8">
-                      {/* Giving Statistics */}
-                      <div>
-                        <h3 className="text-xl font-semibold mb-6 text-emerald-900 dark:text-emerald-100 flex items-center gap-2">
-                          <DollarSign className="h-5 w-5" />
-                          Giving Statistics
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                          {(() => {
-                            const totalAmount = donations.reduce((sum, donation) => sum + (donation.amount || 0), 0);
-                            const thisYear = new Date().getFullYear();
-                            const thisYearDonations = donations.filter(d => 
-                              new Date(d.date).getFullYear() === thisYear
-                            );
-                            const thisYearAmount = thisYearDonations.reduce((sum, donation) => sum + (donation.amount || 0), 0);
-                            const averageDonation = donations.length > 0 ? totalAmount / donations.length : 0;
-                            const fundDesignations = [...new Set(donations.map(d => d.fund_designation).filter(Boolean))];
-
-                            return (
-                              <>
-                                <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950/20 dark:to-emerald-900/20 border-emerald-200 dark:border-emerald-800 shadow-lg hover:shadow-xl transition-all duration-200">
-                                  <CardContent className="p-6">
-                                    <div className="flex items-center justify-between">
-                                      <div>
-                                        <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">Total Given</p>
-                                        <p className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">
-                                          ${totalAmount.toLocaleString()}
-                                        </p>
-                                      </div>
-                                      <DollarSign className="h-8 w-8 text-emerald-600" />
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                                <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border-blue-200 dark:border-blue-800 shadow-lg hover:shadow-xl transition-all duration-200">
-                                  <CardContent className="p-6">
-                                    <div className="flex items-center justify-between">
-                                      <div>
-                                        <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">This Year</p>
-                                        <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
-                                          ${thisYearAmount.toLocaleString()}
-                                        </p>
-                                      </div>
-                                      <Calendar className="h-8 w-8 text-blue-600" />
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                                <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border-purple-200 dark:border-purple-800 shadow-lg hover:shadow-xl transition-all duration-200">
-                                  <CardContent className="p-6">
-                                    <div className="flex items-center justify-between">
-                                      <div>
-                                        <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">Average Gift</p>
-                                        <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
-                                          ${averageDonation.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                        </p>
-                                      </div>
-                                      <Heart className="h-8 w-8 text-purple-600" />
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                                <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 border-orange-200 dark:border-orange-800 shadow-lg hover:shadow-xl transition-all duration-200">
-                                  <CardContent className="p-6">
-                                    <div className="flex items-center justify-between">
-                                      <div>
-                                        <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">Total Gifts</p>
-                                        <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">
-                                          {donations.length}
-                                        </p>
-                                      </div>
-                                      <FileText className="h-8 w-8 text-orange-600" />
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              </>
-                            );
-                          })()}
-                        </div>
-                      </div>
-
-                      {/* Giving by Fund Designation */}
-                      {(() => {
-                        const fundStats = {};
-                        donations.forEach(donation => {
-                          const fund = donation.fund_designation || 'General';
-                          if (!fundStats[fund]) {
-                            fundStats[fund] = { total: 0, count: 0 };
-                          }
-                          fundStats[fund].total += donation.amount || 0;
-                          fundStats[fund].count += 1;
-                        });
-
-                        return Object.keys(fundStats).length > 0 && (
-                          <div>
-                            <h3 className="text-lg font-semibold mb-4">Giving by Fund</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                              {Object.entries(fundStats).map(([fund, stats]) => (
-                                <Card key={fund}>
-                                  <CardContent className="p-4">
-                                    <div className="space-y-2">
-                                      <div className="flex items-center justify-between">
-                                        <h4 className="font-medium">{fund}</h4>
-                                        <DollarSign className="h-4 w-4 text-green-600" />
-                                      </div>
-                                      <div className="text-2xl font-bold text-green-600">
-                                        ${stats.total.toLocaleString()}
-                                      </div>
-                                      <div className="text-sm text-muted-foreground">
-                                        {stats.count} gift{stats.count !== 1 ? 's' : ''}
-                                      </div>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              ))}
+                          )}
+                          {member.join_date && (
+                            <div className="flex items-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-xl">
+                              <Calendar className="mr-4 h-5 w-5 text-orange-500" />
+                              <div>
+                                <div className="text-base font-medium text-orange-900 dark:text-orange-100">
+                                  Join Date: {isValidDate(member.join_date) 
+                                    ? format(new Date(member.join_date), 'MMM d, yyyy')
+                                    : 'Date not available'
+                                  }
+                                </div>
+                                {isValidDate(member.join_date) && (
+                                  <div className="text-sm text-orange-600 dark:text-orange-400">
+                                    Member for {Math.floor((new Date() - new Date(member.join_date)) / (1000 * 60 * 60 * 24 * 365))} years
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })()}
+                          )}
+                        </CardContent>
+                      </Card>
 
-                      {/* Recent Donations */}
-                      <div>
-                        <h3 className="text-lg font-semibold mb-4">Recent Donations</h3>
-                        <div className="space-y-4">
-                          {donations.slice(0, 10).map((donation) => (
-                            <Card key={donation.id}>
-                              <CardContent className="p-4">
-                                <div className="flex items-center justify-between">
-                                  <div className="space-y-1">
-                                    <div className="flex items-center gap-2">
-                                      <p className="font-medium">
-                                        ${donation.amount?.toLocaleString()}
-                                      </p>
-                                      {donation.fund_designation && (
-                                        <Badge variant="outline" className="text-xs">
-                                          {donation.fund_designation}
-                                        </Badge>
-                                      )}
-                                      {donation.campaign && (
-                                        <Badge variant="secondary" className="text-xs">
-                                          {donation.campaign.name}
-                                        </Badge>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center text-sm text-muted-foreground">
-                                      <Calendar className="h-4 w-4 mr-2" />
-                                      {format(new Date(donation.date), 'MMM d, yyyy')}
-                                    </div>
-                                    {donation.payment_method && (
-                                      <div className="flex items-center text-sm text-muted-foreground">
-                                        <DollarSign className="h-4 w-4 mr-2" />
-                                        {donation.payment_method}
-                                      </div>
-                                    )}
-                                    {donation.notes && (
-                                      <p className="text-sm text-muted-foreground mt-1">
-                                        {donation.notes}
-                                      </p>
-                                    )}
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    {donation.payment_method === 'Check' && donation.check_number && (
-                                      <Badge variant="outline" className="text-xs">
-                                        #{donation.check_number}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
-                        {donations.length > 10 && (
-                          <div className="text-center mt-4">
-                            <p className="text-sm text-muted-foreground">
-                              Showing 10 of {donations.length} donations
-                            </p>
+                      {/* Communication Preferences */}
+                      <Card className="border-0 shadow-xl">
+                        <CardHeader className="pb-6 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border-b border-purple-200 dark:border-purple-800">
+                          <CardTitle className="text-xl font-bold text-purple-900 dark:text-purple-100 flex items-center gap-3">
+                            <MessageSquare className="h-6 w-6" />
+                            Communication Preferences
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-6 space-y-4">
+                          <div className="flex gap-3">
+                            <Button variant="outline" size="default" className="text-base">
+                              <MessageSquare className="mr-3 h-4 w-4" />
+                              SMS
+                            </Button>
+                            <Button variant="outline" size="default" className="text-base">
+                              <Mail className="mr-3 h-4 w-4" />
+                              Email
+                            </Button>
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <DollarSign className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <p className="text-muted-foreground mb-2">No donation records found</p>
-                      <p className="text-sm text-muted-foreground">
-                        {member?.firstname} {member?.lastname} hasn't made any donations yet.
-                      </p>
+                        </CardContent>
+                      </Card>
                     </div>
                   )}
-                </CardContent>
-              </Card>
-            </TabsContent>
 
-            <TabsContent value="groups">
-              <Card className="border-0 shadow-lg bg-gradient-to-br from-background to-muted/20">
-                <CardHeader className="pb-6 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border-b border-purple-200 dark:border-purple-800">
-                  <div>
-                    <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-purple-700 bg-clip-text text-transparent">
-                      Group Memberships
-                    </CardTitle>
-                    <CardDescription className="text-purple-600 dark:text-purple-400 mt-1">
-                      View {member?.firstname}'s group involvement and community connections
-                    </CardDescription>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-6">
-                  {isGroupsLoading ? (
-                    <div className="text-center py-12">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-                      <p className="text-purple-600 dark:text-purple-400">Loading group memberships...</p>
-                    </div>
-                  ) : groups.length > 0 ? (
+                  {activeTab === 'attendance' && (
                     <div className="space-y-6">
-                      {/* Group Statistics */}
-                      <div>
-                        <h3 className="text-xl font-semibold mb-6 text-purple-900 dark:text-purple-100 flex items-center gap-2">
-                          <Users className="h-5 w-5" />
-                          Group Overview
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border-purple-200 dark:border-purple-800 shadow-lg hover:shadow-xl transition-all duration-200">
-                            <CardContent className="p-6">
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">Total Groups</p>
-                                  <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
-                                    {groups.length}
-                                  </p>
-                                </div>
-                                <Users className="h-8 w-8 text-purple-600" />
-                              </div>
-                            </CardContent>
-                          </Card>
-                          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border-blue-200 dark:border-blue-800 shadow-lg hover:shadow-xl transition-all duration-200">
-                            <CardContent className="p-6">
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">Active Groups</p>
-                                  <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
-                                    {groups.filter(g => g.group.status === 'active').length}
-                                  </p>
-                                </div>
-                                <CheckCircle className="h-8 w-8 text-blue-600" />
-                              </div>
-                            </CardContent>
-                          </Card>
-                          <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 border-green-200 dark:border-green-800 shadow-lg hover:shadow-xl transition-all duration-200">
-                            <CardContent className="p-6">
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <p className="text-sm text-green-600 dark:text-green-400 font-medium">Leadership Roles</p>
-                                  <p className="text-2xl font-bold text-green-900 dark:text-green-100">
-                                    {groups.filter(g => g.role === 'leader').length}
-                                  </p>
-                                </div>
-                                <Crown className="h-8 w-8 text-green-600" />
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </div>
-                      </div>
-
-                      {/* Group Memberships */}
-                      <div>
-                        <h3 className="text-xl font-semibold mb-6 text-purple-900 dark:text-purple-100 flex items-center gap-2">
-                          <Users className="h-5 w-5" />
-                          Group Memberships
-                        </h3>
-                        <div className="space-y-4">
-                          {groups.map((groupMembership) => (
-                            <Card key={groupMembership.id} className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border-purple-200 dark:border-purple-800 hover:shadow-lg transition-all duration-200">
-                              <CardContent className="p-6">
-                                <div className="flex items-center justify-between">
-                                  <div className="space-y-2">
-                                    <div className="flex items-center gap-3">
-                                      <h4 className="font-semibold text-purple-900 dark:text-purple-100 text-lg">
-                                        {groupMembership.group.name}
-                                      </h4>
-                                      <Badge 
-                                        variant={groupMembership.group.status === 'active' ? 'default' : 'secondary'}
-                                        className="bg-purple-500 hover:bg-purple-600 text-white"
-                                      >
-                                        {groupMembership.group.status}
-                                      </Badge>
-                                    </div>
-                                    {groupMembership.group.description && (
-                                      <p className="text-sm text-purple-600 dark:text-purple-400">
-                                        {groupMembership.group.description}
-                                      </p>
-                                    )}
-                                    <div className="flex items-center gap-4 text-sm text-purple-600 dark:text-purple-400">
-                                      <div className="flex items-center gap-1">
-                                        <User className="h-4 w-4" />
-                                        <span className="capitalize">{groupMembership.role}</span>
-                                      </div>
-                                      {groupMembership.group.leader && (
-                                        <div className="flex items-center gap-1">
-                                          <Crown className="h-4 w-4" />
-                                          <span>Led by {groupMembership.group.leader.firstname} {groupMembership.group.leader.lastname}</span>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    {groupMembership.role === 'leader' && (
-                                      <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white shadow-sm">
-                                        <Crown className="w-3 h-3 mr-1" />
-                                        Leader
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-12">
-                      <Users className="h-16 w-16 text-purple-400 mx-auto mb-4" />
-                      <p className="text-purple-900 dark:text-purple-100 text-lg font-semibold mb-2">No group memberships found</p>
-                      <p className="text-purple-600 dark:text-purple-400">
-                        {member?.firstname} isn't a member of any groups yet.
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="family">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Family Information</CardTitle>
-                  <CardDescription>
-                    {member?.firstname} {member?.lastname}'s family details
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {isFamilyLoading ? (
-                    <div className="text-center py-4">
-                      <p className="text-muted-foreground">Loading family information...</p>
-                    </div>
-                  ) : familyInfo ? (
-                    <div className="space-y-6">
-                      {/* Family Header */}
+                      {/* Attendance History Header */}
                       <div className="flex items-center justify-between">
                         <div>
-                          <h3 className="text-xl font-semibold">{familyInfo.family_name}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {familyInfo.members.length} member{familyInfo.members.length !== 1 ? 's' : ''}
-                          </p>
+                          <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Attendance History</h3>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">View {member?.firstname || 'member'}'s attendance records and engagement statistics</p>
                         </div>
-                        <Button
-                          variant="outline"
-                          onClick={() => navigate('/members?tab=families')}
+                        <Button 
+                          onClick={() => member && setIsRetroCheckInOpen(true)}
+                          disabled={!member}
                         >
-                          <Users className="h-4 w-4 mr-2" />
-                          View Family
+                          <Calendar className="mr-2 h-4 w-4" />
+                          Check In to Past Event
                         </Button>
                       </div>
 
-                      {/* Family Members */}
-                      <div className="space-y-3">
-                        <h4 className="text-lg font-medium">Family Members</h4>
-                        {familyInfo.members.map((familyMember) => (
-                          <Card key={familyMember.id} className="hover:shadow-md transition-shadow">
-                            <CardContent className="p-4">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                  <Avatar className="h-10 w-10">
-                                    <AvatarImage src={familyMember.image_url} />
-                                    <AvatarFallback className="text-sm">
-                                      {getInitials(familyMember.firstname, familyMember.lastname)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div>
-                                    <div className="font-medium">
-                                      {familyMember.firstname} {familyMember.lastname}
+                      {/* Attendance by Event Type */}
+                      <Card className="border-0 shadow-lg">
+                        <CardHeader className="pb-4 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 border-b border-green-200 dark:border-green-800">
+                          <CardTitle className="text-lg font-bold text-green-900 dark:text-green-100 flex items-center gap-2">
+                            <Church className="h-5 w-5" />
+                            Attendance by Event Type
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4">
+                          {(() => {
+                            // Calculate actual attendance statistics by event type
+                            const eventTypeStats = {};
+                            
+                            attendance.forEach(record => {
+                              const eventType = record.events?.event_type || 'Other';
+                              if (!eventTypeStats[eventType]) {
+                                eventTypeStats[eventType] = {
+                                  attended: 0,
+                                  total: 0
+                                };
+                              }
+                              eventTypeStats[eventType].attended++;
+                            });
+                            
+                            // If no attendance data, show empty state
+                            if (Object.keys(eventTypeStats).length === 0) {
+                              return (
+                                <div className="text-center py-8">
+                                  <Church className="h-12 w-12 text-green-400 mx-auto mb-3" />
+                                  <p className="text-green-600 dark:text-green-400 mb-2">No attendance records</p>
+                                  <p className="text-sm text-green-500 dark:text-green-300">
+                                    Attendance statistics will appear here once events are attended
+                                  </p>
+                                </div>
+                              );
+                            }
+                            
+                            // Display the actual statistics
+                            return (
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {Object.entries(eventTypeStats).map(([eventType, stats]) => (
+                                  <div key={eventType} className="flex items-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                                    <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center mr-3">
+                                      <CheckCircle className="h-5 w-5 text-white" />
                                     </div>
-                                    <div className="text-sm text-muted-foreground space-x-2">
-                                      <span className="capitalize">{familyMember.member_type}</span>
-                                      <span>•</span>
-                                      <span className="capitalize">{familyMember.relationship_type}</span>
-                                      {familyMember.birth_date && (
-                                        <>
-                                          <span>•</span>
-                                          <span>{calculateAge(familyMember.birth_date)} years old</span>
-                                        </>
+                                    <div>
+                                      <div className="font-semibold text-green-900 dark:text-green-100 capitalize">
+                                        {eventType}
+                                      </div>
+                                      <div className="text-sm text-green-600 dark:text-green-400">
+                                        {stats.attended} event{stats.attended !== 1 ? 's' : ''} attended
+                                      </div>
+                                    </div>
+                                    <Badge className="ml-auto bg-green-500 text-white">
+                                      {stats.attended}
+                                    </Badge>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          })()}
+                        </CardContent>
+                      </Card>
+
+                      {/* Recent Attendance */}
+                      <Card className="border-0 shadow-lg">
+                        <CardHeader className="pb-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border-b border-blue-200 dark:border-blue-800">
+                          <CardTitle className="text-lg font-bold text-blue-900 dark:text-blue-100 flex items-center gap-2">
+                            <Clock className="h-5 w-5" />
+                            Recent Attendance
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4">
+                          <div className="space-y-3">
+                            {attendance.slice(0, 5).map((record) => {
+                              // Safely get the date value
+                              const dateValue = record.events?.start_date || record.event?.date || record.created_at;
+                              const isValidDate = dateValue && !isNaN(new Date(dateValue).getTime());
+                              
+                              return (
+                                <div key={record.id} className="flex items-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                  <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center mr-3">
+                                    <CheckCircle className="h-4 w-4 text-white" />
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="font-medium text-blue-900 dark:text-blue-100">
+                                      {record.events?.title || record.event?.title || 'Event'}
+                                    </div>
+                                    <div className="text-sm text-blue-600 dark:text-blue-400">
+                                      {isValidDate 
+                                        ? format(new Date(dateValue), 'MMM d, yyyy • h:mm a')
+                                        : 'Date not available'
+                                      }
+                                    </div>
+                                  </div>
+                                  <div className="text-xs text-blue-600 dark:text-blue-400">
+                                    {record.events?.location || record.event?.location || 'Location'}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+
+                  {activeTab === 'giving' && (
+                    <div className="space-y-6">
+                      {(() => {
+                        const donationData = getDonationDisplayData();
+                        
+                        return (
+                          <>
+                            {/* Giving Overview */}
+                            <Card className="border-0 shadow-lg">
+                              <CardHeader className="pb-4 bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-950/20 dark:to-emerald-900/20 border-b border-emerald-200 dark:border-emerald-800">
+                                <CardTitle className="text-lg font-bold text-emerald-900 dark:text-emerald-100 flex items-center gap-2">
+                                  <DollarSign className="h-5 w-5" />
+                                  {donationData.title}
+                                </CardTitle>
+                                <CardDescription className="text-emerald-700 dark:text-emerald-300">
+                                  {donationData.description}
+                                </CardDescription>
+                                {donationData.isFamilyData && (
+                                  <div className="flex items-center gap-2 mt-2">
+                                    <Users className="h-4 w-4 text-emerald-600" />
+                                    <span className="text-sm text-emerald-600 dark:text-emerald-400">
+                                      Showing family donations (includes all family members)
+                                    </span>
+                                  </div>
+                                )}
+                              </CardHeader>
+                              <CardContent className="p-4">
+                                {donationData.isLoading ? (
+                                  <div className="text-center py-8">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto mb-2"></div>
+                                    <p className="text-sm text-emerald-600">Loading...</p>
+                                  </div>
+                                ) : donationData.donations.length > 0 ? (
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="text-center p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
+                                      <div className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">
+                                        ${donationData.donations.reduce((sum, d) => sum + (d.amount || 0), 0).toLocaleString()}
+                                      </div>
+                                      <div className="text-sm text-emerald-600 dark:text-emerald-400">
+                                        {donationData.isFamilyData ? 'Family Total Given' : 'Total Given'}
+                                      </div>
+                                    </div>
+                                    <div className="text-center p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
+                                      <div className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">
+                                        {donationData.donations.length}
+                                      </div>
+                                      <div className="text-sm text-emerald-600 dark:text-emerald-400">
+                                        {donationData.isFamilyData ? 'Family Total Gifts' : 'Total Gifts'}
+                                      </div>
+                                    </div>
+                                    <div className="text-center p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
+                                      <div className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">
+                                        ${Math.round(donationData.donations.reduce((sum, d) => sum + (d.amount || 0), 0) / Math.max(donationData.donations.length, 1))}
+                                      </div>
+                                      <div className="text-sm text-emerald-600 dark:text-emerald-400">
+                                        {donationData.isFamilyData ? 'Family Average Gift' : 'Average Gift'}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="text-center py-8">
+                                    <DollarSign className="h-12 w-12 text-emerald-400 mx-auto mb-3" />
+                                    <p className="text-emerald-600 dark:text-emerald-400 mb-2">No donation records found</p>
+                                    <p className="text-sm text-emerald-500 dark:text-emerald-300">
+                                      {donationData.isFamilyData 
+                                        ? 'No family donations recorded yet'
+                                        : 'No individual donations recorded yet'
+                                      }
+                                    </p>
+                                  </div>
+                                )}
+                              </CardContent>
+                            </Card>
+
+                            {/* Giving by Fund */}
+                            {donationData.donations.length > 0 && (
+                              <Card className="border-0 shadow-lg">
+                                <CardHeader className="pb-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border-b border-blue-200 dark:border-blue-800">
+                                  <CardTitle className="text-lg font-bold text-blue-900 dark:text-blue-100 flex items-center gap-2">
+                                    <PieChart className="h-5 w-5" />
+                                    {donationData.isFamilyData ? 'Family Giving by Fund' : 'Giving by Fund'}
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4">
+                                  {(() => {
+                                    // Calculate fund statistics
+                                    const fundStats = {};
+                                    donationData.donations.forEach(donation => {
+                                      const fund = donation.fund_name || donation.fund_designation || 'General Fund';
+                                      if (!fundStats[fund]) {
+                                        fundStats[fund] = { total: 0, count: 0 };
+                                      }
+                                      fundStats[fund].total += donation.amount || 0;
+                                      fundStats[fund].count += 1;
+                                    });
+
+                                    const totalAmount = donationData.donations.reduce((sum, d) => sum + (d.amount || 0), 0);
+                                    const colors = ['blue', 'green', 'purple', 'orange', 'pink', 'indigo'];
+
+                                    return (
+                                      <div className="space-y-3">
+                                        {Object.entries(fundStats).map(([fund, stats], index) => (
+                                          <div key={fund} className={`flex items-center justify-between p-3 bg-${colors[index % colors.length]}-50 dark:bg-${colors[index % colors.length]}-900/20 rounded-lg`}>
+                                            <div className="flex items-center">
+                                              <div className={`w-3 h-3 bg-${colors[index % colors.length]}-500 rounded-full mr-3`}></div>
+                                              <span className={`font-medium text-${colors[index % colors.length]}-900 dark:text-${colors[index % colors.length]}-100`}>{fund}</span>
+                                            </div>
+                                            <div className="text-right">
+                                              <div className={`font-semibold text-${colors[index % colors.length]}-900 dark:text-${colors[index % colors.length]}-100`}>
+                                                ${stats.total.toLocaleString()}
+                                              </div>
+                                              <div className={`text-xs text-${colors[index % colors.length]}-600 dark:text-${colors[index % colors.length]}-400`}>
+                                                {Math.round((stats.total / totalAmount) * 100)}% • {stats.count} gift{stats.count !== 1 ? 's' : ''}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    );
+                                  })()}
+                                </CardContent>
+                              </Card>
+                            )}
+
+                            {/* Recent Donations */}
+                            {donationData.donations.length > 0 && (
+                              <Card className="border-0 shadow-lg">
+                                <CardHeader className="pb-4 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 border-b border-orange-200 dark:border-orange-800">
+                                  <CardTitle className="text-lg font-bold text-orange-900 dark:text-orange-100 flex items-center gap-2">
+                                    <Clock className="h-5 w-5" />
+                                    {donationData.isFamilyData ? 'Recent Family Donations' : 'Recent Donations'}
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4">
+                                  <div className="space-y-3">
+                                    {donationData.donations.slice(0, 5).map((donation) => {
+                                      // Safely get the date value
+                                      const dateValue = donation.date || donation.created_at;
+                                      const isValidDate = dateValue && !isNaN(new Date(dateValue).getTime());
+                                      
+                                      return (
+                                        <div key={donation.id} className="flex items-center p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                                          <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center mr-3">
+                                            <DollarSign className="h-4 w-4 text-white" />
+                                          </div>
+                                          <div className="flex-1">
+                                            <div className="font-medium text-orange-900 dark:text-orange-100">
+                                              ${donation.amount?.toLocaleString() || '0'}
+                                            </div>
+                                            <div className="text-sm text-orange-600 dark:text-orange-400">
+                                              {donation.fund_name || donation.fund_designation || 'General Fund'} • {isValidDate 
+                                                ? format(new Date(dateValue), 'MMM d, yyyy')
+                                                : 'Date not available'
+                                              }
+                                            </div>
+                                            {donationData.isFamilyData && donation.member_id !== member?.id && (
+                                              <div className="text-xs text-orange-500 dark:text-orange-400">
+                                                From family member
+                                              </div>
+                                            )}
+                                          </div>
+                                          <Badge variant="outline" className="text-xs">
+                                            {donation.payment_method || 'Check'}
+                                          </Badge>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {activeTab === 'groups' && (
+                    <div className="space-y-6">
+                      {/* Group Overview */}
+                      <Card className="border-0 shadow-lg">
+                        <CardHeader className="pb-4 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border-b border-purple-200 dark:border-purple-800">
+                          <CardTitle className="text-lg font-bold text-purple-900 dark:text-purple-100 flex items-center gap-2">
+                            <Users className="h-5 w-5" />
+                            Group Overview
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                              <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+                                {groups.length}
+                              </div>
+                              <div className="text-sm text-purple-600 dark:text-purple-400">Active Groups</div>
+                            </div>
+                            <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                              <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+                                {groups.filter(g => g.role === 'leader').length}
+                              </div>
+                              <div className="text-sm text-purple-600 dark:text-purple-400">Leadership Roles</div>
+                            </div>
+                            <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                              <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+                                {groups.filter(g => g.role === 'member').length}
+                              </div>
+                              <div className="text-sm text-purple-600 dark:text-purple-400">Memberships</div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Group Memberships */}
+                      <Card className="border-0 shadow-lg">
+                        <CardHeader className="pb-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border-b border-blue-200 dark:border-blue-800">
+                          <CardTitle className="text-lg font-bold text-blue-900 dark:text-blue-100 flex items-center gap-2">
+                            <Users className="h-5 w-5" />
+                            Group Memberships
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4">
+                          <div className="space-y-3">
+                            {groups.map((groupMembership) => {
+                              // Safely get the date value
+                              const dateValue = groupMembership.joined_date || groupMembership.created_at;
+                              const isValidDate = dateValue && !isNaN(new Date(dateValue).getTime());
+                              
+                              // Safely get group information
+                              const group = groupMembership.groups || groupMembership.group;
+                              const groupName = group?.name || 'Unknown Group';
+                              const groupDescription = group?.description || 'No description available';
+                              const groupLeader = group?.leader_name || group?.leader || group?.leader_name;
+                              const isLeader = groupMembership.role === 'leader';
+                              
+                              return (
+                                <div key={groupMembership.id} className="flex items-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                  <div className={`w-10 h-10 ${isLeader ? 'bg-yellow-500' : 'bg-blue-500'} rounded-lg flex items-center justify-center mr-3`}>
+                                    {isLeader ? (
+                                      <Crown className="h-5 w-5 text-white" />
+                                    ) : (
+                                      <Users className="h-5 w-5 text-white" />
+                                    )}
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="font-medium text-blue-900 dark:text-blue-100">
+                                      {groupName}
+                                      {isLeader && (
+                                        <Badge variant="default" className="ml-2 text-xs bg-yellow-500">
+                                          Leader
+                                        </Badge>
                                       )}
                                     </div>
-                                    {(familyMember.email || familyMember.phone) && (
-                                      <div className="text-sm text-muted-foreground mt-1">
-                                        {familyMember.email && (
-                                          <div className="flex items-center gap-1">
-                                            <Mail className="w-3 h-3" />
-                                            {familyMember.email}
-                                          </div>
-                                        )}
-                                        {familyMember.phone && (
-                                          <div className="flex items-center gap-1">
-                                            <Phone className="w-3 h-3" />
-                                            {familyMember.phone}
-                                          </div>
-                                        )}
+                                    <div className="text-sm text-blue-600 dark:text-blue-400">
+                                      {groupDescription}
+                                    </div>
+                                    {groupLeader && !isLeader && (
+                                      <div className="text-xs text-blue-500 dark:text-blue-400 mt-1">
+                                        Leader: {groupLeader}
                                       </div>
                                     )}
                                   </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  {familyMember.is_primary && (
-                                    <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                                      <Crown className="w-3 h-3 mr-1" />
-                                      Primary
+                                  <div className="text-right">
+                                    <Badge variant={isLeader ? 'default' : 'secondary'} className="text-xs">
+                                      {groupMembership.role || 'member'}
                                     </Badge>
-                                  )}
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-lg font-medium mb-2">Not in a family</h3>
-                      <p className="text-muted-foreground mb-4">
-                        {member?.firstname} {member?.lastname} is not currently assigned to any family.
-                      </p>
-                      <Button
-                        onClick={() => navigate('/members?tab=families')}
-                      >
-                        <Users className="w-4 h-4 mr-2" />
-                        Manage Families
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="volunteering">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Volunteering History</CardTitle>
-                  <CardDescription>
-                    View {member?.firstname} {member?.lastname}'s volunteering roles and statistics
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {isVolunteersLoading ? (
-                    <div className="text-center py-4">
-                      <p className="text-muted-foreground">Loading volunteering history...</p>
-                    </div>
-                  ) : volunteers.length > 0 ? (
-                    <div className="space-y-6">
-                      {/* Volunteer Statistics */}
-                      <div>
-                        <h3 className="text-lg font-semibold mb-4">Volunteer Statistics</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {(() => {
-                            const volunteerTypeStats = {};
-                            volunteers.forEach(record => {
-                              const eventType = record.events.event_type || 'Other';
-                              if (!volunteerTypeStats[eventType]) {
-                                volunteerTypeStats[eventType] = {
-                                  total: 0,
-                                  roles: {}
-                                };
-                              }
-                              volunteerTypeStats[eventType].total++;
-                              if (record.role) {
-                                volunteerTypeStats[eventType].roles[record.role] = 
-                                  (volunteerTypeStats[eventType].roles[record.role] || 0) + 1;
-                              }
-                            });
-
-                            return Object.entries(volunteerTypeStats).map(([eventType, stats]) => (
-                              <Card key={eventType}>
-                          <CardContent className="p-4">
-                                  <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                                      <h4 className="font-medium capitalize">{eventType}</h4>
-                                      <div className="flex items-center gap-2">
-                                        <Heart className="h-4 w-4 text-red-600" />
-                                        <span className="text-lg font-bold text-red-600">{stats.total}</span>
-                                </div>
-                              </div>
-                                    
-                                    {Object.keys(stats.roles).length > 0 && (
-                                      <div className="space-y-1">
-                                        {Object.entries(stats.roles).map(([role, count]) => (
-                                          <div key={role} className="flex items-center justify-between text-sm">
-                                            <span className="text-muted-foreground capitalize">{role}</span>
-                                            <span className="font-medium">{count}</span>
-                            </div>
-                      ))}
-                    </div>
-                  )}
+                                    <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                                      Joined {isValidDate 
+                                        ? format(new Date(dateValue), 'MMM yyyy')
+                                        : 'Date not available'
+                                      }
+                                    </div>
                                   </div>
-                </CardContent>
-              </Card>
-                            ));
-                          })()}
-                      </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </CardContent>
+                      </Card>
                     </div>
+                  )}
 
-                      {/* Recent Volunteering */}
-                      <div>
-                        <h3 className="text-lg font-semibold mb-4">Recent Volunteering</h3>
-                    <div className="space-y-4">
-                          {volunteers.slice(0, 10).map((volunteer) => (
-                            <Card key={volunteer.id}>
-                              <CardContent className="p-4">
-                                <div className="flex items-center justify-between">
-                                  <div className="space-y-1">
-                                    <p className="font-medium">{volunteer.events.title}</p>
-                                    <div className="flex items-center text-sm text-muted-foreground">
-                                      <Handshake className="h-4 w-4 mr-2" />
-                                      {format(new Date(volunteer.events.start_date), 'MMM d, yyyy • h:mm a')}
+                  {activeTab === 'family' && (
+                    <FamilyAssignment 
+                      member={member} 
+                      onFamilyUpdate={() => {
+                        loadFamilyInfo(member.id);
+                        loadFamilyDonations();
+                      }}
+                    />
+                  )}
+
+                  {activeTab === 'volunteering' && (
+                    <div className="space-y-6">
+                      {/* Volunteering Overview */}
+                      <Card className="border-0 shadow-lg">
+                        <CardHeader className="pb-4 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 border-b border-orange-200 dark:border-orange-800">
+                          <CardTitle className="text-lg font-bold text-orange-900 dark:text-orange-100 flex items-center gap-2">
+                            <Handshake className="h-5 w-5" />
+                            Volunteering Overview
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                              <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">
+                                {volunteers.length}
+                              </div>
+                              <div className="text-sm text-orange-600 dark:text-orange-400">Total Assignments</div>
+                            </div>
+                            <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                              <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">
+                                {new Set(volunteers.map(v => v.events?.id)).size}
+                              </div>
+                              <div className="text-sm text-orange-600 dark:text-orange-400">Events Volunteered</div>
+                            </div>
                           </div>
-                                    {volunteer.events.location && (
-                                      <div className="flex items-center text-sm text-muted-foreground">
-                                        <MapPin className="h-4 w-4 mr-2" />
-                                        {volunteer.events.location}
-                          </div>
-                        )}
-                          </div>
-                          </div>
-                              </CardContent>
-                            </Card>
-                          ))}
-                      </div>
-                        {volunteers.length > 10 && (
-                          <div className="text-center mt-4">
-                            <p className="text-sm text-muted-foreground">
-                              Showing 10 of {volunteers.length} volunteering roles
-                            </p>
+                        </CardContent>
+                      </Card>
+
+                      {/* Volunteer Roles */}
+                      <Card className="border-0 shadow-lg">
+                        <CardHeader className="pb-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border-b border-blue-200 dark:border-blue-800">
+                          <CardTitle className="text-lg font-bold text-blue-900 dark:text-blue-100 flex items-center gap-2">
+                            <Handshake className="h-5 w-5" />
+                            Volunteer Roles
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4">
+                          {volunteers.length > 0 ? (
+                            <div className="space-y-3">
+                              {volunteers.map((volunteer) => {
+                                // Safely get the date value
+                                const dateValue = volunteer.created_at;
+                                const isValidDate = dateValue && !isNaN(new Date(dateValue).getTime());
+                                
+                                return (
+                                  <div key={volunteer.id} className="flex items-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                    <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center mr-3">
+                                      <Handshake className="h-5 w-5 text-white" />
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="font-medium text-blue-900 dark:text-blue-100">{volunteer.role}</div>
+                                      <div className="text-sm text-blue-600 dark:text-blue-400">
+                                        {volunteer.events?.title || 'Event'}
+                                      </div>
+                                      {volunteer.notes && (
+                                        <div className="text-xs text-blue-500 dark:text-blue-400 mt-1">
+                                          {volunteer.notes}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="text-right">
+                                      <Badge variant="secondary" className="text-xs">
+                                        Volunteer
+                                      </Badge>
+                                      <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                                        {isValidDate 
+                                          ? format(new Date(dateValue), 'MMM d, yyyy')
+                                          : 'Date not available'
+                                        }
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8">
+                              <Handshake className="h-12 w-12 text-slate-400 mx-auto mb-3" />
+                              <p className="text-slate-600 dark:text-slate-400">No volunteer roles assigned yet</p>
+                              <Button variant="outline" className="mt-3">
+                                <Plus className="mr-2 h-4 w-4" />
+                                Assign Role
+                              </Button>
                             </div>
                           )}
-                            </div>
-                          </div>
-                        ) : (
-                    <div className="text-center py-8">
-                      <Handshake className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <p className="text-muted-foreground mb-2">No volunteering history found</p>
-                      <p className="text-sm text-muted-foreground">
-                        {member?.firstname} {member?.lastname} hasn't volunteered yet.
-                      </p>
-                      </div>
-                    )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-            </motion.div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </motion.div>
         </div>
       </div>
 
-      {/* Edit Member Dialog */}
+      {/* Mobile Accordion View - Hidden on Tablet and Desktop */}
+      <div className="lg:hidden mt-8">
+        <motion.div variants={itemVariants}>
+          <Accordion type="single" collapsible className="space-y-4">
+            <AccordionItem value="overview">
+              <AccordionTrigger className="text-lg font-semibold px-4">
+                <FileText className="h-5 w-5 mr-3" />
+                Overview
+              </AccordionTrigger>
+              <AccordionContent>
+                <Card className="border-0 shadow-md">
+                  <CardContent className="p-4 space-y-6">
+                    {/* Personal Information */}
+                    <section>
+                      <h3 className="text-base font-semibold flex items-center gap-2 mb-3 text-blue-900 dark:text-blue-100">
+                        <User className="h-4 w-4" /> Personal Information
+                      </h3>
+                      <div className="space-y-3">
+                        <div>
+                          <div className="text-sm text-muted-foreground">Full Name:</div>
+                          <div className="font-medium">{formatName(member.firstname, member.lastname)}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">Member Type:</div>
+                          <div className="font-medium capitalize">{member.member_type}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">Status:</div>
+                          <div className="font-medium capitalize">{member.status}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">Role:</div>
+                          <div className="font-medium capitalize">{member.role}</div>
+                        </div>
+                        {member.gender && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">Gender:</div>
+                            <div className="font-medium capitalize">{member.gender}</div>
+                          </div>
+                        )}
+                        {member.birth_date && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">Age:</div>
+                            <div className="font-medium">{calculateAge(member.birth_date)} years old</div>
+                          </div>
+                        )}
+                        {member.occupation && (
+                          <div>
+                            <div className="text-sm text-muted-foreground">Occupation:</div>
+                            <div className="font-medium break-words">{member.occupation}</div>
+                          </div>
+                        )}
+                      </div>
+                    </section>
+
+                    {/* Contact Information */}
+                    {(member.email || member.phone || (member.address && member.address.street)) && (
+                      <section>
+                        <h3 className="text-base font-semibold flex items-center gap-2 mb-3 text-green-900 dark:text-green-100">
+                          <Mail className="h-4 w-4" /> Contact Information
+                        </h3>
+                        <div className="space-y-3">
+                          {member.email && (
+                            <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                              <div className="text-sm font-medium text-green-900 dark:text-green-100">{member.email}</div>
+                            </div>
+                          )}
+                          {member.phone && (
+                            <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                              <div className="text-sm font-medium text-green-900 dark:text-green-100">{formatPhoneNumber(member.phone)}</div>
+                            </div>
+                          )}
+                          {member.address && member.address.street && (
+                            <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                              <div className="text-sm font-medium text-green-900 dark:text-green-100">{member.address.street}</div>
+                              <div className="text-xs text-green-600 dark:text-green-400">
+                                {[member.address.city, member.address.state, member.address.zip].filter(Boolean).join(', ')}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </section>
+                    )}
+
+                    {/* Important Dates */}
+                    {(member.birth_date || member.join_date) && (
+                      <section>
+                        <h3 className="text-base font-semibold flex items-center gap-2 mb-3 text-orange-900 dark:text-orange-100">
+                          <Calendar className="h-4 w-4" /> Important Dates
+                        </h3>
+                        <div className="space-y-3">
+                          {member.birth_date && (
+                            <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                              <div className="text-sm font-medium text-orange-900 dark:text-orange-100">
+                                Birthday: {isValidDate(member.birth_date) 
+                                  ? format(new Date(member.birth_date), 'MMM d, yyyy')
+                                  : 'Date not available'
+                                }
+                              </div>
+                              {isValidDate(member.birth_date) && calculateAge(member.birth_date) && (
+                                <div className="text-xs text-orange-600 dark:text-orange-400">
+                                  {calculateAge(member.birth_date)} years old
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {member.join_date && (
+                            <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                              <div className="text-sm font-medium text-orange-900 dark:text-orange-100">
+                                Join Date: {isValidDate(member.join_date) 
+                                  ? format(new Date(member.join_date), 'MMM d, yyyy')
+                                  : 'Date not available'
+                                }
+                              </div>
+                              {isValidDate(member.join_date) && (
+                                <div className="text-xs text-orange-600 dark:text-orange-400">
+                                  Member for {Math.floor((new Date() - new Date(member.join_date)) / (1000 * 60 * 60 * 24 * 365))} years
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </section>
+                    )}
+
+                    {/* Communication Preferences */}
+                    {member.communication_preferences && (
+                      <section>
+                        <h3 className="text-base font-semibold flex items-center gap-2 mb-3 text-purple-900 dark:text-purple-100">
+                          <MessageSquare className="h-4 w-4" /> Communication Preferences
+                        </h3>
+                        <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                          <div className="flex flex-wrap gap-2">
+                            {member.communication_preferences.sms && (
+                              <Badge variant="default" className="text-xs bg-purple-500">
+                                <MessageSquare className="w-3 h-3 mr-1" />
+                                SMS
+                              </Badge>
+                            )}
+                            {member.communication_preferences.email && (
+                              <Badge variant="default" className="text-xs bg-blue-500">
+                                <Mail className="w-3 h-3 mr-1" />
+                                Email
+                              </Badge>
+                            )}
+                            {member.communication_preferences.mail && (
+                              <Badge variant="default" className="text-xs bg-gray-500">
+                                <FileText className="w-3 h-3 mr-1" />
+                                Mail
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </section>
+                    )}
+
+                    {/* Family Information */}
+                    {familyInfo && (
+                      <section>
+                        <h3 className="text-base font-semibold flex items-center gap-2 mb-3 text-pink-900 dark:text-pink-100">
+                          <Heart className="h-4 w-4" /> Family Information
+                        </h3>
+                        <div className="p-3 bg-pink-50 dark:bg-pink-900/20 rounded-lg">
+                          <div className="text-sm font-medium text-pink-900 dark:text-pink-100">
+                            {familyInfo.name || 'Family'}
+                          </div>
+                          <div className="text-xs text-pink-600 dark:text-pink-400">
+                            {familyInfo.members?.length || 0} member{(familyInfo.members?.length || 0) !== 1 ? 's' : ''}
+                          </div>
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {familyInfo.members
+                              ?.filter(m => m.id !== member.id)
+                              .slice(0, 3)
+                              .map((familyMember) => (
+                                <Badge key={familyMember.id} variant="outline" className="text-xs">
+                                  {formatName(familyMember.firstname, familyMember.lastname)}
+                                </Badge>
+                              ))}
+                            {familyInfo.members && familyInfo.members.length > 4 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{familyInfo.members.length - 4} more
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </section>
+                    )}
+
+                    {/* Child Guardians */}
+                    {member.member_type === 'child' && guardians.length > 0 && (
+                      <section>
+                        <h3 className="text-base font-semibold flex items-center gap-2 mb-3 text-amber-900 dark:text-amber-100">
+                          <Shield className="h-4 w-4" /> Guardians
+                        </h3>
+                        <div className="space-y-2">
+                          {guardians.map((guardian) => (
+                            <div key={guardian.id} className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                              <div className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                                {formatName(guardian.guardian.firstname, guardian.guardian.lastname)}
+                              </div>
+                              <div className="text-xs text-amber-600 dark:text-amber-400">
+                                {guardian.relationship || 'Guardian'}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+                  </CardContent>
+                </Card>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="attendance">
+              <AccordionTrigger className="text-lg font-semibold px-4">
+                <Church className="h-5 w-5 mr-3" />
+                Attendance ({attendance.length})
+              </AccordionTrigger>
+              <AccordionContent>
+                <Card className="border-0 shadow-md">
+                  <CardContent className="p-4">
+                    {/* Add Check In to Past Event button for mobile */}
+                    <div className="mb-4">
+                      <Button 
+                        onClick={() => member && setIsRetroCheckInOpen(true)}
+                        disabled={!member}
+                        className="w-full"
+                      >
+                        <Calendar className="mr-2 h-4 w-4" />
+                        Check In to Past Event
+                      </Button>
+                    </div>
+                    {isAttendanceLoading ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-2"></div>
+                        <p className="text-sm text-green-600">Loading...</p>
+                      </div>
+                    ) : attendance.length > 0 ? (
+                      <div className="space-y-4">
+                        {/* Attendance by Event Type */}
+                        <div>
+                          <h4 className="text-sm font-semibold mb-3 text-green-900 dark:text-green-100">Attendance by Event Type</h4>
+                          {(() => {
+                            const eventTypeStats = {};
+                            
+                            attendance.forEach(record => {
+                              const eventType = record.events?.event_type || 'Other';
+                              if (!eventTypeStats[eventType]) {
+                                eventTypeStats[eventType] = { attended: 0 };
+                              }
+                              eventTypeStats[eventType].attended++;
+                            });
+                            
+                            if (Object.keys(eventTypeStats).length === 0) {
+                              return (
+                                <div className="text-center py-4">
+                                  <p className="text-sm text-green-600 dark:text-green-400">No attendance records</p>
+                                </div>
+                              );
+                            }
+                            
+                            return (
+                              <div className="space-y-2">
+                                {Object.entries(eventTypeStats).map(([eventType, stats]) => (
+                                  <div key={eventType} className="flex items-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                                    <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center mr-3">
+                                      <CheckCircle className="h-4 w-4 text-white" />
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="font-medium text-green-900 dark:text-green-100 capitalize">
+                                        {eventType}
+                                      </div>
+                                      <div className="text-xs text-green-600 dark:text-green-400">
+                                        {stats.attended} event{stats.attended !== 1 ? 's' : ''} attended
+                                      </div>
+                                    </div>
+                                    <Badge className="bg-green-500 text-white">
+                                      {stats.attended}
+                                    </Badge>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          })()}
+                        </div>
+
+                        {/* Recent Attendance */}
+                        <div>
+                          <h4 className="text-sm font-semibold mb-3 text-blue-900 dark:text-blue-100">Recent Attendance</h4>
+                          <div className="space-y-2">
+                            {attendance.slice(0, 5).map((record) => {
+                              const dateValue = record.events?.start_date || record.event?.date || record.created_at;
+                              const isValidDate = dateValue && !isNaN(new Date(dateValue).getTime());
+                              
+                              return (
+                                <div key={record.id} className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                  <div className="font-medium text-blue-900 dark:text-blue-100">
+                                    {record.events?.title || record.event?.title || 'Event'}
+                                  </div>
+                                  <div className="text-sm text-blue-600 dark:text-blue-400">
+                                    {isValidDate 
+                                      ? format(new Date(dateValue), 'MMM d, yyyy • h:mm a')
+                                      : 'Date not available'
+                                    }
+                                  </div>
+                                  <div className="text-xs text-blue-600 dark:text-blue-400">
+                                    {record.events?.location || record.event?.location || 'Location'}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                            {attendance.length > 5 && (
+                              <p className="text-sm text-muted-foreground text-center">
+                                +{attendance.length - 5} more events
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-4">
+                        <p className="text-sm text-muted-foreground">No attendance records</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="giving">
+              <AccordionTrigger className="text-lg font-semibold px-4">
+                <DollarSign className="h-5 w-5 mr-3" />
+                Giving ({(() => {
+                  const donationData = getDonationDisplayData();
+                  return donationData.donations.length;
+                })()})
+              </AccordionTrigger>
+              <AccordionContent>
+                <Card className="border-0 shadow-md">
+                  <CardContent className="p-4">
+                    {(() => {
+                      const donationData = getDonationDisplayData();
+                      
+                      return donationData.isLoading ? (
+                        <div className="text-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto mb-2"></div>
+                          <p className="text-sm text-emerald-600">Loading...</p>
+                        </div>
+                      ) : donationData.donations.length > 0 ? (
+                        <div className="space-y-4">
+                          {/* Giving Overview */}
+                          <div>
+                            <h4 className="text-sm font-semibold mb-3 text-emerald-900 dark:text-emerald-100">
+                              {donationData.title}
+                            </h4>
+                            {donationData.isFamilyData && (
+                              <div className="flex items-center gap-2 mb-3">
+                                <Users className="h-4 w-4 text-emerald-600" />
+                                <span className="text-xs text-emerald-600 dark:text-emerald-400">
+                                  Showing family donations (includes all family members)
+                                </span>
+                              </div>
+                            )}
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg text-center">
+                                <div className="text-lg font-bold text-emerald-900 dark:text-emerald-100">
+                                  ${donationData.donations.reduce((sum, d) => sum + (d.amount || 0), 0).toLocaleString()}
+                                </div>
+                                <div className="text-xs text-emerald-600 dark:text-emerald-400">
+                                  {donationData.isFamilyData ? 'Family Total Given' : 'Total Given'}
+                                </div>
+                              </div>
+                              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center">
+                                <div className="text-lg font-bold text-blue-900 dark:text-blue-100">
+                                  {donationData.donations.length}
+                                </div>
+                                <div className="text-xs text-blue-600 dark:text-blue-400">
+                                  {donationData.isFamilyData ? 'Family Total Gifts' : 'Total Gifts'}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Recent Donations */}
+                          <div>
+                            <h4 className="text-sm font-semibold mb-3 text-orange-900 dark:text-orange-100">
+                              {donationData.isFamilyData ? 'Recent Family Donations' : 'Recent Donations'}
+                            </h4>
+                            <div className="space-y-2">
+                              {donationData.donations.slice(0, 3).map((donation) => {
+                                const dateValue = donation.date || donation.created_at;
+                                const isValidDate = dateValue && !isNaN(new Date(dateValue).getTime());
+                                
+                                return (
+                                  <div key={donation.id} className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                                    <div className="font-medium text-orange-900 dark:text-orange-100">
+                                      ${donation.amount?.toLocaleString() || '0'}
+                                    </div>
+                                    <div className="text-sm text-orange-600 dark:text-orange-400">
+                                      {donation.fund_name || donation.fund_designation || 'General Fund'} • {isValidDate 
+                                        ? format(new Date(dateValue), 'MMM d, yyyy')
+                                        : 'Date not available'
+                                      }
+                                    </div>
+                                    {donationData.isFamilyData && donation.member_id !== member?.id && (
+                                      <div className="text-xs text-orange-500 dark:text-orange-400">
+                                        From family member
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-4">
+                          <p className="text-sm text-muted-foreground">
+                            {donationData.isFamilyData 
+                              ? 'No family donations recorded yet'
+                              : 'No individual donations recorded yet'
+                            }
+                          </p>
+                        </div>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="groups">
+              <AccordionTrigger className="text-lg font-semibold px-4">
+                <Users className="h-5 w-5 mr-3" />
+                Groups ({groups.length})
+              </AccordionTrigger>
+              <AccordionContent>
+                <Card className="border-0 shadow-md">
+                  <CardContent className="p-4">
+                    {isGroupsLoading ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-2"></div>
+                        <p className="text-sm text-purple-600">Loading...</p>
+                      </div>
+                    ) : groups.length > 0 ? (
+                      <div className="space-y-4">
+                        {/* Group Overview */}
+                        <div>
+                          <h4 className="text-sm font-semibold mb-3 text-purple-900 dark:text-purple-100">Group Overview</h4>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg text-center">
+                              <div className="text-lg font-bold text-purple-900 dark:text-purple-100">
+                                {groups.length}
+                              </div>
+                              <div className="text-xs text-purple-600 dark:text-purple-400">Active Groups</div>
+                            </div>
+                            <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg text-center">
+                              <div className="text-lg font-bold text-purple-900 dark:text-purple-100">
+                                {groups.filter(g => g.role === 'leader').length}
+                              </div>
+                              <div className="text-xs text-purple-600 dark:text-purple-400">Leadership</div>
+                            </div>
+                            <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg text-center">
+                              <div className="text-lg font-bold text-purple-900 dark:text-purple-100">
+                                {groups.filter(g => g.role === 'member').length}
+                              </div>
+                              <div className="text-xs text-purple-600 dark:text-purple-400">Memberships</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Group Memberships */}
+                        <div>
+                          <h4 className="text-sm font-semibold mb-3 text-blue-900 dark:text-blue-100">Group Memberships</h4>
+                          <div className="space-y-2">
+                            {groups.map((groupMembership) => {
+                              const dateValue = groupMembership.joined_date || groupMembership.created_at;
+                              const isValidDate = dateValue && !isNaN(new Date(dateValue).getTime());
+                              
+                              const group = groupMembership.groups || groupMembership.group;
+                              const groupName = group?.name || 'Unknown Group';
+                              const groupDescription = group?.description || 'No description available';
+                              const groupLeader = group?.leader_name || group?.leader || group?.leader_name;
+                              const isLeader = groupMembership.role === 'leader';
+                              
+                              return (
+                                <div key={groupMembership.id} className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <div className="font-medium text-blue-900 dark:text-blue-100">
+                                      {groupName}
+                                      {isLeader && (
+                                        <Badge variant="default" className="ml-2 text-xs bg-yellow-500">
+                                          Leader
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <Badge variant={isLeader ? 'default' : 'secondary'} className="text-xs">
+                                      {groupMembership.role || 'member'}
+                                    </Badge>
+                                  </div>
+                                  <div className="text-sm text-blue-600 dark:text-blue-400">
+                                    {groupDescription}
+                                  </div>
+                                  {groupLeader && !isLeader && (
+                                    <div className="text-xs text-blue-500 dark:text-blue-400 mt-1">
+                                      Leader: {groupLeader}
+                                    </div>
+                                  )}
+                                  <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                                    Joined {isValidDate 
+                                      ? format(new Date(dateValue), 'MMM yyyy')
+                                      : 'Date not available'
+                                    }
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-4">
+                        <p className="text-sm text-muted-foreground">No group memberships</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="volunteering">
+              <AccordionTrigger className="text-lg font-semibold px-4">
+                <Handshake className="h-5 w-5 mr-3" />
+                Volunteering ({volunteers.length})
+              </AccordionTrigger>
+              <AccordionContent>
+                <Card className="border-0 shadow-md">
+                  <CardContent className="p-4">
+                    {isVolunteersLoading ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto mb-2"></div>
+                        <p className="text-sm text-orange-600">Loading...</p>
+                      </div>
+                    ) : volunteers.length > 0 ? (
+                      <div className="space-y-4">
+                        {/* Volunteering Overview */}
+                        <div>
+                          <h4 className="text-sm font-semibold mb-3 text-orange-900 dark:text-orange-100">Volunteering Overview</h4>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-center">
+                              <div className="text-lg font-bold text-orange-900 dark:text-orange-100">
+                                {volunteers.length}
+                              </div>
+                              <div className="text-xs text-orange-600 dark:text-orange-400">Total Assignments</div>
+                            </div>
+                            <div className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-center">
+                              <div className="text-lg font-bold text-orange-900 dark:text-orange-100">
+                                {new Set(volunteers.map(v => v.events?.id)).size}
+                              </div>
+                              <div className="text-xs text-orange-600 dark:text-orange-400">Events Volunteered</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Volunteer Roles */}
+                        <div>
+                          <h4 className="text-sm font-semibold mb-3 text-blue-900 dark:text-blue-100">Volunteer Roles</h4>
+                          <div className="space-y-2">
+                            {volunteers.slice(0, 5).map((volunteer) => {
+                              const dateValue = volunteer.created_at;
+                              const isValidDate = dateValue && !isNaN(new Date(dateValue).getTime());
+                              
+                              return (
+                                <div key={volunteer.id} className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <div className="font-medium text-blue-900 dark:text-blue-100">
+                                      {volunteer.role}
+                                    </div>
+                                    <Badge variant="secondary" className="text-xs">
+                                      Volunteer
+                                    </Badge>
+                                  </div>
+                                  <div className="text-sm text-blue-600 dark:text-blue-400">
+                                    {volunteer.events?.title || 'Event'}
+                                  </div>
+                                  {volunteer.notes && (
+                                    <div className="text-xs text-blue-500 dark:text-blue-400 mt-1">
+                                      {volunteer.notes}
+                                    </div>
+                                  )}
+                                  <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                                    {isValidDate 
+                                      ? format(new Date(dateValue), 'MMM d, yyyy')
+                                      : 'Date not available'
+                                    }
+                                  </div>
+                                </div>
+                              );
+                            })}
+                            {volunteers.length > 5 && (
+                              <p className="text-sm text-muted-foreground text-center">
+                                +{volunteers.length - 5} more roles
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-4">
+                        <p className="text-sm text-muted-foreground">No volunteer roles assigned yet</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="family">
+              <AccordionTrigger className="text-lg font-semibold px-4">
+                <Heart className="h-5 w-5 mr-3" />
+                Family
+              </AccordionTrigger>
+              <AccordionContent>
+                <FamilyAssignment 
+                  member={member} 
+                  onFamilyUpdate={() => {
+                    loadFamilyInfo(member.id);
+                    loadFamilyDonations();
+                  }}
+                />
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </motion.div>
+      </div>
+
+      {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[95vw] lg:max-w-[1200px] max-h-[90vh] overflow-hidden">
-          <DialogHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b border-primary/20">
-            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              Edit {member.firstname} {member.lastname}
-            </DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              Update the member's information below. All changes will be saved when you click "Save Changes".
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Profile</DialogTitle>
+            <DialogDescription>
+              Update {member ? formatName(member.firstname, member.lastname) : 'member'}'s information
             </DialogDescription>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[70vh] pr-2">
-          <MemberForm
-            initialData={{
-                id: member.id,
-              firstname: member.firstname,
-              lastname: member.lastname,
-              email: member.email,
-              phone: member.phone,
-              status: member.status,
-                image_url: member.image_url,
-                member_type: member.member_type,
-                birth_date: member.birth_date,
-                gender: member.gender,
-                join_date: member.join_date,
-                anniversary_date: member.anniversary_date,
-                spouse_name: member.spouse_name,
-                has_children: member.has_children,
-                marital_status: member.marital_status,
-                occupation: member.occupation,
-                address: member.address,
-                emergency_contact: member.emergency_contact,
-                notes: member.notes,
-                last_attendance_date: member.last_attendance_date,
-                attendance_frequency: member.attendance_frequency,
-                ministry_involvement: member.ministry_involvement,
-                communication_preferences: member.communication_preferences,
-                tags: member.tags
-            }}
-            onSave={handleEditMember}
-            onCancel={() => setIsEditDialogOpen(false)}
-          />
-          </div>
+          {member ? (
+            <MemberForm
+              member={member}
+              onSubmit={handleEditMember}
+              onCancel={() => setIsEditDialogOpen(false)}
+            />
+          ) : (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <span className="ml-2 text-sm text-muted-foreground">Loading member data...</span>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete Person</DialogTitle>
+            <DialogTitle>Delete Member</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this person? This action cannot be undone.
+              Are you sure you want to delete {formatName(member.firstname, member.lastname)}? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -1938,67 +2561,62 @@ export default function MemberProfile() {
         </DialogContent>
       </Dialog>
 
-      {/* Retroactive Check-in Dialog */}
+      {/* Retro Check-in Dialog */}
       <Dialog open={isRetroCheckInOpen} onOpenChange={setIsRetroCheckInOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Check In to Past Event</DialogTitle>
+            <DialogTitle>Mark Attendance</DialogTitle>
             <DialogDescription>
-              Select a past event to check in {member?.firstname} {member?.lastname}
+              Select an event to mark {member ? formatName(member.firstname, member.lastname) : 'member'} as present
             </DialogDescription>
           </DialogHeader>
-          
-          {isEventsLoading ? (
-            <div className="flex items-center justify-center py-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : pastEvents.length > 0 ? (
-            <div className="space-y-4 max-h-[400px] overflow-y-auto">
-              {pastEvents.map((event) => (
-                <div
-                  key={event.id}
-                  className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer hover:bg-muted/50 ${
-                    selectedEvent?.id === event.id ? 'border-primary bg-muted/50' : ''
-                  }`}
-                  onClick={() => setSelectedEvent(event)}
-                >
-                  <div className="space-y-1">
-                    <p className="font-medium">{event.title}</p>
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      {format(new Date(event.start_date), 'MMM d, yyyy • h:mm a')}
-                    </div>
-                    {event.location && (
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <MapPin className="h-4 w-4 mr-2" />
-                        {event.location}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-4">
-              <p className="text-muted-foreground">No past events available for check-in.</p>
-            </div>
-          )}
-
-          <DialogFooter>
+          <div className="space-y-4">
             <Button
               variant="outline"
-              onClick={() => {
-                setIsRetroCheckInOpen(false);
-                setSelectedEvent(null);
-              }}
+              onClick={loadPastEvents}
+              disabled={isEventsLoading || !member}
+              className="w-full"
             >
+              {isEventsLoading ? 'Loading events...' : 'Load Past Events'}
+            </Button>
+            {pastEvents.length > 0 && (
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {pastEvents.map((event) => {
+                  // Safely get the date value
+                  const dateValue = event.date || event.start_date || event.created_at;
+                  const isValidDate = dateValue && !isNaN(new Date(dateValue).getTime());
+                  
+                  return (
+                    <Button
+                      key={event.id}
+                      variant={selectedEvent?.id === event.id ? "default" : "outline"}
+                      onClick={() => setSelectedEvent(event)}
+                      className="w-full justify-start"
+                    >
+                      <div className="text-left">
+                        <div className="font-medium">{event.title}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {isValidDate 
+                            ? format(new Date(dateValue), 'MMM d, yyyy')
+                            : 'Date not available'
+                          }
+                        </div>
+                      </div>
+                    </Button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRetroCheckInOpen(false)}>
               Cancel
             </Button>
-            <Button
+            <Button 
               onClick={handleRetroCheckIn}
-              disabled={!selectedEvent}
+              disabled={!selectedEvent || !member}
             >
-              Check In
+              Mark Present
             </Button>
           </DialogFooter>
         </DialogContent>
