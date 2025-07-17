@@ -102,6 +102,9 @@ export function SMS() {
     scheduledDate: '',
     scheduledTime: '',
     recipients: [],
+    selectedGroups: [],
+    selectedMembers: [],
+    targetType: 'all', // 'all', 'groups', 'members'
     type: 'immediate'
   });
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
@@ -749,11 +752,66 @@ export function SMS() {
   // Clearstream-style new functions
   const handleCreateCampaign = async () => {
     try {
+      // Prepare recipients based on target type
+      let recipients = [];
+      
+      if (newCampaign.targetType === 'all') {
+        // Get all opted-in members
+        recipients = members.filter(m => m.sms_opt_in).map(m => ({
+          id: m.id,
+          name: `${m.firstname} ${m.lastname}`,
+          phone: m.phone,
+          type: 'member'
+        }));
+      } else if (newCampaign.targetType === 'groups') {
+        // Get members from selected groups
+        for (const groupId of newCampaign.selectedGroups) {
+          const { data: groupMembers } = await supabase
+            .from('group_members')
+            .select(`
+              member:members(id, firstname, lastname, phone, sms_opt_in)
+            `)
+            .eq('group_id', groupId);
+          
+          if (groupMembers) {
+            const validMembers = groupMembers
+              .map(gm => gm.member)
+              .filter(m => m && m.sms_opt_in)
+              .map(m => ({
+                id: m.id,
+                name: `${m.firstname} ${m.lastname}`,
+                phone: m.phone,
+                type: 'member'
+              }));
+            recipients.push(...validMembers);
+          }
+        }
+      } else if (newCampaign.targetType === 'members') {
+        // Get selected individual members
+        recipients = newCampaign.selectedMembers
+          .map(memberId => members.find(m => m.id === memberId))
+          .filter(m => m && m.sms_opt_in)
+          .map(m => ({
+            id: m.id,
+            name: `${m.firstname} ${m.lastname}`,
+            phone: m.phone,
+            type: 'member'
+          }));
+      }
+
       const campaignData = {
-        ...newCampaign,
+        name: newCampaign.name,
+        description: newCampaign.description,
+        message: newCampaign.message,
+        scheduledDate: newCampaign.scheduledDate || null,
+        scheduledTime: newCampaign.scheduledTime || null,
+        recipients: recipients,
+        targetType: newCampaign.targetType,
+        selectedGroups: newCampaign.selectedGroups,
+        selectedMembers: newCampaign.selectedMembers,
         organization_id: await getCurrentUserOrganizationId(),
-        status: 'scheduled',
-        created_at: new Date().toISOString()
+        status: 'draft',
+        type: newCampaign.type
       };
       
       const { data, error } = await supabase
@@ -766,7 +824,7 @@ export function SMS() {
       
       toast({
         title: 'Success',
-        description: 'Campaign created successfully'
+        description: `Campaign created successfully with ${recipients.length} recipients`
       });
       
       setIsCampaignOpen(false);
@@ -777,6 +835,9 @@ export function SMS() {
         scheduledDate: '',
         scheduledTime: '',
         recipients: [],
+        selectedGroups: [],
+        selectedMembers: [],
+        targetType: 'all',
         type: 'immediate'
       });
       
@@ -944,6 +1005,48 @@ export function SMS() {
     if (!orgData || orgData.length === 0) throw new Error('User not associated with any organization');
 
     return orgData[0].organization_id;
+  };
+
+  // Campaign recipient selection helpers
+  const toggleCampaignGroupSelection = (groupId) => {
+    setNewCampaign(prev => ({
+      ...prev,
+      selectedGroups: prev.selectedGroups.includes(groupId)
+        ? prev.selectedGroups.filter(id => id !== groupId)
+        : [...prev.selectedGroups, groupId]
+    }));
+  };
+
+  const toggleCampaignMemberSelection = (memberId) => {
+    setNewCampaign(prev => ({
+      ...prev,
+      selectedMembers: prev.selectedMembers.includes(memberId)
+        ? prev.selectedMembers.filter(id => id !== memberId)
+        : [...prev.selectedMembers, memberId]
+    }));
+  };
+
+  const getCampaignRecipientCount = () => {
+    if (newCampaign.targetType === 'all') {
+      return members.filter(m => m.sms_opt_in).length;
+    } else if (newCampaign.targetType === 'groups') {
+      return newCampaign.selectedGroups.length;
+    } else if (newCampaign.targetType === 'members') {
+      return newCampaign.selectedMembers.length;
+    }
+    return 0;
+  };
+
+  const getCampaignRecipientTitle = () => {
+    const count = getCampaignRecipientCount();
+    if (newCampaign.targetType === 'all') {
+      return `All Church (${count})`;
+    } else if (newCampaign.targetType === 'groups') {
+      return `${count} Group${count !== 1 ? 's' : ''}`;
+    } else if (newCampaign.targetType === 'members') {
+      return `${count} Member${count !== 1 ? 's' : ''}`;
+    }
+    return 'Select Recipients';
   };
 
   const filteredConversations = conversations.filter(conversation => {
@@ -1230,6 +1333,16 @@ export function SMS() {
                         <span>Type: {campaign.type}</span>
                         <span>Created: {format(new Date(campaign.created_at), 'MMM d, yyyy')}</span>
                       </div>
+                      <div className="text-sm text-muted-foreground">
+                        <span>Target: {campaign.targetType === 'all' ? 'All Church' : 
+                          campaign.targetType === 'groups' ? `${campaign.selectedGroups?.length || 0} Groups` :
+                          `${campaign.selectedMembers?.length || 0} Members`}</span>
+                      </div>
+                      {campaign.recipients && campaign.recipients.length > 0 && (
+                        <div className="text-sm text-muted-foreground">
+                          <span>Recipients: {campaign.recipients.length} people</span>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -2115,6 +2228,110 @@ export function SMS() {
                 <option value="scheduled">Scheduled</option>
                 <option value="recurring">Recurring</option>
               </select>
+            </div>
+
+            {/* Recipient Selection */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Target Recipients</Label>
+                <div className="flex space-x-2">
+                  <Button
+                    type="button"
+                    variant={newCampaign.targetType === 'all' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setNewCampaign({...newCampaign, targetType: 'all'})}
+                  >
+                    All Church
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={newCampaign.targetType === 'groups' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setNewCampaign({...newCampaign, targetType: 'groups'})}
+                  >
+                    Specific Groups
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={newCampaign.targetType === 'members' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setNewCampaign({...newCampaign, targetType: 'members'})}
+                  >
+                    Specific Members
+                  </Button>
+                </div>
+              </div>
+
+              {/* Group Selection */}
+              {newCampaign.targetType === 'groups' && (
+                <div className="space-y-2">
+                  <Label>Select Groups</Label>
+                  <div className="max-h-40 overflow-y-auto border rounded-md p-2 space-y-1">
+                    {groups.map((group) => (
+                      <div
+                        key={group.id}
+                        className={`flex items-center space-x-2 p-2 rounded cursor-pointer hover:bg-muted ${
+                          newCampaign.selectedGroups.includes(group.id) ? 'bg-blue-50 border-blue-200' : ''
+                        }`}
+                        onClick={() => toggleCampaignGroupSelection(group.id)}
+                      >
+                        <div className={`w-4 h-4 border rounded flex items-center justify-center ${
+                          newCampaign.selectedGroups.includes(group.id) ? 'bg-blue-600 border-blue-600' : 'border-gray-300'
+                        }`}>
+                          {newCampaign.selectedGroups.includes(group.id) && (
+                            <Check className="w-3 h-3 text-white" />
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-medium">{group.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {group.memberCount} member{group.memberCount !== 1 ? 's' : ''}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Member Selection */}
+              {newCampaign.targetType === 'members' && (
+                <div className="space-y-2">
+                  <Label>Select Members</Label>
+                  <div className="max-h-40 overflow-y-auto border rounded-md p-2 space-y-1">
+                    {members.filter(m => m.sms_opt_in).map((member) => (
+                      <div
+                        key={member.id}
+                        className={`flex items-center space-x-2 p-2 rounded cursor-pointer hover:bg-muted ${
+                          newCampaign.selectedMembers.includes(member.id) ? 'bg-blue-50 border-blue-200' : ''
+                        }`}
+                        onClick={() => toggleCampaignMemberSelection(member.id)}
+                      >
+                        <div className={`w-4 h-4 border rounded flex items-center justify-center ${
+                          newCampaign.selectedMembers.includes(member.id) ? 'bg-blue-600 border-blue-600' : 'border-gray-300'
+                        }`}>
+                          {newCampaign.selectedMembers.includes(member.id) && (
+                            <Check className="w-3 h-3 text-white" />
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-medium">
+                            {member.firstname} {member.lastname}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {member.phone}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Recipient Summary */}
+              <div className="text-sm text-muted-foreground">
+                {getCampaignRecipientTitle()}
+              </div>
             </div>
           </div>
           <DialogFooter>

@@ -57,12 +57,10 @@ serve(async (req) => {
 
     console.log('Campaign found:', campaign.name)
 
-    // Get recipients based on campaign type
+    // Get recipients based on campaign targeting
     let recipients = []
-    if (campaign.recipients && Array.isArray(campaign.recipients)) {
-      // Direct recipients list
-      recipients = campaign.recipients
-    } else {
+    
+    if (campaign.targetType === 'all') {
       // Get all opted-in members for the organization
       const { data: members, error: membersError } = await supabaseClient
         .from('members')
@@ -78,6 +76,49 @@ serve(async (req) => {
       }
 
       recipients = members || []
+    } else if (campaign.targetType === 'groups' && campaign.selectedGroups) {
+      // Get members from selected groups
+      for (const groupId of campaign.selectedGroups) {
+        const { data: groupMembers, error: groupError } = await supabaseClient
+          .from('group_members')
+          .select(`
+            member:members(id, firstname, lastname, phone, sms_opt_in)
+          `)
+          .eq('group_id', groupId)
+          .eq('organization_id', campaign.organization_id)
+
+        if (groupError) {
+          console.error('Group members lookup error:', groupError)
+          continue
+        }
+
+        if (groupMembers) {
+          const validMembers = groupMembers
+            .map(gm => gm.member)
+            .filter(m => m && m.sms_opt_in && m.phone)
+          recipients.push(...validMembers)
+        }
+      }
+    } else if (campaign.targetType === 'members' && campaign.selectedMembers) {
+      // Get selected individual members
+      const { data: members, error: membersError } = await supabaseClient
+        .from('members')
+        .select('id, firstname, lastname, phone')
+        .eq('organization_id', campaign.organization_id)
+        .eq('status', 'active')
+        .eq('sms_opt_in', true)
+        .in('id', campaign.selectedMembers)
+        .not('phone', 'is', null)
+
+      if (membersError) {
+        console.error('Members lookup error:', membersError)
+        throw new Error(`Failed to get recipients: ${membersError.message}`)
+      }
+
+      recipients = members || []
+    } else if (campaign.recipients && Array.isArray(campaign.recipients)) {
+      // Fallback to direct recipients list
+      recipients = campaign.recipients
     }
 
     console.log(`Sending campaign to ${recipients.length} recipients`)

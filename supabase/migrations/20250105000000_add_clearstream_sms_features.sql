@@ -12,7 +12,10 @@ CREATE TABLE IF NOT EXISTS sms_campaigns (
   "scheduledTime" TIME,
   status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'scheduled', 'active', 'completed', 'cancelled')),
   type TEXT NOT NULL DEFAULT 'immediate' CHECK (type IN ('immediate', 'scheduled', 'recurring')),
+  "targetType" TEXT NOT NULL DEFAULT 'all' CHECK ("targetType" IN ('all', 'groups', 'members')),
   recipients JSONB DEFAULT '[]',
+  "selectedGroups" JSONB DEFAULT '[]',
+  "selectedMembers" JSONB DEFAULT '[]',
   sent_count INTEGER DEFAULT 0,
   delivered_count INTEGER DEFAULT 0,
   failed_count INTEGER DEFAULT 0,
@@ -212,9 +215,9 @@ BEGIN
       
       -- If no organizations exist, skip the inserts
       IF org_id IS NOT NULL THEN
-        INSERT INTO sms_campaigns (organization_id, name, description, message, type, status, "scheduledDate", "scheduledTime") VALUES
-          (org_id, 'Welcome Campaign', 'Welcome new members to the church', 'Welcome to our church! We''re so glad you''re here.', 'immediate', 'draft', NULL, NULL),
-          (org_id, 'Sunday Service Reminder', 'Weekly reminder for Sunday service', 'Join us this Sunday at 10 AM for worship!', 'recurring', 'scheduled', NULL, NULL)
+        INSERT INTO sms_campaigns (organization_id, name, description, message, type, status, "scheduledDate", "scheduledTime", "targetType", "selectedGroups", "selectedMembers") VALUES
+          (org_id, 'Welcome Campaign', 'Welcome new members to the church', 'Welcome to our church! We''re so glad you''re here.', 'immediate', 'draft', NULL, NULL, 'all', '[]', '[]'),
+          (org_id, 'Sunday Service Reminder', 'Weekly reminder for Sunday service', 'Join us this Sunday at 10 AM for worship!', 'recurring', 'scheduled', NULL, NULL, 'all', '[]', '[]')
         ON CONFLICT DO NOTHING;
 
         INSERT INTO sms_ab_tests (organization_id, name, "variantA", "variantB", "testSize", duration) VALUES
