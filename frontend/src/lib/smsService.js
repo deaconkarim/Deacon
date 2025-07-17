@@ -156,11 +156,11 @@ export const smsService = {
     }
     
     // Get Twilio phone number from environment
-    const twilioPhoneNumber = import.meta.env.VITE_TWILIO_PHONE_NUMBER;
+    const twilioPhoneNumber = import.meta.env.TWILIO_PHONE_NUMBER;
     console.log('📞 Twilio Phone Number:', twilioPhoneNumber ? '✅ Configured' : '❌ Not configured');
     
     if (!twilioPhoneNumber) {
-      throw new Error('Twilio phone number not configured. Please set VITE_TWILIO_PHONE_NUMBER in your environment variables.');
+      throw new Error('Twilio phone number not configured. Please set TWILIO_PHONE_NUMBER in your environment variables.');
     }
 
     // Render template if template_id is provided
