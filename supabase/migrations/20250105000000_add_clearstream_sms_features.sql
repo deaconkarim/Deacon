@@ -5,8 +5,9 @@
 -- Drop table if it exists with wrong column names
 DO $$
 BEGIN
-  -- Check if table exists with snake_case columns
-  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'sms_campaigns' AND column_name = 'scheduled_date') THEN
+  -- Check if table exists with snake_case columns or missing camelCase columns
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'sms_campaigns' AND column_name = 'scheduled_date') OR
+     NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'sms_campaigns' AND column_name = 'targetType') THEN
     DROP TABLE IF EXISTS sms_campaigns CASCADE;
   END IF;
 END $$;
@@ -218,28 +219,4 @@ BEGIN
   END IF;
 END $$;
 
--- Insert some sample campaigns (only if organizations table exists and has data)
-DO $$
-BEGIN
-  -- Check if organizations table exists and has data
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'organizations') THEN
-    -- Get the first organization ID or use a default
-    DECLARE
-      org_id UUID;
-    BEGIN
-      SELECT id INTO org_id FROM organizations LIMIT 1;
-      
-      -- If no organizations exist, skip the inserts
-      IF org_id IS NOT NULL THEN
-        INSERT INTO sms_campaigns (organization_id, name, description, message, type, status, "scheduledDate", "scheduledTime", "targetType", "selectedGroups", "selectedMembers") VALUES
-          (org_id, 'Welcome Campaign', 'Welcome new members to the church', 'Welcome to our church! We''re so glad you''re here.', 'immediate', 'draft', NULL, NULL, 'all', '[]', '[]'),
-          (org_id, 'Sunday Service Reminder', 'Weekly reminder for Sunday service', 'Join us this Sunday at 10 AM for worship!', 'recurring', 'scheduled', NULL, NULL, 'all', '[]', '[]')
-        ON CONFLICT DO NOTHING;
-
-        INSERT INTO sms_ab_tests (organization_id, name, "variantA", "variantB", "testSize", duration) VALUES
-          (org_id, 'Welcome Message Test', 'Welcome to our church!', 'We''re glad you''re here!', 50, 7)
-        ON CONFLICT DO NOTHING;
-      END IF;
-    END;
-  END IF;
-END $$;
+-- Sample data will be inserted by the fix migration to ensure proper schema
