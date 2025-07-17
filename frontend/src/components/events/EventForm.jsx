@@ -7,17 +7,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/components/ui/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import { parseVolunteerRoles } from '@/lib/data';
+import { locationService } from '@/lib/locationService';
+import { AlertTriangle, CheckCircle, MapPin, Users, Building } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const EventForm = ({ initialData, onSave, onCancel }) => {
   const [eventData, setEventData] = useState({
     ...initialData,
     title: initialData.title || '',
     description: initialData.description || '',
-    startDate: initialData.startDate ? new Date(initialData.startDate).toISOString().slice(0, 16) : '',
-    endDate: initialData.endDate ? new Date(initialData.endDate).toISOString().slice(0, 16) : '',
-    startTime: initialData.startDate ? new Date(initialData.startDate).toISOString().slice(11, 16) : '09:00',
-    endTime: initialData.endDate ? new Date(initialData.endDate).toISOString().slice(11, 16) : '10:00',
+    startDate: initialData.startDate ? format(new Date(initialData.startDate), 'yyyy-MM-dd\'T\'HH:mm') : '',
+    endDate: initialData.endDate ? format(new Date(initialData.endDate), 'yyyy-MM-dd\'T\'HH:mm') : '',
+    startTime: initialData.startDate ? format(new Date(initialData.startDate), 'HH:mm') : '09:00',
+    endTime: initialData.endDate ? format(new Date(initialData.endDate), 'HH:mm') : '10:00',
     location: initialData.location || '',
+    location_id: initialData.location_id || '',
     url: initialData.url || '',
     is_recurring: initialData.is_recurring || false,
     recurrence_pattern: initialData.recurrence_pattern || '',
@@ -25,10 +29,14 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
     monthly_weekday: initialData.monthly_weekday || '',
     allow_rsvp: initialData.allow_rsvp !== undefined ? initialData.allow_rsvp : true,
     attendance_type: initialData.attendance_type || 'rsvp',
-    event_type: initialData.event_type || 'Sunday Worship Service',
+    event_type: initialData.event_type || 'Worship Service',
     needs_volunteers: initialData.needs_volunteers || false,
     volunteer_roles: parseVolunteerRoles(initialData.volunteer_roles)
   });
+  const [locations, setLocations] = useState([]);
+  const [availableLocations, setAvailableLocations] = useState([]);
+  const [locationConflict, setLocationConflict] = useState(null);
+  const [isCheckingConflict, setIsCheckingConflict] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -36,11 +44,12 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
       ...initialData,
       title: initialData.title || '',
       description: initialData.description || '',
-      startDate: initialData.startDate ? new Date(initialData.startDate).toISOString().slice(0, 16) : '',
-      endDate: initialData.endDate ? new Date(initialData.endDate).toISOString().slice(0, 16) : '',
-      startTime: initialData.startDate ? new Date(initialData.startDate).toISOString().slice(11, 16) : '09:00',
-      endTime: initialData.endDate ? new Date(initialData.endDate).toISOString().slice(11, 16) : '10:00',
+      startDate: initialData.startDate ? format(new Date(initialData.startDate), 'yyyy-MM-dd\'T\'HH:mm') : '',
+      endDate: initialData.endDate ? format(new Date(initialData.endDate), 'yyyy-MM-dd\'T\'HH:mm') : '',
+      startTime: initialData.startDate ? format(new Date(initialData.startDate), 'HH:mm') : '09:00',
+      endTime: initialData.endDate ? format(new Date(initialData.endDate), 'HH:mm') : '10:00',
       location: initialData.location || '',
+      location_id: initialData.location_id || '',
       url: initialData.url || '',
       is_recurring: initialData.is_recurring || false,
       recurrence_pattern: initialData.recurrence_pattern || '',
@@ -48,11 +57,84 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
       monthly_weekday: initialData.monthly_weekday || '',
       allow_rsvp: initialData.allow_rsvp !== undefined ? initialData.allow_rsvp : true,
       attendance_type: initialData.attendance_type || 'rsvp',
-      event_type: initialData.event_type || 'Sunday Worship Service',
+      event_type: initialData.event_type || 'Worship Service',
       needs_volunteers: initialData.needs_volunteers || false,
       volunteer_roles: parseVolunteerRoles(initialData.volunteer_roles)
     });
   }, [initialData]);
+
+  // Load locations on component mount
+  useEffect(() => {
+    loadLocations();
+  }, []);
+
+  // Check for conflicts when location or dates change
+  useEffect(() => {
+    if (eventData.location_id && eventData.startDate && eventData.endDate) {
+      checkLocationConflict();
+    } else {
+      setLocationConflict(null);
+    }
+  }, [eventData.location_id, eventData.startDate, eventData.endDate]);
+
+  // Load available locations when dates change
+  useEffect(() => {
+    if (eventData.startDate && eventData.endDate) {
+      loadAvailableLocations();
+    }
+  }, [eventData.startDate, eventData.endDate]);
+
+  const loadLocations = async () => {
+    try {
+      const data = await locationService.getLocations();
+      setLocations(data);
+    } catch (error) {
+      console.error('Error loading locations:', error);
+    }
+  };
+
+  const loadAvailableLocations = async () => {
+    // Temporarily disable available locations until database function is fixed
+    setAvailableLocations([]);
+    return;
+    
+    try {
+      const startDate = new Date(eventData.startDate);
+      const endDate = new Date(eventData.endDate);
+      const data = await locationService.getAvailableLocations(startDate, endDate);
+      setAvailableLocations(data);
+    } catch (error) {
+      console.error('Error loading available locations:', error);
+    }
+  };
+
+  const checkLocationConflict = async () => {
+    // Temporarily disable location conflict checking until database function is fixed
+    setLocationConflict(null);
+    return;
+    
+    if (!eventData.location_id || eventData.location_id === 'no-location' || !eventData.startDate || !eventData.endDate) {
+      setLocationConflict(null);
+      return;
+    }
+
+    setIsCheckingConflict(true);
+    try {
+      const startDate = new Date(eventData.startDate);
+      const endDate = new Date(eventData.endDate);
+      const conflict = await locationService.checkLocationConflict(
+        eventData.location_id,
+        startDate,
+        endDate,
+        initialData.id || null
+      );
+      setLocationConflict(conflict);
+    } catch (error) {
+      console.error('Error checking location conflict:', error);
+    } finally {
+      setIsCheckingConflict(false);
+    }
+  };
 
   const handleFormChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -95,6 +177,16 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
     e.preventDefault();
     if (!eventData.title || !eventData.startDate || !eventData.endDate) {
       toast({ title: "Missing Information", description: "Please fill in all required fields.", variant: "destructive" });
+      return;
+    }
+
+    // Check for location conflicts
+    if (locationConflict) {
+      toast({ 
+        title: "Location Conflict", 
+        description: "This location is already booked for the selected time. Please choose a different location or time.", 
+        variant: "destructive" 
+      });
       return;
     }
 
@@ -146,10 +238,44 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
             <SelectValue placeholder="Select event type" />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="Worship Service">Worship Service</SelectItem>
             <SelectItem value="Sunday Worship Service">Sunday Worship Service</SelectItem>
-            <SelectItem value="Bible Study">Bible Study</SelectItem>
-            <SelectItem value="Work Day">Work Day</SelectItem>
-            <SelectItem value="Fellowship Activity">Fellowship Activity</SelectItem>
+            <SelectItem value="Bible Study or Class">Bible Study or Class</SelectItem>
+            <SelectItem value="Wednesday Bible Study">Wednesday Bible Study</SelectItem>
+            <SelectItem value="Prayer Meeting">Prayer Meeting</SelectItem>
+            <SelectItem value="Ministry Meeting">Ministry Meeting</SelectItem>
+            <SelectItem value="Outreach Event">Outreach Event</SelectItem>
+            <SelectItem value="Fellowship Gathering">Fellowship Gathering</SelectItem>
+            <SelectItem value="Special Event">Special Event</SelectItem>
+            <SelectItem value="Training or Workshop">Training or Workshop</SelectItem>
+            <SelectItem value="Fundraiser">Fundraiser</SelectItem>
+            <SelectItem value="Trip or Retreat">Trip or Retreat</SelectItem>
+            <SelectItem value="Youth Group">Youth Group</SelectItem>
+            <SelectItem value="Children's Ministry">Children's Ministry</SelectItem>
+            <SelectItem value="Men's Ministry">Men's Ministry</SelectItem>
+            <SelectItem value="Women's Ministry">Women's Ministry</SelectItem>
+            <SelectItem value="Choir Practice">Choir Practice</SelectItem>
+            <SelectItem value="Board Meeting">Board Meeting</SelectItem>
+            <SelectItem value="Deacon Meeting">Deacon Meeting</SelectItem>
+            <SelectItem value="Potluck">Potluck</SelectItem>
+            <SelectItem value="Community Service">Community Service</SelectItem>
+            <SelectItem value="Mission Trip">Mission Trip</SelectItem>
+            <SelectItem value="Conference">Conference</SelectItem>
+            <SelectItem value="Seminar">Seminar</SelectItem>
+            <SelectItem value="Concert">Concert</SelectItem>
+            <SelectItem value="Wedding">Wedding</SelectItem>
+            <SelectItem value="Funeral">Funeral</SelectItem>
+            <SelectItem value="Baptism">Baptism</SelectItem>
+            <SelectItem value="Communion">Communion</SelectItem>
+            <SelectItem value="Dedication">Dedication</SelectItem>
+            <SelectItem value="Graduation">Graduation</SelectItem>
+            <SelectItem value="Anniversary">Anniversary</SelectItem>
+            <SelectItem value="Holiday Service">Holiday Service</SelectItem>
+            <SelectItem value="Easter Service">Easter Service</SelectItem>
+            <SelectItem value="Christmas Service">Christmas Service</SelectItem>
+            <SelectItem value="Thanksgiving Service">Thanksgiving Service</SelectItem>
+            <SelectItem value="New Year's Service">New Year's Service</SelectItem>
+            <SelectItem value="Other">Other</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -248,8 +374,79 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
         </div>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="location">Location</Label>
-        <Input id="location" name="location" value={eventData.location} onChange={handleFormChange} />
+        <Label htmlFor="location_id">Location</Label>
+        <Select
+          value={eventData.location_id || 'no-location'}
+          onValueChange={(value) => {
+            if (value === 'no-location') {
+              setEventData(prev => ({
+                ...prev,
+                location_id: null,
+                location: ''
+              }));
+            } else {
+              const selectedLocation = locations.find(l => l.id === value);
+              setEventData(prev => ({
+                ...prev,
+                location_id: value,
+                location: selectedLocation ? selectedLocation.name : ''
+              }));
+            }
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select a location" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="no-location">No location</SelectItem>
+            {locations.map((location) => (
+              <SelectItem key={location.id} value={location.id}>
+                <div className="flex items-center space-x-2">
+                  {location.location_type === 'room' && <Building className="h-4 w-4" />}
+                  {location.location_type === 'outdoor' && <MapPin className="h-4 w-4" />}
+                  {location.location_type === 'virtual' && <Calendar className="h-4 w-4" />}
+                  <span>{location.name}</span>
+                  {location.capacity && (
+                    <span className="text-xs text-gray-500">({location.capacity} capacity)</span>
+                  )}
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        
+        {/* Location Conflict Warning */}
+        {locationConflict && (
+          <Alert variant="destructive" className="mt-2">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Location Conflict:</strong> This location is already booked for "{locationConflict.conflicting_event_title}" 
+              from {format(new Date(locationConflict.conflicting_start_date), 'MMM d, h:mm a')} to {format(new Date(locationConflict.conflicting_end_date), 'h:mm a')}.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Available Locations Suggestion */}
+        {eventData.startDate && eventData.endDate && availableLocations.length > 0 && !eventData.location_id && (
+          <Alert className="mt-2">
+            <CheckCircle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Available locations:</strong> {availableLocations.map(l => l.location_name).join(', ')}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Custom Location Input (fallback) */}
+        <div className="mt-2">
+          <Label htmlFor="location">Custom Location (if not in list)</Label>
+          <Input 
+            id="location" 
+            name="location" 
+            value={eventData.location} 
+            onChange={handleFormChange}
+            placeholder="Enter custom location if not in the list above"
+          />
+        </div>
       </div>
       <div className="space-y-2">
         <Label htmlFor="url">URL</Label>
@@ -260,9 +457,9 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
           <Checkbox
             id="allow_rsvp"
             checked={eventData.allow_rsvp}
-            onCheckedChange={handleRecurringChange}
+            onCheckedChange={(checked) => setEventData(prev => ({ ...prev, allow_rsvp: checked }))}
           />
-          <Label htmlFor="allow_rsvp">Allow RSVP</Label>
+          <Label htmlFor="allow_rsvp">Track Attendance</Label>
         </div>
         {eventData.allow_rsvp && (
           <div className="space-y-2">

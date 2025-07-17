@@ -542,10 +542,44 @@ export default function AutomationSettings() {
                     <SelectTrigger><SelectValue placeholder="Any" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="any">Any</SelectItem>
+                      <SelectItem value="Worship Service">Worship Service</SelectItem>
                       <SelectItem value="Sunday Worship Service">Sunday Worship Service</SelectItem>
-                      <SelectItem value="Bible Study">Bible Study</SelectItem>
-                      <SelectItem value="Work Day">Work Day</SelectItem>
-                      <SelectItem value="Fellowship Activity">Fellowship Activity</SelectItem>
+                      <SelectItem value="Bible Study or Class">Bible Study or Class</SelectItem>
+                      <SelectItem value="Wednesday Bible Study">Wednesday Bible Study</SelectItem>
+                      <SelectItem value="Prayer Meeting">Prayer Meeting</SelectItem>
+                      <SelectItem value="Ministry Meeting">Ministry Meeting</SelectItem>
+                      <SelectItem value="Outreach Event">Outreach Event</SelectItem>
+                      <SelectItem value="Fellowship Gathering">Fellowship Gathering</SelectItem>
+                      <SelectItem value="Special Event">Special Event</SelectItem>
+                      <SelectItem value="Training or Workshop">Training or Workshop</SelectItem>
+                      <SelectItem value="Fundraiser">Fundraiser</SelectItem>
+                      <SelectItem value="Trip or Retreat">Trip or Retreat</SelectItem>
+                      <SelectItem value="Youth Group">Youth Group</SelectItem>
+                      <SelectItem value="Children's Ministry">Children's Ministry</SelectItem>
+                      <SelectItem value="Men's Ministry">Men's Ministry</SelectItem>
+                      <SelectItem value="Women's Ministry">Women's Ministry</SelectItem>
+                      <SelectItem value="Choir Practice">Choir Practice</SelectItem>
+                      <SelectItem value="Board Meeting">Board Meeting</SelectItem>
+                      <SelectItem value="Deacon Meeting">Deacon Meeting</SelectItem>
+                      <SelectItem value="Potluck">Potluck</SelectItem>
+                      <SelectItem value="Community Service">Community Service</SelectItem>
+                      <SelectItem value="Mission Trip">Mission Trip</SelectItem>
+                      <SelectItem value="Conference">Conference</SelectItem>
+                      <SelectItem value="Seminar">Seminar</SelectItem>
+                      <SelectItem value="Concert">Concert</SelectItem>
+                      <SelectItem value="Wedding">Wedding</SelectItem>
+                      <SelectItem value="Funeral">Funeral</SelectItem>
+                      <SelectItem value="Baptism">Baptism</SelectItem>
+                      <SelectItem value="Communion">Communion</SelectItem>
+                      <SelectItem value="Dedication">Dedication</SelectItem>
+                      <SelectItem value="Graduation">Graduation</SelectItem>
+                      <SelectItem value="Anniversary">Anniversary</SelectItem>
+                      <SelectItem value="Holiday Service">Holiday Service</SelectItem>
+                      <SelectItem value="Easter Service">Easter Service</SelectItem>
+                      <SelectItem value="Christmas Service">Christmas Service</SelectItem>
+                      <SelectItem value="Thanksgiving Service">Thanksgiving Service</SelectItem>
+                      <SelectItem value="New Year's Service">New Year's Service</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

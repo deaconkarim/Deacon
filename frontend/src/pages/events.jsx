@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { format, parse, isAfter, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths } from 'date-fns';
+import Papa from 'papaparse';
 import { motion } from 'framer-motion';
 import { 
   Calendar as CalendarIcon, 
@@ -29,25 +30,14 @@ import {
   ChevronRight,
   Eye,
   BarChart3,
-  TrendingUp,
-  AlertCircle,
-  Info,
   Zap,
   Target,
-  Award,
-  Gift,
   Heart,
   Crown,
   Shield,
-  Music,
   BookOpen,
-  Camera,
   Building,
-  Home,
-  Car,
   GraduationCap,
-  Briefcase,
-  Activity,
   PieChart,
   LineChart,
   Settings,
@@ -58,24 +48,21 @@ import {
   Phone,
   Mail,
   Globe,
-  Wifi,
-  Video,
-  Mic,
-  Lightbulb,
   Coffee,
-  UtensilsCrossed,
-  Baby,
-  UserCheck,
-  UserX,
-  UserMinus,
-  UserPlus2,
   MoreHorizontal,
   Church,
+  Copy,
+  FileText,
+  DollarSign,
+  Tag,
+  Tent,
+  Baby,
+  User,
+  Music,
   Droplets,
   Wine,
-  Cross,
-  Copy,
-  FileText
+  Gift,
+  Monitor
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -112,6 +99,7 @@ import { automationService } from '@/lib/automationService';
 import { PermissionGuard, PermissionButton, PermissionFeature } from '@/components/PermissionGuard';
 import { PERMISSIONS } from '@/lib/permissions.jsx';
 import { cn } from '@/lib/utils';
+import LocationManager from '@/components/locations/LocationManager';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -137,53 +125,85 @@ const itemVariants = {
 
 // Event type icons mapping
 const eventTypeIcons = {
+  'Worship Service': Church,
   'Sunday Worship Service': Church,
-  'Bible Study': BookOpen,
+  'Bible Study or Class': BookOpen,
+  'Wednesday Bible Study': BookOpen,
   'Prayer Meeting': Heart,
+  'Ministry Meeting': Building,
+  'Outreach Event': Globe,
+  'Fellowship Gathering': Coffee,
+  'Special Event': Star,
+  'Training or Workshop': GraduationCap,
+  'Fundraiser': DollarSign,
+  'Trip or Retreat': Tent,
   'Youth Group': Users,
-  'Children\'s Ministry': Baby,
-  'Potluck': UtensilsCrossed,
-  'Fellowship': Coffee,
-  'Meeting': Building,
-  'Conference': GraduationCap,
-  'Workshop': Lightbulb,
-  'Concert': Music,
+  "Children's Ministry": Baby,
+  "Men's Ministry": User,
+  "Women's Ministry": User,
+  'Choir Practice': Music,
+  'Board Meeting': Building,
+  'Deacon Meeting': Shield,
+  'Potluck': Utensils,
+  'Community Service': Heart,
   'Mission Trip': Globe,
-  'Community Service': Shield,
+  'Conference': GraduationCap,
+  'Seminar': GraduationCap,
+  'Concert': Music,
   'Wedding': Heart,
-  'Funeral': Shield,
+  'Funeral': Heart,
   'Baptism': Droplets,
   'Communion': Wine,
-  'Easter Service': Cross,
-  'Christmas Service': Gift,
-  'Thanksgiving': Calendar,
-  'New Year': Calendar,
+  'Dedication': Gift,
+  'Graduation': GraduationCap,
+  'Anniversary': Heart,
+  'Holiday Service': Star,
+  'Easter Service': Church,
+  'Christmas Service': Church,
+  'Thanksgiving Service': Church,
+  "New Year's Service": Church,
   'Other': Calendar
 };
 
 // Event type colors
 const eventTypeColors = {
+  'Worship Service': 'blue',
   'Sunday Worship Service': 'blue',
-  'Bible Study': 'purple',
+  'Bible Study or Class': 'purple',
+  'Wednesday Bible Study': 'purple',
   'Prayer Meeting': 'pink',
-  'Youth Group': 'green',
-  'Children\'s Ministry': 'yellow',
-  'Potluck': 'orange',
-  'Fellowship': 'teal',
-  'Meeting': 'gray',
-  'Conference': 'indigo',
-  'Workshop': 'emerald',
-  'Concert': 'rose',
+  'Ministry Meeting': 'gray',
+  'Outreach Event': 'cyan',
+  'Fellowship Gathering': 'orange',
+  'Special Event': 'red',
+  'Training or Workshop': 'emerald',
+  'Fundraiser': 'green',
+  'Trip or Retreat': 'indigo',
+  'Youth Group': 'cyan',
+  "Children's Ministry": 'amber',
+  "Men's Ministry": 'slate',
+  "Women's Ministry": 'rose',
+  'Choir Practice': 'violet',
+  'Board Meeting': 'gray',
+  'Deacon Meeting': 'indigo',
+  'Potluck': 'lime',
+  'Community Service': 'pink',
   'Mission Trip': 'cyan',
-  'Community Service': 'amber',
+  'Conference': 'emerald',
+  'Seminar': 'emerald',
+  'Concert': 'violet',
   'Wedding': 'pink',
-  'Funeral': 'slate',
-  'Baptism': 'blue',
-  'Communion': 'red',
-  'Easter Service': 'green',
-  'Christmas Service': 'red',
-  'Thanksgiving': 'orange',
-  'New Year': 'purple',
+  'Funeral': 'gray',
+  'Baptism': 'cyan',
+  'Communion': 'purple',
+  'Dedication': 'amber',
+  'Graduation': 'emerald',
+  'Anniversary': 'pink',
+  'Holiday Service': 'red',
+  'Easter Service': 'blue',
+  'Christmas Service': 'blue',
+  'Thanksgiving Service': 'blue',
+  "New Year's Service": 'blue',
   'Other': 'gray'
 };
 
@@ -211,7 +231,7 @@ const formatRecurrencePattern = (pattern, monthlyWeek, monthlyWeekday) => {
 };
 
 // Enhanced Event Card Component
-const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVolunteers, onViewDetails, isPastEvent = false, viewMode = 'list', onBulkSelect, isBulkSelected = false }) => {
+const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVolunteers, onViewDetails, isPastEvent = false, viewMode = 'admin', onBulkSelect, isBulkSelected = false }) => {
   const startDate = new Date(event.start_date);
   const endDate = new Date(event.end_date);
   const isRecurring = event.is_recurring;
@@ -292,56 +312,305 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVol
     );
   }
 
-  return (
-    <motion.div variants={itemVariants}>
-      <Card className="group hover:shadow-lg transition-all duration-200 border-l-4" style={{ borderLeftColor: `var(--${eventColor}-500)` }}>
-        <CardHeader className="p-4 md:p-6">
-          <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-3 md:gap-0">
-            <div className="flex-1">
-              <div className="flex items-start gap-3">
-                <div className={`p-2 rounded-lg bg-${eventColor}-100 text-${eventColor}-600`}>
-                  <EventIcon className="h-5 w-5" />
+  if (viewMode === 'admin') {
+    const isPastEvent = startDate < new Date();
+    return (
+      <motion.div variants={itemVariants}>
+        <Card className="group hover:shadow-lg transition-all duration-200 border-l-4 relative" style={{ borderLeftColor: `var(--${eventColor}-500)` }}>
+          <CardContent className="p-4">
+            {/* Main Event Info Row */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className={`p-2 rounded-lg bg-${eventColor}-100 text-${eventColor}-600 flex-shrink-0`}>
+                  <EventIcon className="h-4 w-4" />
                 </div>
-                <div className="flex-1">
-                  <CardTitle className="text-lg md:text-xl font-bold flex flex-wrap items-center gap-2 mb-2">
-                    {event.title}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-sm font-semibold text-gray-900 truncate">{event.title}</h3>
                     {isRecurring && (
                       <Badge variant="secondary" className="text-xs">
+                        <RefreshCw className="w-3 h-3 mr-1" />
                         {formatRecurrencePattern(event.recurrence_pattern, event.monthly_week, event.monthly_weekday)}
                       </Badge>
                     )}
                     {isPotluck && (
-                      <Badge variant="outline" className="text-xs text-green-600 border-green-600">
+                      <Badge variant="outline" className="text-xs text-green-600">
                         <Utensils className="w-3 h-3 mr-1" />
                         Potluck
                       </Badge>
                     )}
                     {event.needs_volunteers && (
-                      <Badge variant="outline" className="text-xs text-yellow-600 border-yellow-600">
+                      <Badge variant="outline" className="text-xs text-yellow-600">
+                        <Handshake className="w-3 h-3 mr-1" />
+                        Volunteers
+                      </Badge>
+                    )}
+                    {isPastEvent && (
+                      <Badge variant="outline" className="text-xs text-gray-600">
+                        Past
+                      </Badge>
+                    )}
+                    {isInstance && (
+                      <Badge variant="outline" className="text-xs text-purple-600">
+                        <Copy className="w-3 h-3 mr-1" />
+                        Instance
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-4 text-xs text-gray-500">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {format(startDate, 'MMM d, yyyy')}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {format(startDate, 'h:mm a')} - {format(endDate, 'h:mm a')}
+                    </span>
+                    {event.location && (
+                      <span className="flex items-center gap-1 truncate">
+                        <MapPin className="h-3 w-3 flex-shrink-0" />
+                        <span className="truncate">{event.location}</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {event.allow_rsvp && (
+                  <Button
+                    onClick={() => onRSVP(event)}
+                    size="sm"
+                    className={cn(
+                      "h-8",
+                      isPastEvent 
+                        ? "bg-orange-600 hover:bg-orange-700" 
+                        : isCheckIn 
+                        ? "bg-green-600 hover:bg-green-700"
+                        : "bg-blue-600 hover:bg-blue-700"
+                    )}
+                  >
+                    {isPastEvent ? (
+                      <Pencil className="h-3 w-3" />
+                    ) : isCheckIn ? (
+                      <CheckCircle className="h-3 w-3" />
+                    ) : (
+                      <UserPlus className="h-3 w-3" />
+                    )}
+                  </Button>
+                )}
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Event Actions</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => onViewDetails(event)}>
+                      <Eye className="mr-2 h-4 w-4" />
+                      View Details
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onEdit(event)}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit Event
+                    </DropdownMenuItem>
+                    {event.needs_volunteers && (
+                      <DropdownMenuItem onClick={() => onManageVolunteers(event)}>
+                        <Handshake className="mr-2 h-4 w-4" />
+                        Manage Volunteers
+                      </DropdownMenuItem>
+                    )}
+                    {isPotluck && (
+                      <DropdownMenuItem onClick={() => onPotluckRSVP(event)}>
+                        <Utensils className="mr-2 h-4 w-4" />
+                        Potluck RSVP
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={() => onDelete(event.id)}
+                      className="text-red-600 focus:text-red-600"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete Event
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+
+            {/* Description */}
+            {event.description && (
+              <div className="text-xs text-gray-600 mb-3 line-clamp-2 bg-gray-50 dark:bg-gray-800 p-2 rounded">
+                {event.description}
+              </div>
+            )}
+
+            {/* Enhanced Stats Row */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 text-xs">
+                {event.allow_rsvp ? (
+                  <div className="flex items-center gap-1 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
+                    <Users className="h-3 w-3 text-green-600" />
+                    <span className="text-green-700 dark:text-green-300">
+                      {event.attendance || 0} {isCheckIn ? 'checked in' : 'attending'}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
+                    <HelpCircle className="h-3 w-3 text-gray-500" />
+                    <span className="text-gray-600 dark:text-gray-400">Announcement only</span>
+                  </div>
+                )}
+                
+                <div className="flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
+                  <Clock className="h-3 w-3 text-blue-600" />
+                  <span className="text-blue-700 dark:text-blue-300">
+                    {Math.round((endDate - startDate) / (1000 * 60))} min
+                  </span>
+                </div>
+                
+                {!isPastEvent && (
+                  <div className="flex items-center gap-1 bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded">
+                    <Calendar className="h-3 w-3 text-orange-600" />
+                    <span className="text-orange-700 dark:text-orange-300">
+                      {Math.ceil((startDate - new Date()) / (1000 * 60 * 60 * 24))} days
+                    </span>
+                  </div>
+                )}
+
+                <span className="capitalize text-gray-500">{event.event_type || 'Event'}</span>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                {event.url && (
+                  <a
+                    href={event.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-blue-600 hover:underline text-xs"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    Link
+                  </a>
+                )}
+                
+                {event.needs_volunteers && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => onManageVolunteers(event)}
+                    className="h-6 text-xs"
+                  >
+                    <Handshake className="h-3 w-3 mr-1" />
+                    Volunteers
+                  </Button>
+                )}
+                
+                {isPotluck && !isPastEvent && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onPotluckRSVP(event.id)}
+                    className="h-6 text-xs border-green-600 text-green-600 hover:bg-green-50"
+                  >
+                    <Utensils className="h-3 w-3 mr-1" />
+                    Potluck
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    );
+  }
+
+  // Kiosk mode (original spacious layout)
+  if (viewMode === 'kiosk') {
+    return (
+      <motion.div variants={itemVariants}>
+        <Card className="group hover:shadow-xl transition-all duration-300 border-l-4 relative overflow-hidden" style={{ borderLeftColor: `var(--${eventColor}-500)` }}>
+        {/* Background gradient overlay */}
+        <div className={`absolute inset-0 bg-gradient-to-r from-${eventColor}-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
+        
+        <CardHeader className="p-4 md:p-6 relative">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-3 md:gap-0">
+            <div className="flex-1">
+              <div className="flex items-start gap-3">
+                <div className={`p-3 rounded-xl bg-${eventColor}-100 text-${eventColor}-600 shadow-sm`}>
+                  <EventIcon className="h-6 w-6" />
+                </div>
+                <div className="flex-1">
+                  <CardTitle className="text-lg md:text-xl font-bold flex flex-wrap items-center gap-2 mb-3">
+                    {event.title}
+                    {isRecurring && (
+                      <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 hover:bg-blue-200">
+                        <RefreshCw className="w-3 h-3 mr-1" />
+                        {formatRecurrencePattern(event.recurrence_pattern, event.monthly_week, event.monthly_weekday)}
+                      </Badge>
+                    )}
+                    {isPotluck && (
+                      <Badge variant="outline" className="text-xs text-green-600 border-green-600 bg-green-50">
+                        <Utensils className="w-3 h-3 mr-1" />
+                        Potluck
+                      </Badge>
+                    )}
+                    {event.needs_volunteers && (
+                      <Badge variant="outline" className="text-xs text-yellow-600 border-yellow-600 bg-yellow-50">
                         <Handshake className="w-3 h-3 mr-1" />
                         Volunteers Needed
                       </Badge>
                     )}
                     {isPastEvent && (
-                      <Badge variant="outline" className="text-xs text-gray-600 border-gray-600">
+                      <Badge variant="outline" className="text-xs text-gray-600 border-gray-600 bg-gray-50">
+                        <CheckCircle className="w-3 h-3 mr-1" />
                         Past Event
                       </Badge>
                     )}
+                    {isInstance && (
+                      <Badge variant="outline" className="text-xs text-purple-600 border-purple-600 bg-purple-50">
+                        <Copy className="w-3 h-3 mr-1" />
+                        Recurring Instance
+                      </Badge>
+                    )}
                   </CardTitle>
-                  <div className="text-sm md:text-base text-muted-foreground">
-                    <div className="flex items-center gap-4 flex-wrap">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
+                  
+                  {/* Enhanced event details */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-4 flex-wrap text-sm text-muted-foreground">
+                      <span className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-md">
+                        <Calendar className="h-4 w-4 text-blue-600" />
                         {format(startDate, 'EEEE, MMMM d, yyyy')}
                       </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
+                      <span className="flex items-center gap-2 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-md">
+                        <Clock className="h-4 w-4 text-green-600" />
                         {format(startDate, 'h:mm a')} - {format(endDate, 'h:mm a')}
                       </span>
                       {event.location && (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="h-4 w-4" />
+                        <span className="flex items-center gap-2 bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded-md">
+                          <MapPin className="h-4 w-4 text-purple-600" />
                           {event.location}
+                          {event.locations && (
+                            <Badge variant="outline" className="text-xs ml-1">
+                              {event.locations.capacity ? `${event.locations.capacity} capacity` : event.locations.location_type}
+                            </Badge>
+                          )}
+                        </span>
+                      )}
+                    </div>
+                    
+                    {/* Event type and additional info */}
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="capitalize">{event.event_type || 'Event'}</span>
+                      {event.url && (
+                        <span className="flex items-center gap-1">
+                          <Globe className="h-3 w-3" />
+                          <a href={event.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                            Event Link
+                          </a>
                         </span>
                       )}
                     </div>
@@ -349,6 +618,8 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVol
                 </div>
               </div>
             </div>
+            
+            {/* Action buttons */}
             <div className="flex items-center gap-2">
               {onBulkSelect && (
                 <Checkbox
@@ -393,25 +664,51 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVol
           </div>
         </CardHeader>
         
-        <CardContent className="p-4 md:p-6 pt-0">
+        <CardContent className="p-4 md:p-6 pt-0 relative">
+          {/* Description */}
           {event.description && (
-            <div className="text-sm text-gray-600 mb-4 line-clamp-2">{event.description}</div>
+            <div className="text-sm text-gray-600 mb-4 line-clamp-2 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+              {event.description}
+            </div>
           )}
           
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    {/* Enhanced stats and actions */}
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex items-center gap-4 text-sm">
               {event.allow_rsvp ? (
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  <span>{event.attendance || 0} {event.attendance === 1 ? 'person' : 'people'} {isCheckIn ? 'checked in' : 'attending'}</span>
+                <div className="flex items-center gap-2 bg-green-50 dark:bg-green-900/20 px-3 py-2 rounded-lg">
+                  <Users className="h-4 w-4 text-green-600" />
+                  <span className="font-medium text-green-700 dark:text-green-300">
+                    {event.attendance || 0} {event.attendance === 1 ? 'person' : 'people'} {isCheckIn ? 'checked in' : 'attending'}
+                  </span>
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
-                  <HelpCircle className="h-4 w-4" />
-                  <span>Announcement only</span>
+                <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded-lg">
+                  <HelpCircle className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600 dark:text-gray-400">Announcement only</span>
                 </div>
               )}
               
+              {/* Duration indicator */}
+              <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 rounded-lg">
+                <Clock className="h-4 w-4 text-blue-600" />
+                <span className="text-blue-700 dark:text-blue-300">
+                  {Math.round((endDate - startDate) / (1000 * 60))} min
+                </span>
+              </div>
+              
+              {/* Days until event */}
+              {!isPastEvent && (
+                <div className="flex items-center gap-2 bg-orange-50 dark:bg-orange-900/20 px-3 py-2 rounded-lg">
+                  <Calendar className="h-4 w-4 text-orange-600" />
+                  <span className="text-orange-700 dark:text-orange-300">
+                    {Math.ceil((startDate - new Date()) / (1000 * 60 * 60 * 24))} days away
+                  </span>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex flex-col lg:flex-row lg:items-center gap-3">
               {event.url && (
                 <a
                   href={event.url}
@@ -423,56 +720,68 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVol
                   Event Link
                 </a>
               )}
-            </div>
-            
-            <div className="flex flex-col sm:flex-row gap-2">
-              {event.needs_volunteers && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => onManageVolunteers(event)}
-                  className="h-9"
-                >
-                  <Handshake className="mr-2 h-4 w-4" />
-                  Manage Volunteers
-                </Button>
-              )}
-              {event.allow_rsvp && (
-                <Button
-                  onClick={() => onRSVP(event)}
-                  className={cn(
-                    "h-9",
-                    isPastEvent 
-                      ? "bg-orange-600 hover:bg-orange-700" 
-                      : isCheckIn 
-                      ? "bg-green-600 hover:bg-green-700"
-                      : "bg-blue-600 hover:bg-blue-700"
-                  )}
-                >
-                  {isPastEvent ? (
-                    <>
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Edit Attendance
-                    </>
-                  ) : isCheckIn ? (
-                    <>
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      Check In People
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      RSVP Members
-                    </>
-                  )}
-                </Button>
-              )}
+              
+              <div className="flex flex-col sm:flex-row gap-2">
+                {event.needs_volunteers && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => onManageVolunteers(event)}
+                    className="h-9"
+                  >
+                    <Handshake className="mr-2 h-4 w-4" />
+                    Manage Volunteers
+                  </Button>
+                )}
+                {event.allow_rsvp && (
+                  <Button
+                    onClick={() => onRSVP(event)}
+                    className={cn(
+                      "h-9",
+                      isPastEvent 
+                        ? "bg-orange-600 hover:bg-orange-700" 
+                        : isCheckIn 
+                        ? "bg-green-600 hover:bg-green-700"
+                        : "bg-blue-600 hover:bg-blue-700"
+                    )}
+                  >
+                    {isPastEvent ? (
+                      <>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Edit Attendance
+                      </>
+                    ) : isCheckIn ? (
+                      <>
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Check In People
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="mr-2 h-4 w-4" />
+                        RSVP Members
+                      </>
+                    )}
+                  </Button>
+                )}
+
+                {isPotluck && !isPastEvent && (
+                  <Button
+                    variant="outline"
+                    onClick={() => onPotluckRSVP(event.id)}
+                    className="border-green-600 text-green-600 hover:bg-green-50"
+                  >
+                    <Utensils className="mr-2 h-4 w-4" />
+                    Potluck RSVP
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
     </motion.div>
   );
+  }
 };
 
 // Calendar View Component
@@ -801,10 +1110,25 @@ const EventAnalytics = ({ events, pastEvents }) => {
     const attendanceStats = {
       total: 0,
       average: 0,
-      max: 0
+      max: 0,
+      min: Infinity,
+      median: 0
     };
     
-    [...events, ...pastEvents].forEach(event => {
+    const monthlyStats = {};
+    const weeklyStats = {};
+    const locationStats = {};
+    const recurringStats = {
+      total: 0,
+      weekly: 0,
+      monthly: 0,
+      biweekly: 0
+    };
+    
+    const allEvents = [...events, ...pastEvents];
+    const attendanceValues = [];
+    
+    allEvents.forEach(event => {
       // Count event types
       const type = event.event_type || 'Other';
       eventTypes[type] = (eventTypes[type] || 0) + 1;
@@ -813,111 +1137,239 @@ const EventAnalytics = ({ events, pastEvents }) => {
       const attendance = event.attendance || 0;
       attendanceStats.total += attendance;
       attendanceStats.max = Math.max(attendanceStats.max, attendance);
+      attendanceStats.min = Math.min(attendanceStats.min, attendance);
+      attendanceValues.push(attendance);
+      
+      // Monthly stats
+      const month = format(new Date(event.start_date), 'yyyy-MM');
+      monthlyStats[month] = (monthlyStats[month] || 0) + 1;
+      
+      // Weekly stats
+      const week = format(new Date(event.start_date), 'yyyy-\'W\'ww');
+      weeklyStats[week] = (weeklyStats[week] || 0) + 1;
+      
+      // Location stats
+      if (event.location) {
+        locationStats[event.location] = (locationStats[event.location] || 0) + 1;
+      }
+      
+      // Recurring stats
+      if (event.is_recurring) {
+        recurringStats.total++;
+        if (event.recurrence_pattern) {
+          recurringStats[event.recurrence_pattern] = (recurringStats[event.recurrence_pattern] || 0) + 1;
+        }
+      }
     });
     
+    // Calculate median attendance
+    attendanceValues.sort((a, b) => a - b);
+    const mid = Math.floor(attendanceValues.length / 2);
+    attendanceStats.median = attendanceValues.length % 2 === 0 
+      ? (attendanceValues[mid - 1] + attendanceValues[mid]) / 2 
+      : attendanceValues[mid];
+    
     attendanceStats.average = totalEvents > 0 ? Math.round(attendanceStats.total / totalEvents) : 0;
+    attendanceStats.min = attendanceStats.min === Infinity ? 0 : attendanceStats.min;
+    
+    // Top locations
+    const topLocations = Object.entries(locationStats)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 5);
+    
+    // Top months
+    const topMonths = Object.entries(monthlyStats)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 6)
+      .map(([month, count]) => ({
+        month: format(parse(month, 'yyyy-MM', new Date()), 'MMM yyyy'),
+        count
+      }));
     
     return {
       totalEvents,
       upcomingEvents,
       pastEventsCount,
       eventTypes,
-      attendanceStats
+      attendanceStats,
+      topLocations,
+      topMonths,
+      recurringStats
     };
   }, [events, pastEvents]);
 
   return (
     <div className="space-y-6">
-      {/* Main Stats */}
+      {/* Enhanced Main Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Calendar className="h-5 w-5 text-blue-600" />
-              </div>
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Events</p>
-                <p className="text-2xl font-bold">{analytics.totalEvents}</p>
+                <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">Total Events</p>
+                <p className="text-3xl font-bold text-blue-900 dark:text-blue-100">{analytics.totalEvents}</p>
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                  {analytics.upcomingEvents} upcoming
+                </p>
+              </div>
+              <div className="p-3 bg-blue-500 rounded-xl">
+                <Calendar className="h-6 w-6 text-white" />
               </div>
             </div>
           </CardContent>
         </Card>
         
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-green-600" />
-              </div>
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Upcoming</p>
-                <p className="text-2xl font-bold">{analytics.upcomingEvents}</p>
+                <p className="text-sm text-green-600 dark:text-green-400 font-medium">Total Attendance</p>
+                <p className="text-3xl font-bold text-green-900 dark:text-green-100">{analytics.attendanceStats.total}</p>
+                <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                  Avg: {analytics.attendanceStats.average}
+                </p>
+              </div>
+              <div className="p-3 bg-green-500 rounded-xl">
+                <Users className="h-6 w-6 text-white" />
               </div>
             </div>
           </CardContent>
         </Card>
         
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Users className="h-5 w-5 text-purple-600" />
-              </div>
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Avg Attendance</p>
-                <p className="text-2xl font-bold">{analytics.attendanceStats.average}</p>
+                <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">Attendance Range</p>
+                <p className="text-3xl font-bold text-purple-900 dark:text-purple-100">{analytics.attendanceStats.max}</p>
+                <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+                  Min: {analytics.attendanceStats.min} • Median: {analytics.attendanceStats.median}
+                </p>
+              </div>
+              <div className="p-3 bg-purple-500 rounded-xl">
+                <Target className="h-6 w-6 text-white" />
               </div>
             </div>
           </CardContent>
         </Card>
         
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <Target className="h-5 w-5 text-orange-600" />
-              </div>
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Max Attendance</p>
-                <p className="text-2xl font-bold">{analytics.attendanceStats.max}</p>
+                <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">Recurring Events</p>
+                <p className="text-3xl font-bold text-orange-900 dark:text-orange-100">{analytics.recurringStats.total}</p>
+                <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                  {analytics.recurringStats.weekly} weekly, {analytics.recurringStats.monthly} monthly
+                </p>
+              </div>
+              <div className="p-3 bg-orange-500 rounded-xl">
+                <RefreshCw className="h-6 w-6 text-white" />
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Event Type Breakdown */}
-      {Object.keys(analytics.eventTypes).length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <PieChart className="h-5 w-5" />
-              Event Type Breakdown
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Object.entries(analytics.eventTypes)
-                .sort(([,a], [,b]) => b - a)
-                .slice(0, 6)
-                .map(([type, count]) => {
-                  const EventIcon = eventTypeIcons[type] || Calendar;
-                  const eventColor = eventTypeColors[type] || 'gray';
+      {/* Enhanced Analytics Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Event Type Breakdown */}
+        {Object.keys(analytics.eventTypes).length > 0 && (
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border-b border-blue-200 dark:border-blue-800">
+              <CardTitle className="flex items-center gap-2 text-blue-900 dark:text-blue-100">
+                <PieChart className="h-5 w-5" />
+                Event Type Breakdown
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-3">
+                {Object.entries(analytics.eventTypes)
+                  .sort(([,a], [,b]) => b - a)
+                  .slice(0, 8)
+                  .map(([type, count]) => {
+                    const EventIcon = eventTypeIcons[type] || Calendar;
+                    const eventColor = eventTypeColors[type] || 'gray';
+                    const percentage = Math.round((count / analytics.totalEvents) * 100);
+                    
+                    return (
+                      <div key={type} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        <div className={`p-2 rounded-lg bg-${eventColor}-100 text-${eventColor}-600`}>
+                          <EventIcon className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{type}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{count} events ({percentage}%)</p>
+                        </div>
+                        <div className="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div 
+                            className={`bg-${eventColor}-500 h-2 rounded-full`}
+                            style={{ width: `${percentage}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Top Locations */}
+        {analytics.topLocations.length > 0 && (
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 border-b border-green-200 dark:border-green-800">
+              <CardTitle className="flex items-center gap-2 text-green-900 dark:text-green-100">
+                <MapPin className="h-5 w-5" />
+                Popular Locations
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-3">
+                {analytics.topLocations.map(([location, count], index) => {
                   const percentage = Math.round((count / analytics.totalEvents) * 100);
                   
                   return (
-                    <div key={type} className="flex items-center gap-3 p-3 rounded-lg border">
-                      <div className={`p-2 rounded-lg bg-${eventColor}-100 text-${eventColor}-600`}>
-                        <EventIcon className="h-4 w-4" />
+                    <div key={location} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+                      <div className="flex items-center justify-center w-8 h-8 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                        <span className="text-sm font-bold text-green-600 dark:text-green-400">{index + 1}</span>
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm font-medium">{type}</p>
-                        <p className="text-xs text-gray-500">{count} events ({percentage}%)</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{location}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{count} events ({percentage}%)</p>
+                      </div>
+                      <div className="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div 
+                          className="bg-green-500 h-2 rounded-full"
+                          style={{ width: `${percentage}%` }}
+                        ></div>
                       </div>
                     </div>
                   );
                 })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Monthly Trends */}
+      {analytics.topMonths.length > 0 && (
+        <Card className="border-0 shadow-lg">
+          <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border-b border-purple-200 dark:border-purple-800">
+            <CardTitle className="flex items-center gap-2 text-purple-900 dark:text-purple-100">
+              <LineChart className="h-5 w-5" />
+              Monthly Event Trends
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {analytics.topMonths.map(({ month, count }) => (
+                <div key={month} className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                  <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">{count}</div>
+                  <div className="text-sm text-purple-600 dark:text-purple-400">{month}</div>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -1000,7 +1452,7 @@ export default function Events() {
   const [suggestedMembers, setSuggestedMembers] = useState([]);
   
   // New state for enhanced features
-  const [viewMode, setViewMode] = useState('list'); // 'list' or 'calendar'
+  const [viewMode, setViewMode] = useState('admin'); // 'admin', 'kiosk', or 'calendar'
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [eventTypeFilter, setEventTypeFilter] = useState('all');
   const [dateRangeFilter, setDateRangeFilter] = useState('all');
@@ -1440,12 +1892,19 @@ export default function Events() {
     // Apply attendance filter
     if (attendanceFilter !== 'all') {
       filtered = filtered.filter(event => {
-        if (attendanceFilter === 'attending') {
-          return event.attendance > 0;
-        } else if (attendanceFilter === 'not_attending') {
-          return !event.attendance || event.attendance === 0;
+        const attendance = event.attendance || 0;
+        switch (attendanceFilter) {
+          case 'attending':
+            return attendance > 0;
+          case 'not_attending':
+            return attendance === 0;
+          case 'high_attendance':
+            return attendance >= 10;
+          case 'low_attendance':
+            return attendance > 0 && attendance < 5;
+          default:
+            return true;
         }
-        return true;
       });
     }
 
@@ -1461,6 +1920,14 @@ export default function Events() {
         case 'attendance':
           aValue = a.attendance || 0;
           bValue = b.attendance || 0;
+          break;
+        case 'location':
+          aValue = (a.location || '').toLowerCase();
+          bValue = (b.location || '').toLowerCase();
+          break;
+        case 'created':
+          aValue = new Date(a.created_at || a.start_date);
+          bValue = new Date(b.created_at || b.start_date);
           break;
         case 'date':
         default:
@@ -2398,8 +2865,84 @@ export default function Events() {
   };
 
   const handleEditEvent = async (eventData) => {
+    let eventIdToUpdate = editingEvent.id; // Declare at function scope
+    
     try {
-      await updateEvent(editingEvent.id, eventData);
+      console.log('handleEditEvent called with editingEvent:', editingEvent);
+      console.log('editingEvent.id:', editingEvent?.id);
+      console.log('editingEvent.is_instance:', editingEvent?.is_instance);
+      
+      // Check if this is a generated recurring event instance
+      // Look for patterns like: originalId_timestamp or originalId-timestamp
+      if (editingEvent.id && (editingEvent.id.includes('-') || editingEvent.id.includes('_')) && editingEvent.id.length > 36) {
+        console.log('Event ID contains hyphens/underscores and is long, checking if it\'s a generated instance...');
+        
+        // Try to extract the original event ID from the generated instance ID
+        // Handle both formats: originalId_timestamp and originalId-timestamp
+        let originalEventId;
+        if (editingEvent.id.includes('_')) {
+          originalEventId = editingEvent.id.split('_')[0];
+        } else if (editingEvent.id.includes('-')) {
+          // For the format like "sunday-morning-worship-service-1746381600000-2025-07-20t18-00-00-000z"
+          // We need to find where the timestamp starts (after the original ID)
+          // The timestamp format is: YYYY-MM-DDTHH-MM-SS-000Z
+          const timestampPattern = /\d{4}-\d{2}-\d{2}t\d{2}-\d{2}-\d{2}-\d{3}z$/i;
+          const match = editingEvent.id.match(timestampPattern);
+          if (match) {
+            // Remove the timestamp part from the end
+            originalEventId = editingEvent.id.substring(0, match.index);
+          } else {
+            // Fallback: try to find the last numeric part that looks like a timestamp
+            const parts = editingEvent.id.split('-');
+            if (parts.length >= 2) {
+              // Look for the part that contains 't' (indicating timestamp)
+              const timestampIndex = parts.findIndex(part => part.includes('t'));
+              if (timestampIndex !== -1) {
+                originalEventId = parts.slice(0, timestampIndex).join('-');
+              } else {
+                // Remove the last part as fallback
+                originalEventId = parts.slice(0, -1).join('-');
+              }
+            }
+          }
+        }
+        
+        console.log('Extracted original event ID:', originalEventId);
+        
+        if (originalEventId) {
+          // Find the original event in our events list
+          const originalEvent = events.find(e => e.id === originalEventId);
+          
+          if (originalEvent) {
+            eventIdToUpdate = originalEvent.id;
+            console.log('Found original event, using ID:', eventIdToUpdate);
+            console.log('Original event details:', originalEvent);
+          } else {
+            console.log('Could not find original event with ID:', originalEventId);
+            console.log('Available events:', events.map(e => ({ id: e.id, title: e.title, idLength: e.id.length })));
+            
+            // If we can't find the original event, try to find it by title
+            const eventByTitle = events.find(e => e.title === editingEvent.title && !e.is_instance);
+            if (eventByTitle) {
+              eventIdToUpdate = eventByTitle.id;
+              console.log('Found event by title, using ID:', eventIdToUpdate);
+            } else {
+              console.log('Could not find event by title either');
+              // If we still can't find it, try to use the parent_event_id if available
+              if (editingEvent.parent_event_id) {
+                eventIdToUpdate = editingEvent.parent_event_id;
+                console.log('Using parent_event_id:', eventIdToUpdate);
+              }
+            }
+          }
+        }
+      }
+      
+      console.log('Final event ID to update:', eventIdToUpdate);
+      console.log('Event ID type:', typeof eventIdToUpdate);
+      console.log('Event ID length:', eventIdToUpdate?.length);
+      
+      await updateEvent(eventIdToUpdate, eventData);
       setIsEditEventOpen(false);
       setEditingEvent(null);
       fetchEvents();
@@ -2409,6 +2952,11 @@ export default function Events() {
       });
     } catch (error) {
       console.error('Error updating event:', error);
+      console.error('Error details:', {
+        editingEventId: editingEvent?.id,
+        eventIdToUpdate: eventIdToUpdate,
+        error: error
+      });
       toast({
         variant: "destructive",
         title: "Error",
@@ -2489,12 +3037,81 @@ export default function Events() {
     if (!confirm('Are you sure you want to delete this event?')) return;
     
     try {
-      await deleteEvent(eventId);
+      // Find the event object to check if it's a generated instance
+      const event = events.find(e => e.id === eventId);
+      
+      // Check if this is an old event with a malformed ID (like gjhgjhgh-1752854400000)
+      const isOldMalformedId = eventId && eventId.includes('-') && eventId.length > 36 && !eventId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+      
+      // If this is a generated recurring event instance, we need to delete the master event
+      // Only try to find original event if it's not an old malformed ID
+      if (!isOldMalformedId && event && (eventId.includes('-') || eventId.includes('_')) && eventId.length > 36) {
+        // Try to extract the original event ID from the generated instance ID
+        let originalEventId;
+        if (eventId.includes('_')) {
+          originalEventId = eventId.split('_')[0];
+        } else if (eventId.includes('-')) {
+          // For the format like "sunday-morning-worship-service-1746381600000-2025-07-20t18-00-00-000z"
+          // We need to find where the timestamp starts (after the original ID)
+          // The timestamp format is: YYYY-MM-DDTHH-MM-SS-000Z
+          const timestampPattern = /\d{4}-\d{2}-\d{2}t\d{2}-\d{2}-\d{2}-\d{3}z$/i;
+          const match = eventId.match(timestampPattern);
+          if (match) {
+            // Remove the timestamp part from the end
+            originalEventId = eventId.substring(0, match.index);
+          } else {
+            // Fallback: try to find the last numeric part that looks like a timestamp
+            const parts = eventId.split('-');
+            if (parts.length >= 2) {
+              // Look for the part that contains 't' (indicating timestamp)
+              const timestampIndex = parts.findIndex(part => part.includes('t'));
+              if (timestampIndex !== -1) {
+                originalEventId = parts.slice(0, timestampIndex).join('-');
+              } else {
+                // Remove the last part as fallback
+                originalEventId = parts.slice(0, -1).join('-');
+              }
+            }
+          }
+        }
+        
+        if (originalEventId) {
+          // Find the original event in our events list
+          const originalEvent = events.find(e => e.id === originalEventId);
+          
+          if (originalEvent) {
+            await deleteEvent(originalEventId);
+            toast({
+              title: "Success",
+              description: "Recurring event deleted successfully. All future instances have been removed."
+            });
+          } else {
+            // For old events, just delete the event as-is instead of showing an error
+            console.log('Could not find original event to delete, deleting event as-is:', eventId);
+            await deleteEvent(eventId);
+            toast({
+              title: "Success",
+              description: "Event deleted successfully."
+            });
+          }
+        } else {
+          // Could not extract original ID, delete normally
+          await deleteEvent(eventId);
+          toast({
+            title: "Success",
+            description: "Event deleted successfully."
+          });
+        }
+      } else {
+        // For non-recurring events or master events, delete normally
+        await deleteEvent(eventId);
+        toast({
+          title: "Success",
+          description: "Event deleted successfully."
+        });
+      }
+      
       fetchEvents();
-      toast({
-        title: "Success",
-        description: "Event deleted successfully."
-      });
     } catch (error) {
       console.error('Error deleting event:', error);
       toast({
@@ -2506,12 +3123,128 @@ export default function Events() {
   };
 
   const handleEditClick = (event) => {
-    setEditingEvent(event);
-    setIsEditEventOpen(true);
+    console.log('handleEditClick called with event:', event);
+    console.log('Event ID:', event.id);
+    console.log('Event is_instance:', event.is_instance);
+    console.log('Event ID includes hyphen:', event.id.includes('-'));
+    
+    // Check if this is a generated recurring event instance
+    // Look for patterns like: originalId_timestamp or originalId-timestamp
+    if (event.id && (event.id.includes('-') || event.id.includes('_')) && event.id.length > 36) {
+      console.log('Event ID contains hyphens/underscores and is long, checking if it\'s a generated instance...');
+      
+      // Try to extract the original event ID from the generated instance ID
+      // Handle both formats: originalId_timestamp and originalId-timestamp
+      let originalEventId;
+      if (event.id.includes('_')) {
+        originalEventId = event.id.split('_')[0];
+      } else if (event.id.includes('-')) {
+        // For the format like "sunday-morning-worship-service-1746381600000-2025-07-20t18-00-00-000z"
+        // We need to find where the timestamp starts (after the original ID)
+        // The timestamp format is: YYYY-MM-DDTHH-MM-SS-000Z
+        const timestampPattern = /\d{4}-\d{2}-\d{2}t\d{2}-\d{2}-\d{2}-\d{3}z$/i;
+        const match = event.id.match(timestampPattern);
+        if (match) {
+          // Remove the timestamp part from the end
+          originalEventId = event.id.substring(0, match.index);
+        } else {
+          // Fallback: try to find the last numeric part that looks like a timestamp
+          const parts = event.id.split('-');
+          if (parts.length >= 2) {
+            // Look for the part that contains 't' (indicating timestamp)
+            const timestampIndex = parts.findIndex(part => part.includes('t'));
+            if (timestampIndex !== -1) {
+              originalEventId = parts.slice(0, timestampIndex).join('-');
+            } else {
+              // Remove the last part as fallback
+              originalEventId = parts.slice(0, -1).join('-');
+            }
+          }
+        }
+      }
+      
+      console.log('Extracted original event ID:', originalEventId);
+      
+      if (originalEventId) {
+        // Find the original event in our events list
+        const originalEvent = events.find(e => e.id === originalEventId);
+        
+        if (originalEvent) {
+          console.log('Found original event, using for editing:', originalEvent);
+          setEditingEvent(originalEvent);
+          setIsEditEventOpen(true);
+        } else {
+          console.log('Could not find original event with ID:', originalEventId);
+          console.log('Available events:', events.map(e => ({ id: e.id, title: e.title, idLength: e.id.length })));
+          console.log('Editing as regular event:', event);
+          setEditingEvent(event);
+          setIsEditEventOpen(true);
+        }
+      } else {
+        console.log('Could not extract original event ID, editing as regular event:', event);
+        setEditingEvent(event);
+        setIsEditEventOpen(true);
+      }
+    } else {
+      // For non-recurring events or master events, edit normally
+      console.log('Editing regular event:', event);
+      setEditingEvent(event);
+      setIsEditEventOpen(true);
+    }
   };
 
   const handleOpenDialog = async (event) => {
-    setSelectedEvent(event);
+    // If this is a generated recurring event instance, we need to use the master event for RSVP
+    let eventToUse = event;
+    
+    // Check if this is an old event with a malformed ID (like gjhgjhgh-1752854400000)
+    const isOldMalformedId = event.id && event.id.includes('-') && event.id.length > 36 && !event.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+    
+    // Only try to find original event if it's not an old malformed ID
+    if (!isOldMalformedId && event.id && (event.id.includes('-') || event.id.includes('_')) && event.id.length > 36) {
+      // Try to extract the original event ID from the generated instance ID
+      let originalEventId;
+      if (event.id.includes('_')) {
+        originalEventId = event.id.split('_')[0];
+      } else if (event.id.includes('-')) {
+        // For the format like "sunday-morning-worship-service-1746381600000-2025-07-20t18-00-00-000z"
+        // We need to find where the timestamp starts (after the original ID)
+        // The timestamp format is: YYYY-MM-DDTHH-MM-SS-000Z
+        const timestampPattern = /\d{4}-\d{2}-\d{2}t\d{2}-\d{2}-\d{2}-\d{3}z$/i;
+        const match = event.id.match(timestampPattern);
+        if (match) {
+          // Remove the timestamp part from the end
+          originalEventId = event.id.substring(0, match.index);
+        } else {
+          // Fallback: try to find the last numeric part that looks like a timestamp
+          const parts = event.id.split('-');
+          if (parts.length >= 2) {
+            // Look for the part that contains 't' (indicating timestamp)
+            const timestampIndex = parts.findIndex(part => part.includes('t'));
+            if (timestampIndex !== -1) {
+              originalEventId = parts.slice(0, timestampIndex).join('-');
+            } else {
+              // Remove the last part as fallback
+              originalEventId = parts.slice(0, -1).join('-');
+            }
+          }
+        }
+      }
+      
+      if (originalEventId) {
+        // Find the original event in our events list
+        const originalEvent = events.find(e => e.id === originalEventId);
+        
+        if (originalEvent) {
+          eventToUse = originalEvent;
+        } else {
+          // For old events, just use the event as-is instead of showing an error
+          console.log('Could not find original event, using event as-is:', event.id);
+        }
+      }
+    }
+    
+    setSelectedEvent(eventToUse);
     setSelectedMembers([]);
     setMemberSearchQuery('');
     setIsMemberDialogOpen(true);
@@ -2688,7 +3421,57 @@ export default function Events() {
   }, [selectedPotluckEvent, handlePotluckRSVP, fetchEvents]);
 
   const handleManageVolunteers = (event) => {
-    setVolunteerDialogEvent(event);
+    // If this is a generated recurring event instance, we need to use the master event for volunteer management
+    let eventToUse = event;
+    
+    // Check if this is an old event with a malformed ID (like gjhgjhgh-1752854400000)
+    const isOldMalformedId = event.id && event.id.includes('-') && event.id.length > 36 && !event.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+    
+    // Only try to find original event if it's not an old malformed ID
+    if (!isOldMalformedId && event.id && (event.id.includes('-') || event.id.includes('_')) && event.id.length > 36) {
+      // Try to extract the original event ID from the generated instance ID
+      let originalEventId;
+      if (event.id.includes('_')) {
+        originalEventId = event.id.split('_')[0];
+      } else if (event.id.includes('-')) {
+        // For the format like "sunday-morning-worship-service-1746381600000-2025-07-20t18-00-00-000z"
+        // We need to find where the timestamp starts (after the original ID)
+        // The timestamp format is: YYYY-MM-DDTHH-MM-SS-000Z
+        const timestampPattern = /\d{4}-\d{2}-\d{2}t\d{2}-\d{2}-\d{2}-\d{3}z$/i;
+        const match = event.id.match(timestampPattern);
+        if (match) {
+          // Remove the timestamp part from the end
+          originalEventId = event.id.substring(0, match.index);
+        } else {
+          // Fallback: try to find the last numeric part that looks like a timestamp
+          const parts = event.id.split('-');
+          if (parts.length >= 2) {
+            // Look for the part that contains 't' (indicating timestamp)
+            const timestampIndex = parts.findIndex(part => part.includes('t'));
+            if (timestampIndex !== -1) {
+              originalEventId = parts.slice(0, timestampIndex).join('-');
+            } else {
+              // Remove the last part as fallback
+              originalEventId = parts.slice(0, -1).join('-');
+            }
+          }
+        }
+      }
+      
+      if (originalEventId) {
+        // Find the original event in our events list
+        const originalEvent = events.find(e => e.id === originalEventId);
+        
+        if (originalEvent) {
+          eventToUse = originalEvent;
+        } else {
+          // For old events, just use the event as-is instead of showing an error
+          console.log('Could not find original event for volunteers, using event as-is:', event.id);
+        }
+      }
+    }
+    
+    setVolunteerDialogEvent(eventToUse);
     setIsVolunteerDialogOpen(true);
   };
 
@@ -2697,6 +3480,7 @@ export default function Events() {
       <EventCard
         key={event.id}
         event={event}
+        viewMode={viewMode}
         onRSVP={handleOpenDialog}
         onPotluckRSVP={handlePotluckRSVP}
         onEdit={handleEditClick}
@@ -2704,7 +3488,7 @@ export default function Events() {
         onManageVolunteers={handleManageVolunteers}
       />
     );
-  }, [handleOpenDialog, handlePotluckRSVP, handleEditClick, handleDeleteEvent, handleManageVolunteers]);
+  }, [viewMode, handleOpenDialog, handlePotluckRSVP, handleEditClick, handleDeleteEvent, handleManageVolunteers]);
 
   const processRecurringEvents = (events) => {
     const processedEvents = [];
@@ -3042,30 +3826,102 @@ export default function Events() {
         initial="hidden"
         animate="visible"
       >
-        {/* Enhanced Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 px-2 md:px-0">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold mb-2">Events</h1>
-            <p className="text-gray-600 text-lg">Manage and track event attendance</p>
+        {/* Enhanced Header with Stats */}
+        <div className="mb-8 px-2 md:px-0">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Events
+              </h1>
+              <p className="text-gray-600 text-lg">Manage and track event attendance</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAnalytics(!showAnalytics)}
+                className="h-10"
+              >
+                <BarChart3 className="mr-2 h-4 w-4" />
+                {showAnalytics ? 'Hide' : 'Show'} Analytics
+              </Button>
+              <PermissionButton
+                permission={PERMISSIONS.EVENTS_CREATE}
+                onClick={() => setIsCreateEventOpen(true)}
+                className="h-10"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Create Event
+              </PermissionButton>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowAnalytics(!showAnalytics)}
-              className="h-10"
-            >
-              <BarChart3 className="mr-2 h-4 w-4" />
-              {showAnalytics ? 'Hide' : 'Show'} Analytics
-            </Button>
-            <PermissionButton
-              permission={PERMISSIONS.EVENTS_CREATE}
-              onClick={() => setIsCreateEventOpen(true)}
-              className="h-10"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Create Event
-            </PermissionButton>
+
+          {/* Quick Stats Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">Upcoming</p>
+                    <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{events.length}</p>
+                  </div>
+                  <div className="p-2 bg-blue-500 rounded-lg">
+                    <Calendar className="h-5 w-5 text-white" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-sm bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-green-600 dark:text-green-400 font-medium">This Week</p>
+                    <p className="text-2xl font-bold text-green-900 dark:text-green-100">
+                      {events.filter(e => {
+                        const eventDate = new Date(e.start_date);
+                        const weekFromNow = new Date();
+                        weekFromNow.setDate(weekFromNow.getDate() + 7);
+                        return eventDate <= weekFromNow && eventDate >= new Date();
+                      }).length}
+                    </p>
+                  </div>
+                  <div className="p-2 bg-green-500 rounded-lg">
+                    <Clock className="h-5 w-5 text-white" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-sm bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">Total Attendance</p>
+                    <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+                      {events.reduce((sum, e) => sum + (e.attendance || 0), 0)}
+                    </p>
+                  </div>
+                  <div className="p-2 bg-purple-500 rounded-lg">
+                    <Users className="h-5 w-5 text-white" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-sm bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">Past Events</p>
+                    <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">{pastEvents.length}</p>
+                  </div>
+                  <div className="p-2 bg-orange-500 rounded-lg">
+                    <CheckCircle className="h-5 w-5 text-white" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
 
@@ -3083,9 +3939,10 @@ export default function Events() {
 
         {/* Enhanced Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full px-2 md:px-0">
-          <TabsList className="grid w-full grid-cols-2 h-14 mb-6">
+          <TabsList className="grid w-full grid-cols-3 h-14 mb-6">
             <TabsTrigger value="upcoming" className="text-lg">Upcoming Events</TabsTrigger>
             <TabsTrigger value="past" className="text-lg">Past Events</TabsTrigger>
+            <TabsTrigger value="locations" className="text-lg">Locations</TabsTrigger>
           </TabsList>
 
           {/* Upcoming Events Tab */}
@@ -3096,12 +3953,20 @@ export default function Events() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Button
-                    variant={viewMode === 'list' ? 'default' : 'outline'}
+                    variant={viewMode === 'admin' ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => setViewMode('list')}
+                    onClick={() => setViewMode('admin')}
                   >
                     <List className="mr-2 h-4 w-4" />
-                    List View
+                    Admin View
+                  </Button>
+                  <Button
+                    variant={viewMode === 'kiosk' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setViewMode('kiosk')}
+                  >
+                    <Monitor className="mr-2 h-4 w-4" />
+                    Kiosk View
                   </Button>
                   <Button
                     variant={viewMode === 'calendar' ? 'default' : 'outline'}
@@ -3124,104 +3989,258 @@ export default function Events() {
               </div>
 
               {/* Enhanced Filters and Sorting */}
-              <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-                <div className="md:col-span-2">
+              <div className="space-y-4">
+                {/* Search Bar */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
-                    placeholder="Search upcoming events..."
+                    placeholder="Search events by title, location, or description..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full h-10"
+                    className="w-full h-12 pl-10 pr-4"
                   />
                 </div>
-                <Select value={eventTypeFilter} onValueChange={setEventTypeFilter}>
-                  <SelectTrigger className="h-10">
-                    <SelectValue placeholder="Event Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="Sunday Worship Service">Sunday Worship</SelectItem>
-                    <SelectItem value="Bible Study">Bible Study</SelectItem>
-                    <SelectItem value="Prayer Meeting">Prayer Meeting</SelectItem>
-                    <SelectItem value="Youth Group">Youth Group</SelectItem>
-                    <SelectItem value="Children's Ministry">Children's Ministry</SelectItem>
-                    <SelectItem value="Potluck">Potluck</SelectItem>
-                    <SelectItem value="Fellowship">Fellowship</SelectItem>
-                    <SelectItem value="Meeting">Meeting</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={attendanceFilter} onValueChange={setAttendanceFilter}>
-                  <SelectTrigger className="h-10">
-                    <SelectValue placeholder="Attendance" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Events</SelectItem>
-                    <SelectItem value="attending">With Attendance</SelectItem>
-                    <SelectItem value="not_attending">No Attendance</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="h-10">
-                    <SelectValue placeholder="Sort by" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="date">Date</SelectItem>
-                    <SelectItem value="title">Title</SelectItem>
-                    <SelectItem value="attendance">Attendance</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                  className="h-10"
-                >
-                  {sortOrder === 'asc' ? '↑' : '↓'}
-                </Button>
-              </div>
-            </div>
 
-            {/* Quick Actions Bar */}
-            {filteredEvents.length > 0 && (
-              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg mb-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} found
-                  </span>
-                  {bulkSelectedEvents.length > 0 && (
-                    <Badge variant="secondary" className="ml-2">
-                      {bulkSelectedEvents.length} selected
-                    </Badge>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  {bulkSelectedEvents.length > 0 && (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsBulkActionsOpen(true)}
-                      >
-                        <Settings className="mr-2 h-4 w-4" />
-                        Bulk Actions
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setBulkSelectedEvents([])}
-                      >
-                        Clear Selection
-                      </Button>
-                    </>
-                  )}
+                {/* Filter Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+                  <div className="lg:col-span-2">
+                    <Select value={eventTypeFilter} onValueChange={setEventTypeFilter}>
+                      <SelectTrigger className="h-12">
+                        <SelectValue placeholder="Event Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        <SelectItem value="Worship Service">Worship Service</SelectItem>
+                        <SelectItem value="Bible Study or Class">Bible Study or Class</SelectItem>
+                        <SelectItem value="Prayer Meeting">Prayer Meeting</SelectItem>
+                        <SelectItem value="Ministry Meeting">Ministry Meeting</SelectItem>
+                        <SelectItem value="Outreach Event">Outreach Event</SelectItem>
+                        <SelectItem value="Fellowship Gathering">Fellowship Gathering</SelectItem>
+                        <SelectItem value="Special Event">Special Event</SelectItem>
+                        <SelectItem value="Training or Workshop">Training or Workshop</SelectItem>
+                        <SelectItem value="Fundraiser">Fundraiser</SelectItem>
+                        <SelectItem value="Trip or Retreat">Trip or Retreat</SelectItem>
+                        <SelectItem value="Sunday Worship Service">Sunday Worship Service</SelectItem>
+                        <SelectItem value="Wednesday Bible Study">Wednesday Bible Study</SelectItem>
+                        <SelectItem value="Youth Group">Youth Group</SelectItem>
+                        <SelectItem value="Children's Ministry">Children's Ministry</SelectItem>
+                        <SelectItem value="Men's Ministry">Men's Ministry</SelectItem>
+                        <SelectItem value="Women's Ministry">Women's Ministry</SelectItem>
+                        <SelectItem value="Choir Practice">Choir Practice</SelectItem>
+                        <SelectItem value="Board Meeting">Board Meeting</SelectItem>
+                        <SelectItem value="Deacon Meeting">Deacon Meeting</SelectItem>
+                        <SelectItem value="Potluck">Potluck</SelectItem>
+                        <SelectItem value="Community Service">Community Service</SelectItem>
+                        <SelectItem value="Mission Trip">Mission Trip</SelectItem>
+                        <SelectItem value="Conference">Conference</SelectItem>
+                        <SelectItem value="Seminar">Seminar</SelectItem>
+                        <SelectItem value="Concert">Concert</SelectItem>
+                        <SelectItem value="Wedding">Wedding</SelectItem>
+                        <SelectItem value="Funeral">Funeral</SelectItem>
+                        <SelectItem value="Baptism">Baptism</SelectItem>
+                        <SelectItem value="Communion">Communion</SelectItem>
+                        <SelectItem value="Dedication">Dedication</SelectItem>
+                        <SelectItem value="Graduation">Graduation</SelectItem>
+                        <SelectItem value="Anniversary">Anniversary</SelectItem>
+                        <SelectItem value="Holiday Service">Holiday Service</SelectItem>
+                        <SelectItem value="Easter Service">Easter Service</SelectItem>
+                        <SelectItem value="Christmas Service">Christmas Service</SelectItem>
+                        <SelectItem value="Thanksgiving Service">Thanksgiving Service</SelectItem>
+                        <SelectItem value="New Year's Service">New Year's Service</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <Select value={attendanceFilter} onValueChange={setAttendanceFilter}>
+                    <SelectTrigger className="h-12">
+                      <SelectValue placeholder="Attendance" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Events</SelectItem>
+                      <SelectItem value="attending">With Attendance</SelectItem>
+                      <SelectItem value="not_attending">No Attendance</SelectItem>
+                      <SelectItem value="high_attendance">High Attendance (10+)</SelectItem>
+                      <SelectItem value="low_attendance">Low Attendance (&lt;5)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger className="h-12">
+                      <SelectValue placeholder="Sort by" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="date">Date</SelectItem>
+                      <SelectItem value="title">Title</SelectItem>
+                      <SelectItem value="attendance">Attendance</SelectItem>
+                      <SelectItem value="location">Location</SelectItem>
+                      <SelectItem value="created">Recently Created</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setShowQuickActions(!showQuickActions)}
+                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                    className="h-12 w-full"
                   >
-                    <Zap className="mr-2 h-4 w-4" />
-                    Quick Actions
+                    {sortOrder === 'asc' ? '↑ Ascending' : '↓ Descending'}
                   </Button>
+                </div>
+
+                {/* Quick Filter Chips */}
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant={eventTypeFilter === 'all' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEventTypeFilter('all')}
+                  >
+                    All
+                  </Button>
+                  <Button
+                    variant={eventTypeFilter === 'Sunday Worship Service' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEventTypeFilter('Sunday Worship Service')}
+                  >
+                    Sunday Service
+                  </Button>
+                  <Button
+                    variant={eventTypeFilter === 'Wednesday Bible Study' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEventTypeFilter('Wednesday Bible Study')}
+                  >
+                    Wednesday Study
+                  </Button>
+                  <Button
+                    variant={eventTypeFilter === 'Prayer Meeting' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEventTypeFilter('Prayer Meeting')}
+                  >
+                    Prayer
+                  </Button>
+                  <Button
+                    variant={eventTypeFilter === 'Youth Group' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEventTypeFilter('Youth Group')}
+                  >
+                    Youth
+                  </Button>
+                  <Button
+                    variant={eventTypeFilter === "Children's Ministry" ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEventTypeFilter("Children's Ministry")}
+                  >
+                    Children
+                  </Button>
+                  <Button
+                    variant={eventTypeFilter === 'Potluck' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEventTypeFilter('Potluck')}
+                  >
+                    Potluck
+                  </Button>
+                  <Button
+                    variant={eventTypeFilter === 'Fellowship Gathering' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEventTypeFilter('Fellowship Gathering')}
+                  >
+                    Fellowship
+                  </Button>
+                  <Button
+                    variant={eventTypeFilter === 'Board Meeting' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEventTypeFilter('Board Meeting')}
+                  >
+                    Board
+                  </Button>
+                  <Button
+                    variant={eventTypeFilter === 'Special Event' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEventTypeFilter('Special Event')}
+                  >
+                    Special
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Enhanced Quick Actions Bar */}
+            {filteredEvents.length > 0 && (
+              <div className="bg-gradient-to-r from-slate-50 to-blue-50 dark:from-slate-800 dark:to-blue-900/20 border border-slate-200 dark:border-slate-700 rounded-xl p-4 mb-6">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} found
+                      </span>
+                    </div>
+                    {bulkSelectedEvents.length > 0 && (
+                      <Badge variant="default" className="bg-blue-500 hover:bg-blue-600">
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        {bulkSelectedEvents.length} selected
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {bulkSelectedEvents.length > 0 && (
+                      <>
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => setIsBulkActionsOpen(true)}
+                          className="bg-blue-600 hover:bg-blue-700"
+                        >
+                          <Settings className="mr-2 h-4 w-4" />
+                          Bulk Actions
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setBulkSelectedEvents([])}
+                        >
+                          <X className="mr-2 h-4 w-4" />
+                          Clear
+                        </Button>
+                      </>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowQuickActions(!showQuickActions)}
+                      className="border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-900/20"
+                    >
+                      <Zap className="mr-2 h-4 w-4" />
+                      Quick Actions
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const csvContent = filteredEvents.map(event => ({
+                          Title: event.title,
+                          Date: format(new Date(event.start_date), 'MMM d, yyyy'),
+                          Time: format(new Date(event.start_date), 'h:mm a'),
+                          Location: event.location || 'N/A',
+                          Type: event.event_type || 'N/A',
+                          Attendance: event.attendance || 0
+                        }));
+                        const csv = Papa.unparse(csvContent);
+                        const blob = new Blob([csv], { type: 'text/csv' });
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `events-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                      }}
+                      className="border-green-200 text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-900/20"
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Export CSV
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
@@ -3258,9 +4277,37 @@ export default function Events() {
                       // Quick duplicate last event
                       const lastEvent = filteredEvents[0];
                       if (lastEvent) {
+                        // If this is a generated recurring event instance, use the master event for duplication
+                        let eventToDuplicate = lastEvent;
+                        
+                        if (lastEvent.is_instance && lastEvent.id.includes('_')) {
+                          // Extract the original event ID from the generated instance ID
+                          const originalEventId = lastEvent.id.split('_')[0];
+                          
+                          // Check if this is an old event with a malformed ID
+                          const isOldMalformedId = lastEvent.id && lastEvent.id.includes('-') && lastEvent.id.length > 36 && !lastEvent.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+                          
+                          // Only try to find original event if it's not an old malformed ID
+                          if (!isOldMalformedId) {
+                            // Find the original event in our events list
+                            const originalEvent = events.find(e => e.id === originalEventId);
+                            
+                            if (originalEvent) {
+                              eventToDuplicate = originalEvent;
+                            } else {
+                              // For old events, just use the event as-is instead of showing an error
+                              console.log('Could not find original event to duplicate, using event as-is:', lastEvent.id);
+                              eventToDuplicate = lastEvent;
+                            }
+                          } else {
+                            // For old malformed IDs, use the event as-is
+                            eventToDuplicate = lastEvent;
+                          }
+                        }
+                        
                         setEditingEvent({
-                          ...lastEvent,
-                          title: `${lastEvent.title} (Copy)`,
+                          ...eventToDuplicate,
+                          title: `${eventToDuplicate.title} (Copy)`,
                           start_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // Next week
                           end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000).toISOString(), // 2 hours later
                         });
@@ -3346,9 +4393,9 @@ export default function Events() {
                             </p>
                             <Button 
                               variant="outline" 
-                              onClick={() => setViewMode('list')}
+                              onClick={() => setViewMode('admin')}
                             >
-                              Switch to List View
+                              Switch to Admin View
                             </Button>
                           </div>
                         );
@@ -3424,13 +4471,13 @@ export default function Events() {
                          <div className="flex gap-2 justify-center">
                            <Button 
                              variant="outline" 
-                             onClick={() => setViewMode('list')}
+                             onClick={() => setViewMode('admin')}
                            >
-                             Switch to List View
+                             Switch to Admin View
                            </Button>
                            <Button 
                              onClick={() => {
-                               setViewMode('list');
+                               setViewMode('admin');
                                setTimeout(() => setViewMode('calendar'), 100);
                              }}
                            >
@@ -3448,6 +4495,7 @@ export default function Events() {
                     <EventCard
                       key={event.id}
                       event={event}
+                      viewMode={viewMode}
                       onRSVP={handleOpenDialog}
                       onPotluckRSVP={handlePotluckRSVP}
                       onEdit={handleEditClick}
@@ -3530,6 +4578,7 @@ export default function Events() {
                 <EventCard
                   key={event.id}
                   event={event}
+                  viewMode={viewMode}
                   onRSVP={handleOpenDialog}
                   onPotluckRSVP={handlePotluckRSVP}
                   onEdit={handleEditClick}
@@ -3550,6 +4599,11 @@ export default function Events() {
               </p>
             </div>
           )}
+        </TabsContent>
+
+        {/* Locations Tab */}
+        <TabsContent value="locations" className="space-y-4">
+          <LocationManager />
         </TabsContent>
       </Tabs>
 
@@ -3575,7 +4629,7 @@ export default function Events() {
                 recurrence_pattern: '',
                 allow_rsvp: true,
                 attendance_type: 'rsvp',
-                event_type: 'Sunday Worship Service'
+                event_type: 'Worship Service'
               }}
               onSave={handleCreateEvent}
               onCancel={() => setIsCreateEventOpen(false)}
@@ -3910,13 +4964,14 @@ export default function Events() {
           {editingEvent && (
             <>
               <div className="p-3 md:p-6">
+                {/* EventForm for editing - uses editingEvent data */}
                 <EventForm
                   initialData={{
                     ...editingEvent,
-                    startDate: new Date(editingEvent.start_date).toISOString().slice(0, 16),
-                    endDate: new Date(editingEvent.end_date).toISOString().slice(0, 16),
+                    startDate: editingEvent.start_date,
+                    endDate: editingEvent.end_date,
                     allow_rsvp: editingEvent.allow_rsvp !== undefined ? editingEvent.allow_rsvp : true,
-                    event_type: 'Sunday Worship Service'
+                    event_type: editingEvent.event_type || 'Worship Service'
                   }}
                   onSave={handleEditEvent}
                   onCancel={() => {

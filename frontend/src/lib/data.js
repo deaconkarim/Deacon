@@ -473,7 +473,16 @@ export const getAllEvents = async () => {
 
     const { data, error } = await supabase
       .from('events')
-      .select('*')
+      .select(`
+        *,
+        locations (
+          id,
+          name,
+          description,
+          capacity,
+          location_type
+        )
+      `)
       .eq('organization_id', organizationId)
       .order('start_date', { ascending: true });
     
@@ -495,13 +504,8 @@ export const addEvent = async (event) => {
       throw new Error('User not associated with any organization');
     }
 
-    // Generate a unique ID for the event
-    const eventId = `${event.title}-${new Date(event.startDate).getTime()}`
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '')
-      .substring(0, 255); // Ensure we don't exceed the column length
+    // Generate a UUID for the event
+    const eventId = crypto.randomUUID();
 
     const eventData = {
       id: eventId,
@@ -510,6 +514,7 @@ export const addEvent = async (event) => {
       start_date: new Date(event.startDate).toISOString(),
       end_date: new Date(event.endDate).toISOString(),
       location: event.location,
+      location_id: event.location_id || null,
       url: event.url,
       is_recurring: event.is_recurring || false,
       recurrence_pattern: event.is_recurring ? event.recurrence_pattern : null,
@@ -526,47 +531,137 @@ export const addEvent = async (event) => {
 
     // If it's a recurring event, first create the master event
     if (event.is_recurring) {
-      // Create master event with is_master flag
-      const masterEvent = {
-        ...eventData,
-        is_master: true,
-        is_recurring: true
-      };
-
-      // Insert master event
-      const { data: masterData, error: masterError } = await supabase
+      // Check if a master event with this title already exists
+      const { data: existingMaster, error: checkError } = await supabase
         .from('events')
-        .insert([masterEvent])
-        .select()
-        .single();
+        .select('*')
+        .eq('title', event.title)
+        .eq('organization_id', organizationId)
+        .eq('is_master', true)
+        .eq('is_recurring', true)
+        .limit(1);
 
-      if (masterError) throw masterError;
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('Error checking for existing master event:', checkError);
+      }
+
+      let masterEventId = eventId;
+      let masterData;
+
+      if (existingMaster && existingMaster.length > 0) {
+        // Use existing master event
+        masterEventId = existingMaster[0].id;
+        masterData = existingMaster[0];
+        console.log('Using existing master event:', masterEventId);
+      } else {
+        // Create new master event with is_master flag
+        const masterEvent = {
+          ...eventData,
+          is_master: true,
+          is_recurring: true
+        };
+
+        // Insert master event
+        const { data: newMasterData, error: masterError } = await supabase
+          .from('events')
+          .insert([masterEvent])
+          .select()
+          .single();
+
+        if (masterError) {
+          // If there's a conflict, try to find the existing master event
+          if (masterError.code === '23505') { // Unique constraint violation
+            console.log('Master event ID conflict, checking for existing master...');
+            const { data: conflictMaster, error: conflictError } = await supabase
+              .from('events')
+              .select('*')
+              .eq('title', event.title)
+              .eq('organization_id', organizationId)
+              .eq('is_master', true)
+              .limit(1);
+
+            if (!conflictError && conflictMaster && conflictMaster.length > 0) {
+              masterEventId = conflictMaster[0].id;
+              masterData = conflictMaster[0];
+              console.log('Found existing master event after conflict:', masterEventId);
+            } else {
+              throw masterError;
+            }
+          } else {
+            throw masterError;
+          }
+        } else {
+          masterData = newMasterData;
+        }
+      }
 
       // Generate instances with parent_event_id pointing to master event
       const instances = generateRecurringInstances({
         ...eventData,
-        parent_event_id: masterData.id
+        parent_event_id: masterEventId
       });
       
-      // Insert all instances
-      const { data: instancesData, error: instancesError } = await supabase
+      // Filter out instances that might already exist
+      const existingInstanceIds = instances.map(instance => instance.id);
+      const { data: existingInstances, error: existingError } = await supabase
         .from('events')
-        .insert(instances)
-        .select();
+        .select('id')
+        .in('id', existingInstanceIds)
+        .eq('organization_id', organizationId);
+
+      if (existingError) {
+        console.error('Error checking for existing instances:', existingError);
+      }
+
+      const existingIds = existingInstances ? existingInstances.map(e => e.id) : [];
+      const newInstances = instances.filter(instance => !existingIds.includes(instance.id));
       
-      if (instancesError) throw instancesError;
+      if (newInstances.length > 0) {
+        // Insert only new instances
+        const { data: instancesData, error: instancesError } = await supabase
+          .from('events')
+          .insert(newInstances)
+          .select();
+        
+        if (instancesError) throw instancesError;
+        console.log(`Created ${newInstances.length} new instances for master event ${masterEventId}`);
+      } else {
+        console.log('All instances already exist for master event:', masterEventId);
+      }
+      
       return masterData; // Return the master event
     } else {
-      // For non-recurring events, just insert the single event
+      // For non-recurring events, check if it already exists by title and start date
+      const { data: existingEvent, error: checkError } = await supabase
+        .from('events')
+        .select('*')
+        .eq('title', event.title)
+        .eq('start_date', new Date(event.startDate).toISOString())
+        .eq('organization_id', organizationId)
+        .eq('is_recurring', false)
+        .limit(1);
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('Error checking for existing event:', checkError);
+      }
+
+      if (existingEvent && existingEvent.length > 0) {
+        console.log('Event already exists, returning existing event:', existingEvent[0].id);
+        return existingEvent[0];
+      }
+
+      // Insert the single event
       const { data, error } = await supabase
         .from('events')
         .insert([eventData])
-        .select();
+        .select()
+        .single();
       
       if (error) throw error;
-      return data[0];
+      return data;
     }
   } catch (error) {
+    console.error('Error in addEvent:', error);
     throw error;
   }
 };
@@ -579,14 +674,38 @@ export const updateEvent = async (id, updates) => {
     }
 
     // First, get the original event to check if it's recurring
-    const { data: originalEvent, error: fetchError } = await supabase
+    let { data: originalEvent, error: fetchError } = await supabase
       .from('events')
       .select('*')
       .eq('id', id)
       .eq('organization_id', organizationId)
       .single();
 
-    if (fetchError) throw fetchError;
+    // If the event ID doesn't exist, it might be a generated instance ID
+    // Try to find the event by title instead
+    if (fetchError && fetchError.code === 'PGRST116') {
+      console.log('Event ID not found, trying to find by title:', id);
+      
+      // Try to find the event by title
+      const { data: eventsByTitle, error: titleError } = await supabase
+        .from('events')
+        .select('*')
+        .eq('title', updates.title)
+        .eq('organization_id', organizationId)
+        .eq('is_master', true)
+        .limit(1);
+
+      if (titleError) throw titleError;
+      
+      if (eventsByTitle && eventsByTitle.length > 0) {
+        originalEvent = eventsByTitle[0];
+        console.log('Found event by title:', originalEvent.id);
+      } else {
+        throw new Error(`Event not found with ID: ${id} or title: ${updates.title}`);
+      }
+    } else if (fetchError) {
+      throw fetchError;
+    }
 
     const eventData = {
       title: updates.title,
@@ -594,7 +713,9 @@ export const updateEvent = async (id, updates) => {
       start_date: updates.startDate,
       end_date: updates.endDate,
       location: updates.location,
+      location_id: updates.location_id || null,
       url: updates.url,
+      event_type: updates.event_type || 'Worship Service',
       is_recurring: updates.is_recurring || false,
       recurrence_pattern: updates.is_recurring ? updates.recurrence_pattern : null,
       monthly_week: updates.recurrence_pattern === 'monthly_weekday' ? safeParseInt(updates.monthly_week) : null,
@@ -638,7 +759,7 @@ export const updateEvent = async (id, updates) => {
       const { data, error } = await supabase
         .from('events')
         .update(eventData)
-        .eq('id', id)
+        .eq('id', originalEvent.id) // Use the found event ID, not the input ID
         .eq('organization_id', organizationId)
         .select();
       

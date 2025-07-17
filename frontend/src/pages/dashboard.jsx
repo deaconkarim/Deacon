@@ -1051,7 +1051,7 @@ export function Dashboard() {
                 <div className="flex items-center justify-between">
                   <span className="text-slate-600 dark:text-slate-400">Most Common</span>
                   <span className="text-sm font-semibold text-slate-900 dark:text-white truncate max-w-[120px]">
-                    {stats.mostCommonEventType === 'Sunday Worship Service' ? 'Sunday' :
+                    {stats.mostCommonEventType === 'Worship Service' ? 'Sunday' :
                      stats.mostCommonEventType === 'Bible Study' ? 'Bible Study' :
                      stats.mostCommonEventType === 'Fellowship' ? 'Fellowship' :
                      stats.mostCommonEventType === 'Other' ? 'Other' :
