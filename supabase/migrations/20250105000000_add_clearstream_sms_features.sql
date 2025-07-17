@@ -104,7 +104,7 @@ END $$;
 -- Add indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_sms_campaigns_organization_id ON sms_campaigns(organization_id);
 CREATE INDEX IF NOT EXISTS idx_sms_campaigns_status ON sms_campaigns(status);
-CREATE INDEX IF NOT EXISTS idx_sms_campaigns_scheduled_date ON sms_campaigns(scheduled_date);
+CREATE INDEX IF NOT EXISTS idx_sms_campaigns_scheduled_date ON sms_campaigns("scheduledDate");
 
 CREATE INDEX IF NOT EXISTS idx_sms_ab_tests_organization_id ON sms_ab_tests(organization_id);
 CREATE INDEX IF NOT EXISTS idx_sms_ab_tests_status ON sms_ab_tests(status);
