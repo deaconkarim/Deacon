@@ -1,6 +1,9 @@
 -- Fix SMS column names to match frontend expectations
 -- This migration updates column names to use camelCase as expected by the frontend
 
+-- Drop problematic indexes first
+DROP INDEX IF EXISTS idx_sms_campaigns_scheduled_date;
+
 -- Fix sms_campaigns table column names
 DO $$
 BEGIN
@@ -13,7 +16,25 @@ BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'sms_campaigns' AND column_name = 'scheduled_time') THEN
     ALTER TABLE sms_campaigns RENAME COLUMN scheduled_time TO "scheduledTime";
   END IF;
+  
+  -- Rename target_type to targetType if it exists
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'sms_campaigns' AND column_name = 'target_type') THEN
+    ALTER TABLE sms_campaigns RENAME COLUMN target_type TO "targetType";
+  END IF;
+  
+  -- Rename selected_groups to selectedGroups if it exists
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'sms_campaigns' AND column_name = 'selected_groups') THEN
+    ALTER TABLE sms_campaigns RENAME COLUMN selected_groups TO "selectedGroups";
+  END IF;
+  
+  -- Rename selected_members to selectedMembers if it exists
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'sms_campaigns' AND column_name = 'selected_members') THEN
+    ALTER TABLE sms_campaigns RENAME COLUMN selected_members TO "selectedMembers";
+  END IF;
 END $$;
+
+-- Recreate the index with the correct column name
+CREATE INDEX IF NOT EXISTS idx_sms_campaigns_scheduled_date ON sms_campaigns("scheduledDate");
 
 -- Fix sms_ab_tests table column names
 DO $$

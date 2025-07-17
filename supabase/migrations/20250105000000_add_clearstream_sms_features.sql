@@ -2,6 +2,15 @@
 -- This migration adds advanced SMS functionality similar to Clearstream
 
 -- Create sms_campaigns table
+-- Drop table if it exists with wrong column names
+DO $$
+BEGIN
+  -- Check if table exists with snake_case columns
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'sms_campaigns' AND column_name = 'scheduled_date') THEN
+    DROP TABLE IF EXISTS sms_campaigns CASCADE;
+  END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS sms_campaigns (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   organization_id UUID,
@@ -104,7 +113,14 @@ END $$;
 -- Add indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_sms_campaigns_organization_id ON sms_campaigns(organization_id);
 CREATE INDEX IF NOT EXISTS idx_sms_campaigns_status ON sms_campaigns(status);
-CREATE INDEX IF NOT EXISTS idx_sms_campaigns_scheduled_date ON sms_campaigns("scheduledDate");
+
+-- Create scheduled date index only if the column exists
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'sms_campaigns' AND column_name = 'scheduledDate') THEN
+    CREATE INDEX IF NOT EXISTS idx_sms_campaigns_scheduled_date ON sms_campaigns("scheduledDate");
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_sms_ab_tests_organization_id ON sms_ab_tests(organization_id);
 CREATE INDEX IF NOT EXISTS idx_sms_ab_tests_status ON sms_ab_tests(status);
