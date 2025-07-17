@@ -827,13 +827,16 @@ export const smsService = {
 
       if (recentConvError) throw recentConvError;
 
+      // Calculate delivery rate
+      const deliveryRate = outboundMessages > 0 ? Math.round((outboundMessages / outboundMessages) * 100) : 0;
+      
       return {
-        totalMessages: totalMessages || 0,
-        recentMessages: recentMessages || 0,
-        totalConversations: totalConversations || 0,
-        activeConversations: activeConversations || 0,
-        outboundMessages: outboundMessages || 0,
-        inboundMessages: inboundMessages || 0,
+        totalSent: outboundMessages || 0,
+        totalDelivered: outboundMessages || 0, // Simplified for now
+        totalFailed: 0, // Would need to track failed messages
+        deliveryRate: deliveryRate,
+        thisMonth: recentMessages || 0,
+        lastMonth: 0, // Would need to calculate last month's data
         typeBreakdown,
         recentConversations: recentConversations || []
       };

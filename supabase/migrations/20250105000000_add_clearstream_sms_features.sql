@@ -8,8 +8,8 @@ CREATE TABLE IF NOT EXISTS sms_campaigns (
   name TEXT NOT NULL,
   description TEXT,
   message TEXT NOT NULL,
-  scheduled_date DATE,
-  scheduled_time TIME,
+  "scheduledDate" DATE,
+  "scheduledTime" TIME,
   status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'scheduled', 'active', 'completed', 'cancelled')),
   type TEXT NOT NULL DEFAULT 'immediate' CHECK (type IN ('immediate', 'scheduled', 'recurring')),
   recipients JSONB DEFAULT '[]',
@@ -25,14 +25,14 @@ CREATE TABLE IF NOT EXISTS sms_ab_tests (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   organization_id UUID,
   name TEXT NOT NULL,
-  variant_a TEXT NOT NULL,
-  variant_b TEXT NOT NULL,
-  test_size INTEGER DEFAULT 50,
+  "variantA" TEXT NOT NULL,
+  "variantB" TEXT NOT NULL,
+  "testSize" INTEGER DEFAULT 50,
   duration INTEGER DEFAULT 7,
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'cancelled')),
   winner TEXT CHECK (winner IN ('A', 'B', 'tie')),
-  variant_a_stats JSONB DEFAULT '{"sent": 0, "delivered": 0, "failed": 0, "responses": 0}',
-  variant_b_stats JSONB DEFAULT '{"sent": 0, "delivered": 0, "failed": 0, "responses": 0}',
+  "variantAStats" JSONB DEFAULT '{"sent": 0, "delivered": 0, "failed": 0, "responses": 0}',
+  "variantBStats" JSONB DEFAULT '{"sent": 0, "delivered": 0, "failed": 0, "responses": 0}',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -212,12 +212,12 @@ BEGIN
       
       -- If no organizations exist, skip the inserts
       IF org_id IS NOT NULL THEN
-        INSERT INTO sms_campaigns (organization_id, name, description, message, type, status) VALUES
-          (org_id, 'Welcome Campaign', 'Welcome new members to the church', 'Welcome to our church! We''re so glad you''re here.', 'immediate', 'draft'),
-          (org_id, 'Sunday Service Reminder', 'Weekly reminder for Sunday service', 'Join us this Sunday at 10 AM for worship!', 'recurring', 'scheduled')
+        INSERT INTO sms_campaigns (organization_id, name, description, message, type, status, "scheduledDate", "scheduledTime") VALUES
+          (org_id, 'Welcome Campaign', 'Welcome new members to the church', 'Welcome to our church! We''re so glad you''re here.', 'immediate', 'draft', NULL, NULL),
+          (org_id, 'Sunday Service Reminder', 'Weekly reminder for Sunday service', 'Join us this Sunday at 10 AM for worship!', 'recurring', 'scheduled', NULL, NULL)
         ON CONFLICT DO NOTHING;
 
-        INSERT INTO sms_ab_tests (organization_id, name, variant_a, variant_b, test_size, duration) VALUES
+        INSERT INTO sms_ab_tests (organization_id, name, "variantA", "variantB", "testSize", duration) VALUES
           (org_id, 'Welcome Message Test', 'Welcome to our church!', 'We''re glad you''re here!', 50, 7)
         ON CONFLICT DO NOTHING;
       END IF;
