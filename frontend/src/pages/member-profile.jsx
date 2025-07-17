@@ -868,15 +868,15 @@ export default function MemberProfile() {
         )}
 
         {/* Family Information */}
-        <motion.div variants={itemVariants}>
-          <Card className="border-0 shadow-md">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Users className="h-4 w-4 text-teal-500" />
-                Family
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+          <motion.div variants={itemVariants}>
+            <Card className="border-0 shadow-md">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Users className="h-4 w-4 text-teal-500" />
+                  Family
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
               {familyInfo ? (
                 <div className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg">
                   <div className="flex items-start">
@@ -921,9 +921,9 @@ export default function MemberProfile() {
                   </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </motion.div>
+              </CardContent>
+            </Card>
+          </motion.div>
 
         {/* Child Guardians */}
         {member.member_type === 'child' && guardians.length > 0 && (
@@ -936,24 +936,24 @@ export default function MemberProfile() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                                        {guardians.map((guardian) => (
+                {guardians.map((guardian) => (
                           <div 
                             key={guardian.id} 
                             className="flex items-center p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-800 transition-all"
                             onClick={() => navigate(`/members/${guardian.guardian.id}`)}
                           >
-                            <Shield className="mr-3 h-4 w-4 text-amber-500" />
+                    <Shield className="mr-3 h-4 w-4 text-amber-500" />
                             <div className="flex-1">
-                              <div className="text-sm font-medium text-slate-900 dark:text-white">
-                                {formatName(guardian.guardian.firstname, guardian.guardian.lastname)}
-                              </div>
-                              <div className="text-xs text-amber-500 dark:text-amber-400">
-                                {guardian.relationship || 'Guardian'}
-                              </div>
-                            </div>
+                      <div className="text-sm font-medium text-slate-900 dark:text-white">
+                        {formatName(guardian.guardian.firstname, guardian.guardian.lastname)}
+                      </div>
+                      <div className="text-xs text-amber-500 dark:text-amber-400">
+                        {guardian.relationship || 'Guardian'}
+                      </div>
+                    </div>
                             <ChevronRight className="h-4 w-4 text-amber-400" />
-                          </div>
-                        ))}
+                  </div>
+                ))}
               </CardContent>
             </Card>
           </motion.div>
@@ -1097,8 +1097,8 @@ export default function MemberProfile() {
                     )}
 
                     {/* Family Information */}
-                    <div className="pt-6 border-t border-slate-200 dark:border-slate-700">
-                      <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Family</h4>
+                      <div className="pt-6 border-t border-slate-200 dark:border-slate-700">
+                        <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Family</h4>
                       {familyInfo ? (
                         <div className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg">
                           <div className="flex items-start">
@@ -1139,10 +1139,10 @@ export default function MemberProfile() {
                             <Users className="mr-3 h-4 w-4 text-slate-500 mt-0.5" />
                             <div className="text-sm text-slate-600 dark:text-slate-400">
                               Not assigned to a family
-                            </div>
                           </div>
                         </div>
-                      )}
+                      </div>
+                    )}
                     </div>
 
                     {/* Child Guardians */}

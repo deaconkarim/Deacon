@@ -239,13 +239,13 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVol
   const isPotluck = event.title.toLowerCase().includes('potluck');
   const isCheckIn = event.attendance_type === 'check-in';
   const isBibleStudy = event.title.toLowerCase().includes('bible study');
-  
+
   const EventIcon = eventTypeIcons[event.event_type] || Calendar;
   const eventColor = eventTypeColors[event.event_type] || 'gray';
 
   if (viewMode === 'calendar') {
     const isPastEvent = startDate < new Date();
-    return (
+  return (
       <motion.div
         variants={itemVariants}
         className={cn(
@@ -537,57 +537,57 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVol
         <div className={`absolute inset-0 bg-gradient-to-r from-${eventColor}-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
         
         <CardHeader className="p-4 md:p-6 relative">
-          <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-3 md:gap-0">
-            <div className="flex-1">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-3 md:gap-0">
+          <div className="flex-1">
               <div className="flex items-start gap-3">
                 <div className={`p-3 rounded-xl bg-${eventColor}-100 text-${eventColor}-600 shadow-sm`}>
                   <EventIcon className="h-6 w-6" />
                 </div>
                 <div className="flex-1">
                   <CardTitle className="text-lg md:text-xl font-bold flex flex-wrap items-center gap-2 mb-3">
-                    {event.title}
-                    {isRecurring && (
+              {event.title}
+              {isRecurring && (
                       <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 hover:bg-blue-200">
                         <RefreshCw className="w-3 h-3 mr-1" />
-                        {formatRecurrencePattern(event.recurrence_pattern, event.monthly_week, event.monthly_weekday)}
-                      </Badge>
-                    )}
-                    {isPotluck && (
+                  {formatRecurrencePattern(event.recurrence_pattern, event.monthly_week, event.monthly_weekday)}
+                </Badge>
+              )}
+              {isPotluck && (
                       <Badge variant="outline" className="text-xs text-green-600 border-green-600 bg-green-50">
                         <Utensils className="w-3 h-3 mr-1" />
                         Potluck
-                      </Badge>
-                    )}
-                    {event.needs_volunteers && (
+                </Badge>
+              )}
+              {event.needs_volunteers && (
                       <Badge variant="outline" className="text-xs text-yellow-600 border-yellow-600 bg-yellow-50">
                         <Handshake className="w-3 h-3 mr-1" />
-                        Volunteers Needed
-                      </Badge>
-                    )}
-                    {isPastEvent && (
+                  Volunteers Needed
+                </Badge>
+              )}
+              {isPastEvent && (
                       <Badge variant="outline" className="text-xs text-gray-600 border-gray-600 bg-gray-50">
                         <CheckCircle className="w-3 h-3 mr-1" />
-                        Past Event
-                      </Badge>
-                    )}
+                  Past Event
+                </Badge>
+              )}
                     {isInstance && (
                       <Badge variant="outline" className="text-xs text-purple-600 border-purple-600 bg-purple-50">
                         <Copy className="w-3 h-3 mr-1" />
                         Recurring Instance
                       </Badge>
                     )}
-                  </CardTitle>
+            </CardTitle>
                   
                   {/* Enhanced event details */}
                   <div className="space-y-2">
                     <div className="flex items-center gap-4 flex-wrap text-sm text-muted-foreground">
                       <span className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-md">
                         <Calendar className="h-4 w-4 text-blue-600" />
-                        {format(startDate, 'EEEE, MMMM d, yyyy')}
+              {format(startDate, 'EEEE, MMMM d, yyyy')}
                       </span>
                       <span className="flex items-center gap-2 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-md">
                         <Clock className="h-4 w-4 text-green-600" />
-                        {format(startDate, 'h:mm a')} - {format(endDate, 'h:mm a')}
+              {format(startDate, 'h:mm a')} - {format(endDate, 'h:mm a')}
                       </span>
                       {event.location && (
                         <span className="flex items-center gap-2 bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded-md">
@@ -600,7 +600,7 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVol
                           )}
                         </span>
                       )}
-                    </div>
+          </div>
                     
                     {/* Event type and additional info */}
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -632,7 +632,7 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVol
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
                     <MoreHorizontal className="h-4 w-4" />
-                  </Button>
+            </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>Event Actions</DropdownMenuLabel>
@@ -660,13 +660,13 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVol
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            </div>
           </div>
-        </CardHeader>
+        </div>
+      </CardHeader>
         
         <CardContent className="p-4 md:p-6 pt-0 relative">
           {/* Description */}
-          {event.description && (
+        {event.description && (
             <div className="text-sm text-gray-600 mb-4 line-clamp-2 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
               {event.description}
             </div>
@@ -709,31 +709,31 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVol
             </div>
             
             <div className="flex flex-col lg:flex-row lg:items-center gap-3">
-              {event.url && (
-                <a
-                  href={event.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+        {event.url && (
+          <a
+            href={event.url}
+            target="_blank"
+            rel="noopener noreferrer"
                   className="flex items-center gap-1 text-blue-600 hover:underline"
-                >
+          >
                   <ExternalLink className="h-4 w-4" />
-                  Event Link
-                </a>
-              )}
+            Event Link
+          </a>
+        )}
               
               <div className="flex flex-col sm:flex-row gap-2">
-                {event.needs_volunteers && (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => onManageVolunteers(event)}
+            {event.needs_volunteers && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => onManageVolunteers(event)}
                     className="h-9"
-                  >
-                    <Handshake className="mr-2 h-4 w-4" />
-                    Manage Volunteers
-                  </Button>
-                )}
-                {event.allow_rsvp && (
+              >
+                <Handshake className="mr-2 h-4 w-4" />
+                Manage Volunteers
+              </Button>
+            )}
+            {event.allow_rsvp && (
                   <Button
                     onClick={() => onRSVP(event)}
                     className={cn(
@@ -747,12 +747,12 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVol
                   >
                     {isPastEvent ? (
                       <>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Edit Attendance
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit Attendance
                       </>
-                    ) : isCheckIn ? (
+                ) : isCheckIn ? (
                       <>
-                        <CheckCircle className="mr-2 h-4 w-4" />
+                    <CheckCircle className="mr-2 h-4 w-4" />
                         Check In People
                       </>
                     ) : (
@@ -820,13 +820,13 @@ const CalendarView = ({ events, onEventClick, currentMonth, onMonthChange }) => 
     <div className="space-y-4">
       {/* Month Navigation */}
       <div className="flex items-center justify-between">
-        <Button
+                  <Button
           variant="outline"
           size="sm"
           onClick={() => onMonthChange(subMonths(currentMonth, 1))}
-        >
+                  >
           <ChevronLeft className="h-4 w-4" />
-        </Button>
+                  </Button>
         <h2 className="text-lg font-semibold">
           {format(currentMonth, 'MMMM yyyy')}
         </h2>
@@ -895,8 +895,8 @@ const CalendarView = ({ events, onEventClick, currentMonth, onMonthChange }) => 
                   {dayEvents.length > 3 && (
                     <div className="text-xs text-gray-500 text-center">
                       +{dayEvents.length - 3} more
-                    </div>
-                  )}
+              </div>
+            )}
                 </div>
               </div>
             );
@@ -1214,10 +1214,10 @@ const EventAnalytics = ({ events, pastEvents }) => {
               </div>
               <div className="p-3 bg-blue-500 rounded-xl">
                 <Calendar className="h-6 w-6 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
         
         <Card className="border-0 shadow-lg bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20">
           <CardContent className="p-6">
@@ -1453,9 +1453,21 @@ export default function Events() {
   
   // New state for enhanced features
   const [viewMode, setViewMode] = useState('admin'); // 'admin', 'kiosk', or 'calendar'
+
+  // Dynamically generate event type options from actual data
+  const eventTypeOptions = useMemo(() => {
+    const types = new Set();
+    events.forEach(event => {
+      if (event.event_type) {
+        types.add(event.event_type);
+      }
+    });
+    return Array.from(types).sort();
+  }, [events]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [eventTypeFilter, setEventTypeFilter] = useState('all');
   const [dateRangeFilter, setDateRangeFilter] = useState('all');
+  const [timeWindowFilter, setTimeWindowFilter] = useState('month'); // 'all', 'today', 'week', 'month', 'quarter', 'year'
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [selectedEventForDetails, setSelectedEventForDetails] = useState(null);
   const [isEventDetailsOpen, setIsEventDetailsOpen] = useState(false);
@@ -1529,25 +1541,109 @@ export default function Events() {
         }
       }
 
+      // Determine the date range based on time filter
+      let startDate = today;
+      let endDate = null;
+      
+      if (timeWindowFilter === 'month') {
+        // For month filter, get events for the entire current month
+        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+        endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+        console.log('[Events] Month filter - Date range:', startDate.toISOString(), 'to', endDate.toISOString());
+      } else if (timeWindowFilter === 'week') {
+        // For week filter, get events for the current week
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
+        startDate = weekStart;
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6); // End of week (Saturday)
+        weekEnd.setHours(23, 59, 59, 999);
+        endDate = weekEnd;
+        console.log('[Events] Week filter - Date range:', startDate.toISOString(), 'to', endDate.toISOString());
+      } else if (timeWindowFilter === 'quarter') {
+        // For quarter filter, get events for the current quarter
+        const quarter = Math.floor(today.getMonth() / 3);
+        startDate = new Date(today.getFullYear(), quarter * 3, 1);
+        endDate = new Date(today.getFullYear(), (quarter + 1) * 3, 0, 23, 59, 59, 999);
+        console.log('[Events] Quarter filter - Date range:', startDate.toISOString(), 'to', endDate.toISOString());
+      } else if (timeWindowFilter === 'year') {
+        // For year filter, get events for the current year
+        startDate = new Date(today.getFullYear(), 0, 1);
+        endDate = new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999);
+        console.log('[Events] Year filter - Date range:', startDate.toISOString(), 'to', endDate.toISOString());
+      } else {
+        console.log('[Events] Default filter - Date range: from', startDate.toISOString(), 'onwards');
+      }
+      // For 'all' and 'today', keep the original logic (from today onwards)
+
       // Add a timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Request timeout')), 30000)
       );
       
-      const eventsPromise = supabase
+      let eventsPromise;
+      if (endDate) {
+        // Use date range query
+        eventsPromise = supabase
         .from('events')
         .select('*, event_attendance(*)')
         .eq('organization_id', organizationId)
-        .gte('start_date', today.toISOString())
+          .gte('start_date', startDate.toISOString())
+          .lte('start_date', endDate.toISOString())
         .order('start_date', { ascending: true });
+      } else {
+        // Use original query (from today onwards)
+        eventsPromise = supabase
+          .from('events')
+          .select('*, event_attendance(*)')
+          .eq('organization_id', organizationId)
+          .gte('start_date', startDate.toISOString())
+          .order('start_date', { ascending: true });
+      }
 
-      const { data, error } = await Promise.race([eventsPromise, timeoutPromise]);
+      // For admin view with time filters, also fetch recurring events that started before the filter period
+      // but could generate instances within the filter period
+      let data, error;
+      if (viewMode === 'admin' && endDate && timeWindowFilter !== 'all' && timeWindowFilter !== 'today') {
+        const recurringEventsPromise = supabase
+          .from('events')
+          .select('*, event_attendance(*)')
+          .eq('organization_id', organizationId)
+          .lt('start_date', startDate.toISOString())
+          .not('recurrence_pattern', 'eq', null)
+          .order('start_date', { ascending: true });
+
+        const [mainResult, recurringResult] = await Promise.all([
+          Promise.race([eventsPromise, timeoutPromise]),
+          Promise.race([recurringEventsPromise, timeoutPromise])
+        ]);
+
+        if (mainResult.error) throw mainResult.error;
+        if (recurringResult.error) throw recurringResult.error;
+
+        // Combine the results
+        data = [...(mainResult.data || []), ...(recurringResult.data || [])];
+        error = null;
+        console.log('[Events] Main events:', mainResult.data?.length || 0);
+        console.log('[Events] Recurring events from before filter period:', recurringResult.data?.length || 0);
+        console.log('[Events] Combined events:', data.length);
+      } else {
+        const result = await Promise.race([eventsPromise, timeoutPromise]);
+        data = result.data;
+        error = result.error;
+      }
 
       if (error) throw error;
-      console.log('[Events] Upcoming events count:', data.length);
+      console.log('[Events] Fetched events count:', data.length);
+      console.log('[Events] Time filter used:', timeWindowFilter);
+      console.log('[Events] View mode:', viewMode);
 
-      // Process events to only show next instance of recurring events and add attendance count
-      const processedEvents = data.reduce((acc, event) => {
+      // Process events based on view mode and add attendance count
+      let processedEvents;
+      
+      if (viewMode === 'kiosk') {
+        // For kiosk view, only show the next instance of recurring events
+        processedEvents = data.reduce((acc, event) => {
         // Add attendance count to the event
         const eventWithAttendance = {
           ...event,
@@ -1577,6 +1673,75 @@ export default function Events() {
         }
         return acc;
       }, []);
+      } else {
+        // For admin and calendar views, show all future events within the time filter
+        // Filter out past events first
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const futureEvents = data.filter(event => {
+          const eventDate = new Date(event.start_date);
+          return eventDate >= today;
+        });
+        
+        // Add attendance count to all events
+        const eventsWithAttendance = futureEvents.map(event => ({
+          ...event,
+          attendance: event.event_attendance?.length || 0
+        }));
+        
+        // For admin view, generate all recurring event instances within the time filter
+        if (viewMode === 'admin') {
+          // Calculate the end date based on the time filter
+          let filterEndDate = null;
+          const today = new Date();
+          
+          if (timeWindowFilter === 'month') {
+            filterEndDate = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+          } else if (timeWindowFilter === 'week') {
+            const weekStart = new Date(today);
+            weekStart.setDate(today.getDate() - today.getDay());
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+            weekEnd.setHours(23, 59, 59, 999);
+            filterEndDate = weekEnd;
+          } else if (timeWindowFilter === 'quarter') {
+            const quarter = Math.floor(today.getMonth() / 3);
+            filterEndDate = new Date(today.getFullYear(), (quarter + 1) * 3, 0, 23, 59, 59, 999);
+          } else if (timeWindowFilter === 'year') {
+            filterEndDate = new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999);
+          } else if (timeWindowFilter === 'today') {
+            // For today, use the same day
+            filterEndDate = new Date(today);
+            filterEndDate.setHours(23, 59, 59, 999);
+          } else {
+            // For 'all', use 3 months as default
+            filterEndDate = new Date();
+            filterEndDate.setMonth(filterEndDate.getMonth() + 3);
+          }
+          
+          console.log('[Events] Time filter:', timeWindowFilter);
+          console.log('[Events] Filter end date:', format(filterEndDate, 'yyyy-MM-dd'));
+          
+          processedEvents = processRecurringEvents(eventsWithAttendance, filterEndDate);
+        } else {
+          // For calendar view, use the events as-is (calendar handles recurring events separately)
+          processedEvents = eventsWithAttendance;
+        }
+      }
+
+      console.log('[Events] Processed events count:', processedEvents.length);
+      console.log('[Events] View mode processing:', viewMode);
+      
+      // Debug: Show some sample events
+      if (processedEvents.length > 0) {
+        console.log('[Events] Sample processed events:', processedEvents.slice(0, 3).map(e => ({
+          title: e.title,
+          date: e.start_date,
+          recurring: !!e.recurrence_pattern,
+          is_instance: e.is_instance
+        })));
+      }
 
       setEvents(processedEvents);
       setFilteredEvents(processedEvents);
@@ -1590,7 +1755,7 @@ export default function Events() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, timeWindowFilter, viewMode]);
 
   // New function to fetch events for the entire month
   const fetchMonthEvents = useCallback(async (month) => {
@@ -1903,8 +2068,20 @@ export default function Events() {
           case 'low_attendance':
             return attendance > 0 && attendance < 5;
           default:
-            return true;
+        return true;
         }
+      });
+    }
+
+    // Apply time window filter (only for 'today' since others are handled at DB level)
+    if (timeWindowFilter === 'today') {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      
+      filtered = filtered.filter(event => {
+        const eventDate = new Date(event.start_date);
+        const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+        return eventDateOnly.getTime() === today.getTime();
       });
     }
 
@@ -3088,11 +3265,11 @@ export default function Events() {
           } else {
             // For old events, just delete the event as-is instead of showing an error
             console.log('Could not find original event to delete, deleting event as-is:', eventId);
-            await deleteEvent(eventId);
-            toast({
-              title: "Success",
-              description: "Event deleted successfully."
-            });
+      await deleteEvent(eventId);
+      toast({
+        title: "Success",
+        description: "Event deleted successfully."
+      });
           }
         } else {
           // Could not extract original ID, delete normally
@@ -3177,8 +3354,8 @@ export default function Events() {
           console.log('Could not find original event with ID:', originalEventId);
           console.log('Available events:', events.map(e => ({ id: e.id, title: e.title, idLength: e.id.length })));
           console.log('Editing as regular event:', event);
-          setEditingEvent(event);
-          setIsEditEventOpen(true);
+    setEditingEvent(event);
+    setIsEditEventOpen(true);
         }
       } else {
         console.log('Could not extract original event ID, editing as regular event:', event);
@@ -3490,25 +3667,56 @@ export default function Events() {
     );
   }, [viewMode, handleOpenDialog, handlePotluckRSVP, handleEditClick, handleDeleteEvent, handleManageVolunteers]);
 
-  const processRecurringEvents = (events) => {
+  const processRecurringEvents = (events, customEndDate = null) => {
     const processedEvents = [];
     const now = new Date();
-    const endDate = new Date();
-    endDate.setMonth(endDate.getMonth() + 3); // Show events for next 3 months
+    const endDate = customEndDate || new Date();
+    if (!customEndDate) {
+      endDate.setMonth(endDate.getMonth() + 3); // Default: Show events for next 3 months
+    }
+    const seenEventKeys = new Set(); // Track seen events to avoid duplicates
+
+    // Helper function to normalize event titles for better deduplication
+    const normalizeTitle = (title) => {
+      return title
+        .toLowerCase()
+        .replace(/[^\w\s]/g, '') // Remove punctuation
+        .replace(/\s+/g, ' ') // Normalize whitespace
+        .replace(/minitry/g, 'ministry') // Fix common typo
+        .trim();
+    };
 
     events.forEach(event => {
-      if (!event.is_recurring) {
+      if (!event.recurrence_pattern) {
+        // For non-recurring events, add them directly
         processedEvents.push(event);
         return;
       }
+
+      console.log('[processRecurringEvents] Processing recurring event:', {
+        title: event.title,
+        pattern: event.recurrence_pattern,
+        startDate: event.start_date,
+        monthly_week: event.monthly_week,
+        monthly_weekday: event.monthly_weekday
+      });
 
       const startDate = new Date(event.start_date);
       const endTime = new Date(event.end_date);
       const duration = endTime - startDate;
 
       let currentDate = new Date(startDate);
-      while (currentDate <= endDate) {
+      let instanceCount = 0;
+      const maxInstances = 12; // Limit to prevent infinite loops
+
+      while (currentDate <= endDate && instanceCount < maxInstances) {
         if (currentDate >= now) {
+          // Create a unique key for this event instance
+          const normalizedTitle = normalizeTitle(event.title);
+          const eventKey = `${normalizedTitle}_${format(currentDate, 'yyyy-MM-dd')}`;
+          
+          // Only add if we haven't seen this event instance before
+          if (!seenEventKeys.has(eventKey)) {
           const eventInstance = {
             ...event,
             id: `${event.id}_${currentDate.toISOString()}`,
@@ -3517,6 +3725,22 @@ export default function Events() {
             is_instance: true
           };
           processedEvents.push(eventInstance);
+            seenEventKeys.add(eventKey);
+            instanceCount++;
+            
+            console.log('[processRecurringEvents] Created instance:', {
+              title: event.title,
+              date: format(currentDate, 'yyyy-MM-dd'),
+              key: eventKey,
+              instanceCount
+            });
+          } else {
+            console.log('[processRecurringEvents] Skipped duplicate:', {
+              title: event.title,
+              date: format(currentDate, 'yyyy-MM-dd'),
+              key: eventKey
+            });
+          }
         }
 
         // Calculate next occurrence based on recurrence pattern
@@ -3561,6 +3785,14 @@ export default function Events() {
               // Add weeks to get to the target week
               currentDate.setDate(currentDate.getDate() + (targetWeek - 1) * 7);
             }
+            
+            // Ensure we don't go beyond the current month
+            const currentMonth = currentDate.getMonth();
+            if (currentDate.getMonth() !== currentMonth) {
+              // If we've moved to the next month, adjust back
+              currentDate.setMonth(currentMonth);
+              currentDate.setDate(0); // Last day of the current month
+            }
             break;
           default:
             currentDate = endDate; // Stop processing for unknown patterns
@@ -3568,6 +3800,10 @@ export default function Events() {
       }
     });
 
+    console.log('[processRecurringEvents] Processed events:', processedEvents.length);
+    console.log('[processRecurringEvents] Unique event keys:', seenEventKeys.size);
+    console.log('[processRecurringEvents] Time range:', format(now, 'yyyy-MM-dd'), 'to', format(endDate, 'yyyy-MM-dd'));
+    
     return processedEvents;
   };
 
@@ -3829,12 +4065,12 @@ export default function Events() {
         {/* Enhanced Header with Stats */}
         <div className="mb-8 px-2 md:px-0">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-            <div>
+          <div>
               <h1 className="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Events
               </h1>
-              <p className="text-gray-600 text-lg">Manage and track event attendance</p>
-            </div>
+            <p className="text-gray-600 text-lg">Manage and track event attendance</p>
+          </div>
             <div className="flex items-center gap-3">
               <Button
                 variant="outline"
@@ -3845,16 +4081,16 @@ export default function Events() {
                 <BarChart3 className="mr-2 h-4 w-4" />
                 {showAnalytics ? 'Hide' : 'Show'} Analytics
               </Button>
-              <PermissionButton
-                permission={PERMISSIONS.EVENTS_CREATE}
-                onClick={() => setIsCreateEventOpen(true)}
+          <PermissionButton
+            permission={PERMISSIONS.EVENTS_CREATE}
+            onClick={() => setIsCreateEventOpen(true)}
                 className="h-10"
-              >
+          >
                 <Plus className="mr-2 h-4 w-4" />
                 Create Event
-              </PermissionButton>
+          </PermissionButton>
             </div>
-          </div>
+        </div>
 
           {/* Quick Stats Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -3938,14 +4174,14 @@ export default function Events() {
         )}
 
         {/* Enhanced Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full px-2 md:px-0">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full px-2 md:px-0">
           <TabsList className="grid w-full grid-cols-3 h-14 mb-6">
-            <TabsTrigger value="upcoming" className="text-lg">Upcoming Events</TabsTrigger>
-            <TabsTrigger value="past" className="text-lg">Past Events</TabsTrigger>
+          <TabsTrigger value="upcoming" className="text-lg">Upcoming Events</TabsTrigger>
+          <TabsTrigger value="past" className="text-lg">Past Events</TabsTrigger>
             <TabsTrigger value="locations" className="text-lg">Locations</TabsTrigger>
-          </TabsList>
+        </TabsList>
 
-          {/* Upcoming Events Tab */}
+        {/* Upcoming Events Tab */}
           <TabsContent value="upcoming" className="space-y-6">
             {/* Enhanced Search and Filters */}
             <div className="space-y-4">
@@ -3993,16 +4229,16 @@ export default function Events() {
                 {/* Search Bar */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
+              <Input
                     placeholder="Search events by title, location, or description..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full h-12 pl-10 pr-4"
-                  />
-                </div>
+              />
+            </div>
 
                 {/* Filter Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
                   <div className="lg:col-span-2">
                     <Select value={eventTypeFilter} onValueChange={setEventTypeFilter}>
                       <SelectTrigger className="h-12">
@@ -4010,60 +4246,41 @@ export default function Events() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Types</SelectItem>
-                        <SelectItem value="Worship Service">Worship Service</SelectItem>
-                        <SelectItem value="Bible Study or Class">Bible Study or Class</SelectItem>
-                        <SelectItem value="Prayer Meeting">Prayer Meeting</SelectItem>
-                        <SelectItem value="Ministry Meeting">Ministry Meeting</SelectItem>
-                        <SelectItem value="Outreach Event">Outreach Event</SelectItem>
-                        <SelectItem value="Fellowship Gathering">Fellowship Gathering</SelectItem>
-                        <SelectItem value="Special Event">Special Event</SelectItem>
-                        <SelectItem value="Training or Workshop">Training or Workshop</SelectItem>
-                        <SelectItem value="Fundraiser">Fundraiser</SelectItem>
-                        <SelectItem value="Trip or Retreat">Trip or Retreat</SelectItem>
-                        <SelectItem value="Sunday Worship Service">Sunday Worship Service</SelectItem>
-                        <SelectItem value="Wednesday Bible Study">Wednesday Bible Study</SelectItem>
-                        <SelectItem value="Youth Group">Youth Group</SelectItem>
-                        <SelectItem value="Children's Ministry">Children's Ministry</SelectItem>
-                        <SelectItem value="Men's Ministry">Men's Ministry</SelectItem>
-                        <SelectItem value="Women's Ministry">Women's Ministry</SelectItem>
-                        <SelectItem value="Choir Practice">Choir Practice</SelectItem>
-                        <SelectItem value="Board Meeting">Board Meeting</SelectItem>
-                        <SelectItem value="Deacon Meeting">Deacon Meeting</SelectItem>
-                        <SelectItem value="Potluck">Potluck</SelectItem>
-                        <SelectItem value="Community Service">Community Service</SelectItem>
-                        <SelectItem value="Mission Trip">Mission Trip</SelectItem>
-                        <SelectItem value="Conference">Conference</SelectItem>
-                        <SelectItem value="Seminar">Seminar</SelectItem>
-                        <SelectItem value="Concert">Concert</SelectItem>
-                        <SelectItem value="Wedding">Wedding</SelectItem>
-                        <SelectItem value="Funeral">Funeral</SelectItem>
-                        <SelectItem value="Baptism">Baptism</SelectItem>
-                        <SelectItem value="Communion">Communion</SelectItem>
-                        <SelectItem value="Dedication">Dedication</SelectItem>
-                        <SelectItem value="Graduation">Graduation</SelectItem>
-                        <SelectItem value="Anniversary">Anniversary</SelectItem>
-                        <SelectItem value="Holiday Service">Holiday Service</SelectItem>
-                        <SelectItem value="Easter Service">Easter Service</SelectItem>
-                        <SelectItem value="Christmas Service">Christmas Service</SelectItem>
-                        <SelectItem value="Thanksgiving Service">Thanksgiving Service</SelectItem>
-                        <SelectItem value="New Year's Service">New Year's Service</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
+                        {eventTypeOptions.map(type => (
+                          <SelectItem key={type} value={type}>
+                            {type}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
                   
-                  <Select value={attendanceFilter} onValueChange={setAttendanceFilter}>
+                  <Select value={timeWindowFilter} onValueChange={setTimeWindowFilter}>
                     <SelectTrigger className="h-12">
-                      <SelectValue placeholder="Attendance" />
+                      <SelectValue placeholder="Time Window" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Events</SelectItem>
-                      <SelectItem value="attending">With Attendance</SelectItem>
-                      <SelectItem value="not_attending">No Attendance</SelectItem>
-                      <SelectItem value="high_attendance">High Attendance (10+)</SelectItem>
-                      <SelectItem value="low_attendance">Low Attendance (&lt;5)</SelectItem>
+                      <SelectItem value="all">All Time</SelectItem>
+                      <SelectItem value="today">Today</SelectItem>
+                      <SelectItem value="week">This Week</SelectItem>
+                      <SelectItem value="month">This Month</SelectItem>
+                      <SelectItem value="quarter">This Quarter</SelectItem>
+                      <SelectItem value="year">This Year</SelectItem>
                     </SelectContent>
                   </Select>
+                  
+            <Select value={attendanceFilter} onValueChange={setAttendanceFilter}>
+                    <SelectTrigger className="h-12">
+                      <SelectValue placeholder="Attendance" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Events</SelectItem>
+                <SelectItem value="attending">With Attendance</SelectItem>
+                <SelectItem value="not_attending">No Attendance</SelectItem>
+                      <SelectItem value="high_attendance">High Attendance (10+)</SelectItem>
+                      <SelectItem value="low_attendance">Low Attendance (&lt;5)</SelectItem>
+              </SelectContent>
+            </Select>
                   
                   <Select value={sortBy} onValueChange={setSortBy}>
                     <SelectTrigger className="h-12">
@@ -4086,80 +4303,88 @@ export default function Events() {
                   >
                     {sortOrder === 'asc' ? '↑ Ascending' : '↓ Descending'}
                   </Button>
-                </div>
+          </div>
 
                 {/* Quick Filter Chips */}
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant={eventTypeFilter === 'all' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setEventTypeFilter('all')}
-                  >
-                    All
-                  </Button>
-                  <Button
-                    variant={eventTypeFilter === 'Sunday Worship Service' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setEventTypeFilter('Sunday Worship Service')}
-                  >
-                    Sunday Service
-                  </Button>
-                  <Button
-                    variant={eventTypeFilter === 'Wednesday Bible Study' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setEventTypeFilter('Wednesday Bible Study')}
-                  >
-                    Wednesday Study
-                  </Button>
-                  <Button
-                    variant={eventTypeFilter === 'Prayer Meeting' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setEventTypeFilter('Prayer Meeting')}
-                  >
-                    Prayer
-                  </Button>
-                  <Button
-                    variant={eventTypeFilter === 'Youth Group' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setEventTypeFilter('Youth Group')}
-                  >
-                    Youth
-                  </Button>
-                  <Button
-                    variant={eventTypeFilter === "Children's Ministry" ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setEventTypeFilter("Children's Ministry")}
-                  >
-                    Children
-                  </Button>
-                  <Button
-                    variant={eventTypeFilter === 'Potluck' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setEventTypeFilter('Potluck')}
-                  >
-                    Potluck
-                  </Button>
-                  <Button
-                    variant={eventTypeFilter === 'Fellowship Gathering' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setEventTypeFilter('Fellowship Gathering')}
-                  >
-                    Fellowship
-                  </Button>
-                  <Button
-                    variant={eventTypeFilter === 'Board Meeting' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setEventTypeFilter('Board Meeting')}
-                  >
-                    Board
-                  </Button>
-                  <Button
-                    variant={eventTypeFilter === 'Special Event' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setEventTypeFilter('Special Event')}
-                  >
-                    Special
-                  </Button>
+                <div className="space-y-3">
+                  {/* Event Type Quick Filters */}
+                  <div className="flex flex-wrap gap-2">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mr-2">Type:</span>
+                    <Button
+                      variant={eventTypeFilter === 'all' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setEventTypeFilter('all')}
+                    >
+                      All
+                    </Button>
+                    {eventTypeOptions.slice(0, 6).map(type => (
+                      <Button
+                        key={type}
+                        variant={eventTypeFilter === type ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setEventTypeFilter(type)}
+                      >
+                        {type.length > 12 ? type.substring(0, 12) + '...' : type}
+                      </Button>
+                    ))}
+                    {eventTypeOptions.length > 6 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEventTypeFilter('all')}
+                        className="text-blue-600 hover:text-blue-700"
+                      >
+                        +{eventTypeOptions.length - 6} more
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {/* Time Window Quick Filters */}
+                  <div className="flex flex-wrap gap-2">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mr-2">Time:</span>
+                    <Button
+                      variant={timeWindowFilter === 'all' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setTimeWindowFilter('all')}
+                    >
+                      All Time
+                    </Button>
+                    <Button
+                      variant={timeWindowFilter === 'today' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setTimeWindowFilter('today')}
+                    >
+                      Today
+                    </Button>
+                    <Button
+                      variant={timeWindowFilter === 'week' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setTimeWindowFilter('week')}
+                    >
+                      This Week
+                    </Button>
+                    <Button
+                      variant={timeWindowFilter === 'month' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setTimeWindowFilter('month')}
+                    >
+                      This Month
+                    </Button>
+                    <Button
+                      variant={timeWindowFilter === 'quarter' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setTimeWindowFilter('quarter')}
+                    >
+                      This Quarter
+                    </Button>
+                    <Button
+                      variant={timeWindowFilter === 'year' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setTimeWindowFilter('year')}
+                    >
+                      This Year
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -4341,19 +4566,19 @@ export default function Events() {
             )}
 
             {/* Enhanced Events Display */}
-            {isLoading ? (
-              <div className="space-y-4">
-                {[...Array(3)].map((_, i) => (
-                  <Card key={i} className="p-6">
-                    <div className="animate-pulse">
-                      <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
-                      <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-                      <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            ) : filteredEvents.length > 0 ? (
+          {isLoading ? (
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <Card key={i} className="p-6">
+                  <div className="animate-pulse">
+                    <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : filteredEvents.length > 0 ? (
                             viewMode === 'calendar' ? (
                 (() => {
                   try {
@@ -4490,17 +4715,17 @@ export default function Events() {
                    }
                  })()
               ) : (
-                <div className="space-y-4">
-                  {filteredEvents.map((event) => (
-                    <EventCard
-                      key={event.id}
-                      event={event}
+            <div className="space-y-4">
+        {filteredEvents.map((event) => (
+          <EventCard
+            key={event.id}
+            event={event}
                       viewMode={viewMode}
-                      onRSVP={handleOpenDialog}
-                      onPotluckRSVP={handlePotluckRSVP}
-                      onEdit={handleEditClick}
-                      onDelete={handleDeleteEvent}
-                      onManageVolunteers={handleManageVolunteers}
+            onRSVP={handleOpenDialog}
+            onPotluckRSVP={handlePotluckRSVP}
+            onEdit={handleEditClick}
+            onDelete={handleDeleteEvent}
+            onManageVolunteers={handleManageVolunteers}
                       onViewDetails={(event) => {
                         setSelectedEventForDetails(event);
                         setIsEventDetailsOpen(true);
@@ -4513,24 +4738,24 @@ export default function Events() {
                         }
                       }}
                       isBulkSelected={bulkSelectedEvents.includes(event.id)}
-                    />
-                  ))}
-                </div>
+          />
+        ))}
+      </div>
               )
-            ) : (
-              <div className="text-center py-12">
-                <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No upcoming events</h3>
-                <p className="text-gray-500 mb-4">
-                  {searchQuery || attendanceFilter !== 'all' || eventTypeFilter !== 'all'
-                    ? 'No events match your current filters.' 
-                    : 'Get started by creating your first event.'}
-                </p>
-                {!searchQuery && attendanceFilter === 'all' && eventTypeFilter === 'all' && (
-                  <Button onClick={() => setIsCreateEventOpen(true)}>
+          ) : (
+            <div className="text-center py-12">
+              <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No upcoming events</h3>
+              <p className="text-gray-500 mb-4">
+                                  {searchQuery || attendanceFilter !== 'all' || eventTypeFilter !== 'all' || timeWindowFilter !== 'month'
+                  ? 'No events match your current filters.' 
+                  : 'Get started by creating your first event.'}
+              </p>
+                {!searchQuery && attendanceFilter === 'all' && eventTypeFilter === 'all' && timeWindowFilter === 'month' && (
+                <Button onClick={() => setIsCreateEventOpen(true)}>
                     <Plus className="mr-2 h-4 w-4" />
-                    Create Event
-                  </Button>
+                  Create Event
+                </Button>
               )}
             </div>
           )}
@@ -5175,7 +5400,7 @@ export default function Events() {
               <Download className="mr-2 h-4 w-4" />
               Export Selected Events
             </Button>
-          </div>
+    </div>
           <DialogFooter>
             <Button
               variant="outline"
