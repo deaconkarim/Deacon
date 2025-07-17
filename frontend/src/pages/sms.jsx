@@ -14,7 +14,27 @@ import {
   Check,
   RefreshCw,
   Edit,
-  Trash2
+  Trash2,
+  BarChart3,
+  Clock,
+  Target,
+  TrendingUp,
+  Eye,
+  EyeOff,
+  Bell,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  CalendarDays,
+  Repeat,
+  Zap,
+  Settings,
+  Download,
+  Upload,
+  Copy,
+  Share2,
+  Star,
+  StarOff
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -62,6 +82,55 @@ export function SMS() {
   const [newTemplateVariables, setNewTemplateVariables] = useState('');
   const [replyMessage, setReplyMessage] = useState('');
   const [isSendingReply, setIsSendingReply] = useState(false);
+  
+  // New Clearstream-style features
+  const [activeTab, setActiveTab] = useState('conversations');
+  const [smsStats, setSmsStats] = useState({
+    totalSent: 0,
+    totalDelivered: 0,
+    totalFailed: 0,
+    deliveryRate: 0,
+    thisMonth: 0,
+    lastMonth: 0
+  });
+  const [campaigns, setCampaigns] = useState([]);
+  const [isCampaignOpen, setIsCampaignOpen] = useState(false);
+  const [newCampaign, setNewCampaign] = useState({
+    name: '',
+    description: '',
+    message: '',
+    scheduledDate: '',
+    scheduledTime: '',
+    recipients: [],
+    selectedGroups: [],
+    selectedMembers: [],
+    targetType: 'all', // 'all', 'groups', 'members'
+    type: 'immediate'
+  });
+  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
+  const [analyticsData, setAnalyticsData] = useState({
+    deliveryRates: [],
+    messageVolume: [],
+    topRecipients: [],
+    responseRates: []
+  });
+  const [isOptOutOpen, setIsOptOutOpen] = useState(false);
+  const [optOutMembers, setOptOutMembers] = useState([]);
+  const [isABTestOpen, setIsABTestOpen] = useState(false);
+  const [abTestData, setAbTestData] = useState({
+    name: '',
+    variantA: '',
+    variantB: '',
+    testSize: 50,
+    duration: 7
+  });
+  const [advancedFilters, setAdvancedFilters] = useState({
+    dateRange: 'all',
+    status: 'all',
+    direction: 'all',
+    hasResponse: false
+  });
+  
   const { toast } = useToast();
 
   useEffect(() => {
@@ -94,7 +163,7 @@ export function SMS() {
       const organizationId = orgData[0].organization_id;
 
       // Try to load conversations, templates, members, and groups
-      const [conversationsData, templatesData, membersData, groupsData] = await Promise.all([
+      const [conversationsData, templatesData, membersData, groupsData, statsData] = await Promise.all([
         smsService.getConversations().catch(error => {
           console.warn('Failed to load conversations:', error);
           return [];
@@ -105,7 +174,7 @@ export function SMS() {
         }),
         supabase
           .from('members')
-          .select('id, firstname, lastname, phone, status')
+          .select('id, firstname, lastname, phone, status, sms_opt_in')
           .eq('status', 'active')
           .eq('organization_id', organizationId)
           .not('phone', 'is', null)
@@ -128,7 +197,18 @@ export function SMS() {
               return [];
             }
             return data || [];
-          })
+          }),
+        smsService.getSMSStats().catch(error => {
+          console.warn('Failed to load SMS stats:', error);
+          return {
+            totalSent: 0,
+            totalDelivered: 0,
+            totalFailed: 0,
+            deliveryRate: 0,
+            thisMonth: 0,
+            lastMonth: 0
+          };
+        })
       ]);
       
       // Enrich groups with member counts
@@ -152,6 +232,14 @@ export function SMS() {
       setTemplates(templatesData || []);
       setMembers(membersData || []);
       setGroups(enrichedGroups || []);
+      setSmsStats(statsData || {
+        totalSent: 0,
+        totalDelivered: 0,
+        totalFailed: 0,
+        deliveryRate: 0,
+        thisMonth: 0,
+        lastMonth: 0
+      });
     } catch (error) {
       console.error('Error loading SMS data:', error);
       toast({
@@ -661,6 +749,306 @@ export function SMS() {
     setRecipientCount(0);
   };
 
+  // Clearstream-style new functions
+  const handleCreateCampaign = async () => {
+    try {
+      // Prepare recipients based on target type
+      let recipients = [];
+      
+      if (newCampaign.targetType === 'all') {
+        // Get all opted-in members
+        recipients = members.filter(m => m.sms_opt_in).map(m => ({
+          id: m.id,
+          name: `${m.firstname} ${m.lastname}`,
+          phone: m.phone,
+          type: 'member'
+        }));
+      } else if (newCampaign.targetType === 'groups') {
+        // Get members from selected groups
+        for (const groupId of newCampaign.selectedGroups) {
+          const { data: groupMembers } = await supabase
+            .from('group_members')
+            .select(`
+              member:members(id, firstname, lastname, phone, sms_opt_in)
+            `)
+            .eq('group_id', groupId);
+          
+          if (groupMembers) {
+            const validMembers = groupMembers
+              .map(gm => gm.member)
+              .filter(m => m && m.sms_opt_in)
+              .map(m => ({
+                id: m.id,
+                name: `${m.firstname} ${m.lastname}`,
+                phone: m.phone,
+                type: 'member'
+              }));
+            recipients.push(...validMembers);
+          }
+        }
+      } else if (newCampaign.targetType === 'members') {
+        // Get selected individual members
+        recipients = newCampaign.selectedMembers
+          .map(memberId => members.find(m => m.id === memberId))
+          .filter(m => m && m.sms_opt_in)
+          .map(m => ({
+            id: m.id,
+            name: `${m.firstname} ${m.lastname}`,
+            phone: m.phone,
+            type: 'member'
+          }));
+      }
+
+      const campaignData = {
+        name: newCampaign.name,
+        description: newCampaign.description,
+        message: newCampaign.message,
+        scheduledDate: newCampaign.scheduledDate || null,
+        scheduledTime: newCampaign.scheduledTime || null,
+        recipients: recipients,
+        targetType: newCampaign.targetType,
+        selectedGroups: newCampaign.selectedGroups,
+        selectedMembers: newCampaign.selectedMembers,
+        organization_id: await getCurrentUserOrganizationId(),
+        status: 'draft',
+        type: newCampaign.type
+      };
+      
+      const { data, error } = await supabase
+        .from('sms_campaigns')
+        .insert(campaignData)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'Success',
+        description: `Campaign created successfully with ${recipients.length} recipients`
+      });
+      
+      setIsCampaignOpen(false);
+      setNewCampaign({
+        name: '',
+        description: '',
+        message: '',
+        scheduledDate: '',
+        scheduledTime: '',
+        recipients: [],
+        selectedGroups: [],
+        selectedMembers: [],
+        targetType: 'all',
+        type: 'immediate'
+      });
+      
+      // Reload campaigns
+      loadCampaigns();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: `Failed to create campaign: ${error.message}`,
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const loadCampaigns = async () => {
+    try {
+      const organizationId = await getCurrentUserOrganizationId();
+      const { data, error } = await supabase
+        .from('sms_campaigns')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setCampaigns(data || []);
+    } catch (error) {
+      console.error('Error loading campaigns:', error);
+    }
+  };
+
+  const handleOptOutToggle = async (memberId, currentOptIn) => {
+    try {
+      const { error } = await supabase
+        .from('members')
+        .update({ sms_opt_in: !currentOptIn })
+        .eq('id', memberId);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setMembers(prev => prev.map(m => 
+        m.id === memberId ? { ...m, sms_opt_in: !currentOptIn } : m
+      ));
+      
+      toast({
+        title: 'Success',
+        description: `Member ${currentOptIn ? 'opted out' : 'opted in'} successfully`
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: `Failed to update opt-in status: ${error.message}`,
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleABTest = async () => {
+    try {
+      const testData = {
+        ...abTestData,
+        organization_id: await getCurrentUserOrganizationId(),
+        status: 'active',
+        created_at: new Date().toISOString()
+      };
+      
+      const { data, error } = await supabase
+        .from('sms_ab_tests')
+        .insert(testData)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'Success',
+        description: 'A/B test created successfully'
+      });
+      
+      setIsABTestOpen(false);
+      setAbTestData({
+        name: '',
+        variantA: '',
+        variantB: '',
+        testSize: 50,
+        duration: 7
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: `Failed to create A/B test: ${error.message}`,
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const exportSMSData = async () => {
+    try {
+      const organizationId = await getCurrentUserOrganizationId();
+      const { data, error } = await supabase
+        .from('sms_messages')
+        .select(`
+          *,
+          member:members(firstname, lastname, phone),
+          conversation:sms_conversations(title, conversation_type)
+        `)
+        .eq('organization_id', organizationId)
+        .order('sent_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      // Convert to CSV
+      const csvData = data.map(msg => ({
+        Date: format(new Date(msg.sent_at), 'yyyy-MM-dd HH:mm:ss'),
+        Direction: msg.direction,
+        From: msg.from_number,
+        To: msg.to_number,
+        Message: msg.body,
+        Status: msg.status,
+        Member: msg.member ? `${msg.member.firstname} ${msg.member.lastname}` : 'N/A',
+        Conversation: msg.conversation?.title || 'N/A'
+      }));
+      
+      const csvContent = [
+        Object.keys(csvData[0]).join(','),
+        ...csvData.map(row => Object.values(row).map(val => `"${val}"`).join(','))
+      ].join('\n');
+      
+      // Download CSV
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `sms-data-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      
+      toast({
+        title: 'Success',
+        description: 'SMS data exported successfully'
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: `Failed to export data: ${error.message}`,
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const getCurrentUserOrganizationId = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const { data: orgData, error: orgError } = await supabase
+      .from('organization_users')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .eq('approval_status', 'approved')
+      .order('created_at', { ascending: true })
+      .limit(1);
+
+    if (orgError) throw orgError;
+    if (!orgData || orgData.length === 0) throw new Error('User not associated with any organization');
+
+    return orgData[0].organization_id;
+  };
+
+  // Campaign recipient selection helpers
+  const toggleCampaignGroupSelection = (groupId) => {
+    setNewCampaign(prev => ({
+      ...prev,
+      selectedGroups: prev.selectedGroups.includes(groupId)
+        ? prev.selectedGroups.filter(id => id !== groupId)
+        : [...prev.selectedGroups, groupId]
+    }));
+  };
+
+  const toggleCampaignMemberSelection = (memberId) => {
+    setNewCampaign(prev => ({
+      ...prev,
+      selectedMembers: prev.selectedMembers.includes(memberId)
+        ? prev.selectedMembers.filter(id => id !== memberId)
+        : [...prev.selectedMembers, memberId]
+    }));
+  };
+
+  const getCampaignRecipientCount = () => {
+    if (newCampaign.targetType === 'all') {
+      return members.filter(m => m.sms_opt_in).length;
+    } else if (newCampaign.targetType === 'groups') {
+      return newCampaign.selectedGroups.length;
+    } else if (newCampaign.targetType === 'members') {
+      return newCampaign.selectedMembers.length;
+    }
+    return 0;
+  };
+
+  const getCampaignRecipientTitle = () => {
+    const count = getCampaignRecipientCount();
+    if (newCampaign.targetType === 'all') {
+      return `All Church (${count})`;
+    } else if (newCampaign.targetType === 'groups') {
+      return `${count} Group${count !== 1 ? 's' : ''}`;
+    } else if (newCampaign.targetType === 'members') {
+      return `${count} Member${count !== 1 ? 's' : ''}`;
+    }
+    return 'Select Recipients';
+  };
+
   const filteredConversations = conversations.filter(conversation => {
     const matchesSearch = conversation.title?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = selectedType === 'all' || conversation.conversation_type === selectedType;
@@ -687,10 +1075,13 @@ export function SMS() {
         </p>
       </div>
 
-      <Tabs defaultValue="conversations" className="space-y-4">
+      <Tabs defaultValue="conversations" className="space-y-4" value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="conversations">Conversations</TabsTrigger>
           <TabsTrigger value="templates">Templates</TabsTrigger>
+          <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="opt-out">Opt-Out</TabsTrigger>
         </TabsList>
 
         <TabsContent value="conversations" className="space-y-4">
@@ -852,6 +1243,265 @@ export function SMS() {
               </Card>
             ))}
           </div>
+        </TabsContent>
+
+        {/* Campaigns Tab */}
+        <TabsContent value="campaigns" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold">SMS Campaigns</h3>
+            <div className="flex space-x-2">
+              <Button variant="outline" onClick={() => setIsABTestOpen(true)}>
+                <Target className="mr-2 h-4 w-4" />
+                A/B Test
+              </Button>
+              <Button onClick={() => setIsCampaignOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Campaign
+              </Button>
+            </div>
+          </div>
+
+          {/* Campaign Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Total Campaigns</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{campaigns.length}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Active Campaigns</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{campaigns.filter(c => c.status === 'active').length}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Scheduled</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{campaigns.filter(c => c.status === 'scheduled').length}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Completed</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{campaigns.filter(c => c.status === 'completed').length}</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Campaigns List */}
+          <div className="grid gap-4">
+            {campaigns.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <Target className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No Campaigns Yet</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Create your first SMS campaign to reach your congregation effectively.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              campaigns.map((campaign) => (
+                <Card key={campaign.id}>
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className="text-lg">{campaign.name}</CardTitle>
+                        <CardDescription>{campaign.description}</CardDescription>
+                      </div>
+                      <Badge variant={campaign.status === 'active' ? 'default' : campaign.status === 'scheduled' ? 'secondary' : 'outline'}>
+                        {campaign.status}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="text-sm font-medium">Message:</div>
+                      <div className="p-3 bg-muted rounded-md text-sm">
+                        {campaign.message}
+                      </div>
+                      <div className="flex justify-between items-center text-sm text-muted-foreground">
+                        <span>Type: {campaign.type}</span>
+                        <span>Created: {format(new Date(campaign.created_at), 'MMM d, yyyy')}</span>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        <span>Target: {campaign.targetType === 'all' ? 'All Church' : 
+                          campaign.targetType === 'groups' ? `${campaign.selectedGroups?.length || 0} Groups` :
+                          `${campaign.selectedMembers?.length || 0} Members`}</span>
+                      </div>
+                      {campaign.recipients && campaign.recipients.length > 0 && (
+                        <div className="text-sm text-muted-foreground">
+                          <span>Recipients: {campaign.recipients.length} people</span>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </TabsContent>
+
+        {/* Analytics Tab */}
+        <TabsContent value="analytics" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold">SMS Analytics</h3>
+            <Button variant="outline" onClick={exportSMSData}>
+              <Download className="mr-2 h-4 w-4" />
+              Export Data
+            </Button>
+          </div>
+
+          {/* Analytics Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Total Messages Sent</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{smsStats.totalSent}</div>
+                <p className="text-xs text-muted-foreground">All time</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Delivery Rate</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{smsStats.deliveryRate}%</div>
+                <p className="text-xs text-muted-foreground">Successfully delivered</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">This Month</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{smsStats.thisMonth}</div>
+                <p className="text-xs text-muted-foreground">Messages sent</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Message Status Breakdown */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Message Status Breakdown</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <div>
+                    <div className="font-semibold">{smsStats.totalDelivered}</div>
+                    <div className="text-sm text-muted-foreground">Delivered</div>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Clock className="h-5 w-5 text-yellow-500" />
+                  <div>
+                    <div className="font-semibold">{smsStats.totalSent - smsStats.totalDelivered - smsStats.totalFailed}</div>
+                    <div className="text-sm text-muted-foreground">Pending</div>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <XCircle className="h-5 w-5 text-red-500" />
+                  <div>
+                    <div className="font-semibold">{smsStats.totalFailed}</div>
+                    <div className="text-sm text-muted-foreground">Failed</div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Opt-Out Management Tab */}
+        <TabsContent value="opt-out" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold">SMS Opt-Out Management</h3>
+            <Button variant="outline" onClick={() => setIsOptOutOpen(true)}>
+              <Eye className="mr-2 h-4 w-4" />
+              View Details
+            </Button>
+          </div>
+
+          {/* Opt-In Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Opted In</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{members.filter(m => m.sms_opt_in).length}</div>
+                <p className="text-xs text-muted-foreground">Members receiving SMS</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Opted Out</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{members.filter(m => !m.sms_opt_in).length}</div>
+                <p className="text-xs text-muted-foreground">Members not receiving SMS</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Members List */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Member SMS Preferences</CardTitle>
+              <CardDescription>
+                Manage which members receive SMS messages
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {members.map((member) => (
+                  <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={member.image_url} />
+                        <AvatarFallback className="text-sm">
+                          {getInitials(member.firstname, member.lastname)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="font-medium">
+                          {member.firstname} {member.lastname}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {member.phone}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Badge variant={member.sms_opt_in ? 'default' : 'secondary'}>
+                        {member.sms_opt_in ? 'Opted In' : 'Opted Out'}
+                      </Badge>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOptOutToggle(member.id, member.sms_opt_in)}
+                      >
+                        {member.sms_opt_in ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
@@ -1502,6 +2152,384 @@ export function SMS() {
                 </Button>
               </div>
             </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Campaign Dialog */}
+      <Dialog open={isCampaignOpen} onOpenChange={setIsCampaignOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Create SMS Campaign</DialogTitle>
+            <DialogDescription>
+              Create a scheduled SMS campaign to reach your congregation.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="campaign_name">Campaign Name *</Label>
+              <Input
+                id="campaign_name"
+                value={newCampaign.name}
+                onChange={(e) => setNewCampaign({...newCampaign, name: e.target.value})}
+                placeholder="Sunday Service Reminder"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="campaign_description">Description</Label>
+              <Input
+                id="campaign_description"
+                value={newCampaign.description}
+                onChange={(e) => setNewCampaign({...newCampaign, description: e.target.value})}
+                placeholder="Weekly reminder for Sunday service"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="campaign_message">Message *</Label>
+              <Textarea
+                id="campaign_message"
+                value={newCampaign.message}
+                onChange={(e) => setNewCampaign({...newCampaign, message: e.target.value})}
+                placeholder="Join us this Sunday at 10 AM for worship!"
+                rows={4}
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="campaign_date">Scheduled Date</Label>
+                <Input
+                  id="campaign_date"
+                  type="date"
+                  value={newCampaign.scheduledDate}
+                  onChange={(e) => setNewCampaign({...newCampaign, scheduledDate: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="campaign_time">Scheduled Time</Label>
+                <Input
+                  id="campaign_time"
+                  type="time"
+                  value={newCampaign.scheduledTime}
+                  onChange={(e) => setNewCampaign({...newCampaign, scheduledTime: e.target.value})}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="campaign_type">Campaign Type</Label>
+              <select
+                id="campaign_type"
+                value={newCampaign.type}
+                onChange={(e) => setNewCampaign({...newCampaign, type: e.target.value})}
+                className="w-full px-3 py-2 border rounded-md"
+              >
+                <option value="immediate">Send Immediately</option>
+                <option value="scheduled">Scheduled</option>
+                <option value="recurring">Recurring</option>
+              </select>
+            </div>
+
+            {/* Recipient Selection */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Target Recipients</Label>
+                <div className="flex space-x-2">
+                  <Button
+                    type="button"
+                    variant={newCampaign.targetType === 'all' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setNewCampaign({...newCampaign, targetType: 'all'})}
+                  >
+                    All Church
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={newCampaign.targetType === 'groups' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setNewCampaign({...newCampaign, targetType: 'groups'})}
+                  >
+                    Specific Groups
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={newCampaign.targetType === 'members' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setNewCampaign({...newCampaign, targetType: 'members'})}
+                  >
+                    Specific Members
+                  </Button>
+                </div>
+              </div>
+
+              {/* Group Selection */}
+              {newCampaign.targetType === 'groups' && (
+                <div className="space-y-2">
+                  <Label>Select Groups</Label>
+                  <div className="max-h-40 overflow-y-auto border rounded-md p-2 space-y-1">
+                    {groups.map((group) => (
+                      <div
+                        key={group.id}
+                        className={`flex items-center space-x-2 p-2 rounded cursor-pointer hover:bg-muted ${
+                          newCampaign.selectedGroups.includes(group.id) ? 'bg-blue-50 border-blue-200' : ''
+                        }`}
+                        onClick={() => toggleCampaignGroupSelection(group.id)}
+                      >
+                        <div className={`w-4 h-4 border rounded flex items-center justify-center ${
+                          newCampaign.selectedGroups.includes(group.id) ? 'bg-blue-600 border-blue-600' : 'border-gray-300'
+                        }`}>
+                          {newCampaign.selectedGroups.includes(group.id) && (
+                            <Check className="w-3 h-3 text-white" />
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-medium">{group.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {group.memberCount} member{group.memberCount !== 1 ? 's' : ''}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Member Selection */}
+              {newCampaign.targetType === 'members' && (
+                <div className="space-y-2">
+                  <Label>Select Members</Label>
+                  <div className="max-h-40 overflow-y-auto border rounded-md p-2 space-y-1">
+                    {members.filter(m => m.sms_opt_in).map((member) => (
+                      <div
+                        key={member.id}
+                        className={`flex items-center space-x-2 p-2 rounded cursor-pointer hover:bg-muted ${
+                          newCampaign.selectedMembers.includes(member.id) ? 'bg-blue-50 border-blue-200' : ''
+                        }`}
+                        onClick={() => toggleCampaignMemberSelection(member.id)}
+                      >
+                        <div className={`w-4 h-4 border rounded flex items-center justify-center ${
+                          newCampaign.selectedMembers.includes(member.id) ? 'bg-blue-600 border-blue-600' : 'border-gray-300'
+                        }`}>
+                          {newCampaign.selectedMembers.includes(member.id) && (
+                            <Check className="w-3 h-3 text-white" />
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-medium">
+                            {member.firstname} {member.lastname}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {member.phone}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Recipient Summary */}
+              <div className="text-sm text-muted-foreground">
+                {getCampaignRecipientTitle()}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCampaignOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateCampaign}>
+              <Target className="mr-2 h-4 w-4" />
+              Create Campaign
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* A/B Test Dialog */}
+      <Dialog open={isABTestOpen} onOpenChange={setIsABTestOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Create A/B Test</DialogTitle>
+            <DialogDescription>
+              Test two different message variants to see which performs better.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="ab_test_name">Test Name *</Label>
+              <Input
+                id="ab_test_name"
+                value={abTestData.name}
+                onChange={(e) => setAbTestData({...abTestData, name: e.target.value})}
+                placeholder="Welcome Message Test"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="ab_test_variant_a">Variant A *</Label>
+                <Textarea
+                  id="ab_test_variant_a"
+                  value={abTestData.variantA}
+                  onChange={(e) => setAbTestData({...abTestData, variantA: e.target.value})}
+                  placeholder="Welcome to our church!"
+                  rows={3}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ab_test_variant_b">Variant B *</Label>
+                <Textarea
+                  id="ab_test_variant_b"
+                  value={abTestData.variantB}
+                  onChange={(e) => setAbTestData({...abTestData, variantB: e.target.value})}
+                  placeholder="We're glad you're here!"
+                  rows={3}
+                  required
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="ab_test_size">Test Size (%)</Label>
+                <Input
+                  id="ab_test_size"
+                  type="number"
+                  min="10"
+                  max="100"
+                  value={abTestData.testSize}
+                  onChange={(e) => setAbTestData({...abTestData, testSize: parseInt(e.target.value)})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ab_test_duration">Duration (days)</Label>
+                <Input
+                  id="ab_test_duration"
+                  type="number"
+                  min="1"
+                  max="30"
+                  value={abTestData.duration}
+                  onChange={(e) => setAbTestData({...abTestData, duration: parseInt(e.target.value)})}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsABTestOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleABTest}>
+              <Zap className="mr-2 h-4 w-4" />
+              Start A/B Test
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Analytics Dialog */}
+      <Dialog open={isAnalyticsOpen} onOpenChange={setIsAnalyticsOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>SMS Analytics Details</DialogTitle>
+            <DialogDescription>
+              Detailed analytics and insights for your SMS campaigns.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6">
+            {/* Delivery Rate Chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Delivery Rate Over Time</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64 flex items-center justify-center text-muted-foreground">
+                  Chart placeholder - Integration with charting library needed
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Top Recipients */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Top Recipients</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {analyticsData.topRecipients.slice(0, 5).map((recipient, index) => (
+                    <div key={index} className="flex items-center justify-between p-2 border rounded">
+                      <div className="flex items-center space-x-2">
+                        <span className="font-medium">{index + 1}.</span>
+                        <span>{recipient.name}</span>
+                      </div>
+                      <span className="text-sm text-muted-foreground">{recipient.count} messages</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAnalyticsOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Opt-Out Details Dialog */}
+      <Dialog open={isOptOutOpen} onOpenChange={setIsOptOutOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>SMS Opt-Out Details</DialogTitle>
+            <DialogDescription>
+              Detailed view of member SMS preferences and opt-out reasons.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Total Members</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{members.length}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Opt-In Rate</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {members.length > 0 ? Math.round((members.filter(m => m.sms_opt_in).length / members.length) * 100) : 0}%
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Opt-Out Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center p-2 bg-muted rounded">
+                    <span>Opted In</span>
+                    <Badge variant="default">{members.filter(m => m.sms_opt_in).length}</Badge>
+                  </div>
+                  <div className="flex justify-between items-center p-2 bg-muted rounded">
+                    <span>Opted Out</span>
+                    <Badge variant="secondary">{members.filter(m => !m.sms_opt_in).length}</Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsOptOutOpen(false)}>
+              Close
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

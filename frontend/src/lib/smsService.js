@@ -827,18 +827,193 @@ export const smsService = {
 
       if (recentConvError) throw recentConvError;
 
+      // Calculate delivery rate
+      const deliveryRate = outboundMessages > 0 ? Math.round((outboundMessages / outboundMessages) * 100) : 0;
+      
       return {
-        totalMessages: totalMessages || 0,
-        recentMessages: recentMessages || 0,
-        totalConversations: totalConversations || 0,
-        activeConversations: activeConversations || 0,
-        outboundMessages: outboundMessages || 0,
-        inboundMessages: inboundMessages || 0,
+        totalSent: outboundMessages || 0,
+        totalDelivered: outboundMessages || 0, // Simplified for now
+        totalFailed: 0, // Would need to track failed messages
+        deliveryRate: deliveryRate,
+        thisMonth: recentMessages || 0,
+        lastMonth: 0, // Would need to calculate last month's data
         typeBreakdown,
         recentConversations: recentConversations || []
       };
     } catch (error) {
       console.error('Error getting SMS stats:', error);
+      throw error;
+    }
+  },
+
+  // Clearstream-style new methods
+  async getCampaigns() {
+    try {
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User not associated with any organization');
+      }
+
+      const { data, error } = await supabase
+        .from('sms_campaigns')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error getting campaigns:', error);
+      throw error;
+    }
+  },
+
+  async createCampaign(campaignData) {
+    try {
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User not associated with any organization');
+      }
+
+      const { data, error } = await supabase
+        .from('sms_campaigns')
+        .insert({
+          ...campaignData,
+          organization_id: organizationId
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error creating campaign:', error);
+      throw error;
+    }
+  },
+
+  async getABTests() {
+    try {
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User not associated with any organization');
+      }
+
+      const { data, error } = await supabase
+        .from('sms_ab_tests')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error getting A/B tests:', error);
+      throw error;
+    }
+  },
+
+  async createABTest(testData) {
+    try {
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User not associated with any organization');
+      }
+
+      const { data, error } = await supabase
+        .from('sms_ab_tests')
+        .insert({
+          ...testData,
+          organization_id: organizationId
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error creating A/B test:', error);
+      throw error;
+    }
+  },
+
+  async getAnalyticsData(dateRange = '30') {
+    try {
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User not associated with any organization');
+      }
+
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - parseInt(dateRange));
+
+      const { data, error } = await supabase
+        .from('sms_analytics')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .gte('date', startDate.toISOString().split('T')[0])
+        .order('date', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error getting analytics data:', error);
+      throw error;
+    }
+  },
+
+  async getTopRecipients(limit = 10) {
+    try {
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User not associated with any organization');
+      }
+
+      const { data, error } = await supabase
+        .from('sms_messages')
+        .select(`
+          member_id,
+          member:members(firstname, lastname),
+          count
+        `)
+        .eq('organization_id', organizationId)
+        .eq('direction', 'outbound')
+        .not('member_id', 'is', null)
+        .group('member_id, member:members(firstname, lastname)')
+        .order('count', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error getting top recipients:', error);
+      throw error;
+    }
+  },
+
+  async logOptOut(memberId, phoneNumber, action, reason = null) {
+    try {
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User not associated with any organization');
+      }
+
+      const { data, error } = await supabase
+        .from('sms_opt_out_logs')
+        .insert({
+          organization_id: organizationId,
+          member_id: memberId,
+          phone_number: phoneNumber,
+          action,
+          reason
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error logging opt-out:', error);
       throw error;
     }
   }
