@@ -5,12 +5,17 @@
   "scripts": {
     "build": "cd frontend && npm install && npm run build",
     "dev": "cd frontend && npm run dev",
-    "start": "cd frontend && npm run preview"
+    "start": "cd frontend && npm run preview",
+    "fix-events": "node run_event_fix.js"
   },
   "engines": {
     "node": ">=18.0.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.6.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.52.0",
+    "dotenv": "^16.3.1"
   }
 }

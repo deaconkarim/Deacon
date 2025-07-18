@@ -81,6 +81,7 @@ export default function MemberProfile() {
   const { toast } = useToast();
   const [member, setMember] = useState(null);
   const [attendance, setAttendance] = useState([]);
+  const [attendanceStats, setAttendanceStats] = useState({ totalCount: 0, eventTypeBreakdown: {} });
   const [groups, setGroups] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAttendanceLoading, setIsAttendanceLoading] = useState(true);
@@ -144,17 +145,19 @@ export default function MemberProfile() {
   const loadAttendance = async (memberId) => {
     setIsAttendanceLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('event_attendance')
-        .select(`
-          *,
-          events (*)
-        `)
-        .eq('member_id', memberId)
-        .order('created_at', { ascending: false });
+      // Use unified attendance service for consistent calculations
+      const { unifiedAttendanceService } = await import('../lib/unifiedAttendanceService');
+      const attendanceData = await unifiedAttendanceService.getMemberAttendanceCount(memberId, {
+        useLast30Days: true, // Use last 30 days for consistency with dashboard and events page
+        includeFutureEvents: false,
+        includeDeclined: false
+      });
       
-      if (error) throw error;
-      setAttendance(data || []);
+      setAttendance(attendanceData.records || []);
+      setAttendanceStats({
+        totalCount: attendanceData.totalCount || 0,
+        eventTypeBreakdown: attendanceData.eventTypeBreakdown || {}
+      });
     } catch (error) {
       console.error('Error loading attendance:', error);
     } finally {
@@ -705,7 +708,7 @@ export default function MemberProfile() {
                   <Church className="h-5 w-5 text-white" />
                 </div>
                 <div className="text-2xl font-bold text-green-900 dark:text-green-100">
-                  {attendance.length}
+                  {attendanceStats.totalCount}
                 </div>
                 <p className="text-xs text-green-600 dark:text-green-400">Events attended</p>
               </CardContent>
@@ -868,15 +871,15 @@ export default function MemberProfile() {
         )}
 
         {/* Family Information */}
-        <motion.div variants={itemVariants}>
-          <Card className="border-0 shadow-md">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Users className="h-4 w-4 text-teal-500" />
-                Family
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+          <motion.div variants={itemVariants}>
+            <Card className="border-0 shadow-md">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Users className="h-4 w-4 text-teal-500" />
+                  Family
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
               {familyInfo ? (
                 <div className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg">
                   <div className="flex items-start">
@@ -921,9 +924,9 @@ export default function MemberProfile() {
                   </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </motion.div>
+              </CardContent>
+            </Card>
+          </motion.div>
 
         {/* Child Guardians */}
         {member.member_type === 'child' && guardians.length > 0 && (
@@ -936,24 +939,24 @@ export default function MemberProfile() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                                        {guardians.map((guardian) => (
+                {guardians.map((guardian) => (
                           <div 
                             key={guardian.id} 
                             className="flex items-center p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-800 transition-all"
                             onClick={() => navigate(`/members/${guardian.guardian.id}`)}
                           >
-                            <Shield className="mr-3 h-4 w-4 text-amber-500" />
+                    <Shield className="mr-3 h-4 w-4 text-amber-500" />
                             <div className="flex-1">
-                              <div className="text-sm font-medium text-slate-900 dark:text-white">
-                                {formatName(guardian.guardian.firstname, guardian.guardian.lastname)}
-                              </div>
-                              <div className="text-xs text-amber-500 dark:text-amber-400">
-                                {guardian.relationship || 'Guardian'}
-                              </div>
-                            </div>
+                      <div className="text-sm font-medium text-slate-900 dark:text-white">
+                        {formatName(guardian.guardian.firstname, guardian.guardian.lastname)}
+                      </div>
+                      <div className="text-xs text-amber-500 dark:text-amber-400">
+                        {guardian.relationship || 'Guardian'}
+                      </div>
+                    </div>
                             <ChevronRight className="h-4 w-4 text-amber-400" />
-                          </div>
-                        ))}
+                  </div>
+                ))}
               </CardContent>
             </Card>
           </motion.div>
@@ -972,7 +975,7 @@ export default function MemberProfile() {
                     <Church className="h-8 w-8 text-white" />
                   </div>
                   <div className="text-4xl font-bold text-green-900 dark:text-green-100">
-                    {attendance.length}
+                    {attendanceStats.totalCount}
                   </div>
                   <p className="text-lg text-green-600 dark:text-green-400">Events Attended</p>
                 </CardContent>
@@ -1097,8 +1100,8 @@ export default function MemberProfile() {
                     )}
 
                     {/* Family Information */}
-                    <div className="pt-6 border-t border-slate-200 dark:border-slate-700">
-                      <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Family</h4>
+                      <div className="pt-6 border-t border-slate-200 dark:border-slate-700">
+                        <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Family</h4>
                       {familyInfo ? (
                         <div className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg">
                           <div className="flex items-start">
@@ -1139,10 +1142,10 @@ export default function MemberProfile() {
                             <Users className="mr-3 h-4 w-4 text-slate-500 mt-0.5" />
                             <div className="text-sm text-slate-600 dark:text-slate-400">
                               Not assigned to a family
-                            </div>
                           </div>
                         </div>
-                      )}
+                      </div>
+                    )}
                     </div>
 
                     {/* Child Guardians */}
@@ -1398,18 +1401,14 @@ export default function MemberProfile() {
                         </CardHeader>
                         <CardContent className="p-4">
                           {(() => {
-                            // Calculate actual attendance statistics by event type
+                            // Use the improved event type breakdown from unified service
                             const eventTypeStats = {};
                             
-                            attendance.forEach(record => {
-                              const eventType = record.events?.event_type || 'Other';
-                              if (!eventTypeStats[eventType]) {
-                                eventTypeStats[eventType] = {
-                                  attended: 0,
-                                  total: 0
-                                };
-                              }
-                              eventTypeStats[eventType].attended++;
+                            Object.entries(attendanceStats.eventTypeBreakdown).forEach(([eventType, count]) => {
+                              eventTypeStats[eventType] = {
+                                attended: count,
+                                total: count
+                              };
                             });
                             
                             // If no attendance data, show empty state
@@ -2124,14 +2123,13 @@ export default function MemberProfile() {
                         <div>
                           <h4 className="text-sm font-semibold mb-3 text-green-900 dark:text-green-100">Attendance by Event Type</h4>
                           {(() => {
+                            // Use the improved event type breakdown from unified service
                             const eventTypeStats = {};
                             
-                            attendance.forEach(record => {
-                              const eventType = record.events?.event_type || 'Other';
-                              if (!eventTypeStats[eventType]) {
-                                eventTypeStats[eventType] = { attended: 0 };
-                              }
-                              eventTypeStats[eventType].attended++;
+                            Object.entries(attendanceStats.eventTypeBreakdown).forEach(([eventType, count]) => {
+                              eventTypeStats[eventType] = {
+                                attended: count
+                              };
                             });
                             
                             if (Object.keys(eventTypeStats).length === 0) {

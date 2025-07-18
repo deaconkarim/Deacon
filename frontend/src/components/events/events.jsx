@@ -317,7 +317,7 @@ export function Events() {
             ...group[0],
             attendance: isPotluck 
               ? group[0].potluck_rsvps?.length || 0
-              : group[0].event_attendance?.filter(a => a.status === 'attending').length || 0
+              : group[0].event_attendance?.length || 0
           };
         }
 
@@ -395,7 +395,7 @@ export function Events() {
             end_date: nextEndDate.toISOString(),
             attendance: isPotluck 
               ? lastInstance.potluck_rsvps?.length || 0
-              : lastInstance.event_attendance?.filter(a => a.status === 'attending').length || 0
+              : lastInstance.event_attendance?.length || 0
           };
         }
 
@@ -405,7 +405,7 @@ export function Events() {
           ...nextInstance,
           attendance: isPotluck 
             ? nextInstance.potluck_rsvps?.length || 0
-            : nextInstance.event_attendance?.filter(a => a.status === 'attending').length || 0
+            : nextInstance.event_attendance?.length || 0
         };
       }).filter(Boolean); // Remove any null entries
 
@@ -564,7 +564,7 @@ export function Events() {
       id: instanceId,
       start_date: currentDate.toISOString(),
       end_date: occurrenceEndDate.toISOString(),
-      attendance: event.event_attendance?.filter(a => a.status === 'attending').length || 0,
+      attendance: event.event_attendance?.length || 0,
       is_instance: true,
       parent_event_id: event.id
     });

@@ -519,11 +519,11 @@ export function Layout() {
           )}
         </header>
         {/* Main Content Area */}
-        <main className="flex-1 p-4 sm:p-6 md:p-8">
+        <main className="flex-1 p-4 sm:p-6 md:p-8 pb-20 md:pb-8">
           <Outlet />
         </main>
         {/* Footer */}
-        <footer className="py-4 px-6 border-t bg-card">
+        <footer className="py-4 px-6 border-t bg-card mb-14 md:mb-0">
           <div className="flex flex-col sm:flex-row justify-between items-center">
             <p className="text-sm text-muted-foreground">© 2025 Deacon - Church Command Center. All rights reserved.</p>
             <p className="text-xs text-muted-foreground mt-2 sm:mt-0 sm:ml-4 text-center">
