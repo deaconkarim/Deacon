@@ -156,7 +156,7 @@ export const smsService = {
     }
     
     // Get Twilio phone number from environment
-    const twilioPhoneNumber = import.meta.env.VITE_TWILIO_PHONE_NUMBER;
+    const twilioPhoneNumber = import.meta.env.TWILIO_PHONE_NUMBER;
     console.log('📞 Twilio Phone Number:', twilioPhoneNumber ? '✅ Configured' : '❌ Not configured');
     
     if (!twilioPhoneNumber) {

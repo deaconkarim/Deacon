@@ -87,7 +87,7 @@ import {
 import { useAuth } from '@/lib/authContext';
 import { Label } from '@/components/ui/label';
 import { formatName, getInitials } from '@/lib/utils/formatters';
-import { useAttendanceStats } from '../lib/data/attendanceStats';
+
 import LeadershipVerse from '@/components/LeadershipVerse';
 import { PermissionFeature } from '@/components/PermissionGuard';
 import { PERMISSIONS } from '@/lib/permissions';
@@ -237,28 +237,99 @@ export function Dashboard() {
   });
 
   // Memoize the date objects to prevent infinite re-renders
-  const attendanceDateRange = useMemo(() => {
-    const now = new Date();
-    const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
-    return {
-      startDate: thirtyDaysAgo,
-      endDate: now
-    };
-  }, []); // Empty dependency array - only calculate once
 
-  // Attendance stats for last 30 days - only load if user has permission
-  const { isLoading: attendanceLoading, serviceBreakdown, memberStats, dailyData, eventDetails, error, clearCache: clearAttendanceCache } = useAttendanceStats(
-    attendanceDateRange.startDate, 
-    attendanceDateRange.endDate
-  );
+
+  // Use unified attendance service directly for consistency
+  const [attendanceData, setAttendanceData] = useState({
+    memberStats: [],
+    serviceBreakdown: [],
+    dailyData: [],
+    eventDetails: [],
+    isLoading: false,
+    error: null
+  });
+
+  const loadAttendanceData = useCallback(async () => {
+    try {
+      setAttendanceData(prev => ({ ...prev, isLoading: true, error: null }));
+      
+      const { unifiedAttendanceService } = await import('../lib/unifiedAttendanceService');
+      
+      // Get top attendees using the same 30-day window as other pages
+      const topAttendees = await unifiedAttendanceService.getTopAttendees({
+        limit: 10,
+        useLast30Days: true,
+        includeFutureEvents: false,
+        includeDeclined: false
+      });
+
+      // Get attendance data for the 30-day range
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+      const attendanceRangeData = await unifiedAttendanceService.getAttendanceDataForRange(
+        thirtyDaysAgo.toISOString().split('T')[0],
+        now.toISOString().split('T')[0],
+        {
+          includeFutureEvents: false,
+          includeDeclined: false
+        }
+      );
+
+      // Transform data to match expected format
+      const serviceBreakdown = Object.entries(attendanceRangeData.eventTypeBreakdown || {}).map(([name, data]) => ({
+        name,
+        value: data.attendance || 0
+      })).sort((a, b) => b.value - a.value);
+
+      const dailyData = attendanceRangeData.events?.map(event => ({
+        date: new Date(event.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        count: attendanceRangeData.attendance?.filter(a => a.event_id === event.id).length || 0
+      })) || [];
+
+      const eventDetails = attendanceRangeData.events?.map(event => {
+        const eventAttendance = attendanceRangeData.attendance?.filter(a => a.event_id === event.id) || [];
+        return {
+          id: event.id,
+          title: event.title,
+          date: event.start_date,
+          type: event.event_type || 'Other',
+          attendees: eventAttendance.length,
+          attendingMembers: eventAttendance.map(a => `${a.members?.firstname || ''} ${a.members?.lastname || ''}`.trim()).filter(Boolean)
+        };
+      }) || [];
+
+      setAttendanceData({
+        memberStats: topAttendees,
+        serviceBreakdown,
+        dailyData,
+        eventDetails,
+        isLoading: false,
+        error: null
+      });
+    } catch (error) {
+      console.error('Error loading attendance data:', error);
+      setAttendanceData(prev => ({ 
+        ...prev, 
+        isLoading: false, 
+        error: error.message || 'Failed to load attendance data' 
+      }));
+    }
+  }, []);
+
+  // Load attendance data on mount
+  useEffect(() => {
+    loadAttendanceData();
+  }, [loadAttendanceData]);
+
+  const { memberStats, serviceBreakdown, dailyData, eventDetails, isLoading: attendanceLoading, error } = attendanceData;
 
   // Make attendance cache clearing function available globally
   useEffect(() => {
-    window.clearAttendanceCache = clearAttendanceCache;
+    window.clearAttendanceCache = loadAttendanceData;
     return () => {
       delete window.clearAttendanceCache;
     };
-  }, [clearAttendanceCache]);
+  }, [loadAttendanceData]);
 
   if (error) {
     console.error('Attendance stats error:', error);

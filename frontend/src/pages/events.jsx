@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { format, parse, isAfter, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths } from 'date-fns';
 import Papa from 'papaparse';
 import { motion } from 'framer-motion';
@@ -62,7 +63,8 @@ import {
   Droplets,
   Wine,
   Gift,
-  Monitor
+  Monitor,
+  AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -100,6 +102,8 @@ import { PermissionGuard, PermissionButton, PermissionFeature } from '@/componen
 import { PERMISSIONS } from '@/lib/permissions.jsx';
 import { cn } from '@/lib/utils';
 import LocationManager from '@/components/locations/LocationManager';
+// Chart components from recharts
+import { LineChart as RechartsLineChart, BarChart as RechartsBarChart, XAxis, YAxis, Tooltip, Legend, Line, Bar, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -316,214 +320,389 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVol
     const isPastEvent = startDate < new Date();
     return (
       <motion.div variants={itemVariants}>
-        <Card className="group hover:shadow-lg transition-all duration-200 border-l-4 relative" style={{ borderLeftColor: `var(--${eventColor}-500)` }}>
-          <CardContent className="p-4">
-            {/* Main Event Info Row */}
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className={`p-2 rounded-lg bg-${eventColor}-100 text-${eventColor}-600 flex-shrink-0`}>
-                  <EventIcon className="h-4 w-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-sm font-semibold text-gray-900 truncate">{event.title}</h3>
-                    {isRecurring && (
-                      <Badge variant="secondary" className="text-xs">
-                        <RefreshCw className="w-3 h-3 mr-1" />
-                        {formatRecurrencePattern(event.recurrence_pattern, event.monthly_week, event.monthly_weekday)}
-                      </Badge>
-                    )}
-                    {isPotluck && (
-                      <Badge variant="outline" className="text-xs text-green-600">
-                        <Utensils className="w-3 h-3 mr-1" />
-                        Potluck
-                      </Badge>
-                    )}
-                    {event.needs_volunteers && (
-                      <Badge variant="outline" className="text-xs text-yellow-600">
-                        <Handshake className="w-3 h-3 mr-1" />
-                        Volunteers
-                      </Badge>
-                    )}
-                    {isPastEvent && (
-                      <Badge variant="outline" className="text-xs text-gray-600">
-                        Past
-                      </Badge>
-                    )}
-                    {isInstance && (
-                      <Badge variant="outline" className="text-xs text-purple-600">
-                        <Copy className="w-3 h-3 mr-1" />
-                        Instance
-                      </Badge>
-                    )}
+        {/* Mobile Admin View */}
+        <div className="lg:hidden">
+          <Card className="group hover:shadow-lg transition-all duration-200 border-l-4 relative mb-3" style={{ borderLeftColor: `var(--${eventColor}-500)` }}>
+            <CardContent className="p-4">
+              {/* Mobile Header */}
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-start gap-3 flex-1 min-w-0">
+                  <div className={`p-2 rounded-lg bg-${eventColor}-100 text-${eventColor}-600 flex-shrink-0`}>
+                    <EventIcon className="h-4 w-4" />
                   </div>
-                  <div className="flex items-center gap-4 text-xs text-gray-500">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {format(startDate, 'MMM d, yyyy')}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {format(startDate, 'h:mm a')} - {format(endDate, 'h:mm a')}
-                    </span>
-                    {event.location && (
-                      <span className="flex items-center gap-1 truncate">
-                        <MapPin className="h-3 w-3 flex-shrink-0" />
-                        <span className="truncate">{event.location}</span>
-                      </span>
-                    )}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-1">{event.title}</h3>
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {isRecurring && (
+                        <Badge variant="secondary" className="text-xs">
+                          <RefreshCw className="w-3 h-3 mr-1" />
+                          Recurring
+                        </Badge>
+                      )}
+                      {isPotluck && (
+                        <Badge variant="outline" className="text-xs text-green-600">
+                          <Utensils className="w-3 h-3 mr-1" />
+                          Potluck
+                        </Badge>
+                      )}
+                      {event.needs_volunteers && (
+                        <Badge variant="outline" className="text-xs text-yellow-600">
+                          <Handshake className="w-3 h-3 mr-1" />
+                          Volunteers
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-500 space-y-1">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {format(startDate, 'MMM d, yyyy')}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {format(startDate, 'h:mm a')} - {format(endDate, 'h:mm a')}
+                      </div>
+                      {event.location && (
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          <span className="truncate">{event.location}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-              
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {event.allow_rsvp && (
-                  <Button
-                    onClick={() => onRSVP(event)}
-                    size="sm"
-                    className={cn(
-                      "h-8",
-                      isPastEvent 
-                        ? "bg-orange-600 hover:bg-orange-700" 
-                        : isCheckIn 
-                        ? "bg-green-600 hover:bg-green-700"
-                        : "bg-blue-600 hover:bg-blue-700"
-                    )}
-                  >
-                    {isPastEvent ? (
-                      <Pencil className="h-3 w-3" />
-                    ) : isCheckIn ? (
-                      <CheckCircle className="h-3 w-3" />
-                    ) : (
-                      <UserPlus className="h-3 w-3" />
-                    )}
-                  </Button>
-                )}
                 
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Event Actions</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => onViewDetails(event)}>
-                      <Eye className="mr-2 h-4 w-4" />
-                      View Details
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onEdit(event)}>
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Edit Event
-                    </DropdownMenuItem>
-                    {event.needs_volunteers && (
-                      <DropdownMenuItem onClick={() => onManageVolunteers(event)}>
-                        <Handshake className="mr-2 h-4 w-4" />
-                        Manage Volunteers
-                      </DropdownMenuItem>
-                    )}
-                    {isPotluck && (
-                      <DropdownMenuItem onClick={() => onPotluckRSVP(event)}>
-                        <Utensils className="mr-2 h-4 w-4" />
-                        Potluck RSVP
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem 
-                      onClick={() => onDelete(event.id)}
-                      className="text-red-600 focus:text-red-600"
+                {/* Mobile Action Buttons */}
+                <div className="flex flex-col gap-2">
+                  {event.allow_rsvp && (
+                    <Button
+                      onClick={() => onRSVP(event)}
+                      size="sm"
+                      className={cn(
+                        "h-8 w-8 p-0",
+                        isPastEvent 
+                          ? "bg-orange-600 hover:bg-orange-700" 
+                          : isCheckIn 
+                          ? "bg-green-600 hover:bg-green-700"
+                          : "bg-blue-600 hover:bg-blue-700"
+                      )}
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete Event
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                      {isPastEvent ? (
+                        <Pencil className="h-3 w-3" />
+                      ) : isCheckIn ? (
+                        <CheckCircle className="h-3 w-3" />
+                      ) : (
+                        <UserPlus className="h-3 w-3" />
+                      )}
+                    </Button>
+                  )}
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Event Actions</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => onViewDetails(event)}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        View Details
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onEdit(event)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Edit Event
+                      </DropdownMenuItem>
+                      {event.needs_volunteers && (
+                        <DropdownMenuItem onClick={() => onManageVolunteers(event)}>
+                          <Handshake className="mr-2 h-4 w-4" />
+                          Manage Volunteers
+                        </DropdownMenuItem>
+                      )}
+                      {isPotluck && (
+                        <DropdownMenuItem onClick={() => onPotluckRSVP(event)}>
+                          <Utensils className="mr-2 h-4 w-4" />
+                          Potluck RSVP
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        onClick={() => onDelete(event.id)}
+                        className="text-red-600 focus:text-red-600"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Event
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
-            </div>
 
-            {/* Description */}
-            {event.description && (
-              <div className="text-xs text-gray-600 mb-3 line-clamp-2 bg-gray-50 dark:bg-gray-800 p-2 rounded">
-                {event.description}
-              </div>
-            )}
-
-            {/* Enhanced Stats Row */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3 text-xs">
-                {event.allow_rsvp ? (
-                  <div className="flex items-center gap-1 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
-                    <Users className="h-3 w-3 text-green-600" />
-                    <span className="text-green-700 dark:text-green-300">
-                      {event.attendance || 0} {isCheckIn ? 'checked in' : 'attending'}
+              {/* Mobile Stats */}
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  {event.allow_rsvp ? (
+                    <div className="flex items-center gap-1 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
+                      <Users className="h-3 w-3 text-green-600" />
+                      <span className="text-green-700 dark:text-green-300">
+                        {event.attendance || 0} {isCheckIn ? 'checked in' : 'attending'}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1 bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
+                      <HelpCircle className="h-3 w-3 text-gray-500" />
+                      <span className="text-gray-600 dark:text-gray-400">Announcement</span>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
+                    <Clock className="h-3 w-3 text-blue-600" />
+                    <span className="text-blue-700 dark:text-blue-300">
+                      {Math.round((endDate - startDate) / (1000 * 60))} min
                     </span>
                   </div>
-                ) : (
-                  <div className="flex items-center gap-1 bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
-                    <HelpCircle className="h-3 w-3 text-gray-500" />
-                    <span className="text-gray-600 dark:text-gray-400">Announcement only</span>
-                  </div>
-                )}
-                
-                <div className="flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
-                  <Clock className="h-3 w-3 text-blue-600" />
-                  <span className="text-blue-700 dark:text-blue-300">
-                    {Math.round((endDate - startDate) / (1000 * 60))} min
-                  </span>
                 </div>
                 
-                {!isPastEvent && (
-                  <div className="flex items-center gap-1 bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded">
-                    <Calendar className="h-3 w-3 text-orange-600" />
-                    <span className="text-orange-700 dark:text-orange-300">
-                      {Math.ceil((startDate - new Date()) / (1000 * 60 * 60 * 24))} days
+                <div className="flex items-center gap-1">
+                  {event.needs_volunteers && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => onManageVolunteers(event)}
+                      className="h-6 text-xs"
+                    >
+                      <Handshake className="h-3 w-3 mr-1" />
+                      Volunteers
+                    </Button>
+                  )}
+                  
+                  {isPotluck && !isPastEvent && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onPotluckRSVP(event.id)}
+                      className="h-6 text-xs border-green-600 text-green-600 hover:bg-green-50"
+                    >
+                      <Utensils className="h-3 w-3 mr-1" />
+                      Potluck
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Desktop Admin View */}
+        <div className="hidden lg:block">
+          <Card className="group hover:shadow-lg transition-all duration-200 border-l-4 relative" style={{ borderLeftColor: `var(--${eventColor}-500)` }}>
+            <CardContent className="p-4">
+              {/* Main Event Info Row */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className={`p-2 rounded-lg bg-${eventColor}-100 text-${eventColor}-600 flex-shrink-0`}>
+                    <EventIcon className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-sm font-semibold text-gray-900 truncate">{event.title}</h3>
+                      {isRecurring && (
+                        <Badge variant="secondary" className="text-xs">
+                          <RefreshCw className="w-3 h-3 mr-1" />
+                          {formatRecurrencePattern(event.recurrence_pattern, event.monthly_week, event.monthly_weekday)}
+                        </Badge>
+                      )}
+                      {isPotluck && (
+                        <Badge variant="outline" className="text-xs text-green-600">
+                          <Utensils className="w-3 h-3 mr-1" />
+                          Potluck
+                        </Badge>
+                      )}
+                      {event.needs_volunteers && (
+                        <Badge variant="outline" className="text-xs text-yellow-600">
+                          <Handshake className="w-3 h-3 mr-1" />
+                          Volunteers
+                        </Badge>
+                      )}
+                      {isPastEvent && (
+                        <Badge variant="outline" className="text-xs text-gray-600">
+                          Past
+                        </Badge>
+                      )}
+                      {isInstance && (
+                        <Badge variant="outline" className="text-xs text-purple-600">
+                          <Copy className="w-3 h-3 mr-1" />
+                          Instance
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {format(startDate, 'MMM d, yyyy')}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {format(startDate, 'h:mm a')} - {format(endDate, 'h:mm a')}
+                      </span>
+                      {event.location && (
+                        <span className="flex items-center gap-1 truncate">
+                          <MapPin className="h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">{event.location}</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {event.allow_rsvp && (
+                    <Button
+                      onClick={() => onRSVP(event)}
+                      size="sm"
+                      className={cn(
+                        "h-8",
+                        isPastEvent 
+                          ? "bg-orange-600 hover:bg-orange-700" 
+                          : isCheckIn 
+                          ? "bg-green-600 hover:bg-green-700"
+                          : "bg-blue-600 hover:bg-blue-700"
+                      )}
+                    >
+                      {isPastEvent ? (
+                        <Pencil className="h-3 w-3" />
+                      ) : isCheckIn ? (
+                        <CheckCircle className="h-3 w-3" />
+                      ) : (
+                        <UserPlus className="h-3 w-3" />
+                      )}
+                    </Button>
+                  )}
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Event Actions</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => onViewDetails(event)}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        View Details
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onEdit(event)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Edit Event
+                      </DropdownMenuItem>
+                      {event.needs_volunteers && (
+                        <DropdownMenuItem onClick={() => onManageVolunteers(event)}>
+                          <Handshake className="mr-2 h-4 w-4" />
+                          Manage Volunteers
+                        </DropdownMenuItem>
+                      )}
+                      {isPotluck && (
+                        <DropdownMenuItem onClick={() => onPotluckRSVP(event)}>
+                          <Utensils className="mr-2 h-4 w-4" />
+                          Potluck RSVP
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        onClick={() => onDelete(event.id)}
+                        className="text-red-600 focus:text-red-600"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Event
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+
+              {/* Description */}
+              {event.description && (
+                <div className="text-xs text-gray-600 mb-3 line-clamp-2 bg-gray-50 dark:bg-gray-800 p-2 rounded">
+                  {event.description}
+                </div>
+              )}
+
+              {/* Enhanced Stats Row */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 text-xs">
+                  {event.allow_rsvp ? (
+                    <div className="flex items-center gap-1 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
+                      <Users className="h-3 w-3 text-green-600" />
+                      <span className="text-green-700 dark:text-green-300">
+                        {event.attendance || 0} {isCheckIn ? 'checked in' : 'attending'}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1 bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
+                      <HelpCircle className="h-3 w-3 text-gray-500" />
+                      <span className="text-gray-600 dark:text-gray-400">Announcement only</span>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
+                    <Clock className="h-3 w-3 text-blue-600" />
+                    <span className="text-blue-700 dark:text-blue-300">
+                      {Math.round((endDate - startDate) / (1000 * 60))} min
                     </span>
                   </div>
-                )}
+                  
+                  {!isPastEvent && (
+                    <div className="flex items-center gap-1 bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded">
+                      <Calendar className="h-3 w-3 text-orange-600" />
+                      <span className="text-orange-700 dark:text-orange-300">
+                        {Math.ceil((startDate - new Date()) / (1000 * 60 * 60 * 24))} days
+                      </span>
+                    </div>
+                  )}
 
-                <span className="capitalize text-gray-500">{event.event_type || 'Event'}</span>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                {event.url && (
-                  <a
-                    href={event.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-blue-600 hover:underline text-xs"
-                  >
-                    <ExternalLink className="h-3 w-3" />
-                    Link
-                  </a>
-                )}
+                  <span className="capitalize text-gray-500">{event.event_type || 'Event'}</span>
+                </div>
                 
-                {event.needs_volunteers && (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => onManageVolunteers(event)}
-                    className="h-6 text-xs"
-                  >
-                    <Handshake className="h-3 w-3 mr-1" />
-                    Volunteers
-                  </Button>
-                )}
-                
-                {isPotluck && !isPastEvent && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onPotluckRSVP(event.id)}
-                    className="h-6 text-xs border-green-600 text-green-600 hover:bg-green-50"
-                  >
-                    <Utensils className="h-3 w-3 mr-1" />
-                    Potluck
-                  </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  {event.url && (
+                    <a
+                      href={event.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-blue-600 hover:underline text-xs"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      Link
+                    </a>
+                  )}
+                  
+                  {event.needs_volunteers && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => onManageVolunteers(event)}
+                      className="h-6 text-xs"
+                    >
+                      <Handshake className="h-3 w-3 mr-1" />
+                      Volunteers
+                    </Button>
+                  )}
+                  
+                  {isPotluck && !isPastEvent && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onPotluckRSVP(event.id)}
+                      className="h-6 text-xs border-green-600 text-green-600 hover:bg-green-50"
+                    >
+                      <Utensils className="h-3 w-3 mr-1" />
+                      Potluck
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </motion.div>
     );
   }
@@ -574,8 +753,8 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVol
                       <Badge variant="outline" className="text-xs text-purple-600 border-purple-600 bg-purple-50">
                         <Copy className="w-3 h-3 mr-1" />
                         Recurring Instance
-                      </Badge>
-                    )}
+                </Badge>
+              )}
             </CardTitle>
                   
                   {/* Enhanced event details */}
@@ -1101,8 +1280,158 @@ const CalendarView = ({ events, onEventClick, currentMonth, onMonthChange }) => 
 
 // Event Analytics Component
 const EventAnalytics = ({ events, pastEvents }) => {
+  const [membersData, setMembersData] = useState({});
+  const [allPastEventsWithAttendance, setAllPastEventsWithAttendance] = useState([]);
+
+  // Fetch ALL past events with attendance from the database
+  useEffect(() => {
+    const fetchAllPastEventsWithAttendance = async () => {
+      try {
+        const organizationId = await getCurrentUserOrganizationId();
+        if (!organizationId) return;
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // First, get all past events
+        const { data: pastEvents, error: eventsError } = await supabase
+          .from('events')
+          .select('*')
+          .eq('organization_id', organizationId)
+          .lt('start_date', today.toISOString())
+          .order('start_date', { ascending: false });
+
+        if (eventsError) {
+          console.error('Error fetching past events:', eventsError);
+          return;
+        }
+
+        // Then, get all attendance records for these events
+        const eventIds = pastEvents.map(event => event.id);
+        const { data: attendanceRecords, error: attendanceError } = await supabase
+          .from('event_attendance')
+          .select('*')
+          .in('event_id', eventIds);
+
+        if (attendanceError) {
+          console.error('Error fetching attendance records:', attendanceError);
+          return;
+        }
+
+        // Group attendance by event_id
+        const attendanceByEvent = {};
+        attendanceRecords.forEach(record => {
+          if (!attendanceByEvent[record.event_id]) {
+            attendanceByEvent[record.event_id] = [];
+          }
+          attendanceByEvent[record.event_id].push(record);
+        });
+
+        // Combine events with their attendance data
+        const eventsWithAttendance = pastEvents.filter(event => 
+          attendanceByEvent[event.id] && attendanceByEvent[event.id].length > 0
+        ).map(event => ({
+          ...event,
+          event_attendance: attendanceByEvent[event.id] || []
+        }));
+
+        console.log('📊 Analytics: Found', eventsWithAttendance.length, 'past events with attendance');
+        setAllPastEventsWithAttendance(eventsWithAttendance);
+      } catch (error) {
+        console.error('Error fetching all past events with attendance:', error);
+      }
+    };
+
+    fetchAllPastEventsWithAttendance();
+  }, []);
+
+  // Process attendance data from ALL past events with attendance
+  const attendanceData = useMemo(() => {
+    const attendanceByEvent = {};
+    const membersById = {};
+    
+    // Process all past events with attendance (not just filtered ones)
+    allPastEventsWithAttendance.forEach(event => {
+      if (event.event_attendance && event.event_attendance.length > 0) {
+        attendanceByEvent[event.id] = event.event_attendance;
+        
+        // Collect member IDs from attendance records
+        event.event_attendance.forEach(record => {
+          if (record.member_id) {
+            membersById[record.member_id] = {
+              id: record.member_id,
+              firstname: 'Member',
+              lastname: record.member_id.slice(0, 8)
+            };
+          }
+        });
+      }
+    });
+    
+    console.log('📊 Analytics: Processed attendance data from ALL past events');
+    console.log('📊 Events with attendance:', Object.keys(attendanceByEvent).length);
+    console.log('📊 Total attendance records:', Object.values(attendanceByEvent).reduce((sum, records) => sum + records.length, 0));
+    
+    return { attendanceByEvent, membersById };
+  }, [allPastEventsWithAttendance]);
+
+  // Fetch member data for display
+  useEffect(() => {
+    const fetchMemberData = async () => {
+      if (Object.keys(attendanceData.membersById).length > 0) {
+        try {
+          const memberIds = Object.keys(attendanceData.membersById);
+          const { data: memberData, error: memberError } = await supabase
+            .from('members')
+            .select('id, firstname, lastname')
+            .in('id', memberIds);
+          
+          if (!memberError && memberData) {
+            const realMembersById = {};
+            memberData.forEach(member => {
+              realMembersById[member.id] = member;
+            });
+            setMembersData(realMembersById);
+          } else {
+            setMembersData(attendanceData.membersById); // Fallback to placeholder data
+          }
+        } catch (error) {
+          console.error('Error fetching member data:', error);
+          setMembersData(attendanceData.membersById); // Fallback to placeholder data
+        }
+      } else {
+        setMembersData({});
+      }
+    };
+
+    fetchMemberData();
+  }, [attendanceData.membersById]);
+
   const analytics = useMemo(() => {
-    const totalEvents = events.length + pastEvents.length;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Get events that have attendance data AND have passed
+    const allEventsWithAttendance = Object.keys(attendanceData.attendanceByEvent).map(eventId => {
+      const eventAttendance = attendanceData.attendanceByEvent[eventId];
+      // Find the event details from the allPastEventsWithAttendance array
+      const event = allPastEventsWithAttendance.find(e => e.id === eventId);
+      
+      if (event) {
+        return {
+          id: eventId,
+          title: event?.title || `Event ${eventId}`,
+          event_type: event?.event_type || 'Other',
+          start_date: event?.start_date || new Date().toISOString(),
+          location: event?.location || 'Unknown',
+          is_recurring: event?.is_recurring || false,
+          recurrence_pattern: event?.recurrence_pattern || null
+        };
+      }
+      return null;
+    }).filter(Boolean); // Remove null entries
+    
+    const totalEvents = allEventsWithAttendance.length;
     const upcomingEvents = events.length;
     const pastEventsCount = pastEvents.length;
     
@@ -1125,41 +1454,115 @@ const EventAnalytics = ({ events, pastEvents }) => {
       biweekly: 0
     };
     
-    const allEvents = [...events, ...pastEvents];
     const attendanceValues = [];
     
-    allEvents.forEach(event => {
-      // Count event types
-      const type = event.event_type || 'Other';
-      eventTypes[type] = (eventTypes[type] || 0) + 1;
-      
-      // Calculate attendance stats
-      const attendance = event.attendance || 0;
-      attendanceStats.total += attendance;
-      attendanceStats.max = Math.max(attendanceStats.max, attendance);
-      attendanceStats.min = Math.min(attendanceStats.min, attendance);
-      attendanceValues.push(attendance);
-      
-      // Monthly stats
-      const month = format(new Date(event.start_date), 'yyyy-MM');
-      monthlyStats[month] = (monthlyStats[month] || 0) + 1;
-      
-      // Weekly stats
-      const week = format(new Date(event.start_date), 'yyyy-\'W\'ww');
-      weeklyStats[week] = (weeklyStats[week] || 0) + 1;
-      
-      // Location stats
-      if (event.location) {
-        locationStats[event.location] = (locationStats[event.location] || 0) + 1;
-      }
-      
-      // Recurring stats
-      if (event.is_recurring) {
+    // Calculate recurring stats from ALL events (past and future), not just those with attendance
+    const allEventsForRecurring = [...events, ...pastEvents];
+    allEventsForRecurring.forEach(event => {
+      // Count recurring event templates (not instances)
+      if (event.is_recurring && !event.parent_event_id) {
         recurringStats.total++;
         if (event.recurrence_pattern) {
           recurringStats[event.recurrence_pattern] = (recurringStats[event.recurrence_pattern] || 0) + 1;
         }
       }
+    });
+    
+    allEventsWithAttendance.forEach(event => {
+      // Get actual attendance count from event_attendance table
+      const eventAttendance = attendanceData.attendanceByEvent[event.id] || [];
+      const actualAttendance = eventAttendance.length;
+      
+      console.log(`📅 Event ${event.id} (${event.title}) has ${actualAttendance} attendance records`);
+      
+      // Debug: Log what statuses we have
+      const statusCounts = {};
+      eventAttendance.forEach(record => {
+        statusCounts[record.status] = (statusCounts[record.status] || 0) + 1;
+      });
+      if (Object.keys(statusCounts).length > 0) {
+        console.log(`📊 Event ${event.id} status breakdown:`, statusCounts);
+      }
+      
+      // Calculate attendance stats by event type
+      // First try to use the event_type field if it's meaningful
+      let type = event.event_type;
+      
+      // If event_type is empty, null, or generic, extract from title
+      if (!type || type === '' || type === 'Other' || type === 'other') {
+        const title = event.title || event.id || '';
+        if (title.toLowerCase().includes('worship') || title.toLowerCase().includes('service')) {
+          type = 'Worship Service';
+        } else if (title.toLowerCase().includes('bible study') || title.toLowerCase().includes('class')) {
+          type = 'Bible Study or Class';
+        } else if (title.toLowerCase().includes('potluck') || title.toLowerCase().includes('fellowship') || 
+                   title.toLowerCase().includes('breakfast') || title.toLowerCase().includes('lunch') ||
+                   title.toLowerCase().includes('dinner') || title.toLowerCase().includes('gathering')) {
+          type = 'Fellowship Gathering';
+        } else if (title.toLowerCase().includes('ministry') || title.toLowerCase().includes('group')) {
+          type = 'Ministry/Group';
+        } else {
+          type = 'Other';
+        }
+      } else {
+        // If event_type is set, normalize it to match our categories
+        const normalizedType = type.toLowerCase();
+        if (normalizedType.includes('worship') || normalizedType.includes('service')) {
+          type = 'Worship Service';
+        } else if (normalizedType.includes('bible') || normalizedType.includes('study') || normalizedType.includes('class')) {
+          type = 'Bible Study or Class';
+        } else if (normalizedType.includes('potluck') || normalizedType.includes('fellowship') || 
+                   normalizedType.includes('breakfast') || normalizedType.includes('lunch') ||
+                   normalizedType.includes('dinner') || normalizedType.includes('gathering')) {
+          type = 'Fellowship Gathering';
+        } else if (normalizedType.includes('ministry') || normalizedType.includes('group')) {
+          type = 'Ministry/Group';
+        }
+        // If it doesn't match any of our categories, keep the original event_type
+      }
+      
+      if (!eventTypes[type]) {
+        eventTypes[type] = { count: 0, attendance: 0 };
+      }
+      eventTypes[type].count += 1;
+      eventTypes[type].attendance += actualAttendance;
+      
+      // Debug: Log event type detection
+      console.log(`📊 Event "${event.title}" (${event.id}) classified as: ${type} (original event_type: "${event.event_type}")`);
+      
+      // Calculate overall attendance stats
+      attendanceStats.total += actualAttendance;
+      attendanceStats.max = Math.max(attendanceStats.max, actualAttendance);
+      attendanceStats.min = Math.min(attendanceStats.min, actualAttendance);
+      attendanceValues.push(actualAttendance);
+      
+      // Monthly attendance stats
+      const month = format(new Date(event.start_date), 'yyyy-MM');
+      if (!monthlyStats[month]) {
+        monthlyStats[month] = { events: 0, attendance: 0 };
+      }
+      monthlyStats[month].events += 1;
+      monthlyStats[month].attendance += actualAttendance;
+      
+      // Weekly attendance stats
+      const week = format(new Date(event.start_date), 'yyyy-\'W\'ww');
+      if (!weeklyStats[week]) {
+        weeklyStats[week] = { events: 0, attendance: 0 };
+      }
+      weeklyStats[week].events += 1;
+      weeklyStats[week].attendance += actualAttendance;
+      
+      // Location attendance stats
+      if (event.location) {
+        if (!locationStats[event.location]) {
+          locationStats[event.location] = { events: 0, attendance: 0 };
+        }
+        locationStats[event.location].events += 1;
+        locationStats[event.location].attendance += actualAttendance;
+      }
+      
+      // Recurring stats are calculated separately from all events (past and future)
+      // This section only processes events with attendance data for other analytics
     });
     
     // Calculate median attendance
@@ -1172,19 +1575,122 @@ const EventAnalytics = ({ events, pastEvents }) => {
     attendanceStats.average = totalEvents > 0 ? Math.round(attendanceStats.total / totalEvents) : 0;
     attendanceStats.min = attendanceStats.min === Infinity ? 0 : attendanceStats.min;
     
-    // Top locations
-    const topLocations = Object.entries(locationStats)
-      .sort(([,a], [,b]) => b - a)
-      .slice(0, 5);
+    // Debug: Log final analytics summary
+    console.log('📊 Final Analytics Summary:');
+    console.log('  - Total events with attendance:', totalEvents);
+    console.log('  - Total attendance records:', attendanceStats.total);
+    console.log('  - Average attendance per event:', attendanceStats.average);
+    console.log('  - Event types found:', Object.keys(eventTypes));
+    console.log('  - Event type breakdown:', eventTypes);
     
-    // Top months
-    const topMonths = Object.entries(monthlyStats)
-      .sort(([,a], [,b]) => b - a)
-      .slice(0, 6)
-      .map(([month, count]) => ({
-        month: format(parse(month, 'yyyy-MM', new Date()), 'MMM yyyy'),
-        count
+    // Top locations by attendance
+    const topLocations = Object.entries(locationStats)
+      .sort(([,a], [,b]) => b.attendance - a.attendance)
+      .slice(0, 5)
+      .map(([location, stats]) => ({
+        location,
+        events: stats.events,
+        attendance: stats.attendance,
+        avgAttendance: Math.round(stats.attendance / stats.events)
       }));
+    
+    // Top months by attendance
+    const topMonths = Object.entries(monthlyStats)
+      .sort(([,a], [,b]) => b.attendance - a.attendance)
+      .slice(0, 6)
+      .map(([month, stats]) => ({
+        month: format(parse(month, 'yyyy-MM', new Date()), 'MMM yyyy'),
+        events: stats.events,
+        attendance: stats.attendance,
+        avgAttendance: Math.round(stats.attendance / stats.events)
+      }));
+    
+    // Calculate unique attendees per event type and individual event performance
+    const uniqueAttendeesByType = {};
+    const eventPerformance = [];
+    
+    allEventsWithAttendance.forEach(event => {
+      const eventAttendance = attendanceData.attendanceByEvent[event.id] || [];
+      const actualAttendance = eventAttendance.length;
+      
+      // Get unique attendees for this event
+      const uniqueAttendees = new Set();
+      eventAttendance.forEach(record => {
+        if (record.member_id) {
+          uniqueAttendees.add(record.member_id);
+        }
+      });
+      
+      // Determine event type (same logic as before)
+      let type = event.event_type;
+      if (!type || type === '' || type === 'Other' || type === 'other') {
+        const title = event.title || event.id || '';
+        if (title.toLowerCase().includes('worship') || title.toLowerCase().includes('service')) {
+          type = 'Worship Service';
+        } else if (title.toLowerCase().includes('bible study') || title.toLowerCase().includes('class')) {
+          type = 'Bible Study or Class';
+        } else if (title.toLowerCase().includes('potluck') || title.toLowerCase().includes('fellowship') || 
+                   title.toLowerCase().includes('breakfast') || title.toLowerCase().includes('lunch') ||
+                   title.toLowerCase().includes('dinner') || title.toLowerCase().includes('gathering')) {
+          type = 'Fellowship Gathering';
+        } else if (title.toLowerCase().includes('ministry') || title.toLowerCase().includes('group')) {
+          type = 'Ministry/Group';
+        } else {
+          type = 'Other';
+        }
+      } else {
+        const normalizedType = type.toLowerCase();
+        if (normalizedType.includes('worship') || normalizedType.includes('service')) {
+          type = 'Worship Service';
+        } else if (normalizedType.includes('bible') || normalizedType.includes('study') || normalizedType.includes('class')) {
+          type = 'Bible Study or Class';
+        } else if (normalizedType.includes('potluck') || normalizedType.includes('fellowship') || 
+                   normalizedType.includes('breakfast') || normalizedType.includes('lunch') ||
+                   normalizedType.includes('dinner') || normalizedType.includes('gathering')) {
+          type = 'Fellowship Gathering';
+        } else if (normalizedType.includes('ministry') || normalizedType.includes('group')) {
+          type = 'Ministry/Group';
+        }
+      }
+      
+      // Track unique attendees by type
+      if (!uniqueAttendeesByType[type]) {
+        uniqueAttendeesByType[type] = new Set();
+      }
+      uniqueAttendees.forEach(memberId => uniqueAttendeesByType[type].add(memberId));
+      
+      // Track individual event performance
+      eventPerformance.push({
+        id: event.id,
+        title: event.title,
+        type: type,
+        date: event.start_date,
+        totalAttendance: actualAttendance,
+        uniqueAttendees: uniqueAttendees.size,
+        anonymousCount: eventAttendance.filter(r => !r.member_id).length
+      });
+    });
+    
+    // Convert unique attendees sets to counts
+    const uniqueAttendeesCounts = {};
+    Object.entries(uniqueAttendeesByType).forEach(([type, attendeeSet]) => {
+      uniqueAttendeesCounts[type] = attendeeSet.size;
+    });
+    
+    // Sort event performance by attendance
+    eventPerformance.sort((a, b) => b.totalAttendance - a.totalAttendance);
+    
+    // Get top performing events
+    const topEvents = eventPerformance.slice(0, 5);
+    
+    // Get event type summary with unique attendees
+    const eventTypeSummary = Object.entries(eventTypes).map(([type, stats]) => ({
+      type,
+      totalEvents: stats.count,
+      totalAttendance: stats.attendance,
+      uniqueAttendees: uniqueAttendeesCounts[type] || 0,
+      avgAttendance: Math.round(stats.attendance / stats.count)
+    })).sort((a, b) => b.uniqueAttendees - a.uniqueAttendees);
     
     return {
       totalEvents,
@@ -1194,22 +1700,71 @@ const EventAnalytics = ({ events, pastEvents }) => {
       attendanceStats,
       topLocations,
       topMonths,
-      recurringStats
+      recurringStats,
+      uniqueAttendeesCounts,
+      topEvents,
+      eventTypeSummary
     };
-  }, [events, pastEvents]);
+  }, [events, pastEvents, attendanceData.attendanceByEvent, allPastEventsWithAttendance]);
+
+  // Prepare data for charts
+  const attendanceTrendData = analytics.topMonths.map(({ month, attendance, avgAttendance }) => ({ 
+    month, 
+    attendance, 
+    avgAttendance 
+  }));
+  const eventTypeBarData = Object.entries(analytics.eventTypes).map(([type, stats]) => ({ 
+    type, 
+    attendance: stats.attendance,
+    events: stats.count,
+    avgAttendance: Math.round(stats.attendance / stats.count)
+  }));
+
+  // Calculate top attendees based on actual attendance data
+  const [topAttendees, setTopAttendees] = useState([]);
+
+  // Load top attendees using unified service
+  useEffect(() => {
+    const loadTopAttendees = async () => {
+      try {
+        const { unifiedAttendanceService } = await import('../lib/unifiedAttendanceService');
+        const attendees = await unifiedAttendanceService.getTopAttendees({
+          limit: 10,
+          useLast30Days: true, // Use last 30 days for consistency with dashboard
+          includeFutureEvents: false,
+          includeDeclined: false
+        });
+        setTopAttendees(attendees);
+      } catch (error) {
+        console.error('Error loading top attendees:', error);
+      }
+    };
+
+    loadTopAttendees();
+  }, []);
+
+  // Calculate percentage change for attendance (month over month)
+  // TODO: Integrate with previous month data for real calculation
+  const attendanceChange = 0; // Placeholder
+
+  // Debug: Show if we have any attendance data
+  const totalAttendanceRecords = Object.values(attendanceData.attendanceByEvent).reduce((sum, records) => sum + records.length, 0);
+  console.log(`🎯 Total attendance records found: ${totalAttendanceRecords}`);
+  console.log(`📊 Events with attendance data: ${Object.keys(attendanceData.attendanceByEvent).length}`);
+  console.log(`📊 Past events with attendance: ${analytics.totalEvents}`);
 
   return (
     <div className="space-y-6">
-      {/* Enhanced Main Stats */}
+      {/* Main Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">Total Events</p>
+                <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">All Events (Past & Future)</p>
                 <p className="text-3xl font-bold text-blue-900 dark:text-blue-100">{analytics.totalEvents}</p>
                 <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                  {analytics.upcomingEvents} upcoming
+                  {analytics.upcomingEvents} future events
                 </p>
               </div>
               <div className="p-3 bg-blue-500 rounded-xl">
@@ -1223,10 +1778,13 @@ const EventAnalytics = ({ events, pastEvents }) => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-green-600 dark:text-green-400 font-medium">Total Attendance</p>
+                <p className="text-sm text-green-600 dark:text-green-400 font-medium">Total Attendance (All Time)</p>
                 <p className="text-3xl font-bold text-green-900 dark:text-green-100">{analytics.attendanceStats.total}</p>
                 <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                  Avg: {analytics.attendanceStats.average}
+                  Avg: {analytics.attendanceStats.average} per event
+                  {totalAttendanceRecords === 0 && (
+                    <span className="block text-orange-600">No attendance records found</span>
+                  )}
                 </p>
               </div>
               <div className="p-3 bg-green-500 rounded-xl">
@@ -1240,7 +1798,7 @@ const EventAnalytics = ({ events, pastEvents }) => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">Attendance Range</p>
+                <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">Attendance Range (All Time)</p>
                 <p className="text-3xl font-bold text-purple-900 dark:text-purple-100">{analytics.attendanceStats.max}</p>
                 <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
                   Min: {analytics.attendanceStats.min} • Median: {analytics.attendanceStats.median}
@@ -1257,7 +1815,7 @@ const EventAnalytics = ({ events, pastEvents }) => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">Recurring Events</p>
+                <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">Recurring Event Templates</p>
                 <p className="text-3xl font-bold text-orange-900 dark:text-orange-100">{analytics.recurringStats.total}</p>
                 <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
                   {analytics.recurringStats.weekly} weekly, {analytics.recurringStats.monthly} monthly
@@ -1270,6 +1828,36 @@ const EventAnalytics = ({ events, pastEvents }) => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Smart Insights & Recommendations - Moved right after top cards */}
+      <Card className="border-0 shadow-lg mb-6">
+        <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border-b border-blue-200 dark:border-blue-800">
+          <CardTitle className="flex items-center gap-2 text-blue-900 dark:text-blue-100">
+            <Zap className="h-5 w-5" />
+            Insights & Recommendations
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          <ul className="list-disc pl-6 space-y-2 text-blue-700 dark:text-blue-300">
+            <li>Total attendance this month: <span className="font-bold">{analytics.attendanceStats.total}</span> ({attendanceChange >= 0 ? '+' : ''}{attendanceChange}%)</li>
+            {analytics.eventTypeSummary && analytics.eventTypeSummary.length > 0 && (
+              <>
+                <li>Most popular event type: <span className="font-bold">{analytics.eventTypeSummary[0]?.type}</span> with <span className="font-bold">{analytics.eventTypeSummary[0]?.uniqueAttendees}</span> unique attendees across <span className="font-bold">{analytics.eventTypeSummary[0]?.totalEvents}</span> events</li>
+                <li>Event type breakdown: {analytics.eventTypeSummary.slice(0, 3).map((summary, idx) => (
+                  <span key={summary.type}>
+                    {idx > 0 ? ', ' : ''}<span className="font-bold">{summary.type}</span> ({summary.uniqueAttendees} people, {summary.totalEvents} events)
+                  </span>
+                ))}</li>
+              </>
+            )}
+            {analytics.topEvents && analytics.topEvents.length > 0 && (
+              <li>Top performing event: <span className="font-bold">{analytics.topEvents[0]?.title}</span> with <span className="font-bold">{analytics.topEvents[0]?.totalAttendance}</span> total attendees ({analytics.topEvents[0]?.uniqueAttendees} unique)</li>
+            )}
+            <li>Consider promoting under-attended event types for better engagement.</li>
+            <li>Review recurring events for consistency and growth opportunities.</li>
+          </ul>
+        </CardContent>
+      </Card>
 
       {/* Enhanced Analytics Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1285,12 +1873,12 @@ const EventAnalytics = ({ events, pastEvents }) => {
             <CardContent className="p-6">
               <div className="space-y-3">
                 {Object.entries(analytics.eventTypes)
-                  .sort(([,a], [,b]) => b - a)
+                  .sort(([,a], [,b]) => b.attendance - a.attendance)
                   .slice(0, 8)
-                  .map(([type, count]) => {
+                  .map(([type, stats]) => {
                     const EventIcon = eventTypeIcons[type] || Calendar;
                     const eventColor = eventTypeColors[type] || 'gray';
-                    const percentage = Math.round((count / analytics.totalEvents) * 100);
+                    const percentage = Math.round((stats.attendance / analytics.attendanceStats.total) * 100);
                     
                     return (
                       <div key={type} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
@@ -1299,7 +1887,9 @@ const EventAnalytics = ({ events, pastEvents }) => {
                         </div>
                         <div className="flex-1">
                           <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{type}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{count} events ({percentage}%)</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {stats.attendance} attendees • {stats.count} events • Avg: {Math.round(stats.attendance / stats.count)}
+                          </p>
                         </div>
                         <div className="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                           <div 
@@ -1326,17 +1916,19 @@ const EventAnalytics = ({ events, pastEvents }) => {
             </CardHeader>
             <CardContent className="p-6">
               <div className="space-y-3">
-                {analytics.topLocations.map(([location, count], index) => {
-                  const percentage = Math.round((count / analytics.totalEvents) * 100);
+                {analytics.topLocations.map((locationData, index) => {
+                  const percentage = Math.round((locationData.attendance / analytics.attendanceStats.total) * 100);
                   
                   return (
-                    <div key={location} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+                    <div key={locationData.location} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
                       <div className="flex items-center justify-center w-8 h-8 bg-green-100 dark:bg-green-900/20 rounded-lg">
                         <span className="text-sm font-bold text-green-600 dark:text-green-400">{index + 1}</span>
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{location}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{count} events ({percentage}%)</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{locationData.location}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {locationData.attendance} attendees • {locationData.events} events • Avg: {locationData.avgAttendance}
+                        </p>
                       </div>
                       <div className="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                         <div 
@@ -1359,21 +1951,149 @@ const EventAnalytics = ({ events, pastEvents }) => {
           <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border-b border-purple-200 dark:border-purple-800">
             <CardTitle className="flex items-center gap-2 text-purple-900 dark:text-purple-100">
               <LineChart className="h-5 w-5" />
-              Monthly Event Trends
+              Monthly Event Attendance Trends
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {analytics.topMonths.map(({ month, count }) => (
+              {analytics.topMonths.map(({ month, attendance, avgAttendance }) => (
                 <div key={month} className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                  <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">{count}</div>
+                  <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">{attendance}</div>
                   <div className="text-sm text-purple-600 dark:text-purple-400">{month}</div>
+                  <div className="text-xs text-purple-500 dark:text-purple-400">Avg: {avgAttendance}</div>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
       )}
+
+      {/* Attendance Trend Line Chart */}
+      <Card className="border-0 shadow-lg">
+        <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border-b border-blue-200 dark:border-blue-800">
+          <CardTitle className="flex items-center gap-2 text-blue-900 dark:text-blue-100">
+            <LineChart className="h-5 w-5" />
+            Monthly Attendance Trends
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          {/* Interactive chart with recharts */}
+          <ResponsiveContainer width="100%" height={250}>
+            <RechartsLineChart data={attendanceTrendData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="month" />
+              <YAxis allowDecimals={false} />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="attendance" stroke="#6366f1" name="Total Attendance" strokeWidth={2} />
+              <Line type="monotone" dataKey="avgAttendance" stroke="#10b981" name="Avg Attendance" strokeWidth={2} />
+            </RechartsLineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Attendance by Event Type Bar Chart */}
+      <Card className="border-0 shadow-lg">
+        <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border-b border-purple-200 dark:border-purple-800">
+          <CardTitle className="flex items-center gap-2 text-purple-900 dark:text-purple-100">
+            <BarChart3 className="h-5 w-5" />
+            Attendance by Event Type
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          {/* Interactive bar chart with recharts */}
+          <ResponsiveContainer width="100%" height={300}>
+            <RechartsBarChart data={eventTypeBarData} margin={{ top: 10, right: 30, left: 0, bottom: 80 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="type" 
+                angle={-45} 
+                textAnchor="end" 
+                height={80}
+                tick={{ fontSize: 12 }}
+                interval={0}
+              />
+              <YAxis allowDecimals={false} />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="attendance" fill="#a78bfa" name="Total Attendance" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="avgAttendance" fill="#10b981" name="Avg Attendance" radius={[4, 4, 0, 0]} />
+            </RechartsBarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Top Attendees Section */}
+      <Card className="border-0 shadow-lg">
+        <CardHeader className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 border-b border-green-200 dark:border-green-800">
+          <CardTitle className="flex items-center gap-2 text-green-900 dark:text-green-100">
+            <Users className="h-5 w-5" />
+            Top Attendees
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          {/* Top attendees based on actual attendance data */}
+          <div className="space-y-3">
+            <div className="text-center mb-4">
+              <p className="text-sm text-green-600 dark:text-green-400">
+                Most frequent attendees based on actual check-ins
+              </p>
+            </div>
+            
+            {topAttendees.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {topAttendees.map((attendee, idx) => (
+                  <Link 
+                    key={attendee.id} 
+                    to={`/members/${attendee.id}`}
+                    className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center justify-center w-8 h-8 bg-green-500 rounded-lg text-white font-bold text-sm">
+                      {idx + 1}
+                    </div>
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className="w-10 h-10 rounded-full overflow-hidden bg-green-200 dark:bg-green-800 flex items-center justify-center">
+                        {attendee.image ? (
+                          <img 
+                            src={attendee.image} 
+                            alt={attendee.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div className="w-full h-full flex items-center justify-center text-green-600 dark:text-green-400 font-medium text-sm" style={{ display: attendee.image ? 'none' : 'flex' }}>
+                          {attendee.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-green-900 dark:text-green-100">
+                          {attendee.name}
+                        </div>
+                        <div className="text-sm text-green-600 dark:text-green-400">
+                          {attendee.count} event{attendee.count !== 1 ? 's' : ''} attended
+                        </div>
+                      </div>
+                    </div>
+                    <Badge className="bg-green-500 text-white">
+                      {attendee.count}
+                    </Badge>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <Users className="h-8 w-8 text-green-400 mx-auto mb-2" />
+                <p className="text-sm text-green-600 dark:text-green-400">No attendance data available</p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+
     </div>
   );
 };
@@ -1994,22 +2714,46 @@ export default function Events() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
-      // Get events from the last week
-      const oneWeekAgo = new Date();
-      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-      oneWeekAgo.setHours(0, 0, 0, 0);
+      // Determine the date range based on time filter for past events
+      let startDate = new Date();
+      startDate.setDate(startDate.getDate() - 7); // Default to 7 days ago
+      startDate.setHours(0, 0, 0, 0);
+      
+      // Adjust the past events range based on the current time filter
+      if (timeWindowFilter === 'month') {
+        // For month filter, get past events from the beginning of the current month
+        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+      } else if (timeWindowFilter === 'week') {
+        // For week filter, get past events from the beginning of the current week
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
+        startDate = weekStart;
+      } else if (timeWindowFilter === 'quarter') {
+        // For quarter filter, get past events from the beginning of the current quarter
+        const quarter = Math.floor(today.getMonth() / 3);
+        startDate = new Date(today.getFullYear(), quarter * 3, 1);
+      } else if (timeWindowFilter === 'year') {
+        // For year filter, get past events from the beginning of the current year
+        startDate = new Date(today.getFullYear(), 0, 1);
+      } else if (timeWindowFilter === 'today') {
+        // For today filter, get past events from yesterday
+        startDate = new Date(today);
+        startDate.setDate(startDate.getDate() - 1);
+      }
+      // For 'all', keep the default 7 days ago
 
       // Get current user's organization ID (including impersonation)
       const organizationId = await getCurrentUserOrganizationId();
       if (!organizationId) throw new Error('Unable to determine organization');
       
       console.log('[Events] Using organization_id (past):', organizationId);
+      console.log('[Events] Past events date range:', startDate.toISOString(), 'to', today.toISOString());
 
       const { data, error } = await supabase
         .from('events')
         .select('*, event_attendance(*)')
         .eq('organization_id', organizationId)
-        .gte('start_date', oneWeekAgo.toISOString())
+        .gte('start_date', startDate.toISOString())
         .lt('start_date', today.toISOString())
         .order('start_date', { ascending: false });
 
@@ -2034,7 +2778,7 @@ export default function Events() {
     } finally {
       setIsLoadingPast(false);
     }
-  }, [toast]);
+  }, [toast, timeWindowFilter]);
 
   // Enhanced filtering effect with event type filter
   useEffect(() => {
@@ -2234,7 +2978,7 @@ export default function Events() {
       id: instanceId,
       start_date: currentDate.toISOString(),
       end_date: occurrenceEndDate.toISOString(),
-      attendance: event.event_attendance?.filter(a => a.status === 'attending').length || 0,
+              attendance: event.event_attendance?.length || 0,
       is_instance: true,
       parent_event_id: event.id
     });
@@ -4062,15 +4806,45 @@ export default function Events() {
         initial="hidden"
         animate="visible"
       >
-        {/* Enhanced Header with Stats */}
-        <div className="mb-8 px-2 md:px-0">
+        {/* Mobile Header - Hidden on Desktop */}
+        <div className="lg:hidden sticky top-0 z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-center justify-between p-4">
+            <div className="flex-1">
+              <h1 className="text-lg font-semibold text-slate-900 dark:text-white">
+                Events
+              </h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Manage and track events</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowAnalytics(!showAnalytics)}
+                className="hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <BarChart3 className="h-4 w-4" />
+              </Button>
+              <PermissionButton
+                permission={PERMISSIONS.EVENTS_CREATE}
+                onClick={() => setIsCreateEventOpen(true)}
+                size="icon"
+                className="hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <Plus className="h-4 w-4" />
+              </PermissionButton>
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop Header - Hidden on Mobile */}
+        <div className="hidden lg:block mb-8 px-2 md:px-0">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-          <div>
+            <div>
               <h1 className="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Events
               </h1>
-            <p className="text-gray-600 text-lg">Manage and track event attendance</p>
-          </div>
+              <p className="text-gray-600 text-lg">Manage and track event attendance</p>
+            </div>
             <div className="flex items-center gap-3">
               <Button
                 variant="outline"
@@ -4081,24 +4855,24 @@ export default function Events() {
                 <BarChart3 className="mr-2 h-4 w-4" />
                 {showAnalytics ? 'Hide' : 'Show'} Analytics
               </Button>
-          <PermissionButton
-            permission={PERMISSIONS.EVENTS_CREATE}
-            onClick={() => setIsCreateEventOpen(true)}
+              <PermissionButton
+                permission={PERMISSIONS.EVENTS_CREATE}
+                onClick={() => setIsCreateEventOpen(true)}
                 className="h-10"
-          >
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Create Event
-          </PermissionButton>
+              </PermissionButton>
             </div>
-        </div>
+          </div>
 
-          {/* Quick Stats Cards */}
+          {/* Quick Stats Cards - Desktop Only */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">Upcoming</p>
+                    <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">All Future Events</p>
                     <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{events.length}</p>
                   </div>
                   <div className="p-2 bg-blue-500 rounded-lg">
@@ -4112,7 +4886,7 @@ export default function Events() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-green-600 dark:text-green-400 font-medium">This Week</p>
+                    <p className="text-sm text-green-600 dark:text-green-400 font-medium">Next 7 Days</p>
                     <p className="text-2xl font-bold text-green-900 dark:text-green-100">
                       {events.filter(e => {
                         const eventDate = new Date(e.start_date);
@@ -4133,9 +4907,20 @@ export default function Events() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">Total Attendance</p>
+                    <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">This Month's Attendance</p>
                     <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
-                      {events.reduce((sum, e) => sum + (e.attendance || 0), 0)}
+                      {(() => {
+                        const now = new Date();
+                        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+                        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                        
+                        return pastEvents
+                          .filter(e => {
+                            const eventDate = new Date(e.start_date);
+                            return eventDate >= startOfMonth && eventDate <= endOfMonth;
+                          })
+                          .reduce((sum, e) => sum + (e.attendance || 0), 0);
+                      })()}
                     </p>
                   </div>
                   <div className="p-2 bg-purple-500 rounded-lg">
@@ -4149,7 +4934,7 @@ export default function Events() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">Past Events</p>
+                    <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">All Past Events</p>
                     <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">{pastEvents.length}</p>
                   </div>
                   <div className="p-2 bg-orange-500 rounded-lg">
@@ -4161,32 +4946,157 @@ export default function Events() {
           </div>
         </div>
 
+        {/* Mobile Stats Cards */}
+        <div className="lg:hidden p-4">
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20">
+              <CardContent className="p-3 text-center">
+                <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center mx-auto mb-1">
+                  <Calendar className="h-4 w-4 text-white" />
+                </div>
+                <div className="text-lg font-bold text-blue-900 dark:text-blue-100">
+                  {events.length}
+                </div>
+                <p className="text-xs text-blue-600 dark:text-blue-400">Future Events</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20">
+              <CardContent className="p-3 text-center">
+                <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center mx-auto mb-1">
+                  <Clock className="h-4 w-4 text-white" />
+                </div>
+                <div className="text-lg font-bold text-green-900 dark:text-green-100">
+                  {events.filter(e => {
+                    const eventDate = new Date(e.start_date);
+                    const weekFromNow = new Date();
+                    weekFromNow.setDate(weekFromNow.getDate() + 7);
+                    return eventDate <= weekFromNow && eventDate >= new Date();
+                  }).length}
+                </div>
+                <p className="text-xs text-green-600 dark:text-green-400">Next 7 Days</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
+              <CardContent className="p-3 text-center">
+                <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center mx-auto mb-1">
+                  <Users className="h-4 w-4 text-white" />
+                </div>
+                <div className="text-lg font-bold text-purple-900 dark:text-purple-100">
+                  {(() => {
+                    const now = new Date();
+                    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+                    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                    
+                    return pastEvents
+                      .filter(e => {
+                        const eventDate = new Date(e.start_date);
+                        return eventDate >= startOfMonth && eventDate <= endOfMonth;
+                      })
+                      .reduce((sum, e) => sum + (e.attendance || 0), 0);
+                  })()}
+                </div>
+                <p className="text-xs text-purple-600 dark:text-purple-400">This Month's Attendance</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-md bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20">
+              <CardContent className="p-3 text-center">
+                <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center mx-auto mb-1">
+                  <CheckCircle className="h-4 w-4 text-white" />
+                </div>
+                <div className="text-lg font-bold text-orange-900 dark:text-orange-100">
+                  {pastEvents.length}
+                </div>
+                <p className="text-xs text-orange-600 dark:text-orange-400">Past Events</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
         {/* Analytics Section */}
         {showAnalytics && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="mb-6"
+            className="mb-6 px-4 lg:px-0"
           >
-            <EventAnalytics events={events} pastEvents={pastEvents} />
+            <EventAnalytics events={filteredEvents} pastEvents={filteredPastEvents} />
           </motion.div>
         )}
 
         {/* Enhanced Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full px-2 md:px-0">
-          <TabsList className="grid w-full grid-cols-3 h-14 mb-6">
-          <TabsTrigger value="upcoming" className="text-lg">Upcoming Events</TabsTrigger>
-          <TabsTrigger value="past" className="text-lg">Past Events</TabsTrigger>
-            <TabsTrigger value="locations" className="text-lg">Locations</TabsTrigger>
-        </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full px-2 md:px-0">
+          {/* Mobile Tabs */}
+          <div className="lg:hidden">
+            <TabsList className="grid w-full grid-cols-3 h-12 mb-4">
+              <TabsTrigger value="upcoming" className="text-sm">Upcoming</TabsTrigger>
+              <TabsTrigger value="past" className="text-sm">Past</TabsTrigger>
+              <TabsTrigger value="locations" className="text-sm">Locations</TabsTrigger>
+            </TabsList>
+          </div>
 
-        {/* Upcoming Events Tab */}
-          <TabsContent value="upcoming" className="space-y-6">
+          {/* Desktop Tabs */}
+          <div className="hidden lg:block">
+            <TabsList className="grid w-full grid-cols-3 h-14 mb-6">
+              <TabsTrigger value="upcoming" className="text-lg">Upcoming Events</TabsTrigger>
+              <TabsTrigger value="past" className="text-lg">Past Events</TabsTrigger>
+              <TabsTrigger value="locations" className="text-lg">Locations</TabsTrigger>
+            </TabsList>
+          </div>
+
+          {/* Upcoming Events Tab */}
+          <TabsContent value="upcoming" className="space-y-6 px-4 lg:px-0">
             {/* Enhanced Search and Filters */}
             <div className="space-y-4">
-              {/* View Mode Toggle */}
-              <div className="flex items-center justify-between">
+              {/* View Mode Toggle - Mobile */}
+              <div className="lg:hidden space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300">View Mode</h3>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={fetchEvents}
+                    disabled={isLoading}
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                  </Button>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <Button
+                    variant={viewMode === 'admin' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setViewMode('admin')}
+                    className="text-xs"
+                  >
+                    <List className="mr-1 h-3 w-3" />
+                    Admin
+                  </Button>
+                  <Button
+                    variant={viewMode === 'kiosk' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setViewMode('kiosk')}
+                    className="text-xs"
+                  >
+                    <Monitor className="mr-1 h-3 w-3" />
+                    Kiosk
+                  </Button>
+                  <Button
+                    variant={viewMode === 'calendar' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setViewMode('calendar')}
+                    className="text-xs"
+                  >
+                    <Grid className="mr-1 h-3 w-3" />
+                    Calendar
+                  </Button>
+                </div>
+              </div>
+
+              {/* View Mode Toggle - Desktop */}
+              <div className="hidden lg:flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Button
                     variant={viewMode === 'admin' ? 'default' : 'outline'}
@@ -4229,16 +5139,74 @@ export default function Events() {
                 {/* Search Bar */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
+                  <Input
                     placeholder="Search events by title, location, or description..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full h-12 pl-10 pr-4"
-              />
-            </div>
+                  />
+                </div>
 
-                {/* Filter Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
+                {/* Filter Grid - Mobile */}
+                <div className="lg:hidden space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <Select value={eventTypeFilter} onValueChange={setEventTypeFilter}>
+                      <SelectTrigger className="h-10 text-sm">
+                        <SelectValue placeholder="Event Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        {eventTypeOptions.map(type => (
+                          <SelectItem key={type} value={type}>
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select value={timeWindowFilter} onValueChange={setTimeWindowFilter}>
+                      <SelectTrigger className="h-10 text-sm">
+                        <SelectValue placeholder="Time Window" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Time</SelectItem>
+                        <SelectItem value="today">Today</SelectItem>
+                        <SelectItem value="week">This Week</SelectItem>
+                        <SelectItem value="month">This Month</SelectItem>
+                        <SelectItem value="quarter">This Quarter</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <Select value={attendanceFilter} onValueChange={setAttendanceFilter}>
+                      <SelectTrigger className="h-10 text-sm">
+                        <SelectValue placeholder="Attendance" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Events</SelectItem>
+                        <SelectItem value="high">High Attendance</SelectItem>
+                        <SelectItem value="low">Low Attendance</SelectItem>
+                        <SelectItem value="none">No Attendance</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <Select value={sortBy} onValueChange={setSortBy}>
+                      <SelectTrigger className="h-10 text-sm">
+                        <SelectValue placeholder="Sort By" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="date">Date</SelectItem>
+                        <SelectItem value="title">Title</SelectItem>
+                        <SelectItem value="attendance">Attendance</SelectItem>
+                        <SelectItem value="type">Type</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Filter Grid - Desktop */}
+                <div className="hidden lg:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
                   <div className="lg:col-span-2">
                     <Select value={eventTypeFilter} onValueChange={setEventTypeFilter}>
                       <SelectTrigger className="h-12">
@@ -4865,10 +5833,10 @@ export default function Events() {
 
       {/* Member Selection Dialog */}
       <Dialog open={isMemberDialogOpen} onOpenChange={setIsMemberDialogOpen}>
-        <DialogContent className="w-full max-w-full h-full md:h-auto md:max-w-3xl p-0">
+        <DialogContent className="w-[95vw] max-w-full h-[90vh] md:h-auto md:max-w-3xl p-0">
           <DialogHeader className="p-3 md:p-6 border-b">
             <div className="space-y-2">
-              <DialogTitle className="text-2xl md:text-3xl">
+              <DialogTitle className="text-lg md:text-2xl lg:text-3xl">
                 {isEditingPastEvent 
                   ? 'Edit Attendance' 
                   : selectedEvent?.attendance_type === 'check-in' 
@@ -4878,14 +5846,14 @@ export default function Events() {
               </DialogTitle>
               {suggestedMembers.length > 0 && (
                 <div className="flex items-center gap-2">
-                  <Star className="h-5 w-5 text-green-600" />
-                  <span className="text-lg text-green-600 font-normal">
+                  <Star className="h-4 w-4 md:h-5 md:w-5 text-green-600" />
+                  <span className="text-sm md:text-lg text-green-600 font-normal">
                     Smart suggestions available
                   </span>
                 </div>
               )}
             </div>
-            <DialogDescription className="text-lg mt-2">
+            <DialogDescription className="text-sm md:text-lg mt-2">
               {isEditingPastEvent
                 ? `Edit attendance records for ${selectedEvent?.title}`
                 : selectedEvent?.attendance_type === 'check-in'
@@ -4894,56 +5862,56 @@ export default function Events() {
               }
             </DialogDescription>
             {suggestedMembers.length > 0 && (
-              <div className="mt-2 text-sm text-green-600">
+              <div className="mt-2 text-xs md:text-sm text-green-600">
                 Members who frequently attend similar events are highlighted below
               </div>
             )}
           </DialogHeader>
 
-          <div className="p-3 md:p-6">
-            <Tabs defaultValue="available" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 h-14">
-                <TabsTrigger value="available" className="text-lg">
+          <div className="p-3 md:p-6 flex-1 overflow-hidden">
+            <Tabs defaultValue="available" className="w-full h-full flex flex-col">
+              <TabsList className="grid w-full grid-cols-2 h-10 md:h-14">
+                <TabsTrigger value="available" className="text-sm md:text-lg">
                   {isEditingPastEvent ? 'Add Attendance' : 'Available People'}
                 </TabsTrigger>
-                <TabsTrigger value="checked-in" className="text-lg">
+                <TabsTrigger value="checked-in" className="text-sm md:text-lg">
                   {selectedEvent?.attendance_type === 'check-in' ? 'Checked In' : 'RSVP\'d'}
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="available" className="mt-4 md:mt-8">
-                <div className="space-y-4 md:space-y-6">
-                  <div className="flex flex-col md:flex-row gap-3">
+              <TabsContent value="available" className="mt-3 md:mt-8 flex-1 overflow-y-auto">
+                <div className="space-y-3 md:space-y-6">
+                  <div className="flex flex-col md:flex-row gap-2 md:gap-3">
                     <div className="flex-1">
                       <Input
                         placeholder="Search people..."
                         value={memberSearchQuery}
                         onChange={(e) => setMemberSearchQuery(e.target.value)}
-                        className="w-full h-14 text-lg"
+                        className="w-full h-10 md:h-14 text-sm md:text-lg"
                       />
                     </div>
                     <Button
                       onClick={() => setIsCreateMemberOpen(true)}
-                      className="w-full md:w-auto h-14 text-lg bg-blue-600 hover:bg-blue-700"
+                      className="w-full md:w-auto h-10 md:h-14 text-sm md:text-lg bg-blue-600 hover:bg-blue-700"
                     >
-                      <Plus className="mr-2 h-4 w-4" />
+                      <Plus className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
                       Add New Person
                     </Button>
                     {selectedEvent?.attendance_type === 'check-in' && (
                       <Button
                         onClick={() => setIsAnonymousCheckinOpen(true)}
-                        className="w-full md:w-auto h-14 text-lg bg-orange-600 hover:bg-orange-700"
+                        className="w-full md:w-auto h-10 md:h-14 text-sm md:text-lg bg-orange-600 hover:bg-orange-700"
                       >
-                        <UserPlus className="mr-2 h-4 w-4" />
+                        <UserPlus className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
                         Anonymous Check-in
                       </Button>
                     )}
                   </div>
                   <div className="space-y-2">
                     {suggestedMembers.length > 0 && (
-                      <div className="mb-4">
-                        <h3 className="text-lg font-semibold text-green-700 mb-2 flex items-center gap-2">
-                          <Star className="h-5 w-5" />
+                      <div className="mb-3 md:mb-4">
+                        <h3 className="text-sm md:text-lg font-semibold text-green-700 mb-2 flex items-center gap-2">
+                          <Star className="h-4 w-4 md:h-5 md:w-5" />
                           Suggested Based on Previous Attendance
                         </h3>
                         <div className="space-y-2">
@@ -4955,27 +5923,27 @@ export default function Events() {
                             .map((member) => (
                             <div
                               key={member.id}
-                              className="flex items-center space-x-4 p-3 md:p-4 rounded-lg border-2 border-green-200 bg-green-50 cursor-pointer hover:bg-green-100 transition-colors"
+                              className="flex items-center space-x-3 md:space-x-4 p-2 md:p-3 lg:p-4 rounded-lg border-2 border-green-200 bg-green-50 cursor-pointer hover:bg-green-100 transition-colors"
                               onClick={() => handleMemberClick(member)}
                             >
-                              <Avatar className="h-12 w-12 md:h-16 md:w-16">
+                              <Avatar className="h-10 w-10 md:h-12 md:w-12 lg:h-16 lg:w-16">
                                 <AvatarImage src={member.image_url} />
-                                <AvatarFallback className="text-lg md:text-xl">
+                                <AvatarFallback className="text-sm md:text-lg lg:text-xl">
                                   {getInitials(member.firstname, member.lastname)}
                                 </AvatarFallback>
                               </Avatar>
-                              <div className="flex-1">
-                                <p className="text-lg md:text-xl font-medium">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm md:text-lg lg:text-xl font-medium truncate">
                                   {member.firstname} {member.lastname}
                                 </p>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <Badge variant="secondary" className="bg-green-100 text-green-800">
+                                <div className="flex items-center gap-1 md:gap-2 mt-1">
+                                  <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
                                     {memberAttendanceCount[member.id] || 0} previous attendances
                                   </Badge>
-                                  <span className="text-sm text-green-600">Frequent attendee</span>
+                                  <span className="text-xs md:text-sm text-green-600">Frequent attendee</span>
                                 </div>
                               </div>
-                              <Star className="h-5 w-5 text-green-600" />
+                              <Star className="h-4 w-4 md:h-5 md:w-5 text-green-600 flex-shrink-0" />
                             </div>
                           ))}
                         </div>
@@ -4992,17 +5960,17 @@ export default function Events() {
                         .map((member) => (
                         <div
                           key={member.id}
-                          className="flex items-center space-x-4 p-3 md:p-4 rounded-lg border cursor-pointer hover:bg-gray-50"
+                          className="flex items-center space-x-3 md:space-x-4 p-2 md:p-3 lg:p-4 rounded-lg border cursor-pointer hover:bg-gray-50"
                           onClick={() => handleMemberClick(member)}
                         >
-                          <Avatar className="h-12 w-12 md:h-16 md:w-16">
+                          <Avatar className="h-10 w-10 md:h-12 md:w-12 lg:h-16 lg:w-16">
                             <AvatarImage src={member.image_url} />
-                            <AvatarFallback className="text-lg md:text-xl">
+                            <AvatarFallback className="text-sm md:text-lg lg:text-xl">
                               {getInitials(member.firstname, member.lastname)}
                             </AvatarFallback>
                           </Avatar>
-                          <div className="flex-1">
-                            <p className="text-lg md:text-xl font-medium">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm md:text-lg lg:text-xl font-medium truncate">
                               {member.firstname} {member.lastname}
                             </p>
                             {memberAttendanceCount[member.id] && (
@@ -5020,22 +5988,22 @@ export default function Events() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="checked-in" className="mt-4 md:mt-8">
+              <TabsContent value="checked-in" className="mt-3 md:mt-8 flex-1 overflow-y-auto">
                 <div className="space-y-2">
-                  {alreadyRSVPMembers.map((member) => (
+                  {alreadyRSVPMembers.filter(member => member && member.id).map((member) => (
                     <div
                       key={member.id}
-                      className="flex items-center justify-between p-3 md:p-4 rounded-lg border"
+                      className="flex items-center justify-between p-2 md:p-3 lg:p-4 rounded-lg border"
                     >
-                      <div className="flex items-center space-x-4">
-                        <Avatar className="h-12 w-12 md:h-16 md:w-16">
+                      <div className="flex items-center space-x-3 md:space-x-4 min-w-0 flex-1">
+                        <Avatar className="h-10 w-10 md:h-12 md:w-12 lg:h-16 lg:w-16">
                           <AvatarImage src={member.image_url} />
-                          <AvatarFallback className="text-lg md:text-xl">
+                          <AvatarFallback className="text-sm md:text-lg lg:text-xl">
                             {member.isAnonymous ? member.firstname.charAt(0) : getInitials(member.firstname, member.lastname)}
                           </AvatarFallback>
                         </Avatar>
-                        <div>
-                          <p className="text-lg md:text-xl font-medium">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm md:text-lg lg:text-xl font-medium truncate">
                             {member.firstname} {member.lastname}
                           </p>
                           {member.isAnonymous && (
@@ -5047,16 +6015,16 @@ export default function Events() {
                       </div>
                       <Button
                         variant="ghost"
-                        size="lg"
+                        size="sm"
                         onClick={() => handleRemoveMember(member.id)}
-                        className="h-12 w-12 md:h-14 md:w-14 p-0"
+                        className="h-8 w-8 md:h-10 md:w-10 lg:h-12 lg:w-12 p-0 flex-shrink-0"
                       >
-                        <X className="h-6 w-6" />
+                        <X className="h-4 w-4 md:h-5 md:w-5 lg:h-6 lg:w-6" />
                       </Button>
                     </div>
                   ))}
                   {alreadyRSVPMembers.length === 0 && (
-                    <p className="text-base md:text-lg text-gray-500 italic p-4">
+                    <p className="text-sm md:text-base lg:text-lg text-gray-500 italic p-4">
                       {selectedEvent?.attendance_type === 'check-in'
                         ? 'No members have checked in yet'
                         : "No members have RSVP'd yet"}
@@ -5068,18 +6036,18 @@ export default function Events() {
           </div>
 
           <DialogFooter className="p-3 md:p-6 border-t">
-            <div className="flex flex-col md:flex-row gap-3 w-full">
+            <div className="flex flex-col md:flex-row gap-2 md:gap-3 w-full">
               <Button
                 onClick={() => setIsCreateMemberOpen(true)}
-                className="w-full md:w-auto text-lg h-14 bg-blue-600 hover:bg-blue-700"
+                className="w-full md:w-auto text-sm md:text-lg h-10 md:h-14 bg-blue-600 hover:bg-blue-700"
               >
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
                 Create New Person
               </Button>
               <Button
                 variant={selectedEvent?.attendance_type === 'check-in' ? 'default' : 'outline'}
                 onClick={handleCloseDialog}
-                className={`w-full md:w-auto text-lg h-14 ${
+                className={`w-full md:w-auto text-sm md:text-lg h-10 md:h-14 ${
                   selectedEvent?.attendance_type === 'check-in' ? 'bg-green-600 hover:bg-green-700' : ''
                 }`}
               >
@@ -5092,69 +6060,69 @@ export default function Events() {
 
       {/* Create New Member Dialog */}
       <Dialog open={isCreateMemberOpen} onOpenChange={setIsCreateMemberOpen}>
-        <DialogContent className="w-full max-w-full h-full md:h-auto md:max-w-3xl p-0">
+        <DialogContent className="w-[95vw] max-w-full h-[90vh] md:h-auto md:max-w-3xl p-0">
           <DialogHeader className="p-3 md:p-6 border-b">
-            <DialogTitle className="text-2xl md:text-3xl">Create New Person</DialogTitle>
-            <DialogDescription className="text-lg mt-2">
+            <DialogTitle className="text-lg md:text-2xl lg:text-3xl">Create New Person</DialogTitle>
+            <DialogDescription className="text-sm md:text-lg mt-2">
               Add a new person and automatically {selectedEvent?.attendance_type === 'check-in' ? 'check them in' : 'RSVP them'} to this event.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="p-3 md:p-6">
-            <form onSubmit={handleCreateMember} className="space-y-4 md:space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+          <div className="p-3 md:p-6 flex-1 overflow-y-auto">
+            <form onSubmit={handleCreateMember} className="space-y-3 md:space-y-4 lg:space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 lg:gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="firstname" className="text-lg">First Name</Label>
+                  <Label htmlFor="firstname" className="text-sm md:text-lg">First Name</Label>
                   <Input
                     id="firstname"
                     name="firstname"
                     value={newMember.firstname}
                     onChange={(e) => setNewMember({...newMember, firstname: e.target.value})}
-                    className="h-14 text-lg"
+                    className="h-10 md:h-14 text-sm md:text-lg"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lastname" className="text-lg">Last Name</Label>
+                  <Label htmlFor="lastname" className="text-sm md:text-lg">Last Name</Label>
                   <Input
                     id="lastname"
                     name="lastname"
                     value={newMember.lastname}
                     onChange={(e) => setNewMember({...newMember, lastname: e.target.value})}
-                    className="h-14 text-lg"
+                    className="h-10 md:h-14 text-sm md:text-lg"
                     required
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-lg">Email</Label>
+                <Label htmlFor="email" className="text-sm md:text-lg">Email</Label>
                 <Input
                   id="email"
                   name="email"
                   type="email"
                   value={newMember.email}
                   onChange={(e) => setNewMember({...newMember, email: e.target.value})}
-                  className="h-14 text-lg"
+                  className="h-10 md:h-14 text-sm md:text-lg"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone" className="text-lg">Phone</Label>
+                <Label htmlFor="phone" className="text-sm md:text-lg">Phone</Label>
                 <Input
                   id="phone"
                   name="phone"
                   value={newMember.phone}
                   onChange={(e) => setNewMember({...newMember, phone: e.target.value})}
-                  className="h-14 text-lg"
+                  className="h-10 md:h-14 text-sm md:text-lg"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="notes" className="text-lg">Notes</Label>
+                <Label htmlFor="notes" className="text-sm md:text-lg">Notes</Label>
                 <Textarea
                   id="notes"
                   name="notes"
                   value={newMember.notes}
                   onChange={(e) => setNewMember({...newMember, notes: e.target.value})}
-                  className="h-32 text-lg"
+                  className="h-24 md:h-32 text-sm md:text-lg"
                 />
               </div>
             </form>
@@ -5164,7 +6132,7 @@ export default function Events() {
             <Button
               type="submit"
               onClick={handleCreateMember}
-              className="w-full md:w-auto text-lg h-14"
+              className="w-full md:w-auto text-sm md:text-lg h-10 md:h-14"
             >
               Create and {selectedEvent?.attendance_type === 'check-in' ? 'Check In' : 'RSVP'}
             </Button>
@@ -5302,24 +6270,24 @@ export default function Events() {
 
       {/* Anonymous Check-in Dialog */}
       <Dialog open={isAnonymousCheckinOpen} onOpenChange={setIsAnonymousCheckinOpen}>
-        <DialogContent className="w-full max-w-full h-full md:h-auto md:max-w-2xl p-0">
+        <DialogContent className="w-[95vw] max-w-full h-[90vh] md:h-auto md:max-w-2xl p-0">
           <DialogHeader className="p-3 md:p-6 border-b">
-            <DialogTitle className="text-2xl md:text-3xl">Anonymous Check-in</DialogTitle>
-            <DialogDescription className="text-lg mt-2">
+            <DialogTitle className="text-lg md:text-2xl lg:text-3xl">Anonymous Check-in</DialogTitle>
+            <DialogDescription className="text-sm md:text-lg mt-2">
               Check in an anonymous attendee to {selectedEvent?.title}. This will update the event attendance count but won't create a member record.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="p-3 md:p-6">
-            <div className="text-center space-y-4">
-              <div className="flex items-center justify-center w-16 h-16 mx-auto bg-orange-100 rounded-full">
-                <UserPlus className="h-8 w-8 text-orange-600" />
+          <div className="p-3 md:p-6 flex-1 flex items-center justify-center">
+            <div className="text-center space-y-3 md:space-y-4">
+              <div className="flex items-center justify-center w-12 h-12 md:w-16 md:h-16 mx-auto bg-orange-100 rounded-full">
+                <UserPlus className="h-6 w-6 md:h-8 md:w-8 text-orange-600" />
               </div>
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                <h3 className="text-base md:text-lg font-medium text-gray-900 mb-1 md:mb-2">
                   Add Anonymous Attendee
                 </h3>
-                <p className="text-gray-600">
+                <p className="text-sm md:text-base text-gray-600">
                   This will add one anonymous attendee to the event attendance count.
                 </p>
               </div>
@@ -5327,20 +6295,22 @@ export default function Events() {
           </div>
 
           <DialogFooter className="p-3 md:p-6 border-t">
-            <Button
-              variant="outline"
-              onClick={() => setIsAnonymousCheckinOpen(false)}
-              className="w-full md:w-auto text-lg h-14"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleAnonymousCheckin}
-              className="w-full md:w-auto text-lg h-14 bg-orange-600 hover:bg-orange-700"
-            >
-              <UserPlus className="mr-2 h-4 w-4" />
-              Add Anonymous Attendee
-            </Button>
+            <div className="flex flex-col md:flex-row gap-2 md:gap-3 w-full">
+              <Button
+                variant="outline"
+                onClick={() => setIsAnonymousCheckinOpen(false)}
+                className="w-full md:w-auto text-sm md:text-lg h-10 md:h-14"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleAnonymousCheckin}
+                className="w-full md:w-auto text-sm md:text-lg h-10 md:h-14 bg-orange-600 hover:bg-orange-700"
+              >
+                <UserPlus className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+                Add Anonymous Attendee
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

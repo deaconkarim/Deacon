@@ -118,29 +118,17 @@ export function useAttendanceStats(startDate, endDate) {
         .filter(item => item.value > 0)
         .sort((a, b) => b.value - a.value);
       
-      // Member stats
-      const memberStatsObj = attendance.reduce((acc, record) => {
-        if (record.status === 'checked-in' || record.status === 'attending') {
-          const memberId = record.members?.id;
-          const memberName = record.members ? `${record.members.firstname} ${record.members.lastname}` : 'Unknown';
-          if (memberId && !acc[memberId]) {
-            acc[memberId] = {
-              id: memberId,
-              name: memberName,
-              image: record.members.image_url,
-              count: 0
-            };
-          }
-          if (memberId) {
-            acc[memberId].count++;
-          }
-        }
-        return acc;
-      }, {});
+      // Use unified attendance service for consistent member stats
+      // Since we're already filtering by date range in this function, don't use useLast30Days
+      const { unifiedAttendanceService } = await import('../unifiedAttendanceService');
+      const topAttendees = await unifiedAttendanceService.getTopAttendees({
+        limit: 10,
+        dateRange: { startDate: startDateStr, endDate: endDateStr }, // Use the same date range as this function
+        includeFutureEvents: false,
+        includeDeclined: false
+      });
       
-      const memberStats = Object.values(memberStatsObj)
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 10);
+      const memberStats = topAttendees;
       
       // Event details
       const eventDetails = sortedEvents.map(event => {

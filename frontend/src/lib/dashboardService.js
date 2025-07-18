@@ -7,7 +7,7 @@ import { calculateDonationTrend, getWeeklyDonationBreakdown } from './donationTr
 // Cache for dashboard data to prevent redundant requests
 let dashboardCache = null;
 let cacheTimestamp = null;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION = 1 * 60 * 1000; // 1 minute (reduced for debugging)
 
 // Cache for donation trend analysis
 let donationTrendCache = null;
@@ -33,12 +33,10 @@ export const dashboardService = {
   // Consolidated dashboard data fetch - reduces multiple API calls to just a few
   async getDashboardData() {
     try {
-      // Check cache first
-      const now = Date.now();
-      if (dashboardCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
-        console.log('📊 [DashboardService] Using cached data');
-        return dashboardCache;
-      }
+      // Force clear cache for debugging
+      console.log('📊 [DashboardService] Force clearing cache and fetching fresh data');
+      dashboardCache = null;
+      cacheTimestamp = null;
 
       const organizationId = await getCurrentUserOrganizationId();
       console.log('🔍 [DashboardService] Organization ID:', organizationId);
@@ -71,11 +69,8 @@ export const dashboardService = {
         family: familyData
       };
 
-      // Cache the result
-      dashboardCache = result;
-      cacheTimestamp = now;
-
-      console.log('📊 [DashboardService] Data loaded and cached:', {
+      // Don't cache for debugging
+      console.log('📊 [DashboardService] Data loaded (no caching for debugging):', {
         members: membersData.counts?.total || 0,
         donations: donationsData.all?.length || 0,
         events: eventsData.all?.length || 0,
@@ -324,6 +319,8 @@ export const dashboardService = {
 
   // Events data - single API call
   async getEventsData(organizationId) {
+    console.log('🔍 [DashboardService] Fetching events for organization:', organizationId);
+    
     const { data: events, error } = await supabase
       .from('events')
       .select('*')
@@ -331,6 +328,8 @@ export const dashboardService = {
       .order('start_date', { ascending: true });
 
     if (error) throw error;
+
+    console.log('📅 [DashboardService] Events found:', events?.length || 0);
 
     const now = new Date();
     const upcomingEvents = events.filter(e => new Date(e.start_date) >= now).slice(0, 5);
@@ -349,6 +348,16 @@ export const dashboardService = {
       const eventDate = new Date(e.start_date);
       return eventDate >= now && eventDate <= monthFromNow;
     }).length;
+
+    console.log('📊 [DashboardService] Event calculations:', {
+      total: events.length,
+      upcoming: upcomingEvents.length,
+      thisWeek: eventsThisWeek,
+      thisMonth: eventsThisMonth,
+      now: now.toISOString(),
+      weekFromNow: weekFromNow.toISOString(),
+      monthFromNow: monthFromNow.toISOString()
+    });
 
     // Calculate average events per month
     const sixMonthsAgo = new Date();
@@ -385,7 +394,7 @@ export const dashboardService = {
 
     const eventsNeedingVolunteers = upcomingEvents.filter(e => e.needs_volunteers === true).length;
 
-    return {
+    const result = {
       all: events,
       upcoming: upcomingEvents,
       stats: {
@@ -398,6 +407,9 @@ export const dashboardService = {
         needingVolunteers: eventsNeedingVolunteers
       }
     };
+
+    console.log('📊 [DashboardService] Final event stats:', result.stats);
+    return result;
   },
 
   // Tasks data - single API call

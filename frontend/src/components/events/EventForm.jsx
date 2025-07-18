@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
-import { parseVolunteerRoles } from '@/lib/data';
+import { parseVolunteerRoles, getCurrentUserOrganizationId } from '@/lib/data';
 import { locationService } from '@/lib/locationService';
+import { supabase } from '@/lib/supabaseClient';
 import { AlertTriangle, CheckCircle, MapPin, Users, Building } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -22,7 +23,7 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
     endTime: initialData.endDate ? format(new Date(initialData.endDate), 'HH:mm') : '10:00',
     location: initialData.location || '',
     location_id: initialData.location_id || '',
-    url: initialData.url || '',
+    
     is_recurring: initialData.is_recurring || false,
     recurrence_pattern: initialData.recurrence_pattern || '',
     monthly_week: initialData.monthly_week || '',
@@ -50,7 +51,7 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
       endTime: initialData.endDate ? format(new Date(initialData.endDate), 'HH:mm') : '10:00',
       location: initialData.location || '',
       location_id: initialData.location_id || '',
-      url: initialData.url || '',
+
       is_recurring: initialData.is_recurring || false,
       recurrence_pattern: initialData.recurrence_pattern || '',
       monthly_week: initialData.monthly_week || '',
@@ -109,10 +110,6 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
   };
 
   const checkLocationConflict = async () => {
-    // Temporarily disable location conflict checking until database function is fixed
-    setLocationConflict(null);
-    return;
-    
     if (!eventData.location_id || eventData.location_id === 'no-location' || !eventData.startDate || !eventData.endDate) {
       setLocationConflict(null);
       return;
@@ -122,15 +119,54 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
     try {
       const startDate = new Date(eventData.startDate);
       const endDate = new Date(eventData.endDate);
-      const conflict = await locationService.checkLocationConflict(
-        eventData.location_id,
-        startDate,
-        endDate,
-        initialData.id || null
-      );
-      setLocationConflict(conflict);
+      
+      // Direct query to check for conflicts
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) {
+        setLocationConflict(null);
+        return;
+      }
+
+      // Get all events at this location and check for conflicts manually
+      const { data: events, error } = await supabase
+        .from('events')
+        .select('id, title, start_date, end_date')
+        .eq('organization_id', organizationId)
+        .eq('location_id', eventData.location_id)
+        .neq('id', initialData.id || ''); // Exclude current event if editing
+
+      if (error) {
+        console.error('Error fetching events for conflict check:', error);
+        setLocationConflict(null);
+        return;
+      }
+
+      // Check for overlapping events
+      const conflictingEvent = events.find(event => {
+        const eventStart = new Date(event.start_date);
+        const eventEnd = new Date(event.end_date);
+        
+        // Check if the new event overlaps with existing event
+        // Two events overlap if:
+        // 1. New event starts before existing event ends AND
+        // 2. New event ends after existing event starts
+        const hasConflict = startDate < eventEnd && endDate > eventStart;
+        
+        return hasConflict;
+      });
+
+      if (conflictingEvent) {
+        setLocationConflict({
+          conflicting_event_title: conflictingEvent.title,
+          conflicting_start_date: conflictingEvent.start_date,
+          conflicting_end_date: conflictingEvent.end_date
+        });
+      } else {
+        setLocationConflict(null);
+      }
     } catch (error) {
       console.error('Error checking location conflict:', error);
+      setLocationConflict(null);
     } finally {
       setIsCheckingConflict(false);
     }
@@ -140,11 +176,16 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
     const { name, value, type, checked } = e.target;
     
     if (name === 'startDate' && value) {
-      // Always set end date to match start date when start date changes
+      // Set end date to 1 hour after start date when start date changes
+      const startDateTime = new Date(value);
+      const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000); // Add 1 hour
+      const endDateString = endDateTime.toISOString().slice(0, 16); // Format as YYYY-MM-DDTHH:MM
+      
       setEventData(prev => ({
         ...prev,
         [name]: value,
-        endDate: value
+        endDate: endDateString,
+        endTime: endDateTime.toTimeString().slice(0, 5) // Update end time to HH:MM
       }));
     } else {
       setEventData(prev => ({
@@ -239,42 +280,17 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="Worship Service">Worship Service</SelectItem>
-            <SelectItem value="Sunday Worship Service">Sunday Worship Service</SelectItem>
             <SelectItem value="Bible Study or Class">Bible Study or Class</SelectItem>
-            <SelectItem value="Wednesday Bible Study">Wednesday Bible Study</SelectItem>
             <SelectItem value="Prayer Meeting">Prayer Meeting</SelectItem>
-            <SelectItem value="Ministry Meeting">Ministry Meeting</SelectItem>
-            <SelectItem value="Outreach Event">Outreach Event</SelectItem>
             <SelectItem value="Fellowship Gathering">Fellowship Gathering</SelectItem>
-            <SelectItem value="Special Event">Special Event</SelectItem>
-            <SelectItem value="Training or Workshop">Training or Workshop</SelectItem>
-            <SelectItem value="Fundraiser">Fundraiser</SelectItem>
-            <SelectItem value="Trip or Retreat">Trip or Retreat</SelectItem>
+            <SelectItem value="Potluck">Potluck</SelectItem>
             <SelectItem value="Youth Group">Youth Group</SelectItem>
             <SelectItem value="Children's Ministry">Children's Ministry</SelectItem>
             <SelectItem value="Men's Ministry">Men's Ministry</SelectItem>
             <SelectItem value="Women's Ministry">Women's Ministry</SelectItem>
-            <SelectItem value="Choir Practice">Choir Practice</SelectItem>
             <SelectItem value="Board Meeting">Board Meeting</SelectItem>
-            <SelectItem value="Deacon Meeting">Deacon Meeting</SelectItem>
-            <SelectItem value="Potluck">Potluck</SelectItem>
             <SelectItem value="Community Service">Community Service</SelectItem>
-            <SelectItem value="Mission Trip">Mission Trip</SelectItem>
-            <SelectItem value="Conference">Conference</SelectItem>
-            <SelectItem value="Seminar">Seminar</SelectItem>
-            <SelectItem value="Concert">Concert</SelectItem>
-            <SelectItem value="Wedding">Wedding</SelectItem>
-            <SelectItem value="Funeral">Funeral</SelectItem>
-            <SelectItem value="Baptism">Baptism</SelectItem>
-            <SelectItem value="Communion">Communion</SelectItem>
-            <SelectItem value="Dedication">Dedication</SelectItem>
-            <SelectItem value="Graduation">Graduation</SelectItem>
-            <SelectItem value="Anniversary">Anniversary</SelectItem>
-            <SelectItem value="Holiday Service">Holiday Service</SelectItem>
-            <SelectItem value="Easter Service">Easter Service</SelectItem>
-            <SelectItem value="Christmas Service">Christmas Service</SelectItem>
-            <SelectItem value="Thanksgiving Service">Thanksgiving Service</SelectItem>
-            <SelectItem value="New Year's Service">New Year's Service</SelectItem>
+            <SelectItem value="Special Event">Special Event</SelectItem>
             <SelectItem value="Other">Other</SelectItem>
           </SelectContent>
         </Select>
@@ -448,10 +464,7 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
           />
         </div>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="url">URL</Label>
-        <Input id="url" name="url" type="url" value={eventData.url} onChange={handleFormChange} />
-      </div>
+
       <div className="space-y-2">
         <div className="flex items-center space-x-2">
           <Checkbox

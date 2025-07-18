@@ -424,36 +424,70 @@ export const getEvents = async () => {
         return group[0];
       }
 
-      // For recurring events, find the next occurrence
-      const today = new Date();
-      let nextDate = new Date(group[0].start_date);
-      
-      // Keep adding intervals until we find a future date
-      while (nextDate < today) {
-        switch (group[0].recurrence_pattern) {
-          case 'daily':
-            nextDate.setDate(nextDate.getDate() + 1);
-            break;
-          case 'weekly':
-            nextDate.setDate(nextDate.getDate() + 7);
-            break;
-          case 'biweekly':
-            nextDate.setDate(nextDate.getDate() + 14);
-            break;
-          case 'monthly':
-            nextDate.setMonth(nextDate.getMonth() + 1);
-            break;
-          default:
-            nextDate.setDate(nextDate.getDate() + 7); // Default to weekly
-        }
+      // For recurring events, ensure we have enough future instances
+      if (group[0].is_master) {
+        // This is a master event, ensure it has enough instances
+        ensureRecurringEventInstances(group[0].id);
       }
 
-      // Create a new event instance with the next occurrence date
-      return {
-        ...group[0],
-        start_date: nextDate.toISOString(),
-        end_date: new Date(nextDate.getTime() + (new Date(group[0].end_date) - new Date(group[0].start_date))).toISOString()
-      };
+      // Find the next occurrence from today
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Find the next future instance
+      const futureInstances = group.filter(event => {
+        const eventDate = new Date(event.start_date);
+        return eventDate >= today;
+      });
+
+      if (futureInstances.length > 0) {
+        // Return the next occurrence
+        return futureInstances[0];
+      } else {
+        // If no future instances found, calculate the next one
+        let nextDate = new Date(group[0].start_date);
+        
+        // Keep adding intervals until we find a future date
+        while (nextDate < today) {
+          switch (group[0].recurrence_pattern) {
+            case 'daily':
+              nextDate.setDate(nextDate.getDate() + 1);
+              break;
+            case 'weekly':
+              nextDate.setDate(nextDate.getDate() + 7);
+              break;
+            case 'biweekly':
+              nextDate.setDate(nextDate.getDate() + 14);
+              break;
+            case 'monthly':
+              nextDate.setMonth(nextDate.getMonth() + 1);
+              break;
+            case 'monthly_weekday':
+              const targetWeekday = parseInt(group[0].monthly_weekday);
+              const targetWeek = parseInt(group[0].monthly_week);
+              const nextMonth = new Date(nextDate);
+              nextMonth.setMonth(nextMonth.getMonth() + 1);
+              nextDate = getNthWeekdayOfMonth(
+                nextMonth.getFullYear(),
+                nextMonth.getMonth(),
+                targetWeek,
+                targetWeekday
+              );
+              const originalTime = new Date(group[0].start_date);
+              nextDate.setHours(originalTime.getHours(), originalTime.getMinutes(), 0, 0);
+              break;
+            default:
+              nextDate.setDate(nextDate.getDate() + 7); // Default to weekly
+          }
+        }
+
+        // Create a new event instance with the next occurrence date
+        return {
+          ...group[0],
+          start_date: nextDate.toISOString(),
+          end_date: new Date(nextDate.getTime() + (new Date(group[0].end_date) - new Date(group[0].start_date))).toISOString()
+        };
+      }
     });
 
     return processedEvents || [];
@@ -529,104 +563,55 @@ export const addEvent = async (event) => {
       organization_id: organizationId
     };
 
-    // If it's a recurring event, first create the master event
+    // If it's a recurring event, create the master event and instances
     if (event.is_recurring) {
-      // Check if a master event with this title already exists
-      const { data: existingMaster, error: checkError } = await supabase
+      // Create a more reliable master event ID
+      const masterEventId = `master-${event.title.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Date.now()}`;
+      
+      // Create master event
+      const masterEvent = {
+        ...eventData,
+        id: masterEventId,
+        is_master: true,
+        is_recurring: true,
+        parent_event_id: null
+      };
+
+      // Insert master event
+      const { data: masterData, error: masterError } = await supabase
         .from('events')
-        .select('*')
-        .eq('title', event.title)
-        .eq('organization_id', organizationId)
-        .eq('is_master', true)
-        .eq('is_recurring', true)
-        .limit(1);
+        .insert([masterEvent])
+        .select()
+        .single();
 
-      if (checkError && checkError.code !== 'PGRST116') {
-        console.error('Error checking for existing master event:', checkError);
+      if (masterError) {
+        console.error('Error creating master event:', masterError);
+        throw masterError;
       }
 
-      let masterEventId = eventId;
-      let masterData;
-
-      if (existingMaster && existingMaster.length > 0) {
-        // Use existing master event
-        masterEventId = existingMaster[0].id;
-        masterData = existingMaster[0];
-        console.log('Using existing master event:', masterEventId);
-      } else {
-        // Create new master event with is_master flag
-        const masterEvent = {
-          ...eventData,
-          is_master: true,
-          is_recurring: true
-        };
-
-        // Insert master event
-        const { data: newMasterData, error: masterError } = await supabase
-          .from('events')
-          .insert([masterEvent])
-          .select()
-          .single();
-
-        if (masterError) {
-          // If there's a conflict, try to find the existing master event
-          if (masterError.code === '23505') { // Unique constraint violation
-            console.log('Master event ID conflict, checking for existing master...');
-            const { data: conflictMaster, error: conflictError } = await supabase
-              .from('events')
-              .select('*')
-              .eq('title', event.title)
-              .eq('organization_id', organizationId)
-              .eq('is_master', true)
-              .limit(1);
-
-            if (!conflictError && conflictMaster && conflictMaster.length > 0) {
-              masterEventId = conflictMaster[0].id;
-              masterData = conflictMaster[0];
-              console.log('Found existing master event after conflict:', masterEventId);
-            } else {
-              throw masterError;
-            }
-          } else {
-            throw masterError;
-          }
-        } else {
-          masterData = newMasterData;
-        }
-      }
+      console.log('Created master event:', masterEventId);
 
       // Generate instances with parent_event_id pointing to master event
       const instances = generateRecurringInstances({
         ...eventData,
+        id: masterEventId,
         parent_event_id: masterEventId
       });
       
-      // Filter out instances that might already exist
-      const existingInstanceIds = instances.map(instance => instance.id);
-      const { data: existingInstances, error: existingError } = await supabase
-        .from('events')
-        .select('id')
-        .in('id', existingInstanceIds)
-        .eq('organization_id', organizationId);
-
-      if (existingError) {
-        console.error('Error checking for existing instances:', existingError);
-      }
-
-      const existingIds = existingInstances ? existingInstances.map(e => e.id) : [];
-      const newInstances = instances.filter(instance => !existingIds.includes(instance.id));
-      
-      if (newInstances.length > 0) {
-        // Insert only new instances
+      if (instances.length > 0) {
+        // Insert all instances
         const { data: instancesData, error: instancesError } = await supabase
           .from('events')
-          .insert(newInstances)
+          .insert(instances)
           .select();
         
-        if (instancesError) throw instancesError;
-        console.log(`Created ${newInstances.length} new instances for master event ${masterEventId}`);
-      } else {
-        console.log('All instances already exist for master event:', masterEventId);
+        if (instancesError) {
+          console.error('Error creating instances:', instancesError);
+          // If instances fail, we should still return the master event
+          // but log the error for debugging
+        } else {
+          console.log(`Created ${instances.length} instances for master event ${masterEventId}`);
+        }
       }
       
       return masterData; // Return the master event
@@ -826,6 +811,30 @@ export const deleteEvent = async (id) => {
   }
 };
 
+// Helper function to calculate the nth occurrence of a weekday in a month
+const getNthWeekdayOfMonth = (year, month, week, weekday) => {
+  const date = new Date(year, month, 1);
+  
+  // Find the first occurrence of the target weekday
+  while (date.getDay() !== weekday) {
+    date.setDate(date.getDate() + 1);
+  }
+  
+  if (week === 5) {
+    // For "last" week, go to the end of the month and work backwards
+    date.setMonth(date.getMonth() + 1);
+    date.setDate(0); // Last day of the month
+    while (date.getDay() !== weekday) {
+      date.setDate(date.getDate() - 1);
+    }
+  } else {
+    // For other weeks, add the appropriate number of weeks
+    date.setDate(date.getDate() + (week - 1) * 7);
+  }
+  
+  return date;
+};
+
 // Helper function to generate recurring event instances
 const generateRecurringInstances = (event) => {
   const instances = [];
@@ -833,19 +842,21 @@ const generateRecurringInstances = (event) => {
   const endDate = new Date(event.end_date);
   const duration = endDate.getTime() - startDate.getTime();
   
-  // Generate events for the next year
+  // Generate events for the next 6 months instead of a full year
   const maxDate = new Date();
-  maxDate.setFullYear(maxDate.getFullYear() + 1);
+  maxDate.setMonth(maxDate.getMonth() + 6);
   
   let currentDate = new Date(startDate);
+  let instanceCount = 0;
+  const maxInstances = 52; // Safety limit to prevent infinite loops
   
-  while (currentDate <= maxDate) {
+  while (currentDate <= maxDate && instanceCount < maxInstances) {
     const occurrenceEndDate = new Date(currentDate.getTime() + duration);
-    const instanceId = `${event.id}-${currentDate.toISOString()}`
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '');
+    
+    // Generate a shorter, more reliable instance ID
+    const dateStr = currentDate.toISOString().split('T')[0].replace(/-/g, '');
+    const timeStr = currentDate.toISOString().split('T')[1].split('.')[0].replace(/:/g, '');
+    const instanceId = `${event.id}-${dateStr}-${timeStr}`;
     
     instances.push({
       ...event,
@@ -855,6 +866,8 @@ const generateRecurringInstances = (event) => {
       is_master: false,
       parent_event_id: event.parent_event_id
     });
+    
+    instanceCount++;
     
     // Increment based on recurrence pattern
     switch (event.recurrence_pattern) {
@@ -871,40 +884,203 @@ const generateRecurringInstances = (event) => {
         currentDate.setMonth(currentDate.getMonth() + 1);
         break;
       case 'monthly_weekday':
-        // Get the next month
-        currentDate.setMonth(currentDate.getMonth() + 1);
-        // Set to first day of the month
-        currentDate.setDate(1);
-        
         // Get the target weekday (0-6, where 0 is Sunday)
         const targetWeekday = parseInt(event.monthly_weekday);
         // Get the target week (1-5, where 5 means last week)
         const targetWeek = parseInt(event.monthly_week);
         
-        // Find the target date
-        if (targetWeek === 5) {
-          // For last week, start from the end of the month
-          currentDate.setMonth(currentDate.getMonth() + 1);
-          currentDate.setDate(0); // Last day of the month
-          // Go backwards to find the target weekday
-          while (currentDate.getDay() !== targetWeekday) {
-            currentDate.setDate(currentDate.getDate() - 1);
-          }
-        } else {
-          // For other weeks, find the first occurrence of the target weekday
-          while (currentDate.getDay() !== targetWeekday) {
-            currentDate.setDate(currentDate.getDate() + 1);
-          }
-          // Add weeks to get to the target week
-          currentDate.setDate(currentDate.getDate() + (targetWeek - 1) * 7);
-        }
+        // Calculate the next occurrence
+        const nextMonth = new Date(currentDate);
+        nextMonth.setMonth(nextMonth.getMonth() + 1);
+        
+        const nextOccurrence = getNthWeekdayOfMonth(
+          nextMonth.getFullYear(),
+          nextMonth.getMonth(),
+          targetWeek,
+          targetWeekday
+        );
+        
+        // Preserve the original time
+        const originalTime = new Date(event.start_date);
+        nextOccurrence.setHours(originalTime.getHours(), originalTime.getMinutes(), 0, 0);
+        
+        currentDate = nextOccurrence;
         break;
       default:
         currentDate.setDate(currentDate.getDate() + 7); // Default to weekly
     }
   }
   
+  if (instanceCount >= maxInstances) {
+    console.warn(`Safety limit reached for recurring event ${event.title}. Generated ${instanceCount} instances.`);
+  }
+  
   return instances;
+};
+
+// Function to ensure a recurring event has enough future instances
+export const ensureRecurringEventInstances = async (masterEventId) => {
+  try {
+    // Get the master event
+    const { data: masterEvent, error: masterError } = await supabase
+      .from('events')
+      .select('*')
+      .eq('id', masterEventId)
+      .eq('is_master', true)
+      .single();
+
+    if (masterError || !masterEvent) {
+      console.error('Master event not found:', masterEventId);
+      return;
+    }
+
+    // Get existing instances
+    const { data: existingInstances, error: instancesError } = await supabase
+      .from('events')
+      .select('*')
+      .eq('parent_event_id', masterEventId)
+      .order('start_date', { ascending: true });
+
+    if (instancesError) {
+      console.error('Error fetching existing instances:', instancesError);
+      return;
+    }
+
+    // Check if we need more instances (ensure we have instances for the next 3 months)
+    const threeMonthsFromNow = new Date();
+    threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3);
+
+    const lastInstance = existingInstances[existingInstances.length - 1];
+    if (!lastInstance || new Date(lastInstance.start_date) < threeMonthsFromNow) {
+      // Generate additional instances starting from the last instance or master event
+      const startDate = lastInstance ? new Date(lastInstance.start_date) : new Date(masterEvent.start_date);
+      const endDate = new Date(masterEvent.end_date);
+      const duration = endDate.getTime() - startDate.getTime();
+
+      // Generate instances for the next 6 months from the start date
+      const maxDate = new Date(startDate);
+      maxDate.setMonth(maxDate.getMonth() + 6);
+
+      let currentDate = new Date(startDate);
+      const newInstances = [];
+      let instanceCount = 0;
+      const maxInstances = 26; // Safety limit
+
+      while (currentDate <= maxDate && instanceCount < maxInstances) {
+        // Skip the first instance if it's the same as the last existing instance
+        if (lastInstance && currentDate.getTime() === new Date(lastInstance.start_date).getTime()) {
+          // Move to next occurrence
+          switch (masterEvent.recurrence_pattern) {
+            case 'daily':
+              currentDate.setDate(currentDate.getDate() + 1);
+              break;
+            case 'weekly':
+              currentDate.setDate(currentDate.getDate() + 7);
+              break;
+            case 'biweekly':
+              currentDate.setDate(currentDate.getDate() + 14);
+              break;
+            case 'monthly':
+              currentDate.setMonth(currentDate.getMonth() + 1);
+              break;
+            case 'monthly_weekday':
+              const targetWeekday = parseInt(masterEvent.monthly_weekday);
+              const targetWeek = parseInt(masterEvent.monthly_week);
+              const nextMonth = new Date(currentDate);
+              nextMonth.setMonth(nextMonth.getMonth() + 1);
+              currentDate = getNthWeekdayOfMonth(
+                nextMonth.getFullYear(),
+                nextMonth.getMonth(),
+                targetWeek,
+                targetWeekday
+              );
+              const originalTime = new Date(masterEvent.start_date);
+              currentDate.setHours(originalTime.getHours(), originalTime.getMinutes(), 0, 0);
+              break;
+            default:
+              currentDate.setDate(currentDate.getDate() + 7);
+          }
+          continue;
+        }
+
+        const occurrenceEndDate = new Date(currentDate.getTime() + duration);
+        const dateStr = currentDate.toISOString().split('T')[0].replace(/-/g, '');
+        const timeStr = currentDate.toISOString().split('T')[1].split('.')[0].replace(/:/g, '');
+        const instanceId = `${masterEventId}-${dateStr}-${timeStr}`;
+
+        newInstances.push({
+          id: instanceId,
+          title: masterEvent.title,
+          description: masterEvent.description,
+          start_date: currentDate.toISOString(),
+          end_date: occurrenceEndDate.toISOString(),
+          location: masterEvent.location,
+          location_id: masterEvent.location_id,
+          url: masterEvent.url,
+          is_recurring: true,
+          recurrence_pattern: masterEvent.recurrence_pattern,
+          monthly_week: masterEvent.monthly_week,
+          monthly_weekday: masterEvent.monthly_weekday,
+          allow_rsvp: masterEvent.allow_rsvp,
+          attendance_type: masterEvent.attendance_type,
+          event_type: masterEvent.event_type,
+          needs_volunteers: masterEvent.needs_volunteers,
+          volunteer_roles: masterEvent.volunteer_roles,
+          is_master: false,
+          parent_event_id: masterEventId,
+          organization_id: masterEvent.organization_id
+        });
+
+        instanceCount++;
+
+        // Move to next occurrence
+        switch (masterEvent.recurrence_pattern) {
+          case 'daily':
+            currentDate.setDate(currentDate.getDate() + 1);
+            break;
+          case 'weekly':
+            currentDate.setDate(currentDate.getDate() + 7);
+            break;
+          case 'biweekly':
+            currentDate.setDate(currentDate.getDate() + 14);
+            break;
+          case 'monthly':
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            break;
+          case 'monthly_weekday':
+            const targetWeekday = parseInt(masterEvent.monthly_weekday);
+            const targetWeek = parseInt(masterEvent.monthly_week);
+            const nextMonth = new Date(currentDate);
+            nextMonth.setMonth(nextMonth.getMonth() + 1);
+            currentDate = getNthWeekdayOfMonth(
+              nextMonth.getFullYear(),
+              nextMonth.getMonth(),
+              targetWeek,
+              targetWeekday
+            );
+            const originalTime = new Date(masterEvent.start_date);
+            currentDate.setHours(originalTime.getHours(), originalTime.getMinutes(), 0, 0);
+            break;
+          default:
+            currentDate.setDate(currentDate.getDate() + 7);
+        }
+      }
+
+      if (newInstances.length > 0) {
+        const { error: insertError } = await supabase
+          .from('events')
+          .insert(newInstances);
+
+        if (insertError) {
+          console.error('Error creating additional instances:', insertError);
+        } else {
+          console.log(`Created ${newInstances.length} additional instances for master event ${masterEventId}`);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error ensuring recurring event instances:', error);
+  }
 };
 
 // Donations
