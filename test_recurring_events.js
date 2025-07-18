@@ -10,6 +10,7 @@ if (!supabaseUrl || !supabaseKey) {
   process.exit(1);
 }
 
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Test data for recurring events
 const testEvents = [
