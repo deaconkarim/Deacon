@@ -3037,6 +3037,39 @@ export default function Events() {
     }
   };
 
+  // Helper function to extract actual event ID from generated instance IDs
+  const getActualEventId = (eventId) => {
+    if (!eventId) return eventId;
+    
+    // Check if this is a generated recurring event instance
+    if ((eventId.includes('-') || eventId.includes('_')) && eventId.length > 36) {
+      // Extract the original event ID from the generated instance ID
+      if (eventId.includes('_')) {
+        return eventId.split('_')[0];
+      } else if (eventId.includes('-')) {
+        // For the format like "sunday-morning-worship-service-1746381600000-2025-07-20t18-00-00-000z"
+        const timestampPattern = /\d{4}-\d{2}-\d{2}t\d{2}-\d{2}-\d{2}-\d{3}z$/i;
+        const match = eventId.match(timestampPattern);
+        if (match) {
+          return eventId.substring(0, match.index);
+        } else {
+          // Fallback: try to find the last numeric part that looks like a timestamp
+          const parts = eventId.split('-');
+          if (parts.length >= 2) {
+            const timestampIndex = parts.findIndex(part => part.includes('t'));
+            if (timestampIndex !== -1) {
+              return parts.slice(0, timestampIndex).join('-');
+            } else {
+              return parts.slice(0, -1).join('-');
+            }
+          }
+        }
+      }
+    }
+    
+    return eventId;
+  };
+
   const fetchMembers = useCallback(async () => {
     try {
       // Get current user's organization ID (including impersonation)
@@ -3065,6 +3098,35 @@ export default function Events() {
   // Add function to fetch last event attendance
   const fetchLastEventAttendance = async (eventId) => {
     try {
+      // Get the actual event ID for database operations
+      let actualEventId = eventId;
+      
+      // Check if this is a generated recurring event instance
+      if (eventId && (eventId.includes('-') || eventId.includes('_')) && eventId.length > 36) {
+        // Extract the original event ID from the generated instance ID
+        if (eventId.includes('_')) {
+          actualEventId = eventId.split('_')[0];
+        } else if (eventId.includes('-')) {
+          // For the format like "sunday-morning-worship-service-1746381600000-2025-07-20t18-00-00-000z"
+          const timestampPattern = /\d{4}-\d{2}-\d{2}t\d{2}-\d{2}-\d{2}-\d{3}z$/i;
+          const match = eventId.match(timestampPattern);
+          if (match) {
+            actualEventId = eventId.substring(0, match.index);
+          } else {
+            // Fallback: try to find the last numeric part that looks like a timestamp
+            const parts = eventId.split('-');
+            if (parts.length >= 2) {
+              const timestampIndex = parts.findIndex(part => part.includes('t'));
+              if (timestampIndex !== -1) {
+                actualEventId = parts.slice(0, timestampIndex).join('-');
+              } else {
+                actualEventId = parts.slice(0, -1).join('-');
+              }
+            }
+          }
+        }
+      }
+      
       const { data, error } = await supabase
         .from('event_attendance')
         .select(`
@@ -3074,7 +3136,7 @@ export default function Events() {
             start_date
           )
         `)
-        .eq('event_id', eventId)
+        .eq('event_id', actualEventId)
         .order('events(start_date)', { ascending: false })
         .limit(1);
 
@@ -3093,32 +3155,190 @@ export default function Events() {
     }
   };
 
-  const handleRSVP = async (eventId) => {
+  const handleRSVP = async (event) => {
     try {
+      // For recurring events, we need to find the original event to get all the event data
+      let eventToUse = event;
+      
+      // Check if this is a generated recurring event instance
+      if (event.id && (event.id.includes('-') || event.id.includes('_')) && event.id.length > 36) {
+        // Extract the original event ID from the generated instance ID
+        let originalEventId;
+        if (event.id.includes('_')) {
+          originalEventId = event.id.split('_')[0];
+        } else if (event.id.includes('-')) {
+          // For the format like "sunday-morning-worship-service-1746381600000-2025-07-20t18-00-00-000z"
+          const timestampPattern = /\d{4}-\d{2}-\d{2}t\d{2}-\d{2}-\d{2}-\d{3}z$/i;
+          const match = event.id.match(timestampPattern);
+          if (match) {
+            originalEventId = event.id.substring(0, match.index);
+          } else {
+            // Fallback: try to find the last numeric part that looks like a timestamp
+            const parts = event.id.split('-');
+            if (parts.length >= 2) {
+              const timestampIndex = parts.findIndex(part => part.includes('t'));
+              if (timestampIndex !== -1) {
+                originalEventId = parts.slice(0, timestampIndex).join('-');
+              } else {
+                originalEventId = parts.slice(0, -1).join('-');
+              }
+            }
+          }
+        }
+        
+        if (originalEventId) {
+          // Find the original event in our events list
+          const originalEvent = events.find(e => e.id === originalEventId);
+          
+          if (originalEvent) {
+            eventToUse = originalEvent;
+          }
+        }
+      }
+      
       // Reset all state first
-      setSelectedEvent({ id: eventId });
+      setSelectedEvent(eventToUse);
       setSelectedMembers([]);
       setMemberSearchQuery('');
       setIsMemberDialogOpen(true);
       
-      // Fetch existing attendance records
-      const { data: existingRecords, error: fetchError } = await supabase
-        .from('event_attendance')
-        .select('*')
-        .eq('event_id', eventId);
+      // Get the actual event ID for database operations
+      const actualEventId = getActualEventId(event.id);
+      
 
-      if (fetchError) {
-        throw fetchError;
-      }
-
-      // Set selected members based on existing records
-      if (existingRecords && existingRecords.length > 0) {
-              const memberIds = existingRecords.map(record => record.member_id);
-      setSelectedMembers(memberIds);
-      }
 
       // Fetch last event attendance
-      await fetchLastEventAttendance(eventId);
+      await fetchLastEventAttendance(actualEventId);
+      
+      // Check if this is a past event
+      const eventDate = new Date(eventToUse.start_date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const isPastEvent = eventDate < today;
+      setIsEditingPastEvent(isPastEvent);
+      
+      try {
+        // Fetch all members
+        const { data: allMembers, error: membersError } = await supabase
+          .from('members')
+          .select('*')
+          .order('firstname');
+
+        if (membersError) throw membersError;
+
+        // Fetch already RSVP'd/Checked In People (including anonymous attendees) with member data
+        const { data: attendanceData, error: attendanceError } = await supabase
+          .from('event_attendance')
+          .select(`
+            id,
+            member_id,
+            anonymous_name,
+            members (
+              id,
+              firstname,
+              lastname,
+              email,
+              image_url
+            )
+          `)
+          .eq('event_id', actualEventId);
+
+        if (attendanceError) throw attendanceError;
+
+        // Get IDs of members who have already RSVP'd/checked in
+        const attendingMemberIds = attendanceData
+          .filter(record => record.member_id) // Only include records with member_id
+          .map(record => record.member_id);
+        
+        // Filter out members who have already RSVP'd/checked in
+        const availableMembers = allMembers.filter(member => !attendingMemberIds.includes(member.id));
+        
+        // Get the full member data for already RSVP'd/Checked In People
+        const alreadyAttendingMembers = attendanceData
+          .filter(record => record.members) // Only include records with member data
+          .map(record => record.members);
+        
+        // Add anonymous attendees to the already attending list
+        const anonymousAttendees = attendanceData
+          .filter(record => record.anonymous_name && !record.member_id)
+          .map(record => ({
+            id: `anonymous-${record.id}`,
+            firstname: 'Anonymous',
+            lastname: '',
+            email: null,
+            image_url: null,
+            isAnonymous: true
+          }));
+        
+        const allAttendingMembers = [...alreadyAttendingMembers, ...anonymousAttendees];
+
+        // If this is a recurring event, get attendance suggestions based on previous instances
+        let suggestedMembers = [];
+        let attendanceCounts = {};
+        if (eventToUse.is_recurring || eventToUse.recurrence_pattern) {
+          try {
+            // Get previous instances of this event (or similar events of the same type)
+            const { data: previousAttendance, error: prevError } = await supabase
+              .from('event_attendance')
+              .select(`
+                member_id,
+                status,
+                events!inner (
+                  id,
+                  title,
+                  event_type,
+                  start_date,
+                  is_recurring,
+                  recurrence_pattern
+                )
+              `)
+              .eq('events.event_type', eventToUse.event_type)
+              .eq('events.is_recurring', true)
+              .gte('events.start_date', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()); // Last 90 days
+
+            if (!prevError && previousAttendance) {
+              // Count attendance frequency for each member
+              previousAttendance.forEach(record => {
+                const memberId = record.member_id;
+                attendanceCounts[memberId] = (attendanceCounts[memberId] || 0) + 1;
+              });
+
+              // Sort members by attendance frequency (most frequent first)
+              const sortedMemberIds = Object.keys(attendanceCounts)
+                .sort((a, b) => attendanceCounts[b] - attendanceCounts[a]);
+
+              // Get the top 10 most frequent attendees who are available
+              const topAttendees = sortedMemberIds
+                .slice(0, 10)
+                .map(memberId => availableMembers.find(m => m.id === memberId))
+                .filter(Boolean);
+
+              suggestedMembers = topAttendees;
+            }
+          } catch (error) {
+            console.error('Error fetching attendance suggestions:', error);
+            // Continue without suggestions if there's an error
+          }
+        }
+
+        // Sort available members: suggested members first, then alphabetically
+        const sortedAvailableMembers = [
+          ...suggestedMembers,
+          ...availableMembers.filter(member => !suggestedMembers.find(s => s.id === member.id))
+        ];
+
+        setMembers(sortedAvailableMembers);
+        setSuggestedMembers(suggestedMembers);
+        setMemberAttendanceCount(attendanceCounts);
+        setAlreadyRSVPMembers(allAttendingMembers || []);
+      } catch (error) {
+        console.error('Error fetching members:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load members. Please try again."
+        });
+      }
     } catch (error) {
       toast({
         variant: "destructive",
@@ -3130,11 +3350,41 @@ export default function Events() {
 
   const handleMemberClick = async (member) => {
     try {
-      // Add Person to event attendance
+      // Get the actual event ID for database operations
+      // If this is a generated instance ID, extract the original event ID
+      let actualEventId = selectedEvent.id;
+      
+      // Check if this is a generated recurring event instance
+      if (selectedEvent.id && (selectedEvent.id.includes('-') || selectedEvent.id.includes('_')) && selectedEvent.id.length > 36) {
+        // Extract the original event ID from the generated instance ID
+        if (selectedEvent.id.includes('_')) {
+          actualEventId = selectedEvent.id.split('_')[0];
+        } else if (selectedEvent.id.includes('-')) {
+          // For the format like "sunday-morning-worship-service-1746381600000-2025-07-20t18-00-00-000z"
+          const timestampPattern = /\d{4}-\d{2}-\d{2}t\d{2}-\d{2}-\d{2}-\d{3}z$/i;
+          const match = selectedEvent.id.match(timestampPattern);
+          if (match) {
+            actualEventId = selectedEvent.id.substring(0, match.index);
+          } else {
+            // Fallback: try to find the last numeric part that looks like a timestamp
+            const parts = selectedEvent.id.split('-');
+            if (parts.length >= 2) {
+              const timestampIndex = parts.findIndex(part => part.includes('t'));
+              if (timestampIndex !== -1) {
+                actualEventId = parts.slice(0, timestampIndex).join('-');
+              } else {
+                actualEventId = parts.slice(0, -1).join('-');
+              }
+            }
+          }
+        }
+      }
+      
+      // Add Person to event attendance using the actual event ID
       const { data: attendanceData, error } = await supabase
         .from('event_attendance')
         .upsert({
-          event_id: selectedEvent.id,
+          event_id: actualEventId,
           member_id: member.id,
           status: 'attending'
         })
@@ -3155,7 +3405,7 @@ export default function Events() {
           console.log('🎯 Event data:', selectedEvent);
           const triggerData = {
             id: attendanceData.id,
-            event_id: selectedEvent.id,
+            event_id: actualEventId,
             member_id: member.id,
             status: 'attending',
             event_type: selectedEvent.event_type,
@@ -3197,8 +3447,8 @@ export default function Events() {
       // Refresh the events list to update attendance count
       await fetchEvents();
 
-      // For check-in events, refresh the available members list to ensure consistency
-      if (selectedEvent?.attendance_type === 'check-in') {
+      // Refresh the available members list to ensure consistency for all event types
+      try {
         try {
           // Fetch current attendance data to get accurate lists
           const { data: attendanceData, error: attendanceError } = await supabase
@@ -3213,7 +3463,7 @@ export default function Events() {
                 image_url
               )
             `)
-            .eq('event_id', selectedEvent.id);
+            .eq('event_id', actualEventId);
 
           if (!attendanceError && attendanceData) {
             // Get IDs of members who have already checked in
@@ -3299,6 +3549,8 @@ export default function Events() {
         } catch (error) {
           console.error('Error refreshing member lists:', error);
         }
+      } catch (error) {
+        console.error('Error refreshing member lists:', error);
       }
 
       // Keep dialog open for check-in events to allow multiple check-ins
@@ -3313,11 +3565,41 @@ export default function Events() {
 
   const handleAnonymousCheckin = async () => {
     try {
-      // Add anonymous person to event attendance
+      // Get the actual event ID for database operations
+      // If this is a generated instance ID, extract the original event ID
+      let actualEventId = selectedEvent.id;
+      
+      // Check if this is a generated recurring event instance
+      if (selectedEvent.id && (selectedEvent.id.includes('-') || selectedEvent.id.includes('_')) && selectedEvent.id.length > 36) {
+        // Extract the original event ID from the generated instance ID
+        if (selectedEvent.id.includes('_')) {
+          actualEventId = selectedEvent.id.split('_')[0];
+        } else if (selectedEvent.id.includes('-')) {
+          // For the format like "sunday-morning-worship-service-1746381600000-2025-07-20t18-00-00-000z"
+          const timestampPattern = /\d{4}-\d{2}-\d{2}t\d{2}-\d{2}-\d{2}-\d{3}z$/i;
+          const match = selectedEvent.id.match(timestampPattern);
+          if (match) {
+            actualEventId = selectedEvent.id.substring(0, match.index);
+          } else {
+            // Fallback: try to find the last numeric part that looks like a timestamp
+            const parts = selectedEvent.id.split('-');
+            if (parts.length >= 2) {
+              const timestampIndex = parts.findIndex(part => part.includes('t'));
+              if (timestampIndex !== -1) {
+                actualEventId = parts.slice(0, timestampIndex).join('-');
+              } else {
+                actualEventId = parts.slice(0, -1).join('-');
+              }
+            }
+          }
+        }
+      }
+      
+      // Add anonymous person to event attendance using the actual event ID
       const { data: attendanceData, error } = await supabase
         .from('event_attendance')
         .upsert({
-          event_id: selectedEvent.id,
+          event_id: actualEventId,
           member_id: null,
           anonymous_name: 'Anonymous',
           status: 'attending'
@@ -3339,7 +3621,7 @@ export default function Events() {
           console.log('🎯 Event data:', selectedEvent);
           const triggerData = {
             id: attendanceData.id,
-            event_id: selectedEvent.id,
+            event_id: actualEventId,
             member_id: null,
             anonymous_name: 'Anonymous',
             status: 'attending',
@@ -3424,10 +3706,39 @@ export default function Events() {
         }
       } else {
         // For regular members
+        // Get the actual event ID for database operations
+        let actualEventId = selectedEvent.id;
+        
+        // Check if this is a generated recurring event instance
+        if (selectedEvent.id && (selectedEvent.id.includes('-') || selectedEvent.id.includes('_')) && selectedEvent.id.length > 36) {
+          // Extract the original event ID from the generated instance ID
+          if (selectedEvent.id.includes('_')) {
+            actualEventId = selectedEvent.id.split('_')[0];
+          } else if (selectedEvent.id.includes('-')) {
+            // For the format like "sunday-morning-worship-service-1746381600000-2025-07-20t18-00-00-000z"
+            const timestampPattern = /\d{4}-\d{2}-\d{2}t\d{2}-\d{2}-\d{2}-\d{3}z$/i;
+            const match = selectedEvent.id.match(timestampPattern);
+            if (match) {
+              actualEventId = selectedEvent.id.substring(0, match.index);
+            } else {
+              // Fallback: try to find the last numeric part that looks like a timestamp
+              const parts = selectedEvent.id.split('-');
+              if (parts.length >= 2) {
+                const timestampIndex = parts.findIndex(part => part.includes('t'));
+                if (timestampIndex !== -1) {
+                  actualEventId = parts.slice(0, timestampIndex).join('-');
+                } else {
+                  actualEventId = parts.slice(0, -1).join('-');
+                }
+              }
+            }
+          }
+        }
+        
         const { error } = await supabase
           .from('event_attendance')
           .delete()
-          .eq('event_id', selectedEvent.id)
+          .eq('event_id', actualEventId)
           .eq('member_id', memberId);
 
         if (error) throw error;
@@ -3468,8 +3779,38 @@ export default function Events() {
 
   const handleDone = async () => {
     try {
+      // Get the actual event ID for database operations
+      // If this is a generated instance ID, extract the original event ID
+      let actualEventId = selectedEvent.id;
+      
+      // Check if this is a generated recurring event instance
+      if (selectedEvent.id && (selectedEvent.id.includes('-') || selectedEvent.id.includes('_')) && selectedEvent.id.length > 36) {
+        // Extract the original event ID from the generated instance ID
+        if (selectedEvent.id.includes('_')) {
+          actualEventId = selectedEvent.id.split('_')[0];
+        } else if (selectedEvent.id.includes('-')) {
+          // For the format like "sunday-morning-worship-service-1746381600000-2025-07-20t18-00-00-000z"
+          const timestampPattern = /\d{4}-\d{2}-\d{2}t\d{2}-\d{2}-\d{2}-\d{3}z$/i;
+          const match = selectedEvent.id.match(timestampPattern);
+          if (match) {
+            actualEventId = selectedEvent.id.substring(0, match.index);
+          } else {
+            // Fallback: try to find the last numeric part that looks like a timestamp
+            const parts = selectedEvent.id.split('-');
+            if (parts.length >= 2) {
+              const timestampIndex = parts.findIndex(part => part.includes('t'));
+              if (timestampIndex !== -1) {
+                actualEventId = parts.slice(0, timestampIndex).join('-');
+              } else {
+                actualEventId = parts.slice(0, -1).join('-');
+              }
+            }
+          }
+        }
+      }
+      
       const rsvpsToAdd = selectedMembers.map(memberId => ({
-        event_id: selectedEvent.id,
+        event_id: actualEventId,
         member_id: memberId,
         status: 'attending'
       }));
@@ -3493,7 +3834,7 @@ export default function Events() {
                 'event_attendance',
                 {
                   id: attendance.id,
-                  event_id: selectedEvent.id,
+                  event_id: actualEventId,
                   member_id: attendance.member_id,
                   status: 'attending',
                   event_type: selectedEvent.event_type,
@@ -3547,13 +3888,13 @@ export default function Events() {
     }
   };
 
-  const getRSVPButton = (eventId) => {
+  const getRSVPButton = (event) => {
     return (
       <Button 
         variant="default" 
         size="sm"
         className="bg-blue-600 hover:bg-blue-700"
-        onClick={() => handleRSVP(eventId)}
+        onClick={() => handleOpenDialog(event)}
       >
         <HelpCircle className="mr-2 h-4 w-4 text-white" />
         RSVP
@@ -3589,6 +3930,35 @@ export default function Events() {
 
   const fetchAttendingMembers = async (eventId) => {
     try {
+      // Get the actual event ID for database operations
+      let actualEventId = eventId;
+      
+      // Check if this is a generated recurring event instance
+      if (eventId && (eventId.includes('-') || eventId.includes('_')) && eventId.length > 36) {
+        // Extract the original event ID from the generated instance ID
+        if (eventId.includes('_')) {
+          actualEventId = eventId.split('_')[0];
+        } else if (eventId.includes('-')) {
+          // For the format like "sunday-morning-worship-service-1746381600000-2025-07-20t18-00-00-000z"
+          const timestampPattern = /\d{4}-\d{2}-\d{2}t\d{2}-\d{2}-\d{2}-\d{3}z$/i;
+          const match = eventId.match(timestampPattern);
+          if (match) {
+            actualEventId = eventId.substring(0, match.index);
+          } else {
+            // Fallback: try to find the last numeric part that looks like a timestamp
+            const parts = eventId.split('-');
+            if (parts.length >= 2) {
+              const timestampIndex = parts.findIndex(part => part.includes('t'));
+              if (timestampIndex !== -1) {
+                actualEventId = parts.slice(0, timestampIndex).join('-');
+              } else {
+                actualEventId = parts.slice(0, -1).join('-');
+              }
+            }
+          }
+        }
+      }
+      
       const { data, error } = await supabase
         .from('event_attendance')
         .select(`
@@ -3603,7 +3973,7 @@ export default function Events() {
             phone
           )
         `)
-        .eq('event_id', eventId)
+        .eq('event_id', actualEventId)
         .eq('status', 'attending');
 
       if (error) throw error;
@@ -3742,6 +4112,35 @@ export default function Events() {
 
   const fetchEventAttendance = async (eventId) => {
     try {
+      // Get the actual event ID for database operations
+      let actualEventId = eventId;
+      
+      // Check if this is a generated recurring event instance
+      if (eventId && (eventId.includes('-') || eventId.includes('_')) && eventId.length > 36) {
+        // Extract the original event ID from the generated instance ID
+        if (eventId.includes('_')) {
+          actualEventId = eventId.split('_')[0];
+        } else if (eventId.includes('-')) {
+          // For the format like "sunday-morning-worship-service-1746381600000-2025-07-20t18-00-00-000z"
+          const timestampPattern = /\d{4}-\d{2}-\d{2}t\d{2}-\d{2}-\d{2}-\d{3}z$/i;
+          const match = eventId.match(timestampPattern);
+          if (match) {
+            actualEventId = eventId.substring(0, match.index);
+          } else {
+            // Fallback: try to find the last numeric part that looks like a timestamp
+            const parts = eventId.split('-');
+            if (parts.length >= 2) {
+              const timestampIndex = parts.findIndex(part => part.includes('t'));
+              if (timestampIndex !== -1) {
+                actualEventId = parts.slice(0, timestampIndex).join('-');
+              } else {
+                actualEventId = parts.slice(0, -1).join('-');
+              }
+            }
+          }
+        }
+      }
+      
       const { data, error } = await supabase
         .from('event_attendance')
         .select(`
@@ -3752,7 +4151,7 @@ export default function Events() {
             lastname
           )
         `)
-        .eq('event_id', eventId);
+        .eq('event_id', actualEventId);
 
       if (error) throw error;
 
@@ -3891,6 +4290,35 @@ export default function Events() {
       setSelectedEvent(event);
       setIsMemberDialogOpen(true);
       
+      // Get the actual event ID for database operations
+      let actualEventId = event.id;
+      
+      // Check if this is a generated recurring event instance
+      if (event.id && (event.id.includes('-') || event.id.includes('_')) && event.id.length > 36) {
+        // Extract the original event ID from the generated instance ID
+        if (event.id.includes('_')) {
+          actualEventId = event.id.split('_')[0];
+        } else if (event.id.includes('-')) {
+          // For the format like "sunday-morning-worship-service-1746381600000-2025-07-20t18-00-00-000z"
+          const timestampPattern = /\d{4}-\d{2}-\d{2}t\d{2}-\d{2}-\d{2}-\d{3}z$/i;
+          const match = event.id.match(timestampPattern);
+          if (match) {
+            actualEventId = event.id.substring(0, match.index);
+          } else {
+            // Fallback: try to find the last numeric part that looks like a timestamp
+            const parts = event.id.split('-');
+            if (parts.length >= 2) {
+              const timestampIndex = parts.findIndex(part => part.includes('t'));
+              if (timestampIndex !== -1) {
+                actualEventId = parts.slice(0, timestampIndex).join('-');
+              } else {
+                actualEventId = parts.slice(0, -1).join('-');
+              }
+            }
+          }
+        }
+      }
+      
       // First get all members who have already RSVP'd/checked in (including anonymous attendees)
       const { data: attendingMembers, error: attendanceError } = await supabase
         .from('event_attendance')
@@ -3906,7 +4334,7 @@ export default function Events() {
             image_url
           )
         `)
-        .eq('event_id', event.id);
+        .eq('event_id', actualEventId);
 
       if (attendanceError) throw attendanceError;
       
@@ -4117,6 +4545,7 @@ export default function Events() {
   const handleOpenDialog = async (event) => {
     // If this is a generated recurring event instance, we need to use the master event for RSVP
     let eventToUse = event;
+    let actualEventId = event.id; // Default to the event ID as-is
     
     // Check if this is an old event with a malformed ID (like gjhgjhgh-1752854400000)
     const isOldMalformedId = event.id && event.id.includes('-') && event.id.length > 36 && !event.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
@@ -4158,6 +4587,7 @@ export default function Events() {
         
         if (originalEvent) {
           eventToUse = originalEvent;
+          actualEventId = originalEventId; // Use the original event ID for database queries
         } else {
           // For old events, just use the event as-is instead of showing an error
           console.log('Could not find original event, using event as-is:', event.id);
@@ -4186,6 +4616,10 @@ export default function Events() {
 
       if (membersError) throw membersError;
 
+      // Use the actual event ID for database operations
+      console.log('🔍 Using actualEventId for database query:', actualEventId);
+      console.log('🔍 Original event.id:', event.id);
+      
       // Fetch already RSVP'd/Checked In People (including anonymous attendees)
       const { data: attendanceData, error: attendanceError } = await supabase
         .from('event_attendance')
@@ -4201,9 +4635,12 @@ export default function Events() {
             image_url
           )
         `)
-        .eq('event_id', event.id);
+        .eq('event_id', actualEventId);
 
       if (attendanceError) throw attendanceError;
+      
+      console.log('🔍 Attendance data found:', attendanceData?.length || 0, 'records');
+      console.log('🔍 Attendance data:', attendanceData);
 
       // Get IDs of members who have already RSVP'd/checked in
       const attendingMemberIds = attendanceData
@@ -4287,6 +4724,9 @@ export default function Events() {
         ...availableMembers.filter(member => !suggestedMembers.find(s => s.id === member.id))
       ];
 
+      console.log('🔍 Setting alreadyRSVPMembers:', allAttendingMembers?.length || 0, 'members');
+      console.log('🔍 Already attending members:', allAttendingMembers);
+      
       setMembers(sortedAvailableMembers);
       setSuggestedMembers(suggestedMembers);
       setMemberAttendanceCount(attendanceCounts);
@@ -4318,11 +4758,40 @@ export default function Events() {
     setSelectedPotluckEvent(event);
     setIsPotluckRSVPDialogOpen(true);
     
+    // Get the actual event ID for database operations
+    let actualEventId = event.id;
+    
+    // Check if this is a generated recurring event instance
+    if (event.id && (event.id.includes('-') || event.id.includes('_')) && event.id.length > 36) {
+      // Extract the original event ID from the generated instance ID
+      if (event.id.includes('_')) {
+        actualEventId = event.id.split('_')[0];
+      } else if (event.id.includes('-')) {
+        // For the format like "sunday-morning-worship-service-1746381600000-2025-07-20t18-00-00-000z"
+        const timestampPattern = /\d{4}-\d{2}-\d{2}t\d{2}-\d{2}-\d{2}-\d{3}z$/i;
+        const match = event.id.match(timestampPattern);
+        if (match) {
+          actualEventId = event.id.substring(0, match.index);
+        } else {
+          // Fallback: try to find the last numeric part that looks like a timestamp
+          const parts = event.id.split('-');
+          if (parts.length >= 2) {
+            const timestampIndex = parts.findIndex(part => part.includes('t'));
+            if (timestampIndex !== -1) {
+              actualEventId = parts.slice(0, timestampIndex).join('-');
+            } else {
+              actualEventId = parts.slice(0, -1).join('-');
+            }
+          }
+        }
+      }
+    }
+    
     try {
       const { data: rsvps, error } = await supabase
         .from('potluck_rsvps')
         .select('*')
-        .eq('event_id', event.id);
+        .eq('event_id', actualEventId);
       
       if (error) throw error;
       setPotluckRSVPs(rsvps || []);
