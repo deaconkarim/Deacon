@@ -2114,6 +2114,7 @@ export default function Events() {
   const [members, setMembers] = useState([]);
   const [isMemberDialogOpen, setIsMemberDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [selectedEventOriginalId, setSelectedEventOriginalId] = useState(null);
   const [selectedMembers, setSelectedMembers] = useState([]);
   const [memberSearchQuery, setMemberSearchQuery] = useState('');
   const [attendingMembers, setAttendingMembers] = useState([]);
@@ -3350,35 +3351,9 @@ export default function Events() {
 
   const handleMemberClick = async (member) => {
     try {
-      // Get the actual event ID for database operations
-      // If this is a generated instance ID, extract the original event ID
-      let actualEventId = selectedEvent.id;
-      
-      // Check if this is a generated recurring event instance
-      if (selectedEvent.id && (selectedEvent.id.includes('-') || selectedEvent.id.includes('_')) && selectedEvent.id.length > 36) {
-        // Extract the original event ID from the generated instance ID
-        if (selectedEvent.id.includes('_')) {
-          actualEventId = selectedEvent.id.split('_')[0];
-        } else if (selectedEvent.id.includes('-')) {
-          // For the format like "sunday-morning-worship-service-1746381600000-2025-07-20t18-00-00-000z"
-          const timestampPattern = /\d{4}-\d{2}-\d{2}t\d{2}-\d{2}-\d{2}-\d{3}z$/i;
-          const match = selectedEvent.id.match(timestampPattern);
-          if (match) {
-            actualEventId = selectedEvent.id.substring(0, match.index);
-          } else {
-            // Fallback: try to find the last numeric part that looks like a timestamp
-            const parts = selectedEvent.id.split('-');
-            if (parts.length >= 2) {
-              const timestampIndex = parts.findIndex(part => part.includes('t'));
-              if (timestampIndex !== -1) {
-                actualEventId = parts.slice(0, timestampIndex).join('-');
-              } else {
-                actualEventId = parts.slice(0, -1).join('-');
-              }
-            }
-          }
-        }
-      }
+      // Use the original event ID for adding new attendance records
+      // This is the ID that was passed to handleOpenDialog (could be a generated instance ID)
+      const actualEventId = selectedEventOriginalId || selectedEvent.id;
       
       // Add Person to event attendance using the actual event ID
       const { data: attendanceData, error } = await supabase
@@ -4543,6 +4518,9 @@ export default function Events() {
   };
 
   const handleOpenDialog = async (event) => {
+    // Store the original event ID that was passed to us (for adding new attendance)
+    const originalEventId = event.id;
+    
     // If this is a generated recurring event instance, we need to use the master event for RSVP
     let eventToUse = event;
     let actualEventId = event.id; // Default to the event ID as-is
@@ -4596,6 +4574,8 @@ export default function Events() {
     }
     
     setSelectedEvent(eventToUse);
+    // Store the original event ID for adding new attendance records
+    setSelectedEventOriginalId(originalEventId);
     setSelectedMembers([]);
     setMemberSearchQuery('');
     setIsMemberDialogOpen(true);
@@ -4744,6 +4724,7 @@ export default function Events() {
   const handleCloseDialog = () => {
     setIsMemberDialogOpen(false);
     setSelectedEvent(null);
+    setSelectedEventOriginalId(null);
     setSelectedMembers([]);
     setMembers([]);
     setAlreadyRSVPMembers([]);
