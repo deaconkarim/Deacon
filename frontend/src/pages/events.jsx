@@ -2363,37 +2363,87 @@ export default function Events() {
       let processedEvents;
       
       if (viewMode === 'kiosk') {
-        // For kiosk view, only show the next instance of recurring events
-        processedEvents = data.reduce((acc, event) => {
-        // Add attendance count to the event
-        const eventWithAttendance = {
+        // For kiosk view, filter out past events and respect time filter
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // Filter out past events first
+        const futureEvents = data.filter(event => {
+          const eventDate = new Date(event.start_date);
+          return eventDate >= today;
+        });
+        
+        // Calculate the end date based on the time filter for kiosk view
+        let filterEndDate = null;
+        
+        if (timeWindowFilter === 'month') {
+          filterEndDate = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+        } else if (timeWindowFilter === 'week') {
+          const weekStart = new Date(today);
+          weekStart.setDate(today.getDate() - today.getDay());
+          const weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekStart.getDate() + 6);
+          weekEnd.setHours(23, 59, 59, 999);
+          filterEndDate = weekEnd;
+        } else if (timeWindowFilter === 'quarter') {
+          const quarter = Math.floor(today.getMonth() / 3);
+          filterEndDate = new Date(today.getFullYear(), (quarter + 1) * 3, 0, 23, 59, 59, 999);
+        } else if (timeWindowFilter === 'year') {
+          filterEndDate = new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999);
+        } else if (timeWindowFilter === 'today') {
+          // For today, use the same day
+          filterEndDate = new Date(today);
+          filterEndDate.setHours(23, 59, 59, 999);
+        } else {
+          // For 'all', use 3 months as default
+          filterEndDate = new Date();
+          filterEndDate.setMonth(filterEndDate.getMonth() + 3);
+        }
+        
+        // Filter events within the time window
+        const timeFilteredEvents = futureEvents.filter(event => {
+          const eventDate = new Date(event.start_date);
+          return eventDate <= filterEndDate;
+        });
+        
+        // Add attendance count to all events
+        const eventsWithAttendance = timeFilteredEvents.map(event => ({
           ...event,
           attendance: event.event_attendance?.length || 0
-        };
-
-        // If it's not a recurring event, add it
-        if (!event.recurrence_pattern) {
-          acc.push(eventWithAttendance);
-          return acc;
-        }
-
-        // For recurring events, check if we already have an instance of this event
-        const existingEvent = acc.find(e => 
-          e.title === event.title && 
-          e.recurrence_pattern === event.recurrence_pattern
-        );
-
-        if (existingEvent) {
-          // If we already have an instance, only keep the earlier one
-          if (new Date(event.start_date) < new Date(existingEvent.start_date)) {
-            acc = acc.filter(e => e.id !== existingEvent.id);
-            acc.push(eventWithAttendance);
+        }));
+        
+        // For kiosk view, only show the next instance of recurring events
+        processedEvents = eventsWithAttendance.reduce((acc, event) => {
+          // If it's not a recurring event, add it
+          if (!event.recurrence_pattern) {
+            acc.push(event);
+            return acc;
           }
-        } else {
-          acc.push(eventWithAttendance);
-        }
-        return acc;
-      }, []);
+
+          // For recurring events, check if we already have an instance of this event
+          const existingEvent = acc.find(e => 
+            e.title === event.title && 
+            e.recurrence_pattern === event.recurrence_pattern
+          );
+
+          if (existingEvent) {
+            // If we already have an instance, only keep the earlier one
+            if (new Date(event.start_date) < new Date(existingEvent.start_date)) {
+              acc = acc.filter(e => e.id !== existingEvent.id);
+              acc.push(event);
+            }
+          } else {
+            acc.push(event);
+          }
+          return acc;
+        }, []);
+        
+        console.log('[Events] Kiosk view processing:');
+        console.log('[Events] - Time filter:', timeWindowFilter);
+        console.log('[Events] - Filter end date:', format(filterEndDate, 'yyyy-MM-dd'));
+        console.log('[Events] - Future events count:', futureEvents.length);
+        console.log('[Events] - Time filtered events count:', timeFilteredEvents.length);
+        console.log('[Events] - Final processed events count:', processedEvents.length);
       } else {
         // For admin and calendar views, show all future events within the time filter
         // Filter out past events first
