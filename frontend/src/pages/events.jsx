@@ -2206,16 +2206,18 @@ export default function Events() {
   const [isAnonymousCheckinOpen, setIsAnonymousCheckinOpen] = useState(false);
   const [anonymousName, setAnonymousName] = useState('');
 
+  // Kiosk mode detection
+  const isKioskMode = location.pathname === '/events' && location.search.includes('kiosk=true');
+
   // Effect to sync URL parameters with state
   useEffect(() => {
-    const isKioskMode = location.pathname === '/events' && location.search.includes('kiosk=true');
     if (isKioskMode) {
       setViewMode('kiosk');
       setIsFullKioskMode(true);
     } else {
       setIsFullKioskMode(false);
     }
-  }, [location.search]);
+  }, [location.search, isKioskMode]);
 
   const fetchEvents = useCallback(async () => {
     try {
