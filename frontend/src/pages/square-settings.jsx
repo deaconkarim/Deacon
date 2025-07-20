@@ -80,9 +80,7 @@ export function SquareSettings() {
     application_id: '',
     access_token: '',
     environment: 'sandbox',
-    is_active: false,
-    webhook_url: '',
-    webhook_secret: ''
+    is_active: false
   });
   
   const [urlForm, setUrlForm] = useState({
@@ -96,7 +94,6 @@ export function SquareSettings() {
   
   // UI states
   const [showAccessToken, setShowAccessToken] = useState(false);
-  const [showWebhookSecret, setShowWebhookSecret] = useState(false);
   
   const { toast } = useToast();
 
@@ -122,9 +119,7 @@ export function SquareSettings() {
           application_id: settings.application_id || '',
           access_token: settings.access_token || '',
           environment: settings.environment || 'sandbox',
-          is_active: settings.is_active || false,
-          webhook_url: settings.webhook_url || '',
-          webhook_secret: settings.webhook_secret || ''
+          is_active: settings.is_active || false
         });
       }
     } catch (error) {
@@ -433,24 +428,6 @@ export function SquareSettings() {
                     4
                   </div>
                   <div>
-                    <h4 className="font-semibold text-blue-900">Activate Your Square Account</h4>
-                    <p className="text-blue-700 text-sm">
-                      <strong>Important:</strong> You must activate your Square account to accept real payments
-                    </p>
-                    <div className="text-blue-600 text-xs mt-2 space-y-1">
-                      <p><strong>1. Go to Square Dashboard:</strong> <a href="https://squareup.com/dashboard" target="_blank" rel="noopener noreferrer" className="underline">squareup.com/dashboard</a></p>
-                      <p><strong>2. Complete Business Verification:</strong> Provide business information, tax ID, and bank account</p>
-                      <p><strong>3. Wait for Approval:</strong> Square will review and approve your account (1-3 business days)</p>
-                      <p><strong>4. Test with Sandbox:</strong> Use "Sandbox" environment until your account is activated</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
-                    5
-                  </div>
-                  <div>
                     <h4 className="font-semibold text-blue-900">Enter Credentials Below</h4>
                     <p className="text-blue-700 text-sm">
                       Fill in the form below with your Square credentials to enable online donations
@@ -463,115 +440,7 @@ export function SquareSettings() {
         </motion.div>
       )}
 
-      {/* Square Account Activation Guide */}
-      <motion.div variants={itemVariants} className="mb-8">
-        <Card className="border-orange-200 bg-orange-50">
-          <CardHeader>
-            <CardTitle className="flex items-center text-orange-900">
-              <AlertCircle className="w-5 h-5 mr-2" />
-              Square Account Activation Required
-            </CardTitle>
-            <CardDescription className="text-orange-700">
-              Your Square account must be activated to accept real payments
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="bg-orange-100 border border-orange-300 rounded-lg p-4">
-                <h4 className="font-semibold text-orange-900 mb-2">Why Account Activation is Required</h4>
-                <p className="text-orange-800 text-sm mb-3">
-                  Square requires all businesses to complete account activation before processing real payments. 
-                  This is a legal and compliance requirement to prevent fraud and ensure proper tax reporting.
-                </p>
-                <div className="text-orange-700 text-xs space-y-1">
-                  <p><strong>✓ Required for:</strong> Real payment processing, bank deposits, tax reporting</p>
-                  <p><strong>✗ Not required for:</strong> Testing with sandbox environment</p>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h4 className="font-semibold text-orange-900 mb-2">Activation Process</h4>
-                  <div className="text-orange-700 text-sm space-y-2">
-                    <div className="flex items-start space-x-2">
-                      <span className="flex-shrink-0 w-5 h-5 bg-orange-600 text-white rounded-full flex items-center justify-center text-xs font-bold">1</span>
-                      <div>
-                        <p><strong>Business Information:</strong> Legal business name, address, phone number</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-2">
-                      <span className="flex-shrink-0 w-5 h-5 bg-orange-600 text-white rounded-full flex items-center justify-center text-xs font-bold">2</span>
-                      <div>
-                        <p><strong>Tax Information:</strong> EIN (Employer Identification Number) or SSN</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-2">
-                      <span className="flex-shrink-0 w-5 h-5 bg-orange-600 text-white rounded-full flex items-center justify-center text-xs font-bold">3</span>
-                      <div>
-                        <p><strong>Bank Account:</strong> Business checking account for deposits</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-2">
-                      <span className="flex-shrink-0 w-5 h-5 bg-orange-600 text-white rounded-full flex items-center justify-center text-xs font-bold">4</span>
-                      <div>
-                        <p><strong>Identity Verification:</strong> Government-issued ID verification</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <h4 className="font-semibold text-orange-900 mb-2">Timeline & Next Steps</h4>
-                  <div className="text-orange-700 text-sm space-y-2">
-                    <div className="flex items-start space-x-2">
-                      <span className="flex-shrink-0 w-5 h-5 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold">1</span>
-                      <div>
-                        <p><strong>Immediate:</strong> Start with Sandbox environment for testing</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-2">
-                      <span className="flex-shrink-0 w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">2</span>
-                      <div>
-                        <p><strong>1-3 days:</strong> Complete Square account activation</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-2">
-                      <span className="flex-shrink-0 w-5 h-5 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs font-bold">3</span>
-                      <div>
-                        <p><strong>When approved:</strong> Switch to Production environment</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => window.open('https://squareup.com/dashboard', '_blank')}
-                      className="w-full"
-                    >
-                      <ExternalLink className="w-4 h-4 mr-2" />
-                      Go to Square Dashboard
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-blue-100 border border-blue-300 rounded-lg p-4">
-                <h4 className="font-semibold text-blue-900 mb-2">Testing Without Activation</h4>
-                <p className="text-blue-800 text-sm">
-                  You can test the donation system immediately using the <strong>Sandbox environment</strong>. 
-                  This allows you to simulate payments without processing real money.
-                </p>
-                <div className="text-blue-700 text-xs mt-2">
-                  <p><strong>Sandbox Benefits:</strong> Test payment flow, verify integration, train staff</p>
-                  <p><strong>Limitations:</strong> No real money processed, test cards only</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Square Settings */}
@@ -681,50 +550,7 @@ export function SquareSettings() {
                   </div>
                 </div>
 
-                <div className="border-t pt-4">
-                  <h4 className="font-medium text-gray-900 mb-2">Advanced Settings (Optional)</h4>
-                  <p className="text-sm text-gray-600 mb-4">
-                    These settings are optional and only needed for advanced webhook integrations.
-                  </p>
-                  
-                  <div>
-                    <Label htmlFor="webhook_url">Webhook URL (Optional)</Label>
-                    <Input
-                      id="webhook_url"
-                      value={settingsForm.webhook_url}
-                      onChange={(e) => setSettingsForm(prev => ({ ...prev, webhook_url: e.target.value }))}
-                      placeholder="https://your-domain.com/webhook"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Only needed if you want real-time payment notifications
-                    </p>
-                  </div>
 
-                  <div className="mt-4">
-                    <Label htmlFor="webhook_secret">Webhook Secret (Optional)</Label>
-                    <div className="relative">
-                      <Input
-                        id="webhook_secret"
-                        type={showWebhookSecret ? "text" : "password"}
-                        value={settingsForm.webhook_secret}
-                        onChange={(e) => setSettingsForm(prev => ({ ...prev, webhook_secret: e.target.value }))}
-                        placeholder="Secret key for webhook verification"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3"
-                        onClick={() => setShowWebhookSecret(!showWebhookSecret)}
-                      >
-                        {showWebhookSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </Button>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Used to verify webhook authenticity
-                    </p>
-                  </div>
-                </div>
 
                 <Button type="submit" disabled={isSaving} className="w-full">
                   {isSaving ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Settings className="w-4 h-4 mr-2" />}
