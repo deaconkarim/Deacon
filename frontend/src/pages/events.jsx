@@ -5534,25 +5534,7 @@ export default function Events() {
                      maxHeight: 'none'
                    }}
                  >
-                 {/* Force close button for stuck modals */}
-                 <div className="absolute top-2 right-2 z-[60] flex gap-1">
-                   <Button
-                     variant="outline"
-                     size="sm"
-                     onClick={handleCloseDialog}
-                     className="bg-white hover:bg-gray-100 text-gray-700 border-gray-300 text-xs px-2 py-1"
-                   >
-                     Cancel
-                   </Button>
-                   <Button
-                     variant="destructive"
-                     size="sm"
-                     onClick={handleCloseDialog}
-                     className="bg-red-600 hover:bg-red-700 text-white text-xs px-2 py-1"
-                   >
-                     Force Close
-                   </Button>
-                 </div>
+
                  <DialogHeader className="p-3 border-b bg-blue-50 flex-shrink-0">
                    <DialogTitle className="text-lg font-bold text-center truncate">
                      {selectedEvent?.title}
@@ -5562,32 +5544,32 @@ export default function Events() {
                    </DialogDescription>
                  </DialogHeader>
 
-                 <div className="flex-1 overflow-y-auto p-3 min-h-0">
+                 <div className="flex-1 overflow-y-auto p-4 min-h-0">
                    {/* Search Bar */}
-                   <div className="mb-2">
+                   <div className="mb-4">
                      <Input
                        placeholder="Search by name..."
                        value={memberSearchQuery}
                        onChange={(e) => setMemberSearchQuery(e.target.value)}
-                       className="w-full h-8 text-xs"
+                       className="w-full h-12 text-base"
                      />
                    </div>
 
                    {/* Action Buttons */}
-                   <div className="flex gap-1 mb-3">
+                   <div className="flex gap-2 mb-4">
                      <Button
                        onClick={() => setIsCreateMemberOpen(true)}
-                       className="flex-1 h-7 text-xs bg-blue-600 hover:bg-blue-700 px-1"
+                       className="flex-1 h-12 text-base bg-blue-600 hover:bg-blue-700 px-3"
                      >
-                       <Plus className="mr-1 h-3 w-3" />
+                       <Plus className="mr-2 h-5 w-5" />
                        Add New
                      </Button>
                      {selectedEvent?.attendance_type === 'check-in' && (
                        <Button
                          onClick={() => setIsAnonymousCheckinOpen(true)}
-                         className="flex-1 h-7 text-xs bg-orange-600 hover:bg-orange-700 px-1"
+                         className="flex-1 h-12 text-base bg-orange-600 hover:bg-orange-700 px-3"
                        >
-                         <UserPlus className="mr-1 h-3 w-3" />
+                         <UserPlus className="mr-2 h-5 w-5" />
                          Anonymous
                        </Button>
                      )}
@@ -5595,12 +5577,12 @@ export default function Events() {
 
                                      {/* Suggested Members */}
                    {suggestedMembers.length > 0 && (
-                     <div className="mb-4">
-                       <h3 className="text-sm font-bold text-green-700 mb-2 flex items-center justify-center gap-1">
-                         <Star className="h-4 w-4" />
+                     <div className="mb-6">
+                       <h3 className="text-lg font-bold text-green-700 mb-3 flex items-center justify-center gap-2">
+                         <Star className="h-5 w-5" />
                          Frequent Attendees
                        </h3>
-                       <div className="grid grid-cols-1 gap-2">
+                       <div className="grid grid-cols-1 gap-3">
                          {suggestedMembers
                            .filter(member => 
                              member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
@@ -5611,24 +5593,24 @@ export default function Events() {
                            key={member.id}
                            variant="outline"
                            onClick={() => handleMemberClick(member)}
-                           className="w-full h-10 text-left p-1 border-2 border-green-200 bg-green-50 hover:bg-green-100"
+                           className="w-full h-16 text-left p-3 border-2 border-green-200 bg-green-50 hover:bg-green-100"
                          >
-                             <div className="flex items-center space-x-2 w-full">
-                                                            <Avatar className="h-6 w-6 flex-shrink-0">
+                             <div className="flex items-center space-x-3 w-full">
+                                                            <Avatar className="h-10 w-10 flex-shrink-0">
                                <AvatarImage src={member.image_url} />
-                               <AvatarFallback className="text-xs">
+                               <AvatarFallback className="text-base">
                                  {getInitials(member.firstname, member.lastname)}
                                </AvatarFallback>
                              </Avatar>
                                <div className="flex-1 text-left">
-                                 <p className="text-xs font-bold">
+                                 <p className="text-base font-bold">
                                    {member.firstname} {member.lastname}
                                  </p>
-                                 <p className="text-xs text-green-600">
+                                 <p className="text-sm text-green-600">
                                    {memberAttendanceCount[member.id] || 0} previous attendances
                                  </p>
                                </div>
-                               <Star className="h-3 w-3 text-green-600 flex-shrink-0" />
+                               <Star className="h-4 w-4 text-green-600 flex-shrink-0" />
                              </div>
                            </Button>
                          ))}
@@ -5638,8 +5620,8 @@ export default function Events() {
 
                                      {/* All Members */}
                    <div>
-                     <h3 className="text-sm font-bold mb-2 text-center">All People</h3>
-                     <div className="grid grid-cols-1 gap-2">
+                     <h3 className="text-lg font-bold mb-3 text-center">All People</h3>
+                     <div className="grid grid-cols-1 gap-3">
                        {members
                          .filter(member => 
                            !suggestedMembers.find(s => s.id === member.id) &&
@@ -5651,21 +5633,21 @@ export default function Events() {
                            key={member.id}
                            variant="outline"
                            onClick={() => handleMemberClick(member)}
-                           className="w-full h-10 text-left p-1"
+                           className="w-full h-16 text-left p-3"
                          >
-                           <div className="flex items-center space-x-2 w-full">
-                             <Avatar className="h-6 w-6 flex-shrink-0">
+                           <div className="flex items-center space-x-3 w-full">
+                             <Avatar className="h-10 w-10 flex-shrink-0">
                                <AvatarImage src={member.image_url} />
-                               <AvatarFallback className="text-xs">
+                               <AvatarFallback className="text-base">
                                  {getInitials(member.firstname, member.lastname)}
                                </AvatarFallback>
                              </Avatar>
                              <div className="flex-1 text-left">
-                               <p className="text-xs font-bold">
+                               <p className="text-base font-bold">
                                  {member.firstname} {member.lastname}
                                </p>
                                {memberAttendanceCount[member.id] && (
-                                 <p className="text-xs text-gray-600">
+                                 <p className="text-sm text-gray-600">
                                    {memberAttendanceCount[member.id]} previous attendances
                                  </p>
                                )}
