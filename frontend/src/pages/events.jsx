@@ -5409,92 +5409,273 @@ export default function Events() {
             )}
           </div>
 
-          {/* Member Selection Dialog for Kiosk Mode */}
-          <Dialog open={isMemberDialogOpen} onOpenChange={setIsMemberDialogOpen}>
-            <DialogContent className="w-[95vw] max-w-full h-[90vh] md:h-auto md:max-w-4xl p-0 z-50">
-              <DialogHeader className="p-4 md:p-6 border-b">
-                <div className="space-y-2">
-                  <DialogTitle className="text-xl md:text-2xl lg:text-3xl">
-                    {isEditingPastEvent 
-                      ? 'Edit Attendance' 
-                      : selectedEvent?.attendance_type === 'check-in' 
-                        ? 'Check In People' 
-                        : 'RSVP Members'
-                    } - {selectedEvent?.title}
+          {/* Mobile Kiosk Mode - Simple Large Buttons */}
+          {isKioskMode && (
+            <Dialog open={isMemberDialogOpen} onOpenChange={setIsMemberDialogOpen}>
+              <DialogContent className="w-full h-full max-w-none p-0 z-50 bg-white">
+                <DialogHeader className="p-6 border-b bg-blue-50">
+                  <DialogTitle className="text-2xl font-bold text-center">
+                    {selectedEvent?.title}
                   </DialogTitle>
+                  <DialogDescription className="text-lg text-center mt-2">
+                    {selectedEvent?.attendance_type === 'check-in' ? 'Check In' : 'RSVP'}
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="flex-1 overflow-y-auto p-6">
+                  {/* Search Bar */}
+                  <div className="mb-6">
+                    <Input
+                      placeholder="Search by name..."
+                      value={memberSearchQuery}
+                      onChange={(e) => setMemberSearchQuery(e.target.value)}
+                      className="w-full h-16 text-xl"
+                    />
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="grid grid-cols-1 gap-4 mb-8">
+                    <Button
+                      onClick={() => setIsCreateMemberOpen(true)}
+                      className="w-full h-20 text-xl bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Plus className="mr-3 h-6 w-6" />
+                      Add New Person
+                    </Button>
+                    {selectedEvent?.attendance_type === 'check-in' && (
+                      <Button
+                        onClick={() => setIsAnonymousCheckinOpen(true)}
+                        className="w-full h-20 text-xl bg-orange-600 hover:bg-orange-700"
+                      >
+                        <UserPlus className="mr-3 h-6 w-6" />
+                        Anonymous Check-in
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Suggested Members */}
                   {suggestedMembers.length > 0 && (
-                    <div className="flex items-center gap-3">
-                      <Star className="h-6 w-6 md:h-7 md:w-7 text-green-600" />
-                      <span className="text-lg md:text-xl text-green-600 font-normal">
-                        Smart suggestions available
-                      </span>
+                    <div className="mb-8">
+                      <h3 className="text-xl font-bold text-green-700 mb-4 flex items-center justify-center gap-2">
+                        <Star className="h-6 w-6" />
+                        Frequent Attendees
+                      </h3>
+                      <div className="grid grid-cols-1 gap-4">
+                        {suggestedMembers
+                          .filter(member => 
+                            member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                            member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase())
+                          )
+                          .map((member) => (
+                          <Button
+                            key={member.id}
+                            variant="outline"
+                            onClick={() => handleMemberClick(member)}
+                            className="w-full h-24 text-left p-4 border-2 border-green-200 bg-green-50 hover:bg-green-100"
+                          >
+                            <div className="flex items-center space-x-4 w-full">
+                              <Avatar className="h-16 w-16 flex-shrink-0">
+                                <AvatarImage src={member.image_url} />
+                                <AvatarFallback className="text-xl">
+                                  {getInitials(member.firstname, member.lastname)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 text-left">
+                                <p className="text-xl font-bold">
+                                  {member.firstname} {member.lastname}
+                                </p>
+                                <p className="text-sm text-green-600">
+                                  {memberAttendanceCount[member.id] || 0} previous attendances
+                                </p>
+                              </div>
+                              <Star className="h-6 w-6 text-green-600 flex-shrink-0" />
+                            </div>
+                          </Button>
+                        ))}
+                      </div>
                     </div>
                   )}
-                </div>
-                <DialogDescription className="text-lg md:text-xl mt-4">
-                  {isEditingPastEvent
-                    ? `Edit attendance records for ${selectedEvent?.title}`
-                    : selectedEvent?.attendance_type === 'check-in'
-                    ? 'Check In People for the event'
-                      : `Select members to RSVP for ${selectedEvent?.title}`
-                  }
-                </DialogDescription>
-                {suggestedMembers.length > 0 && (
-                  <div className="mt-3 text-sm md:text-base text-green-600">
-                    Members who frequently attend similar events are highlighted below
-                  </div>
-                )}
-              </DialogHeader>
 
-              <div className="p-6 md:p-8 flex-1 overflow-hidden">
-                <Tabs defaultValue="available" className="w-full h-full flex flex-col">
-                  <TabsList className="grid w-full grid-cols-2 h-14 md:h-16">
-                    <TabsTrigger value="available" className="text-lg md:text-xl">
-                      {isEditingPastEvent ? 'Add Attendance' : 'Available People'}
-                    </TabsTrigger>
-                    <TabsTrigger value="checked-in" className="text-lg md:text-xl">
-                      {selectedEvent?.attendance_type === 'check-in' ? 'Checked In' : 'RSVP\'d'}
-                    </TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="available" className="mt-6 md:mt-8 flex-1 overflow-y-auto">
-                    <div className="space-y-6 md:space-y-8">
-                      <div className="flex flex-col md:flex-row gap-4 md:gap-6">
-                        <div className="flex-1">
-                          <Input
-                            placeholder="Search people..."
-                            value={memberSearchQuery}
-                            onChange={(e) => setMemberSearchQuery(e.target.value)}
-                            className="w-full h-16 md:h-20 text-lg md:text-xl"
-                          />
-                        </div>
+                  {/* All Members */}
+                  <div>
+                    <h3 className="text-xl font-bold mb-4 text-center">All People</h3>
+                    <div className="grid grid-cols-1 gap-4">
+                      {members
+                        .filter(member => 
+                          !suggestedMembers.find(s => s.id === member.id) &&
+                          (member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                           member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase()))
+                        )
+                        .map((member) => (
                         <Button
-                          onClick={() => setIsCreateMemberOpen(true)}
-                          className="w-full md:w-auto h-16 md:h-20 text-lg md:text-xl bg-blue-600 hover:bg-blue-700"
+                          key={member.id}
+                          variant="outline"
+                          onClick={() => handleMemberClick(member)}
+                          className="w-full h-24 text-left p-4"
                         >
-                          <Plus className="mr-2 md:mr-3 h-5 w-5 md:h-6 md:w-6" />
-                          Add New Person
+                          <div className="flex items-center space-x-4 w-full">
+                            <Avatar className="h-16 w-16 flex-shrink-0">
+                              <AvatarImage src={member.image_url} />
+                              <AvatarFallback className="text-xl">
+                                {getInitials(member.firstname, member.lastname)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 text-left">
+                              <p className="text-xl font-bold">
+                                {member.firstname} {member.lastname}
+                              </p>
+                              {memberAttendanceCount[member.id] && (
+                                <p className="text-sm text-gray-600">
+                                  {memberAttendanceCount[member.id]} previous attendances
+                                </p>
+                              )}
+                            </div>
+                          </div>
                         </Button>
-                        {selectedEvent?.attendance_type === 'check-in' && (
-                          <Button
-                            onClick={() => setIsAnonymousCheckinOpen(true)}
-                            className="w-full md:w-auto h-16 md:h-20 text-lg md:text-xl bg-orange-600 hover:bg-orange-700"
-                          >
-                            <UserPlus className="mr-2 md:mr-3 h-5 w-5 md:h-6 md:w-6" />
-                            Anonymous Check-in
-                          </Button>
-                        )}
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <DialogFooter className="p-6 border-t bg-gray-50">
+                  <div className="flex gap-4 w-full">
+                    <Button
+                      variant="outline"
+                      onClick={handleCloseDialog}
+                      className="flex-1 h-16 text-xl"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleDone}
+                      className="flex-1 h-16 text-xl"
+                    >
+                      Done
+                    </Button>
+                  </div>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
+
+          {/* Desktop Member Selection Dialog */}
+          {!isKioskMode && (
+            <Dialog open={isMemberDialogOpen} onOpenChange={setIsMemberDialogOpen}>
+              <DialogContent className="w-[95vw] max-w-full h-[90vh] md:h-auto md:max-w-4xl p-0 z-50">
+                <DialogHeader className="p-4 md:p-6 border-b">
+                  <div className="space-y-2">
+                    <DialogTitle className="text-xl md:text-2xl lg:text-3xl">
+                      {isEditingPastEvent 
+                        ? 'Edit Attendance' 
+                        : selectedEvent?.attendance_type === 'check-in' 
+                          ? 'Check In People' 
+                          : 'RSVP Members'
+                      } - {selectedEvent?.title}
+                    </DialogTitle>
+                    {suggestedMembers.length > 0 && (
+                      <div className="flex items-center gap-3">
+                        <Star className="h-6 w-6 md:h-7 md:w-7 text-green-600" />
+                        <span className="text-lg md:text-xl text-green-600 font-normal">
+                          Smart suggestions available
+                        </span>
                       </div>
-                      <div className="space-y-2">
-                        {suggestedMembers.length > 0 && (
-                          <div className="mb-6 md:mb-8">
-                            <h3 className="text-xl md:text-2xl font-bold text-green-700 mb-4 flex items-center gap-3">
-                              <Star className="h-6 w-6 md:h-7 md:w-7" />
-                              Suggested Based on Previous Attendance
-                            </h3>
-                            {/* Mobile Grid Layout */}
-                            <div className="md:hidden">
-                              <div className="grid grid-cols-2 gap-3">
+                    )}
+                  </div>
+                  <DialogDescription className="text-lg md:text-xl mt-4">
+                    {isEditingPastEvent
+                      ? `Edit attendance records for ${selectedEvent?.title}`
+                      : selectedEvent?.attendance_type === 'check-in'
+                      ? 'Check In People for the event'
+                        : `Select members to RSVP for ${selectedEvent?.title}`
+                    }
+                  </DialogDescription>
+                  {suggestedMembers.length > 0 && (
+                    <div className="mt-3 text-sm md:text-base text-green-600">
+                      Members who frequently attend similar events are highlighted below
+                    </div>
+                  )}
+                </DialogHeader>
+
+                <div className="p-6 md:p-8 flex-1 overflow-hidden">
+                  <Tabs defaultValue="available" className="w-full h-full flex flex-col">
+                    <TabsList className="grid w-full grid-cols-2 h-14 md:h-16">
+                      <TabsTrigger value="available" className="text-lg md:text-xl">
+                        {isEditingPastEvent ? 'Add Attendance' : 'Available People'}
+                      </TabsTrigger>
+                      <TabsTrigger value="checked-in" className="text-lg md:text-xl">
+                        {selectedEvent?.attendance_type === 'check-in' ? 'Checked In' : 'RSVP\'d'}
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="available" className="mt-6 md:mt-8 flex-1 overflow-y-auto">
+                      <div className="space-y-6 md:space-y-8">
+                        <div className="flex flex-col md:flex-row gap-4 md:gap-6">
+                          <div className="flex-1">
+                            <Input
+                              placeholder="Search people..."
+                              value={memberSearchQuery}
+                              onChange={(e) => setMemberSearchQuery(e.target.value)}
+                              className="w-full h-16 md:h-20 text-lg md:text-xl"
+                            />
+                          </div>
+                          <Button
+                            onClick={() => setIsCreateMemberOpen(true)}
+                            className="w-full md:w-auto h-16 md:h-20 text-lg md:text-xl bg-blue-600 hover:bg-blue-700"
+                          >
+                            <Plus className="mr-2 md:mr-3 h-5 w-5 md:h-6 md:w-6" />
+                            Add New Person
+                          </Button>
+                          {selectedEvent?.attendance_type === 'check-in' && (
+                            <Button
+                              onClick={() => setIsAnonymousCheckinOpen(true)}
+                              className="w-full md:w-auto h-16 md:h-20 text-lg md:text-xl bg-orange-600 hover:bg-orange-700"
+                            >
+                              <UserPlus className="mr-2 md:mr-3 h-5 w-5 md:h-6 md:w-6" />
+                              Anonymous Check-in
+                            </Button>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          {suggestedMembers.length > 0 && (
+                            <div className="mb-6 md:mb-8">
+                              <h3 className="text-xl md:text-2xl font-bold text-green-700 mb-4 flex items-center gap-3">
+                                <Star className="h-6 w-6 md:h-7 md:w-7" />
+                                Suggested Based on Previous Attendance
+                              </h3>
+                              {/* Mobile Grid Layout */}
+                              <div className="md:hidden">
+                                <div className="grid grid-cols-2 gap-3">
+                                  {suggestedMembers
+                                    .filter(member => 
+                                      member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                                      member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase())
+                                    )
+                                    .map((member) => (
+                                    <div
+                                      key={member.id}
+                                      className="flex flex-col items-center p-3 rounded-lg border-2 border-green-200 bg-green-50 cursor-pointer hover:bg-green-100 transition-colors"
+                                      onClick={() => handleMemberClick(member)}
+                                    >
+                                      <Avatar className="h-16 w-16 mb-2">
+                                        <AvatarImage src={member.image_url} />
+                                        <AvatarFallback className="text-lg">
+                                          {getInitials(member.firstname, member.lastname)}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <p className="text-sm font-bold text-center truncate w-full">
+                                        {member.firstname} {member.lastname}
+                                      </p>
+                                      <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs px-2 py-1 mt-1">
+                                        {memberAttendanceCount[member.id] || 0} attendances
+                                      </Badge>
+                                      <Star className="h-4 w-4 text-green-600 mt-1" />
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                              
+                              {/* Desktop List Layout */}
+                              <div className="hidden md:block space-y-2">
                                 {suggestedMembers
                                   .filter(member => 
                                     member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
@@ -5503,100 +5684,69 @@ export default function Events() {
                                   .map((member) => (
                                   <div
                                     key={member.id}
-                                    className="flex flex-col items-center p-3 rounded-lg border-2 border-green-200 bg-green-50 cursor-pointer hover:bg-green-100 transition-colors"
+                                    className="flex items-center space-x-4 p-4 lg:p-5 rounded-lg border-2 border-green-200 bg-green-50 cursor-pointer hover:bg-green-100 transition-colors"
                                     onClick={() => handleMemberClick(member)}
                                   >
-                                    <Avatar className="h-16 w-16 mb-2">
+                                    <Avatar className="h-16 w-16 lg:h-18 lg:w-18">
                                       <AvatarImage src={member.image_url} />
-                                      <AvatarFallback className="text-lg">
+                                      <AvatarFallback className="text-lg lg:text-xl">
                                         {getInitials(member.firstname, member.lastname)}
                                       </AvatarFallback>
                                     </Avatar>
-                                    <p className="text-sm font-bold text-center truncate w-full">
-                                      {member.firstname} {member.lastname}
-                                    </p>
-                                    <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs px-2 py-1 mt-1">
-                                      {memberAttendanceCount[member.id] || 0} attendances
-                                    </Badge>
-                                    <Star className="h-4 w-4 text-green-600 mt-1" />
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-lg lg:text-xl font-bold truncate">
+                                        {member.firstname} {member.lastname}
+                                      </p>
+                                      <div className="flex items-center gap-2 mt-1">
+                                        <Badge variant="secondary" className="bg-green-100 text-green-800 text-sm px-2 py-1">
+                                          {memberAttendanceCount[member.id] || 0} previous attendances
+                                        </Badge>
+                                        <span className="text-sm md:text-base text-green-600">Frequent attendee</span>
+                                      </div>
+                                    </div>
+                                    <Star className="h-5 w-5 text-green-600 flex-shrink-0" />
                                   </div>
                                 ))}
                               </div>
-                            </div>
-                            
-                            {/* Desktop List Layout */}
-                            <div className="hidden md:block space-y-2">
-                              {suggestedMembers
+                          </div>
+                        )}
+                          
+                          {/* Mobile Grid Layout */}
+                          <div className="md:hidden">
+                            <div className="grid grid-cols-2 gap-3">
+                              {members
                                 .filter(member => 
-                                  member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
-                                  member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase())
+                                  !suggestedMembers.find(s => s.id === member.id) &&
+                                  (member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                                   member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase()))
                                 )
                                 .map((member) => (
                                 <div
                                   key={member.id}
-                                  className="flex items-center space-x-4 p-4 lg:p-5 rounded-lg border-2 border-green-200 bg-green-50 cursor-pointer hover:bg-green-100 transition-colors"
+                                  className="flex flex-col items-center p-3 rounded-lg border-2 cursor-pointer hover:bg-gray-50 transition-colors"
                                   onClick={() => handleMemberClick(member)}
                                 >
-                                  <Avatar className="h-16 w-16 lg:h-18 lg:w-18">
+                                  <Avatar className="h-16 w-16 mb-2">
                                     <AvatarImage src={member.image_url} />
-                                    <AvatarFallback className="text-lg lg:text-xl">
+                                    <AvatarFallback className="text-lg">
                                       {getInitials(member.firstname, member.lastname)}
                                     </AvatarFallback>
                                   </Avatar>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-lg lg:text-xl font-bold truncate">
-                                      {member.firstname} {member.lastname}
-                                    </p>
-                                    <div className="flex items-center gap-2 mt-1">
-                                      <Badge variant="secondary" className="bg-green-100 text-green-800 text-sm px-2 py-1">
-                                        {memberAttendanceCount[member.id] || 0} previous attendances
-                                      </Badge>
-                                      <span className="text-sm md:text-base text-green-600">Frequent attendee</span>
-                                    </div>
-                                  </div>
-                                  <Star className="h-5 w-5 text-green-600 flex-shrink-0" />
+                                  <p className="text-sm font-bold text-center truncate w-full">
+                                    {member.firstname} {member.lastname}
+                                  </p>
+                                  {memberAttendanceCount[member.id] && (
+                                    <Badge variant="outline" className="text-xs px-2 py-1 mt-1">
+                                      {memberAttendanceCount[member.id]} attendances
+                                    </Badge>
+                                  )}
                                 </div>
                               ))}
                             </div>
-                        </div>
-                      )}
-                        
-                        {/* Mobile Grid Layout */}
-                        <div className="md:hidden">
-                          <div className="grid grid-cols-2 gap-3">
-                            {members
-                              .filter(member => 
-                                !suggestedMembers.find(s => s.id === member.id) &&
-                                (member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
-                                 member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase()))
-                              )
-                              .map((member) => (
-                              <div
-                                key={member.id}
-                                className="flex flex-col items-center p-3 rounded-lg border-2 cursor-pointer hover:bg-gray-50 transition-colors"
-                                onClick={() => handleMemberClick(member)}
-                              >
-                                <Avatar className="h-16 w-16 mb-2">
-                                  <AvatarImage src={member.image_url} />
-                                  <AvatarFallback className="text-lg">
-                                    {getInitials(member.firstname, member.lastname)}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <p className="text-sm font-bold text-center truncate w-full">
-                                  {member.firstname} {member.lastname}
-                                </p>
-                                {memberAttendanceCount[member.id] && (
-                                  <Badge variant="outline" className="text-xs px-2 py-1 mt-1">
-                                    {memberAttendanceCount[member.id]} attendances
-                                  </Badge>
-                                )}
-                              </div>
-                            ))}
                           </div>
-                        </div>
-                        
-                        {/* Desktop List Layout */}
-                        <div className="hidden md:block space-y-2">
+                          
+                          {/* Desktop List Layout */}
+                          <div className="hidden md:block space-y-2">
                           {members
                             .filter(member => 
                               !suggestedMembers.find(s => s.id === member.id) &&
@@ -5743,6 +5893,7 @@ export default function Events() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          )}
         </div>
       ) : (
         <motion.div 
