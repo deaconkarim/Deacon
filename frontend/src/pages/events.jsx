@@ -5501,7 +5501,7 @@ export default function Events() {
                                 .map((member) => (
                                 <div
                                   key={member.id}
-                                  className="flex items-center space-x-4 md:space-x-6 p-4 md:p-6 lg:p-8 rounded-xl border-3 border-green-200 bg-green-50 cursor-pointer hover:bg-green-100 transition-colors"
+                                  className="flex items-center space-x-4 md:space-x-6 p-4 md:p-6 lg:p-8 rounded-xl border-2 border-green-200 bg-green-50 cursor-pointer hover:bg-green-100 transition-colors"
                                   onClick={() => handleMemberClick(member)}
                                 >
                                   <Avatar className="h-16 w-16 md:h-20 md:w-20 lg:h-24 lg:w-24">
