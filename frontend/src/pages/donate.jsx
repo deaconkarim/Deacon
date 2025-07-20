@@ -99,7 +99,6 @@ export function DonatePage() {
       
       const payments = Payments.load({
         applicationId: settings.application_id,
-        locationId: settings.location_id,
         environment: settings.environment
       });
       

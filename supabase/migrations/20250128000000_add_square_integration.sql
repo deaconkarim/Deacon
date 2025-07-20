@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS public.square_settings (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
     application_id TEXT NOT NULL,
-    location_id TEXT NOT NULL,
+    location_id TEXT,
     access_token TEXT,
     environment TEXT DEFAULT 'sandbox' CHECK (environment IN ('sandbox', 'production')),
     is_active BOOLEAN DEFAULT false,

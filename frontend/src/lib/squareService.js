@@ -38,11 +38,15 @@ export async function updateSquareSettings(settings) {
       throw new Error('User not associated with any organization');
     }
 
+    // Remove location_id if it's empty or not provided
+    const { location_id, ...otherSettings } = settings;
+    const cleanSettings = location_id ? { ...otherSettings, location_id } : otherSettings;
+
     const { data, error } = await supabase
       .from('square_settings')
       .upsert({
         organization_id: organizationId,
-        ...settings,
+        ...cleanSettings,
         updated_at: new Date().toISOString()
       }, {
         onConflict: 'organization_id'

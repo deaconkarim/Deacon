@@ -76,7 +76,6 @@ export function SquareSettings() {
   // Form data
   const [settingsForm, setSettingsForm] = useState({
     application_id: '',
-    location_id: '',
     access_token: '',
     environment: 'sandbox',
     is_active: false,
@@ -119,7 +118,6 @@ export function SquareSettings() {
       if (settings) {
         setSettingsForm({
           application_id: settings.application_id || '',
-          location_id: settings.location_id || '',
           access_token: settings.access_token || '',
           environment: settings.environment || 'sandbox',
           is_active: settings.is_active || false,
@@ -389,33 +387,19 @@ export function SquareSettings() {
                   </div>
                 </div>
                 
+
+                
                 <div className="flex items-start space-x-3">
                   <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
                     3
                   </div>
                   <div>
-                    <h4 className="font-semibold text-blue-900">Create a Square Location</h4>
-                    <p className="text-blue-700 text-sm">
-                      Go to "Locations" → "Add Location" → Name it "Church Donations" → Set as "Online" location type
-                    </p>
-                    <p className="text-blue-600 text-xs mt-1">
-                      💡 Tip: Choose "Online" location type since you're accepting donations through your website
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
-                    4
-                  </div>
-                  <div>
                     <h4 className="font-semibold text-blue-900">Get Your Credentials</h4>
                     <p className="text-blue-700 text-sm">
-                      Copy your Application ID (starts with sq0idp-), Location ID (starts with LQ), and generate an Access Token
+                      Copy your Application ID (starts with sq0idp-) and generate an Access Token
                     </p>
                     <div className="text-blue-600 text-xs mt-2 space-y-1">
                       <p><strong>Application ID:</strong> Found in "Applications" → Your app → "Credentials"</p>
-                      <p><strong>Location ID:</strong> Found in "Locations" → Your location → Copy the ID</p>
                       <p><strong>Access Token:</strong> Found in "Applications" → Your app → "Credentials" → "Generate Access Token"</p>
                     </div>
                   </div>
@@ -423,7 +407,7 @@ export function SquareSettings() {
                 
                 <div className="flex items-start space-x-3">
                   <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
-                    5
+                    4
                   </div>
                   <div>
                     <h4 className="font-semibold text-blue-900">Enter Credentials Below</h4>
@@ -453,39 +437,21 @@ export function SquareSettings() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSaveSettings} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="application_id" className="flex items-center">
-                      Application ID
-                      <span className="text-red-500 ml-1">*</span>
-                    </Label>
-                    <Input
-                      id="application_id"
-                      value={settingsForm.application_id}
-                      onChange={(e) => setSettingsForm(prev => ({ ...prev, application_id: e.target.value }))}
-                      placeholder="sq0idp-..."
-                      required
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Found in your Square Developer Dashboard under "Applications"
-                    </p>
-                  </div>
-                  <div>
-                    <Label htmlFor="location_id" className="flex items-center">
-                      Location ID
-                      <span className="text-red-500 ml-1">*</span>
-                    </Label>
-                    <Input
-                      id="location_id"
-                      value={settingsForm.location_id}
-                      onChange={(e) => setSettingsForm(prev => ({ ...prev, location_id: e.target.value }))}
-                      placeholder="LQ..."
-                      required
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Found in your Square Dashboard under "Locations" → Click on your location → Copy the Location ID
-                    </p>
-                  </div>
+                <div>
+                  <Label htmlFor="application_id" className="flex items-center">
+                    Application ID
+                    <span className="text-red-500 ml-1">*</span>
+                  </Label>
+                  <Input
+                    id="application_id"
+                    value={settingsForm.application_id}
+                    onChange={(e) => setSettingsForm(prev => ({ ...prev, application_id: e.target.value }))}
+                    placeholder="sq0idp-..."
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Found in your Square Developer Dashboard under "Applications" → Your app → "Credentials"
+                  </p>
                 </div>
 
                 <div>
