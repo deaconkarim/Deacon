@@ -711,7 +711,7 @@ export default function AutomationSettings() {
                           </SelectItem>
                         ))
                       ) : (
-                        <SelectItem value="" disabled>
+                        <SelectItem value="no-users" disabled>
                           No users available
                         </SelectItem>
                       )}
