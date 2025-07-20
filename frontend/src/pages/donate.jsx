@@ -15,7 +15,10 @@ import {
   CreditCard,
   Lock,
   Shield,
-  Mail
+  Mail,
+  Receipt,
+  Calendar,
+  User
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,6 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
+import { supabase } from '@/lib/supabase';
 
 const DonatePage = () => {
   const [searchParams] = useSearchParams();
@@ -46,21 +50,20 @@ const DonatePage = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1); // 1: donation details, 2: payment
+  const [currentStep, setCurrentStep] = useState(1);
+  const [donationId, setDonationId] = useState(null);
   const { toast } = useToast();
 
-  // Parse URL parameters
+  // Parse URL parameters (but don't auto-populate amount)
   useEffect(() => {
-    const amount = searchParams.get('amount');
     const fund = searchParams.get('fund');
     const notes = searchParams.get('notes');
     const campaign = searchParams.get('campaign');
 
-    if (amount) {
+    if (fund) {
       setDonationForm(prev => ({
         ...prev,
-        amount: parseFloat(amount) || '',
-        fund_designation: fund || 'general',
+        fund_designation: fund,
         notes: notes || campaign ? `Campaign: ${campaign}` : ''
       }));
     }
@@ -100,6 +103,112 @@ const DonatePage = () => {
     setCurrentStep(2);
   };
 
+  const processPayment = async (paymentData) => {
+    try {
+      // Create payment intent with Deacon
+      const response = await fetch('/api/payments/create-intent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: parseFloat(donationForm.amount) * 100, // Convert to cents
+          currency: 'usd',
+          payment_method: paymentForm.paymentMethod,
+          metadata: {
+            fund_designation: donationForm.fund_designation,
+            donor_name: donationForm.is_anonymous ? 'Anonymous' : donationForm.donor_name,
+            donor_email: donationForm.donor_email,
+            notes: donationForm.notes,
+            is_anonymous: donationForm.is_anonymous
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create payment intent');
+      }
+
+      const { client_secret, payment_intent_id } = await response.json();
+
+      // Process the payment
+      const paymentResponse = await fetch('/api/payments/process', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          payment_intent_id,
+          payment_method_data: paymentData
+        })
+      });
+
+      if (!paymentResponse.ok) {
+        throw new Error('Payment processing failed');
+      }
+
+      const paymentResult = await paymentResponse.json();
+      return paymentResult;
+    } catch (error) {
+      console.error('Payment error:', error);
+      throw error;
+    }
+  };
+
+  const saveDonationToDatabase = async (paymentResult) => {
+    try {
+      const { data, error } = await supabase
+        .from('donations')
+        .insert({
+          amount: parseFloat(donationForm.amount),
+          fund_designation: donationForm.fund_designation,
+          donor_name: donationForm.is_anonymous ? 'Anonymous' : donationForm.donor_name,
+          donor_email: donationForm.donor_email,
+          donor_phone: donationForm.donor_phone,
+          notes: donationForm.notes,
+          is_anonymous: donationForm.is_anonymous,
+          payment_intent_id: paymentResult.payment_intent_id,
+          payment_status: 'completed',
+          payment_method: paymentForm.paymentMethod,
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Database error:', error);
+      throw error;
+    }
+  };
+
+  const sendDonationEmail = async (donationData) => {
+    try {
+      const response = await fetch('/api/emails/donation-confirmation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          donation_id: donationData.id,
+          donor_name: donationForm.is_anonymous ? 'Anonymous' : donationForm.donor_name,
+          donor_email: donationForm.donor_email,
+          amount: donationForm.amount,
+          fund_designation: donationForm.fund_designation,
+          payment_method: paymentForm.paymentMethod,
+          notes: donationForm.notes
+        })
+      });
+
+      if (!response.ok) {
+        console.error('Email sending failed');
+      }
+    } catch (error) {
+      console.error('Email error:', error);
+    }
+  };
+
   const handlePaymentSubmit = async (e) => {
     e.preventDefault();
     
@@ -118,19 +227,39 @@ const DonatePage = () => {
     setIsSubmitting(true);
 
     try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
+      // Prepare payment data
+      const paymentData = {
+        card_number: paymentForm.cardNumber.replace(/\s/g, ''),
+        expiry_month: paymentForm.expiryDate.split('/')[0],
+        expiry_year: '20' + paymentForm.expiryDate.split('/')[1],
+        cvv: paymentForm.cvv,
+        cardholder_name: paymentForm.cardholderName
+      };
+
+      // Process payment
+      const paymentResult = await processPayment(paymentData);
+
+      // Save to database
+      const donationData = await saveDonationToDatabase(paymentResult);
+
+      // Send confirmation email
+      if (donationForm.donor_email) {
+        await sendDonationEmail(donationData);
+      }
+
+      setDonationId(donationData.id);
       setIsSuccess(true);
+      
       toast({
         title: "Payment Successful!",
         description: "Your donation has been processed. We'll send you a confirmation email.",
         duration: 5000,
       });
     } catch (error) {
+      console.error('Payment failed:', error);
       toast({
         title: "Payment Failed",
-        description: "There was an error processing your payment. Please try again.",
+        description: error.message || "There was an error processing your payment. Please try again.",
         variant: "destructive",
         duration: 5000,
       });
@@ -140,20 +269,17 @@ const DonatePage = () => {
   };
 
   const handleAmountChange = (value) => {
-    // Remove any non-numeric characters except decimal point
     const cleanValue = value.replace(/[^0-9.]/g, '');
     setDonationForm(prev => ({ ...prev, amount: cleanValue }));
   };
 
   const handleCardNumberChange = (value) => {
-    // Format card number with spaces
     const cleanValue = value.replace(/\s/g, '').replace(/\D/g, '');
     const formattedValue = cleanValue.replace(/(\d{4})/g, '$1 ').trim();
     setPaymentForm(prev => ({ ...prev, cardNumber: formattedValue }));
   };
 
   const handleExpiryChange = (value) => {
-    // Format expiry date
     const cleanValue = value.replace(/\D/g, '');
     let formattedValue = cleanValue;
     if (cleanValue.length >= 2) {
@@ -189,11 +315,38 @@ const DonatePage = () => {
               <p className="text-gray-600 mb-6">
                 Your donation of ${parseFloat(donationForm.amount).toFixed(2)} has been received.
               </p>
-              <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <p className="text-sm text-gray-600">
-                  We'll send you a confirmation email with your donation receipt.
-                </p>
+              
+              <div className="bg-gray-50 rounded-lg p-4 mb-6 space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Donation ID:</span>
+                  <span className="font-mono text-gray-800">#{donationId}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Fund:</span>
+                  <span className="text-gray-800">
+                    {fundOptions.find(f => f.value === donationForm.fund_designation)?.label}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Payment Method:</span>
+                  <span className="text-gray-800 capitalize">
+                    {paymentForm.paymentMethod === 'card' ? 'Credit Card' : 'Bank Transfer'}
+                  </span>
+                </div>
               </div>
+
+              {donationForm.donor_email && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Mail className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-800">Confirmation Email Sent</span>
+                  </div>
+                  <p className="text-sm text-blue-700">
+                    We've sent a receipt to {donationForm.donor_email}
+                  </p>
+                </div>
+              )}
+
               <Button 
                 onClick={() => window.location.href = '/'}
                 className="w-full"
