@@ -209,5 +209,10 @@ CREATE TRIGGER trigger_update_square_settings_updated_at
 ALTER TABLE public.donations 
 ADD COLUMN IF NOT EXISTS donation_url_id UUID REFERENCES public.donation_urls(id) ON DELETE SET NULL;
 
--- Create index for the new column
+-- Add square_donation_id to existing donations table for linking Square donations
+ALTER TABLE public.donations 
+ADD COLUMN IF NOT EXISTS square_donation_id UUID REFERENCES public.square_donations(id) ON DELETE SET NULL;
+
+-- Create indexes for linking
 CREATE INDEX IF NOT EXISTS idx_donations_donation_url_id ON public.donations(donation_url_id);
+CREATE INDEX IF NOT EXISTS idx_donations_square_donation_id ON public.donations(square_donation_id);
