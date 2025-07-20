@@ -566,3 +566,24 @@ export async function getIntegratedDonations(filters = {}) {
     throw error;
   }
 }
+
+export async function getSquareSettingsForDonationUrl(organizationId) {
+  try {
+    const { data, error } = await supabase
+      .from('square_settings')
+      .select('*')
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+      .single();
+
+    if (error) {
+      console.log('No active Square settings found for organization:', organizationId);
+      return null;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error getting Square settings:', error);
+    return null;
+  }
+}

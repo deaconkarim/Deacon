@@ -28,7 +28,8 @@ import {
   getDonationUrlBySlug,
   processSquareDonation,
   formatCurrency,
-  debugDonationUrls
+  debugDonationUrls,
+  getSquareSettingsForDonationUrl
 } from '@/lib/squareService';
 
 const containerVariants = {
@@ -101,9 +102,16 @@ export function DonatePage() {
       console.log('Donation URL data:', urlData);
       setDonationUrl(urlData);
       
+      // Get Square settings for this organization
+      const squareSettings = await getSquareSettingsForDonationUrl(urlData.organization_id);
+      console.log('Square settings for organization:', squareSettings);
+      
       // Initialize Square Web SDK if settings are available
-      if (urlData?.organization?.square_settings?.is_active) {
-        await initializeSquarePayments(urlData.organization.square_settings);
+      if (squareSettings?.is_active) {
+        console.log('Initializing Square payments with settings:', squareSettings);
+        await initializeSquarePayments(squareSettings);
+      } else {
+        console.log('Square settings not found or not active');
       }
     } catch (error) {
       console.error('Error loading donation URL:', error);
