@@ -334,7 +334,7 @@ const TextDonationInput = ({ onDonationSubmit, onClose }) => {
           <div className="text-xs text-gray-500 space-y-1">
             <p className="font-medium">Supported Formats:</p>
             <ul className="list-disc list-inside space-y-1">
-              <li>JSON: {"amount": 50, "fund": "general"}</li>
+              <li>JSON: <code>{'{"amount": 50, "fund": "general"}'}</code></li>
               <li>URL Parameters: amount=50&amp;fund=missions</li>
               <li>Plain Text: $50.00 for general fund</li>
               <li>Email/Text: Any text containing amounts and fund info</li>
