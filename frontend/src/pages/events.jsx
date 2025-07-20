@@ -2206,16 +2206,75 @@ export default function Events() {
   const [isAnonymousCheckinOpen, setIsAnonymousCheckinOpen] = useState(false);
   const [anonymousName, setAnonymousName] = useState('');
 
+  // Kiosk mode detection
+  const isKioskMode = location.pathname === '/events' && location.search.includes('kiosk=true');
+
   // Effect to sync URL parameters with state
   useEffect(() => {
-    const isKioskMode = location.pathname === '/events' && location.search.includes('kiosk=true');
     if (isKioskMode) {
       setViewMode('kiosk');
       setIsFullKioskMode(true);
     } else {
       setIsFullKioskMode(false);
     }
-  }, [location.search]);
+  }, [location.search, isKioskMode]);
+
+  // Effect to ensure modals are closed on component unmount or errors
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Close all modals when page is about to unload
+      setIsMemberDialogOpen(false);
+      setIsCreateMemberOpen(false);
+      setIsCreateEventOpen(false);
+      setIsEditEventOpen(false);
+      setIsPotluckRSVPDialogOpen(false);
+      setIsVolunteerDialogOpen(false);
+      setIsAnonymousCheckinOpen(false);
+      setIsBulkActionsOpen(false);
+      setIsEventDetailsOpen(false);
+    };
+
+    const handleKeyDown = (event) => {
+      // Force close all modals on Escape key
+      if (event.key === 'Escape') {
+        handleCloseDialog();
+      }
+    };
+
+    // Add global function to force close modals (for debugging)
+    window.forceCloseModals = () => {
+      console.log('Force closing all modals...');
+      handleCloseDialog();
+    };
+
+    // Add specific kiosk mode modal management
+    if (isKioskMode) {
+      // Only add timeout if dialog is stuck for too long (10 minutes)
+      const timeoutId = setTimeout(() => {
+        if (isMemberDialogOpen) {
+          console.log('Kiosk mode modal timeout - forcing close');
+          handleCloseDialog();
+        }
+      }, 600000); // 10 minutes
+
+      return () => {
+        clearTimeout(timeoutId);
+        handleBeforeUnload();
+      };
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('keydown', handleKeyDown);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('keydown', handleKeyDown);
+      // Clean up modals on unmount
+      handleBeforeUnload();
+      // Remove global function
+      delete window.forceCloseModals;
+    };
+  }, [isKioskMode]);
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -3924,6 +3983,10 @@ export default function Events() {
         title: "Error",
         description: "Failed to add members. Please try again."
       });
+      
+      // Ensure modal is closed even if there's an error
+      setIsMemberDialogOpen(false);
+      setSelectedMembers([]);
     }
   };
 
@@ -4582,8 +4645,9 @@ export default function Events() {
   };
 
   const handleOpenDialog = async (event) => {
-    // Store the original event ID that was passed to us (for adding new attendance)
-    const originalEventId = event.id;
+    try {
+      // Store the original event ID that was passed to us (for adding new attendance)
+      const originalEventId = event.id;
     
     // If this is a generated recurring event instance, we need to use the master event for RSVP
     let eventToUse = event;
@@ -4642,6 +4706,9 @@ export default function Events() {
     setSelectedEventOriginalId(originalEventId);
     setSelectedMembers([]);
     setMemberSearchQuery('');
+    
+    // Open the dialog immediately
+    console.log('Opening dialog for event:', eventToUse.title);
     setIsMemberDialogOpen(true);
     
     // Check if this is a past event
@@ -4782,21 +4849,52 @@ export default function Events() {
         title: "Error",
         description: "Failed to load members. Please try again."
       });
+      // Don't close the dialog on error, just show the error
     }
+  } catch (error) {
+    console.error('Error opening dialog:', error);
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: "Failed to open dialog. Please try again."
+    });
+    // Don't close the dialog on error, just show the error
+  }
   };
 
   const handleCloseDialog = () => {
-    setIsMemberDialogOpen(false);
-    setSelectedEvent(null);
-    setSelectedEventOriginalId(null);
-    setSelectedMembers([]);
-    setMembers([]);
-    setAlreadyRSVPMembers([]);
-    setSuggestedMembers([]);
-    setMemberAttendanceCount({});
-    setIsEditingPastEvent(false);
-    setIsAnonymousCheckinOpen(false);
-    setAnonymousName('');
+    try {
+      console.log('Closing dialog');
+      // Reset all modal states to ensure nothing is stuck open
+      setIsMemberDialogOpen(false);
+      setSelectedEvent(null);
+      setSelectedEventOriginalId(null);
+      setSelectedMembers([]);
+      setMembers([]);
+      setAlreadyRSVPMembers([]);
+      setSuggestedMembers([]);
+      setMemberAttendanceCount({});
+      setIsEditingPastEvent(false);
+      setIsAnonymousCheckinOpen(false);
+      setAnonymousName('');
+      
+      // Also reset other potential modal states that might be stuck
+      setIsCreateMemberOpen(false);
+      setIsCreateEventOpen(false);
+      setIsEditEventOpen(false);
+      setIsPotluckRSVPDialogOpen(false);
+      setIsVolunteerDialogOpen(false);
+      setIsBulkActionsOpen(false);
+      setIsEventDetailsOpen(false);
+      
+      // Clear any search queries
+      setMemberSearchQuery('');
+      
+    } catch (error) {
+      console.error('Error closing dialog:', error);
+      // Force close the main dialog even if there's an error
+      setIsMemberDialogOpen(false);
+    }
   };
 
   const handlePotluckRSVP = useCallback(async (event) => {
@@ -5314,221 +5412,476 @@ export default function Events() {
 
   return (
     <PermissionGuard permission={PERMISSIONS.EVENTS_VIEW}>
-      {/* Full Kiosk Mode - Mobile Optimized */}
-      {isFullKioskMode ? (
-        <div className="fixed inset-0 bg-white z-40 overflow-hidden">
-          {/* Kiosk Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 shadow-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold">Check-In Kiosk</h1>
-                <p className="text-blue-100 text-sm">Select an event to check in</p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setIsFullKioskMode(false);
-                  setViewMode('admin');
-                  navigate('/events');
-                }}
-                className="bg-white/20 hover:bg-white/30 text-white border-white/30"
-              >
-                <X className="mr-2 h-4 w-4" />
-                Exit Kiosk
-              </Button>
-            </div>
-          </div>
+             {/* Full Kiosk Mode - Mobile Optimized */}
+       {isFullKioskMode ? (
+         <div className="fixed inset-0 bg-white z-40 flex flex-col">
+           {/* Kiosk Header */}
+           <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 shadow-lg flex-shrink-0">
+             <div className="flex items-center justify-between">
+               <div>
+                 <h1 className="text-2xl font-bold">Check-In Kiosk</h1>
+                 <p className="text-blue-100 text-sm">Select an event to check in</p>
+               </div>
+               <Button
+                 variant="outline"
+                 size="sm"
+                 onClick={() => {
+                   setIsFullKioskMode(false);
+                   setViewMode('admin');
+                   navigate('/events');
+                 }}
+                 className="bg-white/20 hover:bg-white/30 text-white border-white/30 text-sm px-3 py-2"
+               >
+                 <X className="mr-1 h-4 w-4" />
+                 Exit
+               </Button>
+             </div>
+           </div>
 
-          {/* Kiosk Event List */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+           {/* Kiosk Event List */}
+           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {isLoading ? (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {[...Array(3)].map((_, i) => (
-                  <Card key={i} className="p-6">
+                  <Card key={i} className="p-8">
                     <div className="animate-pulse">
-                      <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
-                      <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-                      <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                      <div className="h-8 bg-gray-200 rounded w-3/4 mb-6"></div>
+                      <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
+                      <div className="h-6 bg-gray-200 rounded w-1/3"></div>
                     </div>
                   </Card>
                 ))}
               </div>
-            ) : filteredEvents.length > 0 ? (
-              <div className="space-y-4">
-                {filteredEvents.map((event) => (
-                  <Card key={event.id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleOpenDialog(event)}>
-                    <CardContent className="p-6">
-                      <div className="flex items-start gap-4">
-                        <div className="flex-shrink-0">
-                          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                            <Calendar className="h-6 w-6 text-blue-600" />
-                          </div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-semibold text-gray-900 mb-2">{event.title}</h3>
-                          <div className="space-y-1 text-sm text-gray-600">
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-4 w-4 text-gray-400" />
-                              <span>{format(new Date(event.start_date), 'EEEE, MMMM d, yyyy')}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Clock className="h-4 w-4 text-gray-400" />
-                              <span>{format(new Date(event.start_date), 'h:mm a')} - {format(new Date(event.end_date), 'h:mm a')}</span>
-                            </div>
-                            {event.location && (
-                              <div className="flex items-center gap-2">
-                                <MapPin className="h-4 w-4 text-gray-400" />
-                                <span>{event.location}</span>
-                              </div>
-                            )}
-                          </div>
-                          <div className="mt-3">
-                            <Badge variant="secondary" className="bg-green-100 text-green-800">
-                              <Users className="mr-1 h-3 w-3" />
-                              {event.attendance || 0} checked in
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className="flex-shrink-0">
-                          <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                            Check In
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No upcoming events</h3>
-                <p className="text-gray-500">No events available for check-in at this time.</p>
-              </div>
-            )}
+                         ) : filteredEvents.length > 0 ? (
+               <div className="space-y-4">
+                 {filteredEvents.map((event) => (
+                   <Card key={event.id} className="hover:shadow-lg transition-shadow cursor-pointer border border-gray-200" onClick={() => handleOpenDialog(event)}>
+                     <CardContent className="p-4">
+                       <div className="flex items-center gap-4">
+                         <div className="flex-shrink-0">
+                           <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                             <Calendar className="h-6 w-6 text-blue-600" />
+                           </div>
+                         </div>
+                         <div className="flex-1 min-w-0">
+                           <h3 className="text-lg font-bold text-gray-900 mb-2">{event.title}</h3>
+                           <div className="space-y-1 text-sm text-gray-600">
+                             <div className="flex items-center gap-2">
+                               <Calendar className="h-4 w-4 text-gray-400" />
+                               <span>{format(new Date(event.start_date), 'EEEE, MMM d')}</span>
+                             </div>
+                             <div className="flex items-center gap-2">
+                               <Clock className="h-4 w-4 text-gray-400" />
+                               <span>{format(new Date(event.start_date), 'h:mm a')} - {format(new Date(event.end_date), 'h:mm a')}</span>
+                             </div>
+                             {event.location && (
+                               <div className="flex items-center gap-2">
+                                 <MapPin className="h-4 w-4 text-gray-400" />
+                                 <span className="truncate">{event.location}</span>
+                               </div>
+                             )}
+                           </div>
+                           <div className="mt-2">
+                             <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs px-2 py-1">
+                               <Users className="mr-1 h-3 w-3" />
+                               {event.attendance || 0} checked in
+                             </Badge>
+                           </div>
+                         </div>
+                         <div className="flex-shrink-0">
+                           <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-sm px-4 py-2">
+                             Check In
+                           </Button>
+                         </div>
+                       </div>
+                     </CardContent>
+                   </Card>
+                 ))}
+               </div>
+                         ) : (
+               <div className="text-center py-8">
+                 <Calendar className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+                 <h3 className="text-xl font-bold text-gray-900 mb-2">No upcoming events</h3>
+                 <p className="text-sm text-gray-500">No events available for check-in at this time.</p>
+               </div>
+             )}
           </div>
 
-          {/* Member Selection Dialog for Kiosk Mode */}
-          <Dialog open={isMemberDialogOpen} onOpenChange={setIsMemberDialogOpen}>
-            <DialogContent className="w-[95vw] max-w-full h-[90vh] md:h-auto md:max-w-3xl p-0 z-50">
-              <DialogHeader className="p-3 md:p-6 border-b">
-                <div className="space-y-2">
-                  <DialogTitle className="text-lg md:text-2xl lg:text-3xl">
-                    {isEditingPastEvent 
-                      ? 'Edit Attendance' 
-                      : selectedEvent?.attendance_type === 'check-in' 
-                        ? 'Check In People' 
-                        : 'RSVP Members'
-                    } - {selectedEvent?.title}
-                  </DialogTitle>
+                                {/* Mobile Kiosk Mode - Fullscreen */}
+           {isKioskMode && (
+             <>
+               {/* Custom overlay for kiosk mode */}
+               {isMemberDialogOpen && (
+                 <div 
+                   className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40"
+                   onClick={handleCloseDialog}
+                 />
+               )}
+               <Dialog open={isMemberDialogOpen} onOpenChange={setIsMemberDialogOpen}>
+                 <DialogContent 
+                   className="!fixed !inset-0 !w-screen !h-screen !max-w-none !p-0 !z-50 bg-white flex flex-col overflow-hidden !translate-x-0 !translate-y-0 !left-0 !top-0"
+                   style={{
+                     position: 'fixed',
+                     top: 0,
+                     left: 0,
+                     right: 0,
+                     bottom: 0,
+                     width: '100vw',
+                     height: '100vh',
+                     transform: 'none',
+                     margin: 0,
+                     maxWidth: 'none',
+                     maxHeight: 'none'
+                   }}
+                 >
+
+                 <DialogHeader className="p-3 border-b bg-blue-50 flex-shrink-0">
+                   <DialogTitle className="text-lg font-bold text-center truncate">
+                     {selectedEvent?.title}
+                   </DialogTitle>
+                   <DialogDescription className="text-sm text-center mt-1">
+                     {selectedEvent?.attendance_type === 'check-in' ? 'Check In' : 'RSVP'}
+                   </DialogDescription>
+                 </DialogHeader>
+
+                 <div className="flex-1 overflow-y-auto p-4 min-h-0 pb-4">
+                   {/* Search Bar */}
+                   <div className="mb-4">
+                     <Input
+                       placeholder="Search by name..."
+                       value={memberSearchQuery}
+                       onChange={(e) => setMemberSearchQuery(e.target.value)}
+                       className="w-full h-12 text-base"
+                     />
+                   </div>
+
+                   {/* Action Buttons */}
+                   <div className="flex gap-2 mb-4">
+                     <Button
+                       onClick={() => setIsCreateMemberOpen(true)}
+                       className="flex-1 h-12 text-base bg-blue-600 hover:bg-blue-700 px-3"
+                     >
+                       <Plus className="mr-2 h-5 w-5" />
+                       Add New
+                     </Button>
+                     {selectedEvent?.attendance_type === 'check-in' && (
+                       <Button
+                         onClick={() => setIsAnonymousCheckinOpen(true)}
+                         className="flex-1 h-12 text-base bg-orange-600 hover:bg-orange-700 px-3"
+                       >
+                         <UserPlus className="mr-2 h-5 w-5" />
+                         Anonymous
+                       </Button>
+                     )}
+                   </div>
+
+                                     {/* Suggested Members */}
+                   {suggestedMembers.length > 0 && (
+                     <div className="mb-6">
+                       <h3 className="text-lg font-bold text-green-700 mb-3 flex items-center justify-center gap-2">
+                         <Star className="h-5 w-5" />
+                         Frequent Attendees
+                       </h3>
+                       <div className="grid grid-cols-1 gap-3">
+                         {suggestedMembers
+                           .filter(member => 
+                             member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                             member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase())
+                           )
+                           .map((member) => (
+                                                    <Button
+                           key={member.id}
+                           variant="outline"
+                           onClick={() => handleMemberClick(member)}
+                           className="w-full h-16 text-left p-3 border-2 border-green-200 bg-green-50 hover:bg-green-100"
+                         >
+                             <div className="flex items-center space-x-3 w-full">
+                                                            <Avatar className="h-10 w-10 flex-shrink-0">
+                               <AvatarImage src={member.image_url} />
+                               <AvatarFallback className="text-base">
+                                 {getInitials(member.firstname, member.lastname)}
+                               </AvatarFallback>
+                             </Avatar>
+                               <div className="flex-1 text-left">
+                                 <p className="text-base font-bold">
+                                   {member.firstname} {member.lastname}
+                                 </p>
+                                 <p className="text-sm text-green-600">
+                                   {memberAttendanceCount[member.id] || 0} previous attendances
+                                 </p>
+                               </div>
+                               <Star className="h-4 w-4 text-green-600 flex-shrink-0" />
+                             </div>
+                           </Button>
+                         ))}
+                       </div>
+                     </div>
+                   )}
+
+                                     {/* All Members */}
+                   <div>
+                     <h3 className="text-lg font-bold mb-3 text-center">All People</h3>
+                     <div className="grid grid-cols-1 gap-3">
+                       {members
+                         .filter(member => 
+                           !suggestedMembers.find(s => s.id === member.id) &&
+                           (member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                            member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase()))
+                         )
+                         .map((member) => (
+                         <Button
+                           key={member.id}
+                           variant="outline"
+                           onClick={() => handleMemberClick(member)}
+                           className="w-full h-16 text-left p-3"
+                         >
+                           <div className="flex items-center space-x-3 w-full">
+                             <Avatar className="h-10 w-10 flex-shrink-0">
+                               <AvatarImage src={member.image_url} />
+                               <AvatarFallback className="text-base">
+                                 {getInitials(member.firstname, member.lastname)}
+                               </AvatarFallback>
+                             </Avatar>
+                             <div className="flex-1 text-left">
+                               <p className="text-base font-bold">
+                                 {member.firstname} {member.lastname}
+                               </p>
+                               {memberAttendanceCount[member.id] && (
+                                 <p className="text-sm text-gray-600">
+                                   {memberAttendanceCount[member.id]} previous attendances
+                                 </p>
+                               )}
+                             </div>
+                           </div>
+                         </Button>
+                       ))}
+                     </div>
+                   </div>
+                </div>
+
+                                 <DialogFooter className="p-3 border-t bg-gray-50 flex-shrink-0">
+                   <div className="flex gap-3 w-full">
+                     <Button
+                       variant="outline"
+                       onClick={handleCloseDialog}
+                       className="flex-1 h-10 text-sm"
+                     >
+                       Cancel
+                     </Button>
+                     <Button
+                       onClick={handleDone}
+                       className="flex-1 h-10 text-sm"
+                       disabled={selectedMembers.length === 0}
+                     >
+                       Done
+                     </Button>
+                   </div>
+                 </DialogFooter>
+               </DialogContent>
+             </Dialog>
+             </>
+           )}
+
+          {/* Desktop Member Selection Dialog */}
+          {!isKioskMode && (
+            <Dialog open={isMemberDialogOpen} onOpenChange={setIsMemberDialogOpen}>
+              <DialogContent className="w-[95vw] max-w-full h-[90vh] md:h-auto md:max-w-4xl p-0 z-50">
+                {/* Force close button for stuck modals */}
+                <div className="fixed top-4 right-4 z-[60]">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleCloseDialog}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    Force Close
+                  </Button>
+                </div>
+                <DialogHeader className="p-4 md:p-6 border-b">
+                  <div className="space-y-2">
+                    <DialogTitle className="text-xl md:text-2xl lg:text-3xl">
+                      {isEditingPastEvent 
+                        ? 'Edit Attendance' 
+                        : selectedEvent?.attendance_type === 'check-in' 
+                          ? 'Check In People' 
+                          : 'RSVP Members'
+                      } - {selectedEvent?.title}
+                    </DialogTitle>
+                    {suggestedMembers.length > 0 && (
+                      <div className="flex items-center gap-3">
+                        <Star className="h-6 w-6 md:h-7 md:w-7 text-green-600" />
+                        <span className="text-lg md:text-xl text-green-600 font-normal">
+                          Smart suggestions available
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <DialogDescription className="text-lg md:text-xl mt-4">
+                    {isEditingPastEvent
+                      ? `Edit attendance records for ${selectedEvent?.title}`
+                      : selectedEvent?.attendance_type === 'check-in'
+                      ? 'Check In People for the event'
+                        : `Select members to RSVP for ${selectedEvent?.title}`
+                    }
+                  </DialogDescription>
                   {suggestedMembers.length > 0 && (
-                    <div className="flex items-center gap-2">
-                      <Star className="h-4 w-4 md:h-5 md:w-5 text-green-600" />
-                      <span className="text-sm md:text-lg text-green-600 font-normal">
-                        Smart suggestions available
-                      </span>
+                    <div className="mt-3 text-sm md:text-base text-green-600">
+                      Members who frequently attend similar events are highlighted below
                     </div>
                   )}
-                </div>
-                <DialogDescription className="text-sm md:text-lg mt-2">
-                  {isEditingPastEvent
-                    ? `Edit attendance records for ${selectedEvent?.title}`
-                    : selectedEvent?.attendance_type === 'check-in'
-                    ? 'Check In People for the event'
-                      : `Select members to RSVP for ${selectedEvent?.title}`
-                  }
-                </DialogDescription>
-                {suggestedMembers.length > 0 && (
-                  <div className="mt-2 text-xs md:text-sm text-green-600">
-                    Members who frequently attend similar events are highlighted below
-                  </div>
-                )}
-              </DialogHeader>
+                </DialogHeader>
 
-              <div className="p-3 md:p-6 flex-1 overflow-hidden">
-                <Tabs defaultValue="available" className="w-full h-full flex flex-col">
-                  <TabsList className="grid w-full grid-cols-2 h-10 md:h-14">
-                    <TabsTrigger value="available" className="text-sm md:text-lg">
-                      {isEditingPastEvent ? 'Add Attendance' : 'Available People'}
-                    </TabsTrigger>
-                    <TabsTrigger value="checked-in" className="text-sm md:text-lg">
-                      {selectedEvent?.attendance_type === 'check-in' ? 'Checked In' : 'RSVP\'d'}
-                    </TabsTrigger>
-                  </TabsList>
+                <div className="p-6 md:p-8 flex-1 overflow-hidden">
+                  <Tabs defaultValue="available" className="w-full h-full flex flex-col">
+                    <TabsList className="grid w-full grid-cols-2 h-14 md:h-16">
+                      <TabsTrigger value="available" className="text-lg md:text-xl">
+                        {isEditingPastEvent ? 'Add Attendance' : 'Available People'}
+                      </TabsTrigger>
+                      <TabsTrigger value="checked-in" className="text-lg md:text-xl">
+                        {selectedEvent?.attendance_type === 'check-in' ? 'Checked In' : 'RSVP\'d'}
+                      </TabsTrigger>
+                    </TabsList>
 
-                  <TabsContent value="available" className="mt-3 md:mt-8 flex-1 overflow-y-auto">
-                    <div className="space-y-3 md:space-y-6">
-                      <div className="flex flex-col md:flex-row gap-2 md:gap-3">
-                        <div className="flex-1">
-                          <Input
-                            placeholder="Search people..."
-                            value={memberSearchQuery}
-                            onChange={(e) => setMemberSearchQuery(e.target.value)}
-                            className="w-full h-10 md:h-14 text-sm md:text-lg"
-                          />
-                        </div>
-                        <Button
-                          onClick={() => setIsCreateMemberOpen(true)}
-                          className="w-full md:w-auto h-10 md:h-14 text-sm md:text-lg bg-blue-600 hover:bg-blue-700"
-                        >
-                          <Plus className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
-                          Add New Person
-                        </Button>
-                        {selectedEvent?.attendance_type === 'check-in' && (
+                    <TabsContent value="available" className="mt-6 md:mt-8 flex-1 overflow-y-auto">
+                      <div className="space-y-6 md:space-y-8">
+                        <div className="flex flex-col md:flex-row gap-4 md:gap-6">
+                          <div className="flex-1">
+                            <Input
+                              placeholder="Search people..."
+                              value={memberSearchQuery}
+                              onChange={(e) => setMemberSearchQuery(e.target.value)}
+                              className="w-full h-16 md:h-20 text-lg md:text-xl"
+                            />
+                          </div>
                           <Button
-                            onClick={() => setIsAnonymousCheckinOpen(true)}
-                            className="w-full md:w-auto h-10 md:h-14 text-sm md:text-lg bg-orange-600 hover:bg-orange-700"
+                            onClick={() => setIsCreateMemberOpen(true)}
+                            className="w-full md:w-auto h-16 md:h-20 text-lg md:text-xl bg-blue-600 hover:bg-blue-700"
                           >
-                            <UserPlus className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
-                            Anonymous Check-in
+                            <Plus className="mr-2 md:mr-3 h-5 w-5 md:h-6 md:w-6" />
+                            Add New Person
                           </Button>
+                          {selectedEvent?.attendance_type === 'check-in' && (
+                            <Button
+                              onClick={() => setIsAnonymousCheckinOpen(true)}
+                              className="w-full md:w-auto h-16 md:h-20 text-lg md:text-xl bg-orange-600 hover:bg-orange-700"
+                            >
+                              <UserPlus className="mr-2 md:mr-3 h-5 w-5 md:h-6 md:w-6" />
+                              Anonymous Check-in
+                            </Button>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          {suggestedMembers.length > 0 && (
+                            <div className="mb-6 md:mb-8">
+                              <h3 className="text-xl md:text-2xl font-bold text-green-700 mb-4 flex items-center gap-3">
+                                <Star className="h-6 w-6 md:h-7 md:w-7" />
+                                Suggested Based on Previous Attendance
+                              </h3>
+                              {/* Mobile Grid Layout */}
+                              <div className="md:hidden">
+                                <div className="grid grid-cols-2 gap-3">
+                                  {suggestedMembers
+                                    .filter(member => 
+                                      member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                                      member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase())
+                                    )
+                                    .map((member) => (
+                                    <div
+                                      key={member.id}
+                                      className="flex flex-col items-center p-3 rounded-lg border-2 border-green-200 bg-green-50 cursor-pointer hover:bg-green-100 transition-colors"
+                                      onClick={() => handleMemberClick(member)}
+                                    >
+                                      <Avatar className="h-16 w-16 mb-2">
+                                        <AvatarImage src={member.image_url} />
+                                        <AvatarFallback className="text-lg">
+                                          {getInitials(member.firstname, member.lastname)}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <p className="text-sm font-bold text-center truncate w-full">
+                                        {member.firstname} {member.lastname}
+                                      </p>
+                                      <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs px-2 py-1 mt-1">
+                                        {memberAttendanceCount[member.id] || 0} attendances
+                                      </Badge>
+                                      <Star className="h-4 w-4 text-green-600 mt-1" />
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                              
+                              {/* Desktop List Layout */}
+                              <div className="hidden md:block space-y-2">
+                                {suggestedMembers
+                                  .filter(member => 
+                                    member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                                    member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase())
+                                  )
+                                  .map((member) => (
+                                  <div
+                                    key={member.id}
+                                    className="flex items-center space-x-4 p-4 lg:p-5 rounded-lg border-2 border-green-200 bg-green-50 cursor-pointer hover:bg-green-100 transition-colors"
+                                    onClick={() => handleMemberClick(member)}
+                                  >
+                                    <Avatar className="h-16 w-16 lg:h-18 lg:w-18">
+                                      <AvatarImage src={member.image_url} />
+                                      <AvatarFallback className="text-lg lg:text-xl">
+                                        {getInitials(member.firstname, member.lastname)}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-lg lg:text-xl font-bold truncate">
+                                        {member.firstname} {member.lastname}
+                                      </p>
+                                      <div className="flex items-center gap-2 mt-1">
+                                        <Badge variant="secondary" className="bg-green-100 text-green-800 text-sm px-2 py-1">
+                                          {memberAttendanceCount[member.id] || 0} previous attendances
+                                        </Badge>
+                                        <span className="text-sm md:text-base text-green-600">Frequent attendee</span>
+                                      </div>
+                                    </div>
+                                    <Star className="h-5 w-5 text-green-600 flex-shrink-0" />
+                                  </div>
+                                ))}
+                              </div>
+                          </div>
                         )}
-                      </div>
-                      <div className="space-y-2">
-                        {suggestedMembers.length > 0 && (
-                          <div className="mb-3 md:mb-4">
-                            <h3 className="text-sm md:text-lg font-semibold text-green-700 mb-2 flex items-center gap-2">
-                              <Star className="h-4 w-4 md:h-5 md:w-5" />
-                              Suggested Based on Previous Attendance
-                            </h3>
-                            <div className="space-y-2">
-                              {suggestedMembers
+                          
+                          {/* Mobile Grid Layout */}
+                          <div className="md:hidden">
+                            <div className="grid grid-cols-2 gap-3">
+                              {members
                                 .filter(member => 
-                                  member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
-                                  member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase())
+                                  !suggestedMembers.find(s => s.id === member.id) &&
+                                  (member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                                   member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase()))
                                 )
                                 .map((member) => (
                                 <div
                                   key={member.id}
-                                  className="flex items-center space-x-3 md:space-x-4 p-2 md:p-3 lg:p-4 rounded-lg border-2 border-green-200 bg-green-50 cursor-pointer hover:bg-green-100 transition-colors"
+                                  className="flex flex-col items-center p-3 rounded-lg border-2 cursor-pointer hover:bg-gray-50 transition-colors"
                                   onClick={() => handleMemberClick(member)}
                                 >
-                                  <Avatar className="h-10 w-10 md:h-12 md:w-12 lg:h-16 lg:w-16">
+                                  <Avatar className="h-16 w-16 mb-2">
                                     <AvatarImage src={member.image_url} />
-                                    <AvatarFallback className="text-sm md:text-lg lg:text-xl">
+                                    <AvatarFallback className="text-lg">
                                       {getInitials(member.firstname, member.lastname)}
                                     </AvatarFallback>
                                   </Avatar>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm md:text-lg lg:text-xl font-medium truncate">
-                                      {member.firstname} {member.lastname}
-                                    </p>
-                                    <div className="flex items-center gap-1 md:gap-2 mt-1">
-                                      <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
-                                        {memberAttendanceCount[member.id] || 0} previous attendances
-                                      </Badge>
-                                      <span className="text-xs md:text-sm text-green-600">Frequent attendee</span>
-                                    </div>
-                                  </div>
-                                  <Star className="h-4 w-4 md:h-5 md:w-5 text-green-600 flex-shrink-0" />
+                                  <p className="text-sm font-bold text-center truncate w-full">
+                                    {member.firstname} {member.lastname}
+                                  </p>
+                                  {memberAttendanceCount[member.id] && (
+                                    <Badge variant="outline" className="text-xs px-2 py-1 mt-1">
+                                      {memberAttendanceCount[member.id]} attendances
+                                    </Badge>
+                                  )}
                                 </div>
                               ))}
                             </div>
                           </div>
-                        )}
-                        
-                        <div className="space-y-2">
+                          
+                          {/* Desktop List Layout */}
+                          <div className="hidden md:block space-y-2">
                           {members
                             .filter(member => 
                               !suggestedMembers.find(s => s.id === member.id) &&
@@ -5538,22 +5891,22 @@ export default function Events() {
                             .map((member) => (
                             <div
                               key={member.id}
-                              className="flex items-center space-x-3 md:space-x-4 p-2 md:p-3 lg:p-4 rounded-lg border cursor-pointer hover:bg-gray-50"
+                              className="flex items-center space-x-4 p-4 lg:p-5 rounded-lg border-2 cursor-pointer hover:bg-gray-50 transition-colors"
                               onClick={() => handleMemberClick(member)}
                             >
-                              <Avatar className="h-10 w-10 md:h-12 md:w-12 lg:h-16 lg:w-16">
+                              <Avatar className="h-16 w-16 lg:h-18 lg:w-18">
                                 <AvatarImage src={member.image_url} />
-                                <AvatarFallback className="text-sm md:text-lg lg:text-xl">
+                                <AvatarFallback className="text-lg lg:text-xl">
                                   {getInitials(member.firstname, member.lastname)}
                                 </AvatarFallback>
                               </Avatar>
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm md:text-lg lg:text-xl font-medium truncate">
+                                <p className="text-lg lg:text-xl font-bold truncate">
                                   {member.firstname} {member.lastname}
                                 </p>
                                 {memberAttendanceCount[member.id] && (
                                   <div className="mt-1">
-                                    <Badge variant="outline" className="text-xs">
+                                    <Badge variant="outline" className="text-sm px-2 py-1">
                                       {memberAttendanceCount[member.id]} previous attendances
                                     </Badge>
                                   </div>
@@ -5566,26 +5919,69 @@ export default function Events() {
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="checked-in" className="mt-3 md:mt-8 flex-1 overflow-y-auto">
-                    <div className="space-y-2">
+                                    <TabsContent value="checked-in" className="mt-3 md:mt-8 flex-1 overflow-y-auto">
+                    {/* Mobile Grid Layout */}
+                    <div className="md:hidden">
+                      <div className="grid grid-cols-2 gap-3">
+                        {alreadyRSVPMembers.filter(member => member && member.id).map((member) => (
+                          <div
+                            key={member.id}
+                            className="flex flex-col items-center p-3 rounded-lg border-2 relative"
+                          >
+                            <Avatar className="h-16 w-16 mb-2">
+                              <AvatarImage src={member.image_url} />
+                              <AvatarFallback className="text-lg">
+                                {member.isAnonymous ? member.firstname.charAt(0) : getInitials(member.firstname, member.lastname)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <p className="text-sm font-bold text-center truncate w-full">
+                              {member.firstname} {member.lastname}
+                            </p>
+                            {member.isAnonymous && (
+                              <Badge variant="outline" className="text-xs px-2 py-1 mt-1 text-orange-600 border-orange-600">
+                                Anonymous
+                              </Badge>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveMember(member.id)}
+                              className="h-8 w-8 p-0 absolute top-2 right-2"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                      {alreadyRSVPMembers.length === 0 && (
+                        <p className="text-sm text-gray-500 italic p-4 text-center">
+                          {selectedEvent?.attendance_type === 'check-in'
+                            ? 'No members have checked in yet'
+                            : 'No members have RSVP\'d yet'}
+                        </p>
+                      )}
+                    </div>
+                    
+                    {/* Desktop List Layout */}
+                    <div className="hidden md:block space-y-2">
                       {alreadyRSVPMembers.filter(member => member && member.id).map((member) => (
                         <div
                           key={member.id}
-                          className="flex items-center justify-between p-2 md:p-3 lg:p-4 rounded-lg border"
+                          className="flex items-center justify-between p-4 lg:p-5 rounded-lg border-2"
                         >
-                          <div className="flex items-center space-x-3 md:space-x-4 min-w-0 flex-1">
-                            <Avatar className="h-10 w-10 md:h-12 md:w-12 lg:h-16 lg:w-16">
+                          <div className="flex items-center space-x-4 min-w-0 flex-1">
+                            <Avatar className="h-16 w-16 lg:h-18 lg:w-18">
                               <AvatarImage src={member.image_url} />
-                              <AvatarFallback className="text-sm md:text-lg lg:text-xl">
+                              <AvatarFallback className="text-lg lg:text-xl">
                                 {member.isAnonymous ? member.firstname.charAt(0) : getInitials(member.firstname, member.lastname)}
                               </AvatarFallback>
                             </Avatar>
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm md:text-lg lg:text-xl font-medium truncate">
+                              <p className="text-lg lg:text-xl font-bold truncate">
                                 {member.firstname} {member.lastname}
                               </p>
                               {member.isAnonymous && (
-                                <Badge variant="outline" className="text-xs text-orange-600 border-orange-600">
+                                <Badge variant="outline" className="text-sm px-3 py-1 text-orange-600 border-orange-600">
                                   Anonymous Attendee
                                 </Badge>
                               )}
@@ -5593,16 +5989,16 @@ export default function Events() {
                           </div>
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="lg"
                             onClick={() => handleRemoveMember(member.id)}
-                            className="h-8 w-8 md:h-10 md:w-10 lg:h-12 lg:w-12 p-0 flex-shrink-0"
+                            className="h-12 w-12 lg:h-14 lg:w-14 p-0 flex-shrink-0"
                           >
-                            <X className="h-4 w-4 md:h-5 md:w-5 lg:h-6 lg:w-6" />
+                            <X className="h-6 w-6 lg:h-7 lg:w-7" />
                           </Button>
                         </div>
                       ))}
                       {alreadyRSVPMembers.length === 0 && (
-                        <p className="text-sm md:text-base lg:text-lg text-gray-500 italic p-4">
+                        <p className="text-base lg:text-lg text-gray-500 italic p-4">
                           {selectedEvent?.attendance_type === 'check-in'
                             ? 'No members have checked in yet'
                             : 'No members have RSVP\'d yet'}
@@ -5613,18 +6009,18 @@ export default function Events() {
                 </Tabs>
               </div>
 
-              <DialogFooter className="p-3 md:p-6 border-t">
-                <div className="flex flex-col md:flex-row gap-2 md:gap-3 w-full">
+              <DialogFooter className="p-4 md:p-6 border-t">
+                <div className="flex flex-row gap-3 md:gap-4 w-full">
                   <Button
                     variant="outline"
                     onClick={handleCloseDialog}
-                    className="w-full md:w-auto text-sm md:text-lg h-10 md:h-14"
+                    className="flex-1 md:w-auto text-base md:text-lg h-12 md:h-14"
                   >
                     Cancel
                   </Button>
                   <Button
                     onClick={handleDone}
-                    className="w-full md:w-auto text-sm md:text-lg h-10 md:h-14"
+                    className="flex-1 md:w-auto text-base md:text-lg h-12 md:h-14"
                   >
                     Done
                   </Button>
@@ -5632,6 +6028,7 @@ export default function Events() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          )}
         </div>
       ) : (
         <motion.div 
@@ -6433,142 +6830,6 @@ export default function Events() {
               ))}
             </div>
           ) : filteredEvents.length > 0 ? (
-                            viewMode === 'calendar' ? (
-                (() => {
-                  try {
-                    if (isCalendarLoading) {
-                      return (
-                        <div className="text-center py-12">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                          <p className="text-gray-500">Loading calendar events...</p>
-                          <p className="text-sm text-gray-400 mt-2">This may take a moment for large datasets</p>
-                        </div>
-                      );
-                    }
-                    
-                    if (calendarEvents.length > 0) {
-                      try {
-                        return (
-                          <CalendarView
-                            events={calendarEvents}
-                            onEventClick={(event) => {
-                              setSelectedEventForDetails(event);
-                              setIsEventDetailsOpen(true);
-                            }}
-                            currentMonth={currentMonth}
-                            onMonthChange={setCurrentMonth}
-                          />
-                        );
-                      } catch (calendarError) {
-                        console.error('[Calendar] Error rendering CalendarView:', calendarError);
-                        return (
-                          <div className="text-center py-12">
-                            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                              <XCircle className="h-6 w-6 text-red-600" />
-                            </div>
-                            <h3 className="text-lg font-medium text-gray-900 mb-2">Calendar Error</h3>
-                            <p className="text-gray-500 mb-4">
-                              There was an error rendering the calendar view.
-                            </p>
-                            <Button 
-                              variant="outline" 
-                              onClick={() => setViewMode('admin')}
-                            >
-                              Switch to Admin View
-                            </Button>
-                          </div>
-                        );
-                      }
-                    }
-                    
-                                         return (
-                       <div className="text-center py-12">
-                         <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                         <h3 className="text-lg font-medium text-gray-900 mb-2">No events this month</h3>
-                         <p className="text-gray-500 mb-4">
-                           No events scheduled for {format(currentMonth, 'MMMM yyyy')}.
-                         </p>
-                         <div className="flex gap-2 justify-center">
-                           <Button onClick={() => setIsCreateEventOpen(true)}>
-                             <Plus className="mr-2 h-4 w-4" />
-                             Create Event
-                           </Button>
-                           <Button 
-                             variant="outline" 
-                             onClick={async () => {
-                               setCalendarEvents([]);
-                               setIsCalendarLoading(true);
-                               
-                               try {
-                                 // First try to refresh the session
-                                 console.log('[Calendar] Manual retry - refreshing session...');
-                                 const { data, error: refreshError } = await supabase.auth.refreshSession();
-                                 
-                                 if (refreshError) {
-                                   console.error('[Calendar] Session refresh failed:', refreshError);
-                                   toast({
-                                     title: 'Authentication Error',
-                                     description: 'Please log in again to continue.',
-                                     variant: 'destructive'
-                                   });
-                                   setIsCalendarLoading(false);
-                                   return;
-                                 }
-                                 
-                                 console.log('[Calendar] Session refreshed, fetching events...');
-                                 const monthEvents = await fetchMonthEvents(currentMonth);
-                                 setCalendarEvents(monthEvents);
-                               } catch (error) {
-                                 console.error('[Calendar] Manual retry failed:', error);
-                                 toast({
-                                   title: 'Error',
-                                   description: error.message || 'Failed to load events',
-                                   variant: 'destructive'
-                                 });
-                               } finally {
-                                 setIsCalendarLoading(false);
-                               }
-                             }}
-                           >
-                             <RefreshCw className="mr-2 h-4 w-4" />
-                             Retry
-                           </Button>
-                         </div>
-                       </div>
-                     );
-                   } catch (error) {
-                     console.error('[Calendar] Error rendering calendar view:', error);
-                     return (
-                       <div className="text-center py-12">
-                         <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                           <XCircle className="h-6 w-6 text-red-600" />
-                         </div>
-                         <h3 className="text-lg font-medium text-gray-900 mb-2">Calendar Error</h3>
-                         <p className="text-gray-500 mb-4">
-                           There was an error loading the calendar view.
-                         </p>
-                         <div className="flex gap-2 justify-center">
-                           <Button 
-                             variant="outline" 
-                             onClick={() => setViewMode('admin')}
-                           >
-                             Switch to Admin View
-                           </Button>
-                           <Button 
-                             onClick={() => {
-                               setViewMode('admin');
-                               setTimeout(() => setViewMode('calendar'), 100);
-                             }}
-                           >
-                             <RefreshCw className="mr-2 h-4 w-4" />
-                             Retry Calendar
-                           </Button>
-                         </div>
-                       </div>
-                     );
-                   }
-                 })()
-              ) : (
             <div className="space-y-4">
         {filteredEvents.map((event) => (
           <EventCard
@@ -6595,24 +6856,23 @@ export default function Events() {
           />
         ))}
       </div>
-              )
-          ) : (
-            <div className="text-center py-12">
-              <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No upcoming events</h3>
-              <p className="text-gray-500 mb-4">
-                                  {searchQuery || attendanceFilter !== 'all' || eventTypeFilter !== 'all' || timeWindowFilter !== 'month'
-                  ? 'No events match your current filters.' 
-                  : 'Get started by creating your first event.'}
-              </p>
-                {!searchQuery && attendanceFilter === 'all' && eventTypeFilter === 'all' && timeWindowFilter === 'month' && (
-                <Button onClick={() => setIsCreateEventOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                  Create Event
-                </Button>
-              )}
-            </div>
-          )}
+            ) : (
+              <div className="text-center py-12">
+                <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No upcoming events</h3>
+                <p className="text-gray-500 mb-4">
+                                    {searchQuery || attendanceFilter !== 'all' || eventTypeFilter !== 'all' || timeWindowFilter !== 'month'
+                    ? 'No events match your current filters.' 
+                    : 'Get started by creating your first event.'}
+                </p>
+                  {!searchQuery && attendanceFilter === 'all' && eventTypeFilter === 'all' && timeWindowFilter === 'month' && (
+                  <Button onClick={() => setIsCreateEventOpen(true)}>
+                      <Plus className="mr-2 h-4 w-4" />
+                    Create Event
+                  </Button>
+                )}
+              </div>
+            )}
         </TabsContent>
 
         {/* Past Events Tab */}
@@ -6836,32 +7096,32 @@ export default function Events() {
                       </div>
                     )}
                     
-                    <div className="space-y-2">
-                      {members
+                                            <div className="space-y-2">
+                          {members
                         .filter(member => 
                           !suggestedMembers.find(s => s.id === member.id) &&
                           (member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
                            member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase()))
                         )
                         .map((member) => (
-                        <div
-                          key={member.id}
-                          className="flex items-center space-x-3 md:space-x-4 p-2 md:p-3 lg:p-4 rounded-lg border cursor-pointer hover:bg-gray-50"
-                          onClick={() => handleMemberClick(member)}
-                        >
-                          <Avatar className="h-10 w-10 md:h-12 md:w-12 lg:h-16 lg:w-16">
+                                                    <div
+                              key={member.id}
+                              className="flex items-center space-x-3 md:space-x-4 p-3 md:p-4 lg:p-5 rounded-lg border-2 cursor-pointer hover:bg-gray-50 transition-colors"
+                              onClick={() => handleMemberClick(member)}
+                            >
+                          <Avatar className="h-14 w-14 md:h-16 md:w-16 lg:h-18 lg:w-18">
                             <AvatarImage src={member.image_url} />
-                            <AvatarFallback className="text-sm md:text-lg lg:text-xl">
+                            <AvatarFallback className="text-base md:text-lg lg:text-xl">
                               {getInitials(member.firstname, member.lastname)}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm md:text-lg lg:text-xl font-medium truncate">
+                            <p className="text-base md:text-lg lg:text-xl font-bold truncate">
                               {member.firstname} {member.lastname}
                             </p>
                             {memberAttendanceCount[member.id] && (
                               <div className="mt-1">
-                                <Badge variant="outline" className="text-xs">
+                                <Badge variant="outline" className="text-sm px-2 py-1">
                                   {memberAttendanceCount[member.id]} previous attendances
                                 </Badge>
                               </div>
@@ -6874,26 +7134,26 @@ export default function Events() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="checked-in" className="mt-3 md:mt-8 flex-1 overflow-y-auto">
+              <TabsContent value="checked-in" className="mt-6 md:mt-8 flex-1 overflow-y-auto">
                 <div className="space-y-2">
                   {alreadyRSVPMembers.filter(member => member && member.id).map((member) => (
-                    <div
-                      key={member.id}
-                      className="flex items-center justify-between p-2 md:p-3 lg:p-4 rounded-lg border"
-                    >
-                      <div className="flex items-center space-x-3 md:space-x-4 min-w-0 flex-1">
-                        <Avatar className="h-10 w-10 md:h-12 md:w-12 lg:h-16 lg:w-16">
+                                            <div
+                          key={member.id}
+                          className="flex items-center justify-between p-3 md:p-4 lg:p-5 rounded-lg border-2"
+                        >
+                          <div className="flex items-center space-x-3 md:space-x-4 min-w-0 flex-1">
+                        <Avatar className="h-14 w-14 md:h-16 md:w-16 lg:h-18 lg:w-18">
                           <AvatarImage src={member.image_url} />
-                          <AvatarFallback className="text-sm md:text-lg lg:text-xl">
+                          <AvatarFallback className="text-base md:text-lg lg:text-xl">
                             {member.isAnonymous ? member.firstname.charAt(0) : getInitials(member.firstname, member.lastname)}
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm md:text-lg lg:text-xl font-medium truncate">
+                          <p className="text-base md:text-lg lg:text-xl font-bold truncate">
                             {member.firstname} {member.lastname}
                           </p>
                           {member.isAnonymous && (
-                            <Badge variant="outline" className="text-xs text-orange-600 border-orange-600">
+                            <Badge variant="outline" className="text-sm px-3 py-1 text-orange-600 border-orange-600">
                               Anonymous Attendee
                             </Badge>
                           )}
@@ -6901,16 +7161,16 @@ export default function Events() {
                       </div>
                       <Button
                         variant="ghost"
-                        size="sm"
+                        size="lg"
                         onClick={() => handleRemoveMember(member.id)}
-                        className="h-8 w-8 md:h-10 md:w-10 lg:h-12 lg:w-12 p-0 flex-shrink-0"
+                        className="h-10 w-10 md:h-12 md:w-12 lg:h-14 lg:w-14 p-0 flex-shrink-0"
                       >
-                        <X className="h-4 w-4 md:h-5 md:w-5 lg:h-6 lg:w-6" />
+                        <X className="h-5 w-5 md:h-6 md:w-6 lg:h-7 lg:w-7" />
                       </Button>
                     </div>
                   ))}
                   {alreadyRSVPMembers.length === 0 && (
-                    <p className="text-sm md:text-base lg:text-lg text-gray-500 italic p-4">
+                    <p className="text-xl md:text-2xl text-gray-500 italic p-8">
                       {selectedEvent?.attendance_type === 'check-in'
                         ? 'No members have checked in yet'
                         : "No members have RSVP'd yet"}
@@ -6921,19 +7181,19 @@ export default function Events() {
             </Tabs>
           </div>
 
-          <DialogFooter className="p-3 md:p-6 border-t">
-            <div className="flex flex-col md:flex-row gap-2 md:gap-3 w-full">
+          <DialogFooter className="p-6 md:p-8 border-t">
+            <div className="flex flex-col md:flex-row gap-4 md:gap-6 w-full">
               <Button
                 onClick={() => setIsCreateMemberOpen(true)}
-                className="w-full md:w-auto text-sm md:text-lg h-10 md:h-14 bg-blue-600 hover:bg-blue-700"
+                className="w-full md:w-auto text-lg md:text-xl h-16 md:h-20 bg-blue-600 hover:bg-blue-700"
               >
-                <Plus className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+                <Plus className="mr-2 md:mr-3 h-5 w-5 md:h-6 md:w-6" />
                 Create New Person
               </Button>
               <Button
                 variant={selectedEvent?.attendance_type === 'check-in' ? 'default' : 'outline'}
                 onClick={handleCloseDialog}
-                className={`w-full md:w-auto text-sm md:text-lg h-10 md:h-14 ${
+                className={`w-full md:w-auto text-lg md:text-xl h-16 md:h-20 ${
                   selectedEvent?.attendance_type === 'check-in' ? 'bg-green-600 hover:bg-green-700' : ''
                 }`}
               >
@@ -7256,7 +7516,7 @@ export default function Events() {
               <Download className="mr-2 h-4 w-4" />
               Export Selected Events
             </Button>
-    </div>
+          </div>
           <DialogFooter>
             <Button
               variant="outline"
