@@ -347,3 +347,51 @@ export function createSquarePaymentForm(amount, currency = 'USD') {
     intent: 'CAPTURE'
   };
 }
+
+// ================== DEBUG FUNCTIONS ==================
+
+export async function debugDonationUrls() {
+  try {
+    console.log('Checking if donation_urls table exists...');
+    
+    // Try to query the table
+    const { data, error } = await supabase
+      .from('donation_urls')
+      .select('*')
+      .limit(1);
+
+    if (error) {
+      console.error('Error accessing donation_urls table:', error);
+      return {
+        tableExists: false,
+        error: error.message,
+        code: error.code
+      };
+    }
+
+    console.log('donation_urls table exists, found', data?.length || 0, 'records');
+    
+    // Get all donation URLs for debugging
+    const { data: allUrls, error: allError } = await supabase
+      .from('donation_urls')
+      .select('*');
+
+    if (allError) {
+      console.error('Error getting all donation URLs:', allError);
+    } else {
+      console.log('All donation URLs:', allUrls);
+    }
+
+    return {
+      tableExists: true,
+      recordCount: data?.length || 0,
+      allUrls: allUrls || []
+    };
+  } catch (error) {
+    console.error('Debug function error:', error);
+    return {
+      tableExists: false,
+      error: error.message
+    };
+  }
+}

@@ -27,7 +27,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { 
   getDonationUrlBySlug,
   processSquareDonation,
-  formatCurrency
+  formatCurrency,
+  debugDonationUrls
 } from '@/lib/squareService';
 
 const containerVariants = {
@@ -73,7 +74,14 @@ export function DonatePage() {
   const loadDonationUrl = async () => {
     try {
       setIsLoading(true);
+      console.log('Loading donation URL for slug:', slug);
+      
+      // Debug: Check if table exists and has data
+      const debugInfo = await debugDonationUrls();
+      console.log('Debug info:', debugInfo);
+      
       const urlData = await getDonationUrlBySlug(slug);
+      console.log('Donation URL data:', urlData);
       setDonationUrl(urlData);
       
       // Initialize Square Web SDK if settings are available
@@ -82,6 +90,12 @@ export function DonatePage() {
       }
     } catch (error) {
       console.error('Error loading donation URL:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      });
       toast({
         title: "Error",
         description: "Failed to load donation page",
@@ -266,11 +280,34 @@ export function DonatePage() {
         <div className="text-center">
           <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Page Not Found</h1>
-          <p className="text-gray-600 mb-4">This donation page could not be found or is no longer active.</p>
-          <Button onClick={() => navigate('/')}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Go Home
-          </Button>
+          <p className="text-gray-600 mb-4">
+            This donation page could not be found or is no longer active.
+            {slug && (
+              <span className="block text-sm text-gray-500 mt-2">
+                URL: /donate/{slug}
+              </span>
+            )}
+          </p>
+          <div className="space-y-2">
+            <Button onClick={() => navigate('/')}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Go Home
+            </Button>
+            <Button variant="outline" onClick={() => window.location.reload()}>
+              Try Again
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={async () => {
+                console.log('Debug button clicked');
+                const debugInfo = await debugDonationUrls();
+                console.log('Debug info from button:', debugInfo);
+                alert(`Debug Info: ${JSON.stringify(debugInfo, null, 2)}`);
+              }}
+            >
+              Debug Database
+            </Button>
+          </div>
         </div>
       </div>
     );
