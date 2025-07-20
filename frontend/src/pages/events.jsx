@@ -2174,6 +2174,7 @@ export default function Events() {
   
   // New state for enhanced features
   const [viewMode, setViewMode] = useState('admin'); // 'admin', 'kiosk', or 'calendar'
+  const [isFullKioskMode, setIsFullKioskMode] = useState(false); // Track full kiosk mode
 
   // Dynamically generate event type options from actual data
   const eventTypeOptions = useMemo(() => {
@@ -5300,12 +5301,331 @@ export default function Events() {
 
   return (
     <PermissionGuard permission={PERMISSIONS.EVENTS_VIEW}>
-      <motion.div 
-        className="w-full px-0 md:px-4"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
+      {/* Full Kiosk Mode - Mobile Optimized */}
+      {isFullKioskMode ? (
+        <div className="fixed inset-0 bg-white z-40 overflow-hidden">
+          {/* Kiosk Header */}
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold">Check-In Kiosk</h1>
+                <p className="text-blue-100 text-sm">Select an event to check in</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsFullKioskMode(false);
+                  setViewMode('admin');
+                }}
+                className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+              >
+                <X className="mr-2 h-4 w-4" />
+                Exit Kiosk
+              </Button>
+            </div>
+          </div>
+
+          {/* Kiosk Event List */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {isLoading ? (
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <Card key={i} className="p-6">
+                    <div className="animate-pulse">
+                      <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
+                      <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+                      <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : filteredEvents.length > 0 ? (
+              <div className="space-y-4">
+                {filteredEvents.map((event) => (
+                  <Card key={event.id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleOpenDialog(event)}>
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-4">
+                        <div className="flex-shrink-0">
+                          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                            <Calendar className="h-6 w-6 text-blue-600" />
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">{event.title}</h3>
+                          <div className="space-y-1 text-sm text-gray-600">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4 text-gray-400" />
+                              <span>{format(new Date(event.start_date), 'EEEE, MMMM d, yyyy')}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4 text-gray-400" />
+                              <span>{format(new Date(event.start_date), 'h:mm a')} - {format(new Date(event.end_date), 'h:mm a')}</span>
+                            </div>
+                            {event.location && (
+                              <div className="flex items-center gap-2">
+                                <MapPin className="h-4 w-4 text-gray-400" />
+                                <span>{event.location}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="mt-3">
+                            <Badge variant="secondary" className="bg-green-100 text-green-800">
+                              <Users className="mr-1 h-3 w-3" />
+                              {event.attendance || 0} checked in
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="flex-shrink-0">
+                          <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                            Check In
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No upcoming events</h3>
+                <p className="text-gray-500">No events available for check-in at this time.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Member Selection Dialog for Kiosk Mode */}
+          <Dialog open={isMemberDialogOpen} onOpenChange={setIsMemberDialogOpen}>
+            <DialogContent className="w-[95vw] max-w-full h-[90vh] md:h-auto md:max-w-3xl p-0 z-50">
+              <DialogHeader className="p-3 md:p-6 border-b">
+                <div className="space-y-2">
+                  <DialogTitle className="text-lg md:text-2xl lg:text-3xl">
+                    {isEditingPastEvent 
+                      ? 'Edit Attendance' 
+                      : selectedEvent?.attendance_type === 'check-in' 
+                        ? 'Check In People' 
+                        : 'RSVP Members'
+                    } - {selectedEvent?.title}
+                  </DialogTitle>
+                  {suggestedMembers.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Star className="h-4 w-4 md:h-5 md:w-5 text-green-600" />
+                      <span className="text-sm md:text-lg text-green-600 font-normal">
+                        Smart suggestions available
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <DialogDescription className="text-sm md:text-lg mt-2">
+                  {isEditingPastEvent
+                    ? `Edit attendance records for ${selectedEvent?.title}`
+                    : selectedEvent?.attendance_type === 'check-in'
+                    ? 'Check In People for the event'
+                      : `Select members to RSVP for ${selectedEvent?.title}`
+                  }
+                </DialogDescription>
+                {suggestedMembers.length > 0 && (
+                  <div className="mt-2 text-xs md:text-sm text-green-600">
+                    Members who frequently attend similar events are highlighted below
+                  </div>
+                )}
+              </DialogHeader>
+
+              <div className="p-3 md:p-6 flex-1 overflow-hidden">
+                <Tabs defaultValue="available" className="w-full h-full flex flex-col">
+                  <TabsList className="grid w-full grid-cols-2 h-10 md:h-14">
+                    <TabsTrigger value="available" className="text-sm md:text-lg">
+                      {isEditingPastEvent ? 'Add Attendance' : 'Available People'}
+                    </TabsTrigger>
+                    <TabsTrigger value="checked-in" className="text-sm md:text-lg">
+                      {selectedEvent?.attendance_type === 'check-in' ? 'Checked In' : 'RSVP\'d'}
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="available" className="mt-3 md:mt-8 flex-1 overflow-y-auto">
+                    <div className="space-y-3 md:space-y-6">
+                      <div className="flex flex-col md:flex-row gap-2 md:gap-3">
+                        <div className="flex-1">
+                          <Input
+                            placeholder="Search people..."
+                            value={memberSearchQuery}
+                            onChange={(e) => setMemberSearchQuery(e.target.value)}
+                            className="w-full h-10 md:h-14 text-sm md:text-lg"
+                          />
+                        </div>
+                        <Button
+                          onClick={() => setIsCreateMemberOpen(true)}
+                          className="w-full md:w-auto h-10 md:h-14 text-sm md:text-lg bg-blue-600 hover:bg-blue-700"
+                        >
+                          <Plus className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+                          Add New Person
+                        </Button>
+                        {selectedEvent?.attendance_type === 'check-in' && (
+                          <Button
+                            onClick={() => setIsAnonymousCheckinOpen(true)}
+                            className="w-full md:w-auto h-10 md:h-14 text-sm md:text-lg bg-orange-600 hover:bg-orange-700"
+                          >
+                            <UserPlus className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+                            Anonymous Check-in
+                          </Button>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        {suggestedMembers.length > 0 && (
+                          <div className="mb-3 md:mb-4">
+                            <h3 className="text-sm md:text-lg font-semibold text-green-700 mb-2 flex items-center gap-2">
+                              <Star className="h-4 w-4 md:h-5 md:w-5" />
+                              Suggested Based on Previous Attendance
+                            </h3>
+                            <div className="space-y-2">
+                              {suggestedMembers
+                                .filter(member => 
+                                  member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                                  member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase())
+                                )
+                                .map((member) => (
+                                <div
+                                  key={member.id}
+                                  className="flex items-center space-x-3 md:space-x-4 p-2 md:p-3 lg:p-4 rounded-lg border-2 border-green-200 bg-green-50 cursor-pointer hover:bg-green-100 transition-colors"
+                                  onClick={() => handleMemberClick(member)}
+                                >
+                                  <Avatar className="h-10 w-10 md:h-12 md:w-12 lg:h-16 lg:w-16">
+                                    <AvatarImage src={member.image_url} />
+                                    <AvatarFallback className="text-sm md:text-lg lg:text-xl">
+                                      {getInitials(member.firstname, member.lastname)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm md:text-lg lg:text-xl font-medium truncate">
+                                      {member.firstname} {member.lastname}
+                                    </p>
+                                    <div className="flex items-center gap-1 md:gap-2 mt-1">
+                                      <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
+                                        {memberAttendanceCount[member.id] || 0} previous attendances
+                                      </Badge>
+                                      <span className="text-xs md:text-sm text-green-600">Frequent attendee</span>
+                                    </div>
+                                  </div>
+                                  <Star className="h-4 w-4 md:h-5 md:w-5 text-green-600 flex-shrink-0" />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        <div className="space-y-2">
+                          {members
+                            .filter(member => 
+                              !suggestedMembers.find(s => s.id === member.id) &&
+                              (member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                               member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase()))
+                            )
+                            .map((member) => (
+                            <div
+                              key={member.id}
+                              className="flex items-center space-x-3 md:space-x-4 p-2 md:p-3 lg:p-4 rounded-lg border cursor-pointer hover:bg-gray-50"
+                              onClick={() => handleMemberClick(member)}
+                            >
+                              <Avatar className="h-10 w-10 md:h-12 md:w-12 lg:h-16 lg:w-16">
+                                <AvatarImage src={member.image_url} />
+                                <AvatarFallback className="text-sm md:text-lg lg:text-xl">
+                                  {getInitials(member.firstname, member.lastname)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm md:text-lg lg:text-xl font-medium truncate">
+                                  {member.firstname} {member.lastname}
+                                </p>
+                                {memberAttendanceCount[member.id] && (
+                                  <div className="mt-1">
+                                    <Badge variant="outline" className="text-xs">
+                                      {memberAttendanceCount[member.id]} previous attendances
+                                    </Badge>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="checked-in" className="mt-3 md:mt-8 flex-1 overflow-y-auto">
+                    <div className="space-y-2">
+                      {alreadyRSVPMembers.filter(member => member && member.id).map((member) => (
+                        <div
+                          key={member.id}
+                          className="flex items-center justify-between p-2 md:p-3 lg:p-4 rounded-lg border"
+                        >
+                          <div className="flex items-center space-x-3 md:space-x-4 min-w-0 flex-1">
+                            <Avatar className="h-10 w-10 md:h-12 md:w-12 lg:h-16 lg:w-16">
+                              <AvatarImage src={member.image_url} />
+                              <AvatarFallback className="text-sm md:text-lg lg:text-xl">
+                                {member.isAnonymous ? member.firstname.charAt(0) : getInitials(member.firstname, member.lastname)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm md:text-lg lg:text-xl font-medium truncate">
+                                {member.firstname} {member.lastname}
+                              </p>
+                              {member.isAnonymous && (
+                                <Badge variant="outline" className="text-xs text-orange-600 border-orange-600">
+                                  Anonymous Attendee
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveMember(member.id)}
+                            className="h-8 w-8 md:h-10 md:w-10 lg:h-12 lg:w-12 p-0 flex-shrink-0"
+                          >
+                            <X className="h-4 w-4 md:h-5 md:w-5 lg:h-6 lg:w-6" />
+                          </Button>
+                        </div>
+                      ))}
+                      {alreadyRSVPMembers.length === 0 && (
+                        <p className="text-sm md:text-base lg:text-lg text-gray-500 italic p-4">
+                          {selectedEvent?.attendance_type === 'check-in'
+                            ? 'No members have checked in yet'
+                            : 'No members have RSVP\'d yet'}
+                        </p>
+                      )}
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </div>
+
+              <DialogFooter className="p-3 md:p-6 border-t">
+                <div className="flex flex-col md:flex-row gap-2 md:gap-3 w-full">
+                  <Button
+                    variant="outline"
+                    onClick={handleCloseDialog}
+                    className="w-full md:w-auto text-sm md:text-lg h-10 md:h-14"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleDone}
+                    className="w-full md:w-auto text-sm md:text-lg h-10 md:h-14"
+                  >
+                    Done
+                  </Button>
+                </div>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      ) : (
+        <motion.div 
+          className="w-full px-0 md:px-4"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
         {/* Mobile Header - Hidden on Desktop */}
         <div className="lg:hidden sticky top-0 z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700">
           <div className="flex items-center justify-between p-4">
@@ -5444,6 +5764,20 @@ export default function Events() {
               </CardContent>
             </Card>
           </div>
+          
+          {/* Kiosk Mode Button - Desktop */}
+          <div className="mt-6">
+            <Button
+              onClick={() => {
+                setViewMode('kiosk');
+                setIsFullKioskMode(true);
+              }}
+              className="w-full h-16 text-xl font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+            >
+              <Monitor className="mr-3 h-7 w-7" />
+              Check-In Kiosk Mode
+            </Button>
+          </div>
         </div>
 
         {/* Mobile Stats Cards */}
@@ -5513,6 +5847,18 @@ export default function Events() {
               </CardContent>
             </Card>
           </div>
+          
+          {/* Kiosk Mode Button */}
+          <Button
+            onClick={() => {
+              setViewMode('kiosk');
+              setIsFullKioskMode(true);
+            }}
+            className="w-full h-16 text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+          >
+            <Monitor className="mr-3 h-6 w-6" />
+            Check-In Kiosk Mode
+          </Button>
         </div>
 
         {/* Analytics Section */}
@@ -5568,7 +5914,10 @@ export default function Events() {
                   <Button
                     variant={viewMode === 'admin' ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => setViewMode('admin')}
+                    onClick={() => {
+                      setViewMode('admin');
+                      setIsFullKioskMode(false);
+                    }}
                     className="text-xs"
                   >
                     <List className="mr-1 h-3 w-3" />
@@ -5577,7 +5926,10 @@ export default function Events() {
                   <Button
                     variant={viewMode === 'kiosk' ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => setViewMode('kiosk')}
+                    onClick={() => {
+                      setViewMode('kiosk');
+                      setIsFullKioskMode(true);
+                    }}
                     className="text-xs"
                   >
                     <Monitor className="mr-1 h-3 w-3" />
@@ -5586,7 +5938,10 @@ export default function Events() {
                   <Button
                     variant={viewMode === 'calendar' ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => setViewMode('calendar')}
+                    onClick={() => {
+                      setViewMode('calendar');
+                      setIsFullKioskMode(false);
+                    }}
                     className="text-xs"
                   >
                     <Grid className="mr-1 h-3 w-3" />
@@ -5601,7 +5956,10 @@ export default function Events() {
                   <Button
                     variant={viewMode === 'admin' ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => setViewMode('admin')}
+                    onClick={() => {
+                      setViewMode('admin');
+                      setIsFullKioskMode(false);
+                    }}
                   >
                     <List className="mr-2 h-4 w-4" />
                     Admin View
@@ -5609,7 +5967,10 @@ export default function Events() {
                   <Button
                     variant={viewMode === 'kiosk' ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => setViewMode('kiosk')}
+                    onClick={() => {
+                      setViewMode('kiosk');
+                      setIsFullKioskMode(true);
+                    }}
                   >
                     <Monitor className="mr-2 h-4 w-4" />
                     Kiosk View
@@ -5617,7 +5978,10 @@ export default function Events() {
                   <Button
                     variant={viewMode === 'calendar' ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => setViewMode('calendar')}
+                    onClick={() => {
+                      setViewMode('calendar');
+                      setIsFullKioskMode(false);
+                    }}
                   >
                     <Grid className="mr-2 h-4 w-4" />
                     Calendar View
@@ -6331,9 +6695,9 @@ export default function Events() {
         </DialogContent>
       </Dialog>
 
-      {/* Member Selection Dialog */}
+      {/* Member Selection Dialog for Regular Mode */}
       <Dialog open={isMemberDialogOpen} onOpenChange={setIsMemberDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-full h-[90vh] md:h-auto md:max-w-3xl p-0">
+        <DialogContent className="w-[95vw] max-w-full h-[90vh] md:h-auto md:max-w-3xl p-0 z-50">
           <DialogHeader className="p-3 md:p-6 border-b">
             <div className="space-y-2">
               <DialogTitle className="text-lg md:text-2xl lg:text-3xl">
@@ -6956,7 +7320,8 @@ export default function Events() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </motion.div>
+        </motion.div>
+      )}
     </PermissionGuard>
   );
 }
