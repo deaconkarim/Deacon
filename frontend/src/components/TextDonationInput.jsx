@@ -6,7 +6,7 @@ import {
   CheckCircle, 
   AlertCircle,
   Copy,
-  Paste,
+  Clipboard,
   DollarSign,
   Hash
 } from 'lucide-react';
@@ -224,7 +224,7 @@ const TextDonationInput = ({ onDonationSubmit, onClose }) => {
                   className="h-6 w-6 p-0"
                   title="Paste from clipboard"
                 >
-                  <Paste className="h-3 w-3" />
+                  <Clipboard className="h-3 w-3" />
                 </Button>
                 <Button
                   size="sm"
