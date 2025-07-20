@@ -394,9 +394,12 @@ export function SquareSettings() {
                     3
                   </div>
                   <div>
-                    <h4 className="font-semibold text-blue-900">Get Your Credentials</h4>
+                    <h4 className="font-semibold text-blue-900">Create a Square Location</h4>
                     <p className="text-blue-700 text-sm">
-                      Copy your Application ID (starts with sq0idp-), Location ID (starts with LQ), and generate an Access Token
+                      Go to "Locations" → "Add Location" → Name it "Church Donations" → Set as "Online" location type
+                    </p>
+                    <p className="text-blue-600 text-xs mt-1">
+                      💡 Tip: Choose "Online" location type since you're accepting donations through your website
                     </p>
                   </div>
                 </div>
@@ -404,6 +407,23 @@ export function SquareSettings() {
                 <div className="flex items-start space-x-3">
                   <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
                     4
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-blue-900">Get Your Credentials</h4>
+                    <p className="text-blue-700 text-sm">
+                      Copy your Application ID (starts with sq0idp-), Location ID (starts with LQ), and generate an Access Token
+                    </p>
+                    <div className="text-blue-600 text-xs mt-2 space-y-1">
+                      <p><strong>Application ID:</strong> Found in "Applications" → Your app → "Credentials"</p>
+                      <p><strong>Location ID:</strong> Found in "Locations" → Your location → Copy the ID</p>
+                      <p><strong>Access Token:</strong> Found in "Applications" → Your app → "Credentials" → "Generate Access Token"</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
+                    5
                   </div>
                   <div>
                     <h4 className="font-semibold text-blue-900">Enter Credentials Below</h4>
@@ -463,7 +483,7 @@ export function SquareSettings() {
                       required
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      Found in your Square Dashboard under "Locations"
+                      Found in your Square Dashboard under "Locations" → Click on your location → Copy the Location ID
                     </p>
                   </div>
                 </div>
