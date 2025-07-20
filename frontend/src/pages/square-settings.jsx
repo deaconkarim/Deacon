@@ -346,9 +346,77 @@ export function SquareSettings() {
           Square Integration Settings
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
-          Configure your Square payment integration and manage donation URLs
+          Set up your own Square account to accept online donations securely
         </p>
       </motion.div>
+
+      {/* Setup Guide */}
+      {!squareSettings && (
+        <motion.div variants={itemVariants} className="mb-8">
+          <Card className="border-blue-200 bg-blue-50">
+            <CardHeader>
+              <CardTitle className="flex items-center text-blue-900">
+                <CreditCard className="w-5 h-5 mr-2" />
+                Getting Started with Square
+              </CardTitle>
+              <CardDescription className="text-blue-700">
+                Follow these steps to set up your Square account for online donations
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
+                    1
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-blue-900">Create Square Developer Account</h4>
+                    <p className="text-blue-700 text-sm">
+                      Visit <a href="https://developer.squareup.com/" target="_blank" rel="noopener noreferrer" className="underline font-medium">Square Developer Dashboard</a> and create a free account
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
+                    2
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-blue-900">Create Square Application</h4>
+                    <p className="text-blue-700 text-sm">
+                      In your Square dashboard, go to "Applications" → "New Application" → Name it "Church Donations" → Select "Web Payments"
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
+                    3
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-blue-900">Get Your Credentials</h4>
+                    <p className="text-blue-700 text-sm">
+                      Copy your Application ID (starts with sq0idp-), Location ID (starts with LQ), and generate an Access Token
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
+                    4
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-blue-900">Enter Credentials Below</h4>
+                    <p className="text-blue-700 text-sm">
+                      Fill in the form below with your Square credentials to enable online donations
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Square Settings */}
@@ -357,17 +425,20 @@ export function SquareSettings() {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <CreditCard className="w-5 h-5 mr-2" />
-                Square Configuration
+                Your Square Account Settings
               </CardTitle>
               <CardDescription>
-                Configure your Square application settings for payment processing
+                Enter your Square credentials to enable online donations for your church
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSaveSettings} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="application_id">Application ID</Label>
+                    <Label htmlFor="application_id" className="flex items-center">
+                      Application ID
+                      <span className="text-red-500 ml-1">*</span>
+                    </Label>
                     <Input
                       id="application_id"
                       value={settingsForm.application_id}
@@ -375,9 +446,15 @@ export function SquareSettings() {
                       placeholder="sq0idp-..."
                       required
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Found in your Square Developer Dashboard under "Applications"
+                    </p>
                   </div>
                   <div>
-                    <Label htmlFor="location_id">Location ID</Label>
+                    <Label htmlFor="location_id" className="flex items-center">
+                      Location ID
+                      <span className="text-red-500 ml-1">*</span>
+                    </Label>
                     <Input
                       id="location_id"
                       value={settingsForm.location_id}
@@ -385,11 +462,17 @@ export function SquareSettings() {
                       placeholder="LQ..."
                       required
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Found in your Square Dashboard under "Locations"
+                    </p>
                   </div>
                 </div>
 
                 <div>
-                  <Label htmlFor="access_token">Access Token</Label>
+                  <Label htmlFor="access_token" className="flex items-center">
+                    Access Token
+                    <span className="text-red-500 ml-1">*</span>
+                  </Label>
                   <div className="relative">
                     <Input
                       id="access_token"
@@ -409,6 +492,9 @@ export function SquareSettings() {
                       {showAccessToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </Button>
                   </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Generate this in your Square Developer Dashboard under "Credentials"
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -422,10 +508,23 @@ export function SquareSettings() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="sandbox">Sandbox</SelectItem>
-                        <SelectItem value="production">Production</SelectItem>
+                        <SelectItem value="sandbox">
+                          <div className="flex items-center">
+                            <span>Sandbox (Testing)</span>
+                            <Badge variant="secondary" className="ml-2 text-xs">Recommended for setup</Badge>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="production">
+                          <div className="flex items-center">
+                            <span>Production (Live)</span>
+                            <Badge variant="default" className="ml-2 text-xs">Real payments</Badge>
+                          </div>
+                        </SelectItem>
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Start with Sandbox to test, then switch to Production when ready
+                    </p>
                   </div>
                   <div className="flex items-center space-x-2">
                     <input
@@ -435,46 +534,75 @@ export function SquareSettings() {
                       onChange={(e) => setSettingsForm(prev => ({ ...prev, is_active: e.target.checked }))}
                       className="rounded"
                     />
-                    <Label htmlFor="is_active">Enable Square Integration</Label>
+                    <Label htmlFor="is_active" className="font-medium">Enable Square Integration</Label>
                   </div>
                 </div>
 
-                <div>
-                  <Label htmlFor="webhook_url">Webhook URL (Optional)</Label>
-                  <Input
-                    id="webhook_url"
-                    value={settingsForm.webhook_url}
-                    onChange={(e) => setSettingsForm(prev => ({ ...prev, webhook_url: e.target.value }))}
-                    placeholder="https://your-domain.com/webhook"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="webhook_secret">Webhook Secret (Optional)</Label>
-                  <div className="relative">
+                <div className="border-t pt-4">
+                  <h4 className="font-medium text-gray-900 mb-2">Advanced Settings (Optional)</h4>
+                  <p className="text-sm text-gray-600 mb-4">
+                    These settings are optional and only needed for advanced webhook integrations.
+                  </p>
+                  
+                  <div>
+                    <Label htmlFor="webhook_url">Webhook URL (Optional)</Label>
                     <Input
-                      id="webhook_secret"
-                      type={showWebhookSecret ? "text" : "password"}
-                      value={settingsForm.webhook_secret}
-                      onChange={(e) => setSettingsForm(prev => ({ ...prev, webhook_secret: e.target.value }))}
-                      placeholder="Secret key for webhook verification"
+                      id="webhook_url"
+                      value={settingsForm.webhook_url}
+                      onChange={(e) => setSettingsForm(prev => ({ ...prev, webhook_url: e.target.value }))}
+                      placeholder="https://your-domain.com/webhook"
                     />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3"
-                      onClick={() => setShowWebhookSecret(!showWebhookSecret)}
-                    >
-                      {showWebhookSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </Button>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Only needed if you want real-time payment notifications
+                    </p>
+                  </div>
+
+                  <div className="mt-4">
+                    <Label htmlFor="webhook_secret">Webhook Secret (Optional)</Label>
+                    <div className="relative">
+                      <Input
+                        id="webhook_secret"
+                        type={showWebhookSecret ? "text" : "password"}
+                        value={settingsForm.webhook_secret}
+                        onChange={(e) => setSettingsForm(prev => ({ ...prev, webhook_secret: e.target.value }))}
+                        placeholder="Secret key for webhook verification"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3"
+                        onClick={() => setShowWebhookSecret(!showWebhookSecret)}
+                      >
+                        {showWebhookSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Used to verify webhook authenticity
+                    </p>
                   </div>
                 </div>
 
                 <Button type="submit" disabled={isSaving} className="w-full">
                   {isSaving ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Settings className="w-4 h-4 mr-2" />}
-                  {isSaving ? 'Saving...' : 'Save Settings'}
+                  {isSaving ? 'Saving...' : 'Save Square Settings'}
                 </Button>
+                
+                {squareSettings?.is_active && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <div className="flex items-center">
+                      <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
+                      <div>
+                        <p className="text-sm font-medium text-green-800">
+                          Square Integration Active
+                        </p>
+                        <p className="text-xs text-green-600">
+                          Your church can now accept online donations
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </form>
             </CardContent>
           </Card>
@@ -491,10 +619,13 @@ export function SquareSettings() {
                     Donation URLs
                   </CardTitle>
                   <CardDescription>
-                    Create and manage public donation pages
+                    Create shareable donation pages for your church
                   </CardDescription>
                 </div>
-                <Button onClick={() => setIsUrlDialogOpen(true)}>
+                <Button 
+                  onClick={() => setIsUrlDialogOpen(true)}
+                  disabled={!squareSettings?.is_active}
+                >
                   <Plus className="w-4 h-4 mr-2" />
                   Create URL
                 </Button>
@@ -502,11 +633,31 @@ export function SquareSettings() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {donationUrls.length === 0 ? (
+                {!squareSettings?.is_active ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <CreditCard className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                    <p className="font-medium text-gray-700 mb-2">Square Integration Required</p>
+                    <p className="text-sm mb-4">Complete your Square setup above to create donation URLs</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => document.getElementById('application_id')?.focus()}
+                    >
+                      Configure Square Settings
+                    </Button>
+                  </div>
+                ) : donationUrls.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     <Link className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                    <p>No donation URLs created yet</p>
-                    <p className="text-sm">Create your first donation URL to get started</p>
+                    <p className="font-medium text-gray-700 mb-2">No Donation URLs Yet</p>
+                    <p className="text-sm mb-4">Create your first donation URL to start accepting online donations</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setIsUrlDialogOpen(true)}
+                    >
+                      Create Your First URL
+                    </Button>
                   </div>
                 ) : (
                   donationUrls.map((url) => (
@@ -629,13 +780,19 @@ export function SquareSettings() {
               {editingUrl ? 'Edit Donation URL' : 'Create Donation URL'}
             </DialogTitle>
             <DialogDescription>
-              Configure a public donation page for your organization
+              {editingUrl 
+                ? 'Update your donation page settings'
+                : 'Create a beautiful donation page that you can share with your congregation'
+              }
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={editingUrl ? handleUpdateUrl : handleCreateUrl}>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="url_name">Name</Label>
+                <Label htmlFor="url_name" className="flex items-center">
+                  Page Name
+                  <span className="text-red-500 ml-1">*</span>
+                </Label>
                 <Input
                   id="url_name"
                   value={urlForm.name}
@@ -643,6 +800,9 @@ export function SquareSettings() {
                   placeholder="General Donations"
                   required
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  This will be the title of your donation page
+                </p>
               </div>
               <div>
                 <Label htmlFor="url_description">Description</Label>
@@ -650,8 +810,11 @@ export function SquareSettings() {
                   id="url_description"
                   value={urlForm.description}
                   onChange={(e) => setUrlForm(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Optional description for this donation page"
+                  placeholder="Tell donors what this donation will support..."
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Optional: Explain what these donations will be used for
+                </p>
               </div>
               <div>
                 <Label htmlFor="url_campaign">Campaign (Optional)</Label>
@@ -671,6 +834,9 @@ export function SquareSettings() {
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Link to a fundraising campaign to track progress
+                </p>
               </div>
               <div>
                 <Label htmlFor="url_message">Custom Message</Label>
@@ -678,8 +844,11 @@ export function SquareSettings() {
                   id="url_message"
                   value={urlForm.custom_message}
                   onChange={(e) => setUrlForm(prev => ({ ...prev, custom_message: e.target.value }))}
-                  placeholder="Optional message to display on the donation page"
+                  placeholder="Thank you for your generous support..."
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Optional: A personal message to display to donors
+                </p>
               </div>
               <div className="flex items-center space-x-2">
                 <input
