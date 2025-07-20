@@ -5492,7 +5492,40 @@ export default function Events() {
                               <Star className="h-6 w-6 md:h-7 md:w-7" />
                               Suggested Based on Previous Attendance
                             </h3>
-                            <div className="space-y-2">
+                            {/* Mobile Grid Layout */}
+                            <div className="md:hidden">
+                              <div className="grid grid-cols-2 gap-3">
+                                {suggestedMembers
+                                  .filter(member => 
+                                    member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                                    member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase())
+                                  )
+                                  .map((member) => (
+                                  <div
+                                    key={member.id}
+                                    className="flex flex-col items-center p-3 rounded-lg border-2 border-green-200 bg-green-50 cursor-pointer hover:bg-green-100 transition-colors"
+                                    onClick={() => handleMemberClick(member)}
+                                  >
+                                    <Avatar className="h-16 w-16 mb-2">
+                                      <AvatarImage src={member.image_url} />
+                                      <AvatarFallback className="text-lg">
+                                        {getInitials(member.firstname, member.lastname)}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <p className="text-sm font-bold text-center truncate w-full">
+                                      {member.firstname} {member.lastname}
+                                    </p>
+                                    <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs px-2 py-1 mt-1">
+                                      {memberAttendanceCount[member.id] || 0} attendances
+                                    </Badge>
+                                    <Star className="h-4 w-4 text-green-600 mt-1" />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                            
+                            {/* Desktop List Layout */}
+                            <div className="hidden md:block space-y-2">
                               {suggestedMembers
                                 .filter(member => 
                                   member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
@@ -5501,17 +5534,17 @@ export default function Events() {
                                 .map((member) => (
                                 <div
                                   key={member.id}
-                                  className="flex items-center space-x-3 md:space-x-4 p-3 md:p-4 lg:p-5 rounded-lg border-2 border-green-200 bg-green-50 cursor-pointer hover:bg-green-100 transition-colors"
+                                  className="flex items-center space-x-4 p-4 lg:p-5 rounded-lg border-2 border-green-200 bg-green-50 cursor-pointer hover:bg-green-100 transition-colors"
                                   onClick={() => handleMemberClick(member)}
                                 >
-                                                                    <Avatar className="h-14 w-14 md:h-16 md:w-16 lg:h-18 lg:w-18">
+                                  <Avatar className="h-16 w-16 lg:h-18 lg:w-18">
                                     <AvatarImage src={member.image_url} />
-                                    <AvatarFallback className="text-base md:text-lg lg:text-xl">
+                                    <AvatarFallback className="text-lg lg:text-xl">
                                       {getInitials(member.firstname, member.lastname)}
                                     </AvatarFallback>
                                   </Avatar>
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-base md:text-lg lg:text-xl font-bold truncate">
+                                    <p className="text-lg lg:text-xl font-bold truncate">
                                       {member.firstname} {member.lastname}
                                     </p>
                                     <div className="flex items-center gap-2 mt-1">
@@ -5521,14 +5554,49 @@ export default function Events() {
                                       <span className="text-sm md:text-base text-green-600">Frequent attendee</span>
                                     </div>
                                   </div>
-                                <Star className="h-4 w-4 md:h-5 md:w-5 text-green-600 flex-shrink-0" />
+                                  <Star className="h-5 w-5 text-green-600 flex-shrink-0" />
+                                </div>
+                              ))}
+                            </div>
+                        </div>
+                      )}
+                        
+                        {/* Mobile Grid Layout */}
+                        <div className="md:hidden">
+                          <div className="grid grid-cols-2 gap-3">
+                            {members
+                              .filter(member => 
+                                !suggestedMembers.find(s => s.id === member.id) &&
+                                (member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                                 member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase()))
+                              )
+                              .map((member) => (
+                              <div
+                                key={member.id}
+                                className="flex flex-col items-center p-3 rounded-lg border-2 cursor-pointer hover:bg-gray-50 transition-colors"
+                                onClick={() => handleMemberClick(member)}
+                              >
+                                <Avatar className="h-16 w-16 mb-2">
+                                  <AvatarImage src={member.image_url} />
+                                  <AvatarFallback className="text-lg">
+                                    {getInitials(member.firstname, member.lastname)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <p className="text-sm font-bold text-center truncate w-full">
+                                  {member.firstname} {member.lastname}
+                                </p>
+                                {memberAttendanceCount[member.id] && (
+                                  <Badge variant="outline" className="text-xs px-2 py-1 mt-1">
+                                    {memberAttendanceCount[member.id]} attendances
+                                  </Badge>
+                                )}
                               </div>
                             ))}
                           </div>
                         </div>
-                      )}
                         
-                        <div className="space-y-2">
+                        {/* Desktop List Layout */}
+                        <div className="hidden md:block space-y-2">
                           {members
                             .filter(member => 
                               !suggestedMembers.find(s => s.id === member.id) &&
@@ -5538,17 +5606,17 @@ export default function Events() {
                             .map((member) => (
                             <div
                               key={member.id}
-                              className="flex items-center space-x-3 md:space-x-4 p-3 md:p-4 lg:p-5 rounded-lg border-2 cursor-pointer hover:bg-gray-50 transition-colors"
+                              className="flex items-center space-x-4 p-4 lg:p-5 rounded-lg border-2 cursor-pointer hover:bg-gray-50 transition-colors"
                               onClick={() => handleMemberClick(member)}
                             >
-                              <Avatar className="h-14 w-14 md:h-16 md:w-16 lg:h-18 lg:w-18">
+                              <Avatar className="h-16 w-16 lg:h-18 lg:w-18">
                                 <AvatarImage src={member.image_url} />
-                                <AvatarFallback className="text-base md:text-lg lg:text-xl">
+                                <AvatarFallback className="text-lg lg:text-xl">
                                   {getInitials(member.firstname, member.lastname)}
                                 </AvatarFallback>
                               </Avatar>
                               <div className="flex-1 min-w-0">
-                                <p className="text-base md:text-lg lg:text-xl font-bold truncate">
+                                <p className="text-lg lg:text-xl font-bold truncate">
                                   {member.firstname} {member.lastname}
                                 </p>
                                 {memberAttendanceCount[member.id] && (
@@ -5566,22 +5634,65 @@ export default function Events() {
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="checked-in" className="mt-3 md:mt-8 flex-1 overflow-y-auto">
-                    <div className="space-y-2">
+                                    <TabsContent value="checked-in" className="mt-3 md:mt-8 flex-1 overflow-y-auto">
+                    {/* Mobile Grid Layout */}
+                    <div className="md:hidden">
+                      <div className="grid grid-cols-2 gap-3">
+                        {alreadyRSVPMembers.filter(member => member && member.id).map((member) => (
+                          <div
+                            key={member.id}
+                            className="flex flex-col items-center p-3 rounded-lg border-2 relative"
+                          >
+                            <Avatar className="h-16 w-16 mb-2">
+                              <AvatarImage src={member.image_url} />
+                              <AvatarFallback className="text-lg">
+                                {member.isAnonymous ? member.firstname.charAt(0) : getInitials(member.firstname, member.lastname)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <p className="text-sm font-bold text-center truncate w-full">
+                              {member.firstname} {member.lastname}
+                            </p>
+                            {member.isAnonymous && (
+                              <Badge variant="outline" className="text-xs px-2 py-1 mt-1 text-orange-600 border-orange-600">
+                                Anonymous
+                              </Badge>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveMember(member.id)}
+                              className="h-8 w-8 p-0 absolute top-2 right-2"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                      {alreadyRSVPMembers.length === 0 && (
+                        <p className="text-sm text-gray-500 italic p-4 text-center">
+                          {selectedEvent?.attendance_type === 'check-in'
+                            ? 'No members have checked in yet'
+                            : 'No members have RSVP\'d yet'}
+                        </p>
+                      )}
+                    </div>
+                    
+                    {/* Desktop List Layout */}
+                    <div className="hidden md:block space-y-2">
                       {alreadyRSVPMembers.filter(member => member && member.id).map((member) => (
                         <div
                           key={member.id}
-                          className="flex items-center justify-between p-3 md:p-4 lg:p-5 rounded-lg border-2"
+                          className="flex items-center justify-between p-4 lg:p-5 rounded-lg border-2"
                         >
-                                                      <div className="flex items-center space-x-3 md:space-x-4 min-w-0 flex-1">
-                            <Avatar className="h-14 w-14 md:h-16 md:w-16 lg:h-18 lg:w-18">
+                          <div className="flex items-center space-x-4 min-w-0 flex-1">
+                            <Avatar className="h-16 w-16 lg:h-18 lg:w-18">
                               <AvatarImage src={member.image_url} />
-                              <AvatarFallback className="text-base md:text-lg lg:text-xl">
+                              <AvatarFallback className="text-lg lg:text-xl">
                                 {member.isAnonymous ? member.firstname.charAt(0) : getInitials(member.firstname, member.lastname)}
                               </AvatarFallback>
                             </Avatar>
                             <div className="min-w-0 flex-1">
-                              <p className="text-base md:text-lg lg:text-xl font-bold truncate">
+                              <p className="text-lg lg:text-xl font-bold truncate">
                                 {member.firstname} {member.lastname}
                               </p>
                               {member.isAnonymous && (
@@ -5595,14 +5706,14 @@ export default function Events() {
                             variant="ghost"
                             size="lg"
                             onClick={() => handleRemoveMember(member.id)}
-                            className="h-10 w-10 md:h-12 md:w-12 lg:h-14 lg:w-14 p-0 flex-shrink-0"
+                            className="h-12 w-12 lg:h-14 lg:w-14 p-0 flex-shrink-0"
                           >
-                            <X className="h-5 w-5 md:h-6 md:w-6 lg:h-7 lg:w-7" />
+                            <X className="h-6 w-6 lg:h-7 lg:w-7" />
                           </Button>
                         </div>
                       ))}
                       {alreadyRSVPMembers.length === 0 && (
-                        <p className="text-sm md:text-base lg:text-lg text-gray-500 italic p-4">
+                        <p className="text-base lg:text-lg text-gray-500 italic p-4">
                           {selectedEvent?.attendance_type === 'check-in'
                             ? 'No members have checked in yet'
                             : 'No members have RSVP\'d yet'}
@@ -5613,18 +5724,18 @@ export default function Events() {
                 </Tabs>
               </div>
 
-              <DialogFooter className="p-6 md:p-8 border-t">
-                <div className="flex flex-col md:flex-row gap-4 md:gap-6 w-full">
+              <DialogFooter className="p-4 md:p-6 border-t">
+                <div className="flex flex-row gap-3 md:gap-4 w-full">
                   <Button
                     variant="outline"
                     onClick={handleCloseDialog}
-                    className="w-full md:w-auto text-lg md:text-xl h-16 md:h-20"
+                    className="flex-1 md:w-auto text-base md:text-lg h-12 md:h-14"
                   >
                     Cancel
                   </Button>
                   <Button
                     onClick={handleDone}
-                    className="w-full md:w-auto text-lg md:text-xl h-16 md:h-20"
+                    className="flex-1 md:w-auto text-base md:text-lg h-12 md:h-14"
                   >
                     Done
                   </Button>
