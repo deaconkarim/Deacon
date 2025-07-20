@@ -32,7 +32,9 @@ import {
   AlertCircle,
   Clock,
   ArrowUpRight,
-  ChevronRight
+  ChevronRight,
+  QrCode,
+  Smartphone
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -67,6 +69,7 @@ import {
   closeBatch,
   getBatchDetails
 } from '@/lib/donationService';
+import DonationScanner from '@/components/DonationScanner';
 import { getMembers, getAllEvents } from '@/lib/data';
 
 const containerVariants = {
@@ -104,6 +107,7 @@ export function Donations() {
   const [isBatchDetailsDialogOpen, setIsBatchDetailsDialogOpen] = useState(false);
   const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
   
   // Selected items
   const [selectedDonation, setSelectedDonation] = useState(null);
@@ -314,6 +318,32 @@ export function Donations() {
       toast({
         title: "Error",
         description: "Failed to update donation",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Scanner operations
+  const handleScannerDonation = async (donationData) => {
+    try {
+      const newDonation = await addDonation({
+        ...donationData,
+        date: format(new Date(), 'yyyy-MM-dd'),
+        payment_method: 'qr_code',
+        notes: donationData.notes || 'Scanned donation'
+      });
+      
+      setDonations([newDonation, ...donations]);
+      setIsScannerOpen(false);
+      toast({
+        title: "Success",
+        description: "Scanned donation added successfully",
+      });
+    } catch (error) {
+      console.error('Error adding scanned donation:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add scanned donation",
         variant: "destructive",
       });
     }
@@ -823,7 +853,7 @@ export function Donations() {
 
       {/* Mobile Quick Actions */}
       <div className="block md:hidden px-4 py-3 bg-white dark:bg-slate-900 border-b">
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2">
           <Button
             onClick={() => setIsDonationDialogOpen(true)}
             className="flex-1 bg-blue-600 hover:bg-blue-700"
@@ -831,6 +861,14 @@ export function Donations() {
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Donation
+          </Button>
+          <Button
+            onClick={() => setIsScannerOpen(true)}
+            variant="outline"
+            size="sm"
+            className="px-3"
+          >
+            <QrCode className="h-4 w-4" />
           </Button>
           <Button
             onClick={() => setShowIntelligence(!showIntelligence)}
@@ -1618,6 +1656,10 @@ export function Donations() {
                 <Button onClick={applyFilters} variant="outline" className="w-full sm:w-auto sm:hidden">
                   <Filter className="h-4 w-4 mr-2" />
                   Apply Filters
+                </Button>
+                <Button onClick={() => setIsScannerOpen(true)} variant="outline" className="w-full sm:w-auto">
+                  <QrCode className="h-4 w-4 mr-2" />
+                  Scan QR Code
                 </Button>
                 <Button onClick={() => setIsDonationDialogOpen(true)} className="w-full sm:w-auto">
                   <Plus className="h-4 w-4 mr-2" />
@@ -2859,6 +2901,14 @@ export function Donations() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Donation Scanner */}
+      {isScannerOpen && (
+        <DonationScanner
+          onDonationSubmit={handleScannerDonation}
+          onClose={() => setIsScannerOpen(false)}
+        />
+      )}
       </motion.div>
     </div>
   );
