@@ -2174,6 +2174,7 @@ export default function Events() {
   
   // New state for enhanced features
   const [viewMode, setViewMode] = useState('admin'); // 'admin', 'kiosk', or 'calendar'
+  const [isFullKioskMode, setIsFullKioskMode] = useState(false); // Track full kiosk mode
 
   // Dynamically generate event type options from actual data
   const eventTypeOptions = useMemo(() => {
@@ -5300,12 +5301,107 @@ export default function Events() {
 
   return (
     <PermissionGuard permission={PERMISSIONS.EVENTS_VIEW}>
-      <motion.div 
-        className="w-full px-0 md:px-4"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
+      {/* Full Kiosk Mode - Mobile Optimized */}
+      {isFullKioskMode ? (
+        <div className="fixed inset-0 bg-white z-50 overflow-hidden">
+          {/* Kiosk Header */}
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold">Check-In Kiosk</h1>
+                <p className="text-blue-100 text-sm">Select an event to check in</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsFullKioskMode(false);
+                  setViewMode('admin');
+                }}
+                className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+              >
+                <X className="mr-2 h-4 w-4" />
+                Exit Kiosk
+              </Button>
+            </div>
+          </div>
+
+          {/* Kiosk Event List */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {isLoading ? (
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <Card key={i} className="p-6">
+                    <div className="animate-pulse">
+                      <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
+                      <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+                      <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : filteredEvents.length > 0 ? (
+              <div className="space-y-4">
+                {filteredEvents.map((event) => (
+                  <Card key={event.id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleOpenDialog(event)}>
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-4">
+                        <div className="flex-shrink-0">
+                          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                            <Calendar className="h-6 w-6 text-blue-600" />
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">{event.title}</h3>
+                          <div className="space-y-1 text-sm text-gray-600">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4 text-gray-400" />
+                              <span>{format(new Date(event.start_date), 'EEEE, MMMM d, yyyy')}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4 text-gray-400" />
+                              <span>{format(new Date(event.start_date), 'h:mm a')} - {format(new Date(event.end_date), 'h:mm a')}</span>
+                            </div>
+                            {event.location && (
+                              <div className="flex items-center gap-2">
+                                <MapPin className="h-4 w-4 text-gray-400" />
+                                <span>{event.location}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="mt-3">
+                            <Badge variant="secondary" className="bg-green-100 text-green-800">
+                              <Users className="mr-1 h-3 w-3" />
+                              {event.attendance || 0} checked in
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="flex-shrink-0">
+                          <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                            Check In
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No upcoming events</h3>
+                <p className="text-gray-500">No events available for check-in at this time.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <motion.div 
+          className="w-full px-0 md:px-4"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
         {/* Mobile Header - Hidden on Desktop */}
         <div className="lg:hidden sticky top-0 z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700">
           <div className="flex items-center justify-between p-4">
@@ -5444,6 +5540,20 @@ export default function Events() {
               </CardContent>
             </Card>
           </div>
+          
+          {/* Kiosk Mode Button - Desktop */}
+          <div className="mt-6">
+            <Button
+              onClick={() => {
+                setViewMode('kiosk');
+                setIsFullKioskMode(true);
+              }}
+              className="w-full h-16 text-xl font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+            >
+              <Monitor className="mr-3 h-7 w-7" />
+              Check-In Kiosk Mode
+            </Button>
+          </div>
         </div>
 
         {/* Mobile Stats Cards */}
@@ -5513,6 +5623,18 @@ export default function Events() {
               </CardContent>
             </Card>
           </div>
+          
+          {/* Kiosk Mode Button */}
+          <Button
+            onClick={() => {
+              setViewMode('kiosk');
+              setIsFullKioskMode(true);
+            }}
+            className="w-full h-16 text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+          >
+            <Monitor className="mr-3 h-6 w-6" />
+            Check-In Kiosk Mode
+          </Button>
         </div>
 
         {/* Analytics Section */}
@@ -5568,7 +5690,10 @@ export default function Events() {
                   <Button
                     variant={viewMode === 'admin' ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => setViewMode('admin')}
+                    onClick={() => {
+                      setViewMode('admin');
+                      setIsFullKioskMode(false);
+                    }}
                     className="text-xs"
                   >
                     <List className="mr-1 h-3 w-3" />
@@ -5577,7 +5702,10 @@ export default function Events() {
                   <Button
                     variant={viewMode === 'kiosk' ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => setViewMode('kiosk')}
+                    onClick={() => {
+                      setViewMode('kiosk');
+                      setIsFullKioskMode(true);
+                    }}
                     className="text-xs"
                   >
                     <Monitor className="mr-1 h-3 w-3" />
@@ -5586,7 +5714,10 @@ export default function Events() {
                   <Button
                     variant={viewMode === 'calendar' ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => setViewMode('calendar')}
+                    onClick={() => {
+                      setViewMode('calendar');
+                      setIsFullKioskMode(false);
+                    }}
                     className="text-xs"
                   >
                     <Grid className="mr-1 h-3 w-3" />
@@ -5601,7 +5732,10 @@ export default function Events() {
                   <Button
                     variant={viewMode === 'admin' ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => setViewMode('admin')}
+                    onClick={() => {
+                      setViewMode('admin');
+                      setIsFullKioskMode(false);
+                    }}
                   >
                     <List className="mr-2 h-4 w-4" />
                     Admin View
@@ -5609,7 +5743,10 @@ export default function Events() {
                   <Button
                     variant={viewMode === 'kiosk' ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => setViewMode('kiosk')}
+                    onClick={() => {
+                      setViewMode('kiosk');
+                      setIsFullKioskMode(true);
+                    }}
                   >
                     <Monitor className="mr-2 h-4 w-4" />
                     Kiosk View
@@ -5617,7 +5754,10 @@ export default function Events() {
                   <Button
                     variant={viewMode === 'calendar' ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => setViewMode('calendar')}
+                    onClick={() => {
+                      setViewMode('calendar');
+                      setIsFullKioskMode(false);
+                    }}
                   >
                     <Grid className="mr-2 h-4 w-4" />
                     Calendar View
@@ -6956,7 +7096,8 @@ export default function Events() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </motion.div>
+        </motion.div>
+      )}
     </PermissionGuard>
   );
 }
