@@ -5544,7 +5544,7 @@ export default function Events() {
                    </DialogDescription>
                  </DialogHeader>
 
-                 <div className="flex-1 overflow-y-auto p-4 min-h-0">
+                 <div className="flex-1 overflow-y-auto p-4 min-h-0 pb-4">
                    {/* Search Bar */}
                    <div className="mb-4">
                      <Input
@@ -5673,7 +5673,7 @@ export default function Events() {
                        className="flex-1 h-10 text-sm"
                        disabled={selectedMembers.length === 0}
                      >
-                       Done ({selectedMembers.length})
+                       Done
                      </Button>
                    </div>
                  </DialogFooter>
