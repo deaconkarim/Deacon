@@ -216,6 +216,15 @@ export async function processSquareDonation(donationData) {
       .single();
 
     if (error) throw error;
+
+    // Automatically sync to main donations table
+    try {
+      await syncSquareDonationToMainSystem(data.id);
+    } catch (syncError) {
+      console.error('Failed to sync Square donation to main system:', syncError);
+      // Don't fail the entire transaction if sync fails
+    }
+
     return data;
   } catch (error) {
     throw error;

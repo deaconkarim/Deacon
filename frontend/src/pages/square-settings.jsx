@@ -37,7 +37,8 @@ import {
   updateDonationUrl,
   deleteDonationUrl,
   getSquareDonationAnalytics,
-  generateDonationUrl
+  generateDonationUrl,
+  syncAllSquareDonations
 } from '@/lib/squareService';
 import { getCampaigns } from '@/lib/donationService';
 
@@ -62,6 +63,7 @@ export function SquareSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   
   // Dialog states
   const [isUrlDialogOpen, setIsUrlDialogOpen] = useState(false);
@@ -257,6 +259,29 @@ export function SquareSettings() {
         description: "Failed to delete donation URL",
         variant: "destructive"
       });
+    }
+  };
+
+  const handleSyncDonations = async () => {
+    try {
+      setIsSyncing(true);
+      const result = await syncAllSquareDonations();
+      
+      toast({
+        title: "Sync Complete",
+        description: `Successfully synced ${result.successful} donations to main system`,
+      });
+      
+      await loadData();
+    } catch (error) {
+      console.error('Error syncing donations:', error);
+      toast({
+        title: "Error",
+        description: "Failed to sync donations",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -740,13 +765,23 @@ export function SquareSettings() {
                     Create shareable donation pages for your church
                   </CardDescription>
                 </div>
-                <Button 
-                  onClick={() => setIsUrlDialogOpen(true)}
-                  disabled={!squareSettings?.is_active}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create URL
-                </Button>
+                <div className="flex items-center space-x-2">
+                  <Button 
+                    variant="outline"
+                    onClick={handleSyncDonations}
+                    disabled={isSyncing || !squareSettings?.is_active}
+                  >
+                    <RefreshCw className={`w-4 h-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+                    {isSyncing ? 'Syncing...' : 'Sync to Main System'}
+                  </Button>
+                  <Button 
+                    onClick={() => setIsUrlDialogOpen(true)}
+                    disabled={!squareSettings?.is_active}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create URL
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
