@@ -2219,6 +2219,63 @@ export default function Events() {
     }
   }, [location.search, isKioskMode]);
 
+  // Effect to ensure modals are closed on component unmount or errors
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Close all modals when page is about to unload
+      setIsMemberDialogOpen(false);
+      setIsCreateMemberOpen(false);
+      setIsCreateEventOpen(false);
+      setIsEditEventOpen(false);
+      setIsPotluckRSVPDialogOpen(false);
+      setIsVolunteerDialogOpen(false);
+      setIsAnonymousCheckinOpen(false);
+      setIsBulkActionsOpen(false);
+      setIsEventDetailsOpen(false);
+    };
+
+    const handleKeyDown = (event) => {
+      // Force close all modals on Escape key
+      if (event.key === 'Escape') {
+        handleCloseDialog();
+      }
+    };
+
+    // Add global function to force close modals (for debugging)
+    window.forceCloseModals = () => {
+      console.log('Force closing all modals...');
+      handleCloseDialog();
+    };
+
+    // Add specific kiosk mode modal management
+    if (isKioskMode) {
+      // Only add timeout if dialog is stuck for too long (10 minutes)
+      const timeoutId = setTimeout(() => {
+        if (isMemberDialogOpen) {
+          console.log('Kiosk mode modal timeout - forcing close');
+          handleCloseDialog();
+        }
+      }, 600000); // 10 minutes
+
+      return () => {
+        clearTimeout(timeoutId);
+        handleBeforeUnload();
+      };
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('keydown', handleKeyDown);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('keydown', handleKeyDown);
+      // Clean up modals on unmount
+      handleBeforeUnload();
+      // Remove global function
+      delete window.forceCloseModals;
+    };
+  }, [isKioskMode]);
+
   const fetchEvents = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -3926,6 +3983,10 @@ export default function Events() {
         title: "Error",
         description: "Failed to add members. Please try again."
       });
+      
+      // Ensure modal is closed even if there's an error
+      setIsMemberDialogOpen(false);
+      setSelectedMembers([]);
     }
   };
 
@@ -4584,8 +4645,9 @@ export default function Events() {
   };
 
   const handleOpenDialog = async (event) => {
-    // Store the original event ID that was passed to us (for adding new attendance)
-    const originalEventId = event.id;
+    try {
+      // Store the original event ID that was passed to us (for adding new attendance)
+      const originalEventId = event.id;
     
     // If this is a generated recurring event instance, we need to use the master event for RSVP
     let eventToUse = event;
@@ -4644,6 +4706,9 @@ export default function Events() {
     setSelectedEventOriginalId(originalEventId);
     setSelectedMembers([]);
     setMemberSearchQuery('');
+    
+    // Open the dialog immediately
+    console.log('Opening dialog for event:', eventToUse.title);
     setIsMemberDialogOpen(true);
     
     // Check if this is a past event
@@ -4784,21 +4849,52 @@ export default function Events() {
         title: "Error",
         description: "Failed to load members. Please try again."
       });
+      // Don't close the dialog on error, just show the error
     }
+  } catch (error) {
+    console.error('Error opening dialog:', error);
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: "Failed to open dialog. Please try again."
+    });
+    // Don't close the dialog on error, just show the error
+  }
   };
 
   const handleCloseDialog = () => {
-    setIsMemberDialogOpen(false);
-    setSelectedEvent(null);
-    setSelectedEventOriginalId(null);
-    setSelectedMembers([]);
-    setMembers([]);
-    setAlreadyRSVPMembers([]);
-    setSuggestedMembers([]);
-    setMemberAttendanceCount({});
-    setIsEditingPastEvent(false);
-    setIsAnonymousCheckinOpen(false);
-    setAnonymousName('');
+    try {
+      console.log('Closing dialog');
+      // Reset all modal states to ensure nothing is stuck open
+      setIsMemberDialogOpen(false);
+      setSelectedEvent(null);
+      setSelectedEventOriginalId(null);
+      setSelectedMembers([]);
+      setMembers([]);
+      setAlreadyRSVPMembers([]);
+      setSuggestedMembers([]);
+      setMemberAttendanceCount({});
+      setIsEditingPastEvent(false);
+      setIsAnonymousCheckinOpen(false);
+      setAnonymousName('');
+      
+      // Also reset other potential modal states that might be stuck
+      setIsCreateMemberOpen(false);
+      setIsCreateEventOpen(false);
+      setIsEditEventOpen(false);
+      setIsPotluckRSVPDialogOpen(false);
+      setIsVolunteerDialogOpen(false);
+      setIsBulkActionsOpen(false);
+      setIsEventDetailsOpen(false);
+      
+      // Clear any search queries
+      setMemberSearchQuery('');
+      
+    } catch (error) {
+      console.error('Error closing dialog:', error);
+      // Force close the main dialog even if there's an error
+      setIsMemberDialogOpen(false);
+    }
   };
 
   const handlePotluckRSVP = useCallback(async (event) => {
@@ -5316,34 +5412,34 @@ export default function Events() {
 
   return (
     <PermissionGuard permission={PERMISSIONS.EVENTS_VIEW}>
-      {/* Full Kiosk Mode - Mobile Optimized */}
-      {isFullKioskMode ? (
-        <div className="fixed inset-0 bg-white z-40 overflow-hidden">
-          {/* Kiosk Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 shadow-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-4xl font-bold">Check-In Kiosk</h1>
-                <p className="text-blue-100 text-xl">Select an event to check in</p>
-              </div>
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={() => {
-                  setIsFullKioskMode(false);
-                  setViewMode('admin');
-                  navigate('/events');
-                }}
-                className="bg-white/20 hover:bg-white/30 text-white border-white/30 text-lg px-6 py-3"
-              >
-                <X className="mr-3 h-6 w-6" />
-                Exit Kiosk
-              </Button>
-            </div>
-          </div>
+             {/* Full Kiosk Mode - Mobile Optimized */}
+       {isFullKioskMode ? (
+         <div className="fixed inset-0 bg-white z-40 flex flex-col">
+           {/* Kiosk Header */}
+           <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 shadow-lg flex-shrink-0">
+             <div className="flex items-center justify-between">
+               <div>
+                 <h1 className="text-2xl font-bold">Check-In Kiosk</h1>
+                 <p className="text-blue-100 text-sm">Select an event to check in</p>
+               </div>
+               <Button
+                 variant="outline"
+                 size="sm"
+                 onClick={() => {
+                   setIsFullKioskMode(false);
+                   setViewMode('admin');
+                   navigate('/events');
+                 }}
+                 className="bg-white/20 hover:bg-white/30 text-white border-white/30 text-sm px-3 py-2"
+               >
+                 <X className="mr-1 h-4 w-4" />
+                 Exit
+               </Button>
+             </div>
+           </div>
 
-          {/* Kiosk Event List */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+           {/* Kiosk Event List */}
+           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {isLoading ? (
               <div className="space-y-6">
                 {[...Array(3)].map((_, i) => (
@@ -5356,214 +5452,269 @@ export default function Events() {
                   </Card>
                 ))}
               </div>
-            ) : filteredEvents.length > 0 ? (
-              <div className="space-y-6">
-                {filteredEvents.map((event) => (
-                  <Card key={event.id} className="hover:shadow-xl transition-shadow cursor-pointer border-2 hover:border-blue-300" onClick={() => handleOpenDialog(event)}>
-                    <CardContent className="p-8">
-                      <div className="flex items-start gap-6">
-                        <div className="flex-shrink-0">
-                          <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center">
-                            <Calendar className="h-10 w-10 text-blue-600" />
-                          </div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-3xl font-bold text-gray-900 mb-4">{event.title}</h3>
-                          <div className="space-y-3 text-xl text-gray-600">
-                            <div className="flex items-center gap-3">
-                              <Calendar className="h-6 w-6 text-gray-400" />
-                              <span>{format(new Date(event.start_date), 'EEEE, MMMM d, yyyy')}</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <Clock className="h-6 w-6 text-gray-400" />
-                              <span>{format(new Date(event.start_date), 'h:mm a')} - {format(new Date(event.end_date), 'h:mm a')}</span>
-                            </div>
-                            {event.location && (
-                              <div className="flex items-center gap-3">
-                                <MapPin className="h-6 w-6 text-gray-400" />
-                                <span>{event.location}</span>
-                              </div>
-                            )}
-                          </div>
-                          <div className="mt-4">
-                            <Badge variant="secondary" className="bg-green-100 text-green-800 text-lg px-4 py-2">
-                              <Users className="mr-2 h-5 w-5" />
-                              {event.attendance || 0} checked in
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className="flex-shrink-0">
-                          <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-xl px-8 py-4 h-auto">
-                            Check In
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-16">
-                <Calendar className="mx-auto h-24 w-24 text-gray-400 mb-6" />
-                <h3 className="text-3xl font-bold text-gray-900 mb-4">No upcoming events</h3>
-                <p className="text-xl text-gray-500">No events available for check-in at this time.</p>
-              </div>
-            )}
+                         ) : filteredEvents.length > 0 ? (
+               <div className="space-y-4">
+                 {filteredEvents.map((event) => (
+                   <Card key={event.id} className="hover:shadow-lg transition-shadow cursor-pointer border border-gray-200" onClick={() => handleOpenDialog(event)}>
+                     <CardContent className="p-4">
+                       <div className="flex items-center gap-4">
+                         <div className="flex-shrink-0">
+                           <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                             <Calendar className="h-6 w-6 text-blue-600" />
+                           </div>
+                         </div>
+                         <div className="flex-1 min-w-0">
+                           <h3 className="text-lg font-bold text-gray-900 mb-2">{event.title}</h3>
+                           <div className="space-y-1 text-sm text-gray-600">
+                             <div className="flex items-center gap-2">
+                               <Calendar className="h-4 w-4 text-gray-400" />
+                               <span>{format(new Date(event.start_date), 'EEEE, MMM d')}</span>
+                             </div>
+                             <div className="flex items-center gap-2">
+                               <Clock className="h-4 w-4 text-gray-400" />
+                               <span>{format(new Date(event.start_date), 'h:mm a')} - {format(new Date(event.end_date), 'h:mm a')}</span>
+                             </div>
+                             {event.location && (
+                               <div className="flex items-center gap-2">
+                                 <MapPin className="h-4 w-4 text-gray-400" />
+                                 <span className="truncate">{event.location}</span>
+                               </div>
+                             )}
+                           </div>
+                           <div className="mt-2">
+                             <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs px-2 py-1">
+                               <Users className="mr-1 h-3 w-3" />
+                               {event.attendance || 0} checked in
+                             </Badge>
+                           </div>
+                         </div>
+                         <div className="flex-shrink-0">
+                           <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-sm px-4 py-2">
+                             Check In
+                           </Button>
+                         </div>
+                       </div>
+                     </CardContent>
+                   </Card>
+                 ))}
+               </div>
+                         ) : (
+               <div className="text-center py-8">
+                 <Calendar className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+                 <h3 className="text-xl font-bold text-gray-900 mb-2">No upcoming events</h3>
+                 <p className="text-sm text-gray-500">No events available for check-in at this time.</p>
+               </div>
+             )}
           </div>
 
-          {/* Mobile Kiosk Mode - Simple Large Buttons */}
-          {isKioskMode && (
-            <Dialog open={isMemberDialogOpen} onOpenChange={setIsMemberDialogOpen}>
-              <DialogContent className="w-full h-full max-w-none p-0 z-50 bg-white">
-                <DialogHeader className="p-6 border-b bg-blue-50">
-                  <DialogTitle className="text-2xl font-bold text-center">
-                    {selectedEvent?.title}
-                  </DialogTitle>
-                  <DialogDescription className="text-lg text-center mt-2">
-                    {selectedEvent?.attendance_type === 'check-in' ? 'Check In' : 'RSVP'}
-                  </DialogDescription>
-                </DialogHeader>
+                                {/* Mobile Kiosk Mode - Fullscreen */}
+           {isKioskMode && (
+             <>
+               {/* Custom overlay for kiosk mode */}
+               {isMemberDialogOpen && (
+                 <div 
+                   className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40"
+                   onClick={handleCloseDialog}
+                 />
+               )}
+               <Dialog open={isMemberDialogOpen} onOpenChange={setIsMemberDialogOpen}>
+                 <DialogContent 
+                   className="!fixed !inset-0 !w-screen !h-screen !max-w-none !p-0 !z-50 bg-white flex flex-col overflow-hidden !translate-x-0 !translate-y-0 !left-0 !top-0"
+                   style={{
+                     position: 'fixed',
+                     top: 0,
+                     left: 0,
+                     right: 0,
+                     bottom: 0,
+                     width: '100vw',
+                     height: '100vh',
+                     transform: 'none',
+                     margin: 0,
+                     maxWidth: 'none',
+                     maxHeight: 'none'
+                   }}
+                 >
+                 {/* Force close button for stuck modals */}
+                 <div className="absolute top-2 right-2 z-[60] flex gap-1">
+                   <Button
+                     variant="outline"
+                     size="sm"
+                     onClick={handleCloseDialog}
+                     className="bg-white hover:bg-gray-100 text-gray-700 border-gray-300 text-xs px-2 py-1"
+                   >
+                     Cancel
+                   </Button>
+                   <Button
+                     variant="destructive"
+                     size="sm"
+                     onClick={handleCloseDialog}
+                     className="bg-red-600 hover:bg-red-700 text-white text-xs px-2 py-1"
+                   >
+                     Force Close
+                   </Button>
+                 </div>
+                 <DialogHeader className="p-3 border-b bg-blue-50 flex-shrink-0">
+                   <DialogTitle className="text-lg font-bold text-center truncate">
+                     {selectedEvent?.title}
+                   </DialogTitle>
+                   <DialogDescription className="text-sm text-center mt-1">
+                     {selectedEvent?.attendance_type === 'check-in' ? 'Check In' : 'RSVP'}
+                   </DialogDescription>
+                 </DialogHeader>
 
-                <div className="flex-1 overflow-y-auto p-6">
-                  {/* Search Bar */}
-                  <div className="mb-6">
-                    <Input
-                      placeholder="Search by name..."
-                      value={memberSearchQuery}
-                      onChange={(e) => setMemberSearchQuery(e.target.value)}
-                      className="w-full h-16 text-xl"
-                    />
-                  </div>
+                 <div className="flex-1 overflow-y-auto p-3 min-h-0">
+                   {/* Search Bar */}
+                   <div className="mb-2">
+                     <Input
+                       placeholder="Search by name..."
+                       value={memberSearchQuery}
+                       onChange={(e) => setMemberSearchQuery(e.target.value)}
+                       className="w-full h-8 text-xs"
+                     />
+                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="grid grid-cols-1 gap-4 mb-8">
-                    <Button
-                      onClick={() => setIsCreateMemberOpen(true)}
-                      className="w-full h-20 text-xl bg-blue-600 hover:bg-blue-700"
-                    >
-                      <Plus className="mr-3 h-6 w-6" />
-                      Add New Person
-                    </Button>
-                    {selectedEvent?.attendance_type === 'check-in' && (
-                      <Button
-                        onClick={() => setIsAnonymousCheckinOpen(true)}
-                        className="w-full h-20 text-xl bg-orange-600 hover:bg-orange-700"
-                      >
-                        <UserPlus className="mr-3 h-6 w-6" />
-                        Anonymous Check-in
-                      </Button>
-                    )}
-                  </div>
+                   {/* Action Buttons */}
+                   <div className="flex gap-1 mb-3">
+                     <Button
+                       onClick={() => setIsCreateMemberOpen(true)}
+                       className="flex-1 h-7 text-xs bg-blue-600 hover:bg-blue-700 px-1"
+                     >
+                       <Plus className="mr-1 h-3 w-3" />
+                       Add New
+                     </Button>
+                     {selectedEvent?.attendance_type === 'check-in' && (
+                       <Button
+                         onClick={() => setIsAnonymousCheckinOpen(true)}
+                         className="flex-1 h-7 text-xs bg-orange-600 hover:bg-orange-700 px-1"
+                       >
+                         <UserPlus className="mr-1 h-3 w-3" />
+                         Anonymous
+                       </Button>
+                     )}
+                   </div>
 
-                  {/* Suggested Members */}
-                  {suggestedMembers.length > 0 && (
-                    <div className="mb-8">
-                      <h3 className="text-xl font-bold text-green-700 mb-4 flex items-center justify-center gap-2">
-                        <Star className="h-6 w-6" />
-                        Frequent Attendees
-                      </h3>
-                      <div className="grid grid-cols-1 gap-4">
-                        {suggestedMembers
-                          .filter(member => 
-                            member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
-                            member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase())
-                          )
-                          .map((member) => (
-                          <Button
-                            key={member.id}
-                            variant="outline"
-                            onClick={() => handleMemberClick(member)}
-                            className="w-full h-24 text-left p-4 border-2 border-green-200 bg-green-50 hover:bg-green-100"
-                          >
-                            <div className="flex items-center space-x-4 w-full">
-                              <Avatar className="h-16 w-16 flex-shrink-0">
-                                <AvatarImage src={member.image_url} />
-                                <AvatarFallback className="text-xl">
-                                  {getInitials(member.firstname, member.lastname)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1 text-left">
-                                <p className="text-xl font-bold">
-                                  {member.firstname} {member.lastname}
-                                </p>
-                                <p className="text-sm text-green-600">
-                                  {memberAttendanceCount[member.id] || 0} previous attendances
-                                </p>
-                              </div>
-                              <Star className="h-6 w-6 text-green-600 flex-shrink-0" />
-                            </div>
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                                     {/* Suggested Members */}
+                   {suggestedMembers.length > 0 && (
+                     <div className="mb-4">
+                       <h3 className="text-sm font-bold text-green-700 mb-2 flex items-center justify-center gap-1">
+                         <Star className="h-4 w-4" />
+                         Frequent Attendees
+                       </h3>
+                       <div className="grid grid-cols-1 gap-2">
+                         {suggestedMembers
+                           .filter(member => 
+                             member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                             member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase())
+                           )
+                           .map((member) => (
+                                                    <Button
+                           key={member.id}
+                           variant="outline"
+                           onClick={() => handleMemberClick(member)}
+                           className="w-full h-10 text-left p-1 border-2 border-green-200 bg-green-50 hover:bg-green-100"
+                         >
+                             <div className="flex items-center space-x-2 w-full">
+                                                            <Avatar className="h-6 w-6 flex-shrink-0">
+                               <AvatarImage src={member.image_url} />
+                               <AvatarFallback className="text-xs">
+                                 {getInitials(member.firstname, member.lastname)}
+                               </AvatarFallback>
+                             </Avatar>
+                               <div className="flex-1 text-left">
+                                 <p className="text-xs font-bold">
+                                   {member.firstname} {member.lastname}
+                                 </p>
+                                 <p className="text-xs text-green-600">
+                                   {memberAttendanceCount[member.id] || 0} previous attendances
+                                 </p>
+                               </div>
+                               <Star className="h-3 w-3 text-green-600 flex-shrink-0" />
+                             </div>
+                           </Button>
+                         ))}
+                       </div>
+                     </div>
+                   )}
 
-                  {/* All Members */}
-                  <div>
-                    <h3 className="text-xl font-bold mb-4 text-center">All People</h3>
-                    <div className="grid grid-cols-1 gap-4">
-                      {members
-                        .filter(member => 
-                          !suggestedMembers.find(s => s.id === member.id) &&
-                          (member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
-                           member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase()))
-                        )
-                        .map((member) => (
-                        <Button
-                          key={member.id}
-                          variant="outline"
-                          onClick={() => handleMemberClick(member)}
-                          className="w-full h-24 text-left p-4"
-                        >
-                          <div className="flex items-center space-x-4 w-full">
-                            <Avatar className="h-16 w-16 flex-shrink-0">
-                              <AvatarImage src={member.image_url} />
-                              <AvatarFallback className="text-xl">
-                                {getInitials(member.firstname, member.lastname)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 text-left">
-                              <p className="text-xl font-bold">
-                                {member.firstname} {member.lastname}
-                              </p>
-                              {memberAttendanceCount[member.id] && (
-                                <p className="text-sm text-gray-600">
-                                  {memberAttendanceCount[member.id]} previous attendances
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
+                                     {/* All Members */}
+                   <div>
+                     <h3 className="text-sm font-bold mb-2 text-center">All People</h3>
+                     <div className="grid grid-cols-1 gap-2">
+                       {members
+                         .filter(member => 
+                           !suggestedMembers.find(s => s.id === member.id) &&
+                           (member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                            member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase()))
+                         )
+                         .map((member) => (
+                         <Button
+                           key={member.id}
+                           variant="outline"
+                           onClick={() => handleMemberClick(member)}
+                           className="w-full h-10 text-left p-1"
+                         >
+                           <div className="flex items-center space-x-2 w-full">
+                             <Avatar className="h-6 w-6 flex-shrink-0">
+                               <AvatarImage src={member.image_url} />
+                               <AvatarFallback className="text-xs">
+                                 {getInitials(member.firstname, member.lastname)}
+                               </AvatarFallback>
+                             </Avatar>
+                             <div className="flex-1 text-left">
+                               <p className="text-xs font-bold">
+                                 {member.firstname} {member.lastname}
+                               </p>
+                               {memberAttendanceCount[member.id] && (
+                                 <p className="text-xs text-gray-600">
+                                   {memberAttendanceCount[member.id]} previous attendances
+                                 </p>
+                               )}
+                             </div>
+                           </div>
+                         </Button>
+                       ))}
+                     </div>
+                   </div>
                 </div>
 
-                <DialogFooter className="p-6 border-t bg-gray-50">
-                  <div className="flex gap-4 w-full">
-                    <Button
-                      variant="outline"
-                      onClick={handleCloseDialog}
-                      className="flex-1 h-16 text-xl"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleDone}
-                      className="flex-1 h-16 text-xl"
-                    >
-                      Done
-                    </Button>
-                  </div>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          )}
+                                 <DialogFooter className="p-3 border-t bg-gray-50 flex-shrink-0">
+                   <div className="flex gap-3 w-full">
+                     <Button
+                       variant="outline"
+                       onClick={handleCloseDialog}
+                       className="flex-1 h-10 text-sm"
+                     >
+                       Cancel
+                     </Button>
+                     <Button
+                       onClick={handleDone}
+                       className="flex-1 h-10 text-sm"
+                       disabled={selectedMembers.length === 0}
+                     >
+                       Done ({selectedMembers.length})
+                     </Button>
+                   </div>
+                 </DialogFooter>
+               </DialogContent>
+             </Dialog>
+             </>
+           )}
 
           {/* Desktop Member Selection Dialog */}
           {!isKioskMode && (
             <Dialog open={isMemberDialogOpen} onOpenChange={setIsMemberDialogOpen}>
               <DialogContent className="w-[95vw] max-w-full h-[90vh] md:h-auto md:max-w-4xl p-0 z-50">
+                {/* Force close button for stuck modals */}
+                <div className="fixed top-4 right-4 z-[60]">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleCloseDialog}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    Force Close
+                  </Button>
+                </div>
                 <DialogHeader className="p-4 md:p-6 border-b">
                   <div className="space-y-2">
                     <DialogTitle className="text-xl md:text-2xl lg:text-3xl">
@@ -6697,142 +6848,6 @@ export default function Events() {
               ))}
             </div>
           ) : filteredEvents.length > 0 ? (
-                            viewMode === 'calendar' ? (
-                (() => {
-                  try {
-                    if (isCalendarLoading) {
-                      return (
-                        <div className="text-center py-12">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                          <p className="text-gray-500">Loading calendar events...</p>
-                          <p className="text-sm text-gray-400 mt-2">This may take a moment for large datasets</p>
-                        </div>
-                      );
-                    }
-                    
-                    if (calendarEvents.length > 0) {
-                      try {
-                        return (
-                          <CalendarView
-                            events={calendarEvents}
-                            onEventClick={(event) => {
-                              setSelectedEventForDetails(event);
-                              setIsEventDetailsOpen(true);
-                            }}
-                            currentMonth={currentMonth}
-                            onMonthChange={setCurrentMonth}
-                          />
-                        );
-                      } catch (calendarError) {
-                        console.error('[Calendar] Error rendering CalendarView:', calendarError);
-                        return (
-                          <div className="text-center py-12">
-                            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                              <XCircle className="h-6 w-6 text-red-600" />
-                            </div>
-                            <h3 className="text-lg font-medium text-gray-900 mb-2">Calendar Error</h3>
-                            <p className="text-gray-500 mb-4">
-                              There was an error rendering the calendar view.
-                            </p>
-                            <Button 
-                              variant="outline" 
-                              onClick={() => setViewMode('admin')}
-                            >
-                              Switch to Admin View
-                            </Button>
-                          </div>
-                        );
-                      }
-                    }
-                    
-                                         return (
-                       <div className="text-center py-12">
-                         <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                         <h3 className="text-lg font-medium text-gray-900 mb-2">No events this month</h3>
-                         <p className="text-gray-500 mb-4">
-                           No events scheduled for {format(currentMonth, 'MMMM yyyy')}.
-                         </p>
-                         <div className="flex gap-2 justify-center">
-                           <Button onClick={() => setIsCreateEventOpen(true)}>
-                             <Plus className="mr-2 h-4 w-4" />
-                             Create Event
-                           </Button>
-                           <Button 
-                             variant="outline" 
-                             onClick={async () => {
-                               setCalendarEvents([]);
-                               setIsCalendarLoading(true);
-                               
-                               try {
-                                 // First try to refresh the session
-                                 console.log('[Calendar] Manual retry - refreshing session...');
-                                 const { data, error: refreshError } = await supabase.auth.refreshSession();
-                                 
-                                 if (refreshError) {
-                                   console.error('[Calendar] Session refresh failed:', refreshError);
-                                   toast({
-                                     title: 'Authentication Error',
-                                     description: 'Please log in again to continue.',
-                                     variant: 'destructive'
-                                   });
-                                   setIsCalendarLoading(false);
-                                   return;
-                                 }
-                                 
-                                 console.log('[Calendar] Session refreshed, fetching events...');
-                                 const monthEvents = await fetchMonthEvents(currentMonth);
-                                 setCalendarEvents(monthEvents);
-                               } catch (error) {
-                                 console.error('[Calendar] Manual retry failed:', error);
-                                 toast({
-                                   title: 'Error',
-                                   description: error.message || 'Failed to load events',
-                                   variant: 'destructive'
-                                 });
-                               } finally {
-                                 setIsCalendarLoading(false);
-                               }
-                             }}
-                           >
-                             <RefreshCw className="mr-2 h-4 w-4" />
-                             Retry
-                           </Button>
-                         </div>
-                       </div>
-                     );
-                   } catch (error) {
-                     console.error('[Calendar] Error rendering calendar view:', error);
-                     return (
-                       <div className="text-center py-12">
-                         <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                           <XCircle className="h-6 w-6 text-red-600" />
-                         </div>
-                         <h3 className="text-lg font-medium text-gray-900 mb-2">Calendar Error</h3>
-                         <p className="text-gray-500 mb-4">
-                           There was an error loading the calendar view.
-                         </p>
-                         <div className="flex gap-2 justify-center">
-                           <Button 
-                             variant="outline" 
-                             onClick={() => setViewMode('admin')}
-                           >
-                             Switch to Admin View
-                           </Button>
-                           <Button 
-                             onClick={() => {
-                               setViewMode('admin');
-                               setTimeout(() => setViewMode('calendar'), 100);
-                             }}
-                           >
-                             <RefreshCw className="mr-2 h-4 w-4" />
-                             Retry Calendar
-                           </Button>
-                         </div>
-                       </div>
-                     );
-                   }
-                 })()
-              ) : (
             <div className="space-y-4">
         {filteredEvents.map((event) => (
           <EventCard
@@ -6859,24 +6874,23 @@ export default function Events() {
           />
         ))}
       </div>
-              )
-          ) : (
-            <div className="text-center py-12">
-              <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No upcoming events</h3>
-              <p className="text-gray-500 mb-4">
-                                  {searchQuery || attendanceFilter !== 'all' || eventTypeFilter !== 'all' || timeWindowFilter !== 'month'
-                  ? 'No events match your current filters.' 
-                  : 'Get started by creating your first event.'}
-              </p>
-                {!searchQuery && attendanceFilter === 'all' && eventTypeFilter === 'all' && timeWindowFilter === 'month' && (
-                <Button onClick={() => setIsCreateEventOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                  Create Event
-                </Button>
-              )}
-            </div>
-          )}
+            ) : (
+              <div className="text-center py-12">
+                <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No upcoming events</h3>
+                <p className="text-gray-500 mb-4">
+                                    {searchQuery || attendanceFilter !== 'all' || eventTypeFilter !== 'all' || timeWindowFilter !== 'month'
+                    ? 'No events match your current filters.' 
+                    : 'Get started by creating your first event.'}
+                </p>
+                  {!searchQuery && attendanceFilter === 'all' && eventTypeFilter === 'all' && timeWindowFilter === 'month' && (
+                  <Button onClick={() => setIsCreateEventOpen(true)}>
+                      <Plus className="mr-2 h-4 w-4" />
+                    Create Event
+                  </Button>
+                )}
+              </div>
+            )}
         </TabsContent>
 
         {/* Past Events Tab */}
@@ -7520,7 +7534,7 @@ export default function Events() {
               <Download className="mr-2 h-4 w-4" />
               Export Selected Events
             </Button>
-    </div>
+          </div>
           <DialogFooter>
             <Button
               variant="outline"
