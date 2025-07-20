@@ -96,6 +96,9 @@ export async function createDonationUrl(urlData) {
     // Generate a unique URL slug
     const slug = generateUrlSlug(urlData.name || 'Donation');
     
+    // Handle "none" campaign_id as null
+    const campaignId = urlData.campaign_id === 'none' ? null : urlData.campaign_id;
+    
     const { data, error } = await supabase
       .from('donation_urls')
       .insert({
@@ -103,7 +106,7 @@ export async function createDonationUrl(urlData) {
         name: urlData.name,
         description: urlData.description,
         slug: slug,
-        campaign_id: urlData.campaign_id,
+        campaign_id: campaignId,
         suggested_amounts: urlData.suggested_amounts || [],
         custom_message: urlData.custom_message,
         is_active: urlData.is_active !== false,
@@ -126,10 +129,16 @@ export async function updateDonationUrl(id, updates) {
       throw new Error('User not associated with any organization');
     }
 
+    // Handle "none" campaign_id as null
+    const cleanUpdates = { ...updates };
+    if (cleanUpdates.campaign_id === 'none') {
+      cleanUpdates.campaign_id = null;
+    }
+
     const { data, error } = await supabase
       .from('donation_urls')
       .update({
-        ...updates,
+        ...cleanUpdates,
         updated_at: new Date().toISOString()
       })
       .eq('id', id)

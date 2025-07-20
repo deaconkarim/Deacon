@@ -86,7 +86,7 @@ export function SquareSettings() {
   const [urlForm, setUrlForm] = useState({
     name: '',
     description: '',
-    campaign_id: '',
+    campaign_id: 'none',
     suggested_amounts: [],
     custom_message: '',
     is_active: true
@@ -264,7 +264,7 @@ export function SquareSettings() {
     setUrlForm({
       name: '',
       description: '',
-      campaign_id: '',
+      campaign_id: 'none',
       suggested_amounts: [],
       custom_message: '',
       is_active: true
@@ -276,7 +276,7 @@ export function SquareSettings() {
     setUrlForm({
       name: url.name,
       description: url.description || '',
-      campaign_id: url.campaign_id || '',
+      campaign_id: url.campaign_id || 'none',
       suggested_amounts: url.suggested_amounts || [],
       custom_message: url.custom_message || '',
       is_active: url.is_active
@@ -812,7 +812,7 @@ export function SquareSettings() {
                     <SelectValue placeholder="Select a campaign" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No Campaign</SelectItem>
+                    <SelectItem value="none">No Campaign</SelectItem>
                     {campaigns.map((campaign) => (
                       <SelectItem key={campaign.id} value={campaign.id}>
                         {campaign.name}
