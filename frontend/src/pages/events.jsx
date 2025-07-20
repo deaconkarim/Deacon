@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { format, parse, isAfter, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths } from 'date-fns';
 import Papa from 'papaparse';
 import { motion } from 'framer-motion';
@@ -2101,6 +2101,8 @@ const EventAnalytics = ({ events, pastEvents }) => {
 export default function Events() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const [events, setEvents] = useState([]);
   const [pastEvents, setPastEvents] = useState([]);
@@ -2203,6 +2205,17 @@ export default function Events() {
   const [isEditingPastEvent, setIsEditingPastEvent] = useState(false);
   const [isAnonymousCheckinOpen, setIsAnonymousCheckinOpen] = useState(false);
   const [anonymousName, setAnonymousName] = useState('');
+
+  // Effect to sync URL parameters with state
+  useEffect(() => {
+    const isKioskMode = location.pathname === '/events' && location.search.includes('kiosk=true');
+    if (isKioskMode) {
+      setViewMode('kiosk');
+      setIsFullKioskMode(true);
+    } else {
+      setIsFullKioskMode(false);
+    }
+  }, [location.search]);
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -5317,6 +5330,7 @@ export default function Events() {
                 onClick={() => {
                   setIsFullKioskMode(false);
                   setViewMode('admin');
+                  navigate('/events');
                 }}
                 className="bg-white/20 hover:bg-white/30 text-white border-white/30"
               >
@@ -5771,6 +5785,7 @@ export default function Events() {
               onClick={() => {
                 setViewMode('kiosk');
                 setIsFullKioskMode(true);
+                navigate('/events?kiosk=true');
               }}
               className="w-full h-16 text-xl font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
             >
@@ -5853,6 +5868,7 @@ export default function Events() {
             onClick={() => {
               setViewMode('kiosk');
               setIsFullKioskMode(true);
+              navigate('/events?kiosk=true');
             }}
             className="w-full h-16 text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
           >
@@ -5917,6 +5933,7 @@ export default function Events() {
                     onClick={() => {
                       setViewMode('admin');
                       setIsFullKioskMode(false);
+                      navigate('/events');
                     }}
                     className="text-xs"
                   >
@@ -5929,6 +5946,7 @@ export default function Events() {
                     onClick={() => {
                       setViewMode('kiosk');
                       setIsFullKioskMode(true);
+                      navigate('/events?kiosk=true');
                     }}
                     className="text-xs"
                   >
@@ -5941,6 +5959,7 @@ export default function Events() {
                     onClick={() => {
                       setViewMode('calendar');
                       setIsFullKioskMode(false);
+                      navigate('/events');
                     }}
                     className="text-xs"
                   >
@@ -5959,6 +5978,7 @@ export default function Events() {
                     onClick={() => {
                       setViewMode('admin');
                       setIsFullKioskMode(false);
+                      navigate('/events');
                     }}
                   >
                     <List className="mr-2 h-4 w-4" />
@@ -5970,6 +5990,7 @@ export default function Events() {
                     onClick={() => {
                       setViewMode('kiosk');
                       setIsFullKioskMode(true);
+                      navigate('/events?kiosk=true');
                     }}
                   >
                     <Monitor className="mr-2 h-4 w-4" />
@@ -5981,6 +6002,7 @@ export default function Events() {
                     onClick={() => {
                       setViewMode('calendar');
                       setIsFullKioskMode(false);
+                      navigate('/events');
                     }}
                   >
                     <Grid className="mr-2 h-4 w-4" />

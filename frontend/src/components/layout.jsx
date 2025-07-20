@@ -68,6 +68,9 @@ export function Layout() {
   const [isInstalled, setIsInstalled] = useState(false);
 
   const isMobile = useIsMobile();
+  
+  // Check if we're in kiosk mode (events page with kiosk parameter)
+  const isKioskMode = location.pathname === '/events' && location.search.includes('kiosk=true');
 
   // Generate navigation items based on user permissions - this runs immediately
   const generateNavigation = () => {
@@ -400,15 +403,16 @@ export function Layout() {
   return (
     <div className="min-h-screen bg-background flex">
       {/* Overlaying Expand-on-hover Sidebar for Desktop/Tablet */}
-      <aside
-        className={cn(
-          "hidden md:flex fixed inset-y-0 left-0 z-50 bg-card border-r flex-col items-center py-4 transition-all duration-200",
-          sidebarExpanded ? "w-56 shadow-xl" : "w-16"
-        )}
-        style={{ pointerEvents: 'auto' }}
-        onMouseEnter={() => setSidebarExpanded(true)}
-        onMouseLeave={() => setSidebarExpanded(false)}
-      >
+      {!isKioskMode && (
+        <aside
+          className={cn(
+            "hidden md:flex fixed inset-y-0 left-0 z-50 bg-card border-r flex-col items-center py-4 transition-all duration-200",
+            sidebarExpanded ? "w-56 shadow-xl" : "w-16"
+          )}
+          style={{ pointerEvents: 'auto' }}
+          onMouseEnter={() => setSidebarExpanded(true)}
+          onMouseLeave={() => setSidebarExpanded(false)}
+        >
         {navigation.map((item) => {
           const isActive = location.pathname === item.href;
           return (
@@ -433,8 +437,9 @@ export function Layout() {
           );
         })}
       </aside>
+      )}
       {/* Main Content with Header */}
-      <div className="flex-1 flex flex-col md:ml-16 transition-all duration-200">
+      <div className={cn("flex-1 flex flex-col transition-all duration-200", !isKioskMode && "md:ml-16")}>
         {/* Impersonation Banner */}
         {isImpersonating && impersonationData && (
           <div className="bg-amber-100 dark:bg-amber-900/30 border-b border-amber-300 dark:border-amber-700/50 px-4 py-2 sticky top-0 z-50">
@@ -460,7 +465,8 @@ export function Layout() {
         )}
 
         {/* Header stays at the top, full width */}
-        <header className="bg-card border-b px-4 py-3 flex justify-between items-center sticky top-0 z-40">
+        {!isKioskMode && (
+          <header className="bg-card border-b px-4 py-3 flex justify-between items-center sticky top-0 z-40">
           <div className="flex items-center gap-2">
             <Logo showText={false} size={40} />
             {isMobile ? (
@@ -518,22 +524,26 @@ export function Layout() {
             </div>
           )}
         </header>
+        )}
         {/* Main Content Area */}
-        <main className="flex-1 p-4 sm:p-6 md:p-8 pb-20 md:pb-8">
+        <main className={cn("flex-1", isKioskMode ? "p-0" : "p-4 sm:p-6 md:p-8 pb-20 md:pb-8")}>
           <Outlet />
         </main>
         {/* Footer */}
-        <footer className="py-4 px-6 border-t bg-card mb-14 md:mb-0">
-          <div className="flex flex-col sm:flex-row justify-between items-center">
-            <p className="text-sm text-muted-foreground">© 2025 Deacon - Church Command Center. All rights reserved.</p>
-            <p className="text-xs text-muted-foreground mt-2 sm:mt-0 sm:ml-4 text-center">
-              <a href="/privacy-policy" className="underline hover:text-primary">Privacy Policy</a>
-            </p>
-          </div>
-        </footer>
+        {!isKioskMode && (
+          <footer className="py-4 px-6 border-t bg-card mb-14 md:mb-0">
+            <div className="flex flex-col sm:flex-row justify-between items-center">
+              <p className="text-sm text-muted-foreground">© 2025 Deacon - Church Command Center. All rights reserved.</p>
+              <p className="text-xs text-muted-foreground mt-2 sm:mt-0 sm:ml-4 text-center">
+                <a href="/privacy-policy" className="underline hover:text-primary">Privacy Policy</a>
+              </p>
+            </div>
+          </footer>
+        )}
       </div>
       {/* Mobile Navigation (phones only) remains unchanged */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t md:hidden z-50">
+      {!isKioskMode && (
+        <nav className="fixed bottom-0 left-0 right-0 bg-card border-t md:hidden z-50">
         <div className="max-w-screen-xl mx-auto px-2">
           <div className="flex justify-around items-center h-14">
             {mainNavItems.slice(0, 4).map((item) => {
@@ -594,6 +604,7 @@ export function Layout() {
           </div>
         </div>
       </nav>
+      )}
     </div>
   );
 }
