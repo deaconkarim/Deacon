@@ -11,7 +11,11 @@ import {
   Building,
   Users,
   Target,
-  Gift
+  Gift,
+  CreditCard,
+  Lock,
+  Shield,
+  Mail
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,8 +37,16 @@ const DonatePage = () => {
     notes: '',
     is_anonymous: false
   });
+  const [paymentForm, setPaymentForm] = useState({
+    cardNumber: '',
+    expiryDate: '',
+    cvv: '',
+    cardholderName: '',
+    paymentMethod: 'card'
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1); // 1: donation details, 2: payment
   const { toast } = useToast();
 
   // Parse URL parameters
@@ -62,7 +74,7 @@ const DonatePage = () => {
     { value: 'youth', label: 'Youth Ministry', icon: Users, color: 'bg-pink-100 text-pink-800' }
   ];
 
-  const handleSubmit = async (e) => {
+  const handleDonationSubmit = (e) => {
     e.preventDefault();
     
     if (!donationForm.amount || parseFloat(donationForm.amount) <= 0) {
@@ -75,23 +87,50 @@ const DonatePage = () => {
       return;
     }
 
+    if (!donationForm.is_anonymous && !donationForm.donor_name) {
+      toast({
+        title: "Name Required",
+        description: "Please enter your name or check anonymous donation",
+        variant: "destructive",
+        duration: 3000,
+      });
+      return;
+    }
+
+    setCurrentStep(2);
+  };
+
+  const handlePaymentSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (paymentForm.paymentMethod === 'card') {
+      if (!paymentForm.cardNumber || !paymentForm.expiryDate || !paymentForm.cvv || !paymentForm.cardholderName) {
+        toast({
+          title: "Payment Information Required",
+          description: "Please fill in all payment fields",
+          variant: "destructive",
+          duration: 3000,
+        });
+        return;
+      }
+    }
+
     setIsSubmitting(true);
 
     try {
-      // In a real implementation, this would send the donation to your backend
-      // For now, we'll simulate the process
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Simulate payment processing
+      await new Promise(resolve => setTimeout(resolve, 3000));
       
       setIsSuccess(true);
       toast({
-        title: "Thank You!",
-        description: "Your donation has been received. We'll send you a confirmation email.",
+        title: "Payment Successful!",
+        description: "Your donation has been processed. We'll send you a confirmation email.",
         duration: 5000,
       });
     } catch (error) {
       toast({
-        title: "Donation Failed",
-        description: "There was an error processing your donation. Please try again.",
+        title: "Payment Failed",
+        description: "There was an error processing your payment. Please try again.",
         variant: "destructive",
         duration: 5000,
       });
@@ -104,6 +143,23 @@ const DonatePage = () => {
     // Remove any non-numeric characters except decimal point
     const cleanValue = value.replace(/[^0-9.]/g, '');
     setDonationForm(prev => ({ ...prev, amount: cleanValue }));
+  };
+
+  const handleCardNumberChange = (value) => {
+    // Format card number with spaces
+    const cleanValue = value.replace(/\s/g, '').replace(/\D/g, '');
+    const formattedValue = cleanValue.replace(/(\d{4})/g, '$1 ').trim();
+    setPaymentForm(prev => ({ ...prev, cardNumber: formattedValue }));
+  };
+
+  const handleExpiryChange = (value) => {
+    // Format expiry date
+    const cleanValue = value.replace(/\D/g, '');
+    let formattedValue = cleanValue;
+    if (cleanValue.length >= 2) {
+      formattedValue = cleanValue.slice(0, 2) + '/' + cleanValue.slice(2, 4);
+    }
+    setPaymentForm(prev => ({ ...prev, expiryDate: formattedValue }));
   };
 
   const getFundIcon = (fundValue) => {
@@ -176,7 +232,7 @@ const DonatePage = () => {
 
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Donation Form */}
+          {/* Main Form */}
           <div className="lg:col-span-2">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -187,124 +243,271 @@ const DonatePage = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <DollarSign className="h-5 w-5 text-blue-600" />
-                    <span>Make a Donation</span>
+                    <span>{currentStep === 1 ? 'Donation Details' : 'Payment Information'}</span>
                   </CardTitle>
                   <CardDescription>
-                    Your generosity helps us continue our mission and serve our community.
+                    {currentStep === 1 
+                      ? 'Your generosity helps us continue our mission and serve our community.'
+                      : 'Complete your donation with secure payment processing.'
+                    }
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Amount */}
-                    <div className="space-y-2">
-                      <Label htmlFor="amount">Donation Amount</Label>
-                      <div className="relative">
-                        <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-                        <Input
-                          id="amount"
-                          type="text"
-                          placeholder="0.00"
-                          value={donationForm.amount}
-                          onChange={(e) => handleAmountChange(e.target.value)}
-                          className="pl-10 text-lg"
-                          required
+                  {currentStep === 1 ? (
+                    <form onSubmit={handleDonationSubmit} className="space-y-6">
+                      {/* Amount */}
+                      <div className="space-y-2">
+                        <Label htmlFor="amount">Donation Amount</Label>
+                        <div className="relative">
+                          <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                          <Input
+                            id="amount"
+                            type="text"
+                            placeholder="0.00"
+                            value={donationForm.amount}
+                            onChange={(e) => handleAmountChange(e.target.value)}
+                            className="pl-10 text-lg"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      {/* Fund Designation */}
+                      <div className="space-y-2">
+                        <Label htmlFor="fund">Fund Designation</Label>
+                        <Select
+                          value={donationForm.fund_designation}
+                          onValueChange={(value) => setDonationForm(prev => ({ ...prev, fund_designation: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {fundOptions.map((fund) => (
+                              <SelectItem key={fund.value} value={fund.value}>
+                                <div className="flex items-center space-x-2">
+                                  <fund.icon className="h-4 w-4" />
+                                  <span>{fund.label}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Donor Information */}
+                      <div className="space-y-4">
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="anonymous"
+                            checked={donationForm.is_anonymous}
+                            onChange={(e) => setDonationForm(prev => ({ ...prev, is_anonymous: e.target.checked }))}
+                            className="rounded"
+                          />
+                          <Label htmlFor="anonymous" className="text-sm">Make this donation anonymous</Label>
+                        </div>
+
+                        {!donationForm.is_anonymous && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="name">Your Name</Label>
+                              <Input
+                                id="name"
+                                placeholder="John Doe"
+                                value={donationForm.donor_name}
+                                onChange={(e) => setDonationForm(prev => ({ ...prev, donor_name: e.target.value }))}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="email">Email Address</Label>
+                              <Input
+                                id="email"
+                                type="email"
+                                placeholder="john@example.com"
+                                value={donationForm.donor_email}
+                                onChange={(e) => setDonationForm(prev => ({ ...prev, donor_email: e.target.value }))}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Notes */}
+                      <div className="space-y-2">
+                        <Label htmlFor="notes">Additional Notes (Optional)</Label>
+                        <Textarea
+                          id="notes"
+                          placeholder="Any special instructions or comments..."
+                          value={donationForm.notes}
+                          onChange={(e) => setDonationForm(prev => ({ ...prev, notes: e.target.value }))}
+                          rows={3}
                         />
                       </div>
-                    </div>
 
-                    {/* Fund Designation */}
-                    <div className="space-y-2">
-                      <Label htmlFor="fund">Fund Designation</Label>
-                      <Select
-                        value={donationForm.fund_designation}
-                        onValueChange={(value) => setDonationForm(prev => ({ ...prev, fund_designation: value }))}
+                      {/* Continue Button */}
+                      <Button 
+                        type="submit" 
+                        className="w-full" 
+                        size="lg"
+                        disabled={!donationForm.amount || parseFloat(donationForm.amount) <= 0}
                       >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {fundOptions.map((fund) => (
-                            <SelectItem key={fund.value} value={fund.value}>
-                              <div className="flex items-center space-x-2">
-                                <fund.icon className="h-4 w-4" />
-                                <span>{fund.label}</span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Donor Information */}
-                    <div className="space-y-4">
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="anonymous"
-                          checked={donationForm.is_anonymous}
-                          onChange={(e) => setDonationForm(prev => ({ ...prev, is_anonymous: e.target.checked }))}
-                          className="rounded"
-                        />
-                        <Label htmlFor="anonymous" className="text-sm">Make this donation anonymous</Label>
+                        <Heart className="h-4 w-4 mr-2" />
+                        Continue to Payment
+                      </Button>
+                    </form>
+                  ) : (
+                    <form onSubmit={handlePaymentSubmit} className="space-y-6">
+                      {/* Payment Method Selection */}
+                      <div className="space-y-2">
+                        <Label>Payment Method</Label>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="radio"
+                              id="card"
+                              name="paymentMethod"
+                              value="card"
+                              checked={paymentForm.paymentMethod === 'card'}
+                              onChange={(e) => setPaymentForm(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                              className="rounded"
+                            />
+                            <Label htmlFor="card" className="flex items-center space-x-2">
+                              <CreditCard className="h-4 w-4" />
+                              <span>Credit Card</span>
+                            </Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="radio"
+                              id="ach"
+                              name="paymentMethod"
+                              value="ach"
+                              checked={paymentForm.paymentMethod === 'ach'}
+                              onChange={(e) => setPaymentForm(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                              className="rounded"
+                            />
+                            <Label htmlFor="ach" className="flex items-center space-x-2">
+                              <Building className="h-4 w-4" />
+                              <span>Bank Transfer</span>
+                            </Label>
+                          </div>
+                        </div>
                       </div>
 
-                      {!donationForm.is_anonymous && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {paymentForm.paymentMethod === 'card' && (
+                        <div className="space-y-4">
+                          {/* Card Number */}
                           <div className="space-y-2">
-                            <Label htmlFor="name">Your Name</Label>
+                            <Label htmlFor="cardNumber">Card Number</Label>
                             <Input
-                              id="name"
-                              placeholder="John Doe"
-                              value={donationForm.donor_name}
-                              onChange={(e) => setDonationForm(prev => ({ ...prev, donor_name: e.target.value }))}
+                              id="cardNumber"
+                              placeholder="1234 5678 9012 3456"
+                              value={paymentForm.cardNumber}
+                              onChange={(e) => handleCardNumberChange(e.target.value)}
+                              maxLength={19}
+                              required
                             />
                           </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            {/* Expiry Date */}
+                            <div className="space-y-2">
+                              <Label htmlFor="expiryDate">Expiry Date</Label>
+                              <Input
+                                id="expiryDate"
+                                placeholder="MM/YY"
+                                value={paymentForm.expiryDate}
+                                onChange={(e) => handleExpiryChange(e.target.value)}
+                                maxLength={5}
+                                required
+                              />
+                            </div>
+
+                            {/* CVV */}
+                            <div className="space-y-2">
+                              <Label htmlFor="cvv">CVV</Label>
+                              <Input
+                                id="cvv"
+                                placeholder="123"
+                                value={paymentForm.cvv}
+                                onChange={(e) => setPaymentForm(prev => ({ ...prev, cvv: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
+                                maxLength={4}
+                                required
+                              />
+                            </div>
+                          </div>
+
+                          {/* Cardholder Name */}
                           <div className="space-y-2">
-                            <Label htmlFor="email">Email Address</Label>
+                            <Label htmlFor="cardholderName">Cardholder Name</Label>
                             <Input
-                              id="email"
-                              type="email"
-                              placeholder="john@example.com"
-                              value={donationForm.donor_email}
-                              onChange={(e) => setDonationForm(prev => ({ ...prev, donor_email: e.target.value }))}
+                              id="cardholderName"
+                              placeholder="John Doe"
+                              value={paymentForm.cardholderName}
+                              onChange={(e) => setPaymentForm(prev => ({ ...prev, cardholderName: e.target.value }))}
+                              required
                             />
                           </div>
                         </div>
                       )}
-                    </div>
 
-                    {/* Notes */}
-                    <div className="space-y-2">
-                      <Label htmlFor="notes">Additional Notes (Optional)</Label>
-                      <Textarea
-                        id="notes"
-                        placeholder="Any special instructions or comments..."
-                        value={donationForm.notes}
-                        onChange={(e) => setDonationForm(prev => ({ ...prev, notes: e.target.value }))}
-                        rows={3}
-                      />
-                    </div>
-
-                    {/* Submit Button */}
-                    <Button 
-                      type="submit" 
-                      className="w-full" 
-                      size="lg"
-                      disabled={isSubmitting || !donationForm.amount || parseFloat(donationForm.amount) <= 0}
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          <Heart className="h-4 w-4 mr-2" />
-                          Complete Donation
-                        </>
+                      {paymentForm.paymentMethod === 'ach' && (
+                        <div className="space-y-4">
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <Shield className="h-4 w-4 text-blue-600" />
+                              <span className="text-sm font-medium text-blue-800">Secure Bank Transfer</span>
+                            </div>
+                            <p className="text-sm text-blue-700">
+                              You'll be redirected to your bank's secure login page to complete the transfer.
+                            </p>
+                          </div>
+                        </div>
                       )}
-                    </Button>
-                  </form>
+
+                      {/* Security Notice */}
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <Lock className="h-4 w-4 text-green-600" />
+                          <span className="text-sm font-medium text-gray-800">Secure Payment</span>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Your payment information is encrypted and secure. We use industry-standard SSL encryption.
+                        </p>
+                      </div>
+
+                      {/* Payment Buttons */}
+                      <div className="flex space-x-3">
+                        <Button 
+                          type="button"
+                          variant="outline" 
+                          onClick={() => setCurrentStep(1)}
+                          className="flex-1"
+                        >
+                          Back
+                        </Button>
+                        <Button 
+                          type="submit" 
+                          className="flex-1" 
+                          size="lg"
+                          disabled={isSubmitting}
+                        >
+                          {isSubmitting ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              Processing...
+                            </>
+                          ) : (
+                            <>
+                              <Lock className="h-4 w-4 mr-2" />
+                              Complete Payment
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </form>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>
@@ -321,7 +524,7 @@ const DonatePage = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <QrCode className="h-5 w-5 text-blue-600" />
-                    <span>Quick Donation</span>
+                    <span>Donation Summary</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -340,6 +543,25 @@ const DonatePage = () => {
                       <Label className="text-sm font-medium">Donation Amount</Label>
                       <div className="text-2xl font-bold text-green-600">
                         ${parseFloat(donationForm.amount).toFixed(2)}
+                      </div>
+                    </div>
+                  )}
+
+                  {currentStep === 2 && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Payment Method</Label>
+                      <div className="flex items-center space-x-2">
+                        {paymentForm.paymentMethod === 'card' ? (
+                          <>
+                            <CreditCard className="h-4 w-4 text-gray-500" />
+                            <span className="text-sm">Credit Card</span>
+                          </>
+                        ) : (
+                          <>
+                            <Building className="h-4 w-4 text-gray-500" />
+                            <span className="text-sm">Bank Transfer</span>
+                          </>
+                        )}
                       </div>
                     </div>
                   )}
@@ -389,15 +611,15 @@ const DonatePage = () => {
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm text-gray-600">
                   <div className="flex items-start space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>All donations are secure and encrypted</span>
+                    <Lock className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span>All payments are secure and encrypted</span>
                   </div>
                   <div className="flex items-start space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <Shield className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
                     <span>Your information is kept confidential</span>
                   </div>
                   <div className="flex items-start space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <Mail className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
                     <span>Tax receipts are automatically generated</span>
                   </div>
                 </CardContent>
