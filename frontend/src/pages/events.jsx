@@ -5504,29 +5504,29 @@ export default function Events() {
                                   className="flex items-center space-x-4 md:space-x-6 p-4 md:p-6 lg:p-8 rounded-xl border-2 border-green-200 bg-green-50 cursor-pointer hover:bg-green-100 transition-colors"
                                   onClick={() => handleMemberClick(member)}
                                 >
-                                  <Avatar className="h-16 w-16 md:h-20 md:w-20 lg:h-24 lg:w-24">
+                                  <Avatar className="h-24 w-24 md:h-32 md:w-32 lg:h-40 lg:w-40">
                                     <AvatarImage src={member.image_url} />
-                                    <AvatarFallback className="text-xl md:text-2xl lg:text-3xl">
+                                    <AvatarFallback className="text-2xl md:text-3xl lg:text-4xl">
                                       {getInitials(member.firstname, member.lastname)}
                                     </AvatarFallback>
                                   </Avatar>
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-xl md:text-2xl lg:text-3xl font-bold truncate">
+                                    <p className="text-2xl md:text-3xl lg:text-4xl font-bold truncate">
                                       {member.firstname} {member.lastname}
                                     </p>
-                                    <div className="flex items-center gap-1 md:gap-2 mt-1">
-                                      <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
+                                    <div className="flex items-center gap-2 md:gap-3 mt-2">
+                                      <Badge variant="secondary" className="bg-green-100 text-green-800 text-lg px-4 py-2">
                                         {memberAttendanceCount[member.id] || 0} previous attendances
                                       </Badge>
-                                      <span className="text-xs md:text-sm text-green-600">Frequent attendee</span>
-                                    </div>
+                                                                          <span className="text-lg md:text-xl text-green-600">Frequent attendee</span>
                                   </div>
-                                  <Star className="h-4 w-4 md:h-5 md:w-5 text-green-600 flex-shrink-0" />
                                 </div>
-                              ))}
-                            </div>
+                                <Star className="h-8 w-8 md:h-10 md:w-10 text-green-600 flex-shrink-0" />
+                              </div>
+                            ))}
                           </div>
-                        )}
+                        </div>
+                      )}
                         
                         <div className="space-y-2">
                           {members
@@ -6849,18 +6849,18 @@ export default function Events() {
                           className="flex items-center space-x-4 md:space-x-6 p-4 md:p-6 lg:p-8 rounded-xl border-2 cursor-pointer hover:bg-gray-50 transition-colors"
                           onClick={() => handleMemberClick(member)}
                         >
-                          <Avatar className="h-16 w-16 md:h-20 md:w-20 lg:h-24 lg:w-24">
+                          <Avatar className="h-24 w-24 md:h-32 md:w-32 lg:h-40 lg:w-40">
                             <AvatarImage src={member.image_url} />
-                            <AvatarFallback className="text-xl md:text-2xl lg:text-3xl">
+                            <AvatarFallback className="text-2xl md:text-3xl lg:text-4xl">
                               {getInitials(member.firstname, member.lastname)}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
-                            <p className="text-xl md:text-2xl lg:text-3xl font-bold truncate">
+                            <p className="text-2xl md:text-3xl lg:text-4xl font-bold truncate">
                               {member.firstname} {member.lastname}
                             </p>
                             {memberAttendanceCount[member.id] && (
-                              <div className="mt-2">
+                              <div className="mt-3">
                                 <Badge variant="outline" className="text-lg px-4 py-2">
                                   {memberAttendanceCount[member.id]} previous attendances
                                 </Badge>
@@ -6882,18 +6882,18 @@ export default function Events() {
                       className="flex items-center justify-between p-4 md:p-6 lg:p-8 rounded-xl border-2"
                     >
                       <div className="flex items-center space-x-4 md:space-x-6 min-w-0 flex-1">
-                        <Avatar className="h-16 w-16 md:h-20 md:w-20 lg:h-24 lg:w-24">
+                        <Avatar className="h-24 w-24 md:h-32 md:w-32 lg:h-40 lg:w-40">
                           <AvatarImage src={member.image_url} />
-                          <AvatarFallback className="text-xl md:text-2xl lg:text-3xl">
+                          <AvatarFallback className="text-2xl md:text-3xl lg:text-4xl">
                             {member.isAnonymous ? member.firstname.charAt(0) : getInitials(member.firstname, member.lastname)}
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 flex-1">
-                          <p className="text-xl md:text-2xl lg:text-3xl font-bold truncate">
+                          <p className="text-2xl md:text-3xl lg:text-4xl font-bold truncate">
                             {member.firstname} {member.lastname}
                           </p>
                           {member.isAnonymous && (
-                            <Badge variant="outline" className="text-lg px-4 py-2 text-orange-600 border-orange-600">
+                            <Badge variant="outline" className="text-xl px-6 py-3 text-orange-600 border-orange-600">
                               Anonymous Attendee
                             </Badge>
                           )}
@@ -6903,9 +6903,9 @@ export default function Events() {
                         variant="ghost"
                         size="lg"
                         onClick={() => handleRemoveMember(member.id)}
-                        className="h-12 w-12 md:h-16 md:w-16 lg:h-20 lg:w-20 p-0 flex-shrink-0"
+                        className="h-16 w-16 md:h-20 md:w-20 lg:h-24 lg:w-24 p-0 flex-shrink-0"
                       >
-                        <X className="h-6 w-6 md:h-8 md:w-8 lg:h-10 lg:w-10" />
+                        <X className="h-8 w-8 md:h-10 md:w-10 lg:h-12 lg:w-12" />
                       </Button>
                     </div>
                   ))}
