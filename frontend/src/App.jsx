@@ -33,6 +33,7 @@ import Landing from './pages/landing';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import PWAUpdateNotification from './components/PWAUpdateNotification';
 import PWATest from './components/PWATest';
+import DonatePage from './pages/donate';
 
 function App() {
   return (
@@ -49,6 +50,7 @@ function App() {
         <Route path="/invite/:invitationId" element={<PublicLayout><Invite /></PublicLayout>} />
         <Route path="/privacy-policy" element={<PublicLayout><PrivacyPolicy /></PublicLayout>} />
         <Route path="/terms-of-service" element={<PublicLayout><TermsOfService /></PublicLayout>} />
+        <Route path="/donate" element={<DonatePage />} />
         
         {/* Approval status route */}
         <Route path="/approval-status" element={<ApprovalStatus />} />
