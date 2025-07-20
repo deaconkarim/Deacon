@@ -5412,9 +5412,9 @@ export default function Events() {
           {/* Member Selection Dialog for Kiosk Mode */}
           <Dialog open={isMemberDialogOpen} onOpenChange={setIsMemberDialogOpen}>
             <DialogContent className="w-[95vw] max-w-full h-[90vh] md:h-auto md:max-w-4xl p-0 z-50">
-              <DialogHeader className="p-6 md:p-8 border-b">
-                <div className="space-y-4">
-                  <DialogTitle className="text-2xl md:text-3xl lg:text-4xl">
+              <DialogHeader className="p-4 md:p-6 border-b">
+                <div className="space-y-2">
+                  <DialogTitle className="text-xl md:text-2xl lg:text-3xl">
                     {isEditingPastEvent 
                       ? 'Edit Attendance' 
                       : selectedEvent?.attendance_type === 'check-in' 
@@ -5485,14 +5485,14 @@ export default function Events() {
                           </Button>
                         )}
                       </div>
-                      <div className="space-y-4">
+                      <div className="space-y-2">
                         {suggestedMembers.length > 0 && (
                           <div className="mb-6 md:mb-8">
                             <h3 className="text-xl md:text-2xl font-bold text-green-700 mb-4 flex items-center gap-3">
                               <Star className="h-6 w-6 md:h-7 md:w-7" />
                               Suggested Based on Previous Attendance
                             </h3>
-                            <div className="space-y-4">
+                            <div className="space-y-2">
                               {suggestedMembers
                                 .filter(member => 
                                   member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
@@ -5501,27 +5501,27 @@ export default function Events() {
                                 .map((member) => (
                                 <div
                                   key={member.id}
-                                  className="flex items-center space-x-4 md:space-x-6 p-4 md:p-6 lg:p-8 rounded-xl border-2 border-green-200 bg-green-50 cursor-pointer hover:bg-green-100 transition-colors"
+                                  className="flex items-center space-x-3 md:space-x-4 p-3 md:p-4 lg:p-5 rounded-lg border-2 border-green-200 bg-green-50 cursor-pointer hover:bg-green-100 transition-colors"
                                   onClick={() => handleMemberClick(member)}
                                 >
-                                  <Avatar className="h-24 w-24 md:h-32 md:w-32 lg:h-40 lg:w-40">
+                                                                    <Avatar className="h-16 w-16 md:h-20 md:w-20 lg:h-24 lg:w-24">
                                     <AvatarImage src={member.image_url} />
-                                    <AvatarFallback className="text-2xl md:text-3xl lg:text-4xl">
+                                    <AvatarFallback className="text-lg md:text-xl lg:text-2xl">
                                       {getInitials(member.firstname, member.lastname)}
                                     </AvatarFallback>
                                   </Avatar>
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-2xl md:text-3xl lg:text-4xl font-bold truncate">
+                                    <p className="text-lg md:text-xl lg:text-2xl font-bold truncate">
                                       {member.firstname} {member.lastname}
                                     </p>
-                                    <div className="flex items-center gap-2 md:gap-3 mt-2">
-                                      <Badge variant="secondary" className="bg-green-100 text-green-800 text-lg px-4 py-2">
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <Badge variant="secondary" className="bg-green-100 text-green-800 text-sm px-2 py-1">
                                         {memberAttendanceCount[member.id] || 0} previous attendances
                                       </Badge>
-                                                                          <span className="text-lg md:text-xl text-green-600">Frequent attendee</span>
+                                      <span className="text-sm md:text-base text-green-600">Frequent attendee</span>
+                                    </div>
                                   </div>
-                                </div>
-                                <Star className="h-8 w-8 md:h-10 md:w-10 text-green-600 flex-shrink-0" />
+                                <Star className="h-5 w-5 md:h-6 md:w-6 text-green-600 flex-shrink-0" />
                               </div>
                             ))}
                           </div>
@@ -5538,22 +5538,22 @@ export default function Events() {
                             .map((member) => (
                             <div
                               key={member.id}
-                              className="flex items-center space-x-3 md:space-x-4 p-2 md:p-3 lg:p-4 rounded-lg border cursor-pointer hover:bg-gray-50"
+                              className="flex items-center space-x-3 md:space-x-4 p-3 md:p-4 lg:p-5 rounded-lg border-2 cursor-pointer hover:bg-gray-50 transition-colors"
                               onClick={() => handleMemberClick(member)}
                             >
-                              <Avatar className="h-10 w-10 md:h-12 md:w-12 lg:h-16 lg:w-16">
+                              <Avatar className="h-16 w-16 md:h-20 md:w-20 lg:h-24 lg:w-24">
                                 <AvatarImage src={member.image_url} />
-                                <AvatarFallback className="text-sm md:text-lg lg:text-xl">
+                                <AvatarFallback className="text-lg md:text-xl lg:text-2xl">
                                   {getInitials(member.firstname, member.lastname)}
                                 </AvatarFallback>
                               </Avatar>
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm md:text-lg lg:text-xl font-medium truncate">
+                                <p className="text-lg md:text-xl lg:text-2xl font-bold truncate">
                                   {member.firstname} {member.lastname}
                                 </p>
                                 {memberAttendanceCount[member.id] && (
                                   <div className="mt-1">
-                                    <Badge variant="outline" className="text-xs">
+                                    <Badge variant="outline" className="text-sm px-2 py-1">
                                       {memberAttendanceCount[member.id]} previous attendances
                                     </Badge>
                                   </div>
@@ -5571,21 +5571,21 @@ export default function Events() {
                       {alreadyRSVPMembers.filter(member => member && member.id).map((member) => (
                         <div
                           key={member.id}
-                          className="flex items-center justify-between p-2 md:p-3 lg:p-4 rounded-lg border"
+                          className="flex items-center justify-between p-3 md:p-4 lg:p-5 rounded-lg border-2"
                         >
                           <div className="flex items-center space-x-3 md:space-x-4 min-w-0 flex-1">
-                            <Avatar className="h-10 w-10 md:h-12 md:w-12 lg:h-16 lg:w-16">
+                            <Avatar className="h-16 w-16 md:h-20 md:w-20 lg:h-24 lg:w-24">
                               <AvatarImage src={member.image_url} />
-                              <AvatarFallback className="text-sm md:text-lg lg:text-xl">
+                              <AvatarFallback className="text-lg md:text-xl lg:text-2xl">
                                 {member.isAnonymous ? member.firstname.charAt(0) : getInitials(member.firstname, member.lastname)}
                               </AvatarFallback>
                             </Avatar>
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm md:text-lg lg:text-xl font-medium truncate">
+                              <p className="text-lg md:text-xl lg:text-2xl font-bold truncate">
                                 {member.firstname} {member.lastname}
                               </p>
                               {member.isAnonymous && (
-                                <Badge variant="outline" className="text-xs text-orange-600 border-orange-600">
+                                <Badge variant="outline" className="text-sm px-3 py-1 text-orange-600 border-orange-600">
                                   Anonymous Attendee
                                 </Badge>
                               )}
@@ -5593,11 +5593,11 @@ export default function Events() {
                           </div>
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="lg"
                             onClick={() => handleRemoveMember(member.id)}
-                            className="h-8 w-8 md:h-10 md:w-10 lg:h-12 lg:w-12 p-0 flex-shrink-0"
+                            className="h-12 w-12 md:h-14 md:w-14 lg:h-16 lg:w-16 p-0 flex-shrink-0"
                           >
-                            <X className="h-4 w-4 md:h-5 md:w-5 lg:h-6 lg:w-6" />
+                            <X className="h-6 w-6 md:h-7 md:w-7 lg:h-8 lg:w-8" />
                           </Button>
                         </div>
                       ))}
@@ -6836,32 +6836,32 @@ export default function Events() {
                       </div>
                     )}
                     
-                    <div className="space-y-4">
-                      {members
+                                            <div className="space-y-2">
+                          {members
                         .filter(member => 
                           !suggestedMembers.find(s => s.id === member.id) &&
                           (member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
                            member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase()))
                         )
                         .map((member) => (
-                        <div
-                          key={member.id}
-                          className="flex items-center space-x-4 md:space-x-6 p-4 md:p-6 lg:p-8 rounded-xl border-2 cursor-pointer hover:bg-gray-50 transition-colors"
-                          onClick={() => handleMemberClick(member)}
-                        >
-                          <Avatar className="h-24 w-24 md:h-32 md:w-32 lg:h-40 lg:w-40">
+                                                    <div
+                              key={member.id}
+                              className="flex items-center space-x-3 md:space-x-4 p-3 md:p-4 lg:p-5 rounded-lg border-2 cursor-pointer hover:bg-gray-50 transition-colors"
+                              onClick={() => handleMemberClick(member)}
+                            >
+                          <Avatar className="h-16 w-16 md:h-20 md:w-20 lg:h-24 lg:w-24">
                             <AvatarImage src={member.image_url} />
-                            <AvatarFallback className="text-2xl md:text-3xl lg:text-4xl">
+                            <AvatarFallback className="text-lg md:text-xl lg:text-2xl">
                               {getInitials(member.firstname, member.lastname)}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
-                            <p className="text-2xl md:text-3xl lg:text-4xl font-bold truncate">
+                            <p className="text-lg md:text-xl lg:text-2xl font-bold truncate">
                               {member.firstname} {member.lastname}
                             </p>
                             {memberAttendanceCount[member.id] && (
-                              <div className="mt-3">
-                                <Badge variant="outline" className="text-lg px-4 py-2">
+                              <div className="mt-1">
+                                <Badge variant="outline" className="text-sm px-2 py-1">
                                   {memberAttendanceCount[member.id]} previous attendances
                                 </Badge>
                               </div>
@@ -6875,25 +6875,25 @@ export default function Events() {
               </TabsContent>
 
               <TabsContent value="checked-in" className="mt-6 md:mt-8 flex-1 overflow-y-auto">
-                <div className="space-y-4">
+                <div className="space-y-2">
                   {alreadyRSVPMembers.filter(member => member && member.id).map((member) => (
-                    <div
-                      key={member.id}
-                      className="flex items-center justify-between p-4 md:p-6 lg:p-8 rounded-xl border-2"
-                    >
-                      <div className="flex items-center space-x-4 md:space-x-6 min-w-0 flex-1">
-                        <Avatar className="h-24 w-24 md:h-32 md:w-32 lg:h-40 lg:w-40">
+                                            <div
+                          key={member.id}
+                          className="flex items-center justify-between p-3 md:p-4 lg:p-5 rounded-lg border-2"
+                        >
+                          <div className="flex items-center space-x-3 md:space-x-4 min-w-0 flex-1">
+                        <Avatar className="h-16 w-16 md:h-20 md:w-20 lg:h-24 lg:w-24">
                           <AvatarImage src={member.image_url} />
-                          <AvatarFallback className="text-2xl md:text-3xl lg:text-4xl">
+                          <AvatarFallback className="text-lg md:text-xl lg:text-2xl">
                             {member.isAnonymous ? member.firstname.charAt(0) : getInitials(member.firstname, member.lastname)}
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 flex-1">
-                          <p className="text-2xl md:text-3xl lg:text-4xl font-bold truncate">
+                          <p className="text-lg md:text-xl lg:text-2xl font-bold truncate">
                             {member.firstname} {member.lastname}
                           </p>
                           {member.isAnonymous && (
-                            <Badge variant="outline" className="text-xl px-6 py-3 text-orange-600 border-orange-600">
+                            <Badge variant="outline" className="text-sm px-3 py-1 text-orange-600 border-orange-600">
                               Anonymous Attendee
                             </Badge>
                           )}
@@ -6903,9 +6903,9 @@ export default function Events() {
                         variant="ghost"
                         size="lg"
                         onClick={() => handleRemoveMember(member.id)}
-                        className="h-16 w-16 md:h-20 md:w-20 lg:h-24 lg:w-24 p-0 flex-shrink-0"
+                        className="h-12 w-12 md:h-14 md:w-14 lg:h-16 lg:w-16 p-0 flex-shrink-0"
                       >
-                        <X className="h-8 w-8 md:h-10 md:w-10 lg:h-12 lg:w-12" />
+                        <X className="h-6 w-6 md:h-7 md:w-7 lg:h-8 lg:w-8" />
                       </Button>
                     </div>
                   ))}
