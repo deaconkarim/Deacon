@@ -181,7 +181,7 @@ export async function getDonationUrlBySlug(slug) {
       .from('donation_urls')
       .select(`
         *,
-        organization:organizations(id, name, logo_url, primary_color, secondary_color),
+        organization:organizations(id, name, logo_url),
         campaign:donation_campaigns(id, name, description, goal_amount, current_amount)
       `)
       .eq('slug', slug)
