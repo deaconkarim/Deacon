@@ -5318,80 +5318,80 @@ export default function Events() {
       {isFullKioskMode ? (
         <div className="fixed inset-0 bg-white z-40 overflow-hidden">
           {/* Kiosk Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 shadow-lg">
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold">Check-In Kiosk</h1>
-                <p className="text-blue-100 text-sm">Select an event to check in</p>
+                <h1 className="text-4xl font-bold">Check-In Kiosk</h1>
+                <p className="text-blue-100 text-xl">Select an event to check in</p>
               </div>
               <Button
                 variant="outline"
-                size="sm"
+                size="lg"
                 onClick={() => {
                   setIsFullKioskMode(false);
                   setViewMode('admin');
                   navigate('/events');
                 }}
-                className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+                className="bg-white/20 hover:bg-white/30 text-white border-white/30 text-lg px-6 py-3"
               >
-                <X className="mr-2 h-4 w-4" />
+                <X className="mr-3 h-6 w-6" />
                 Exit Kiosk
               </Button>
             </div>
           </div>
 
           {/* Kiosk Event List */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
             {isLoading ? (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {[...Array(3)].map((_, i) => (
-                  <Card key={i} className="p-6">
+                  <Card key={i} className="p-8">
                     <div className="animate-pulse">
-                      <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
-                      <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-                      <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                      <div className="h-8 bg-gray-200 rounded w-3/4 mb-6"></div>
+                      <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
+                      <div className="h-6 bg-gray-200 rounded w-1/3"></div>
                     </div>
                   </Card>
                 ))}
               </div>
             ) : filteredEvents.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {filteredEvents.map((event) => (
-                  <Card key={event.id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleOpenDialog(event)}>
-                    <CardContent className="p-6">
-                      <div className="flex items-start gap-4">
+                  <Card key={event.id} className="hover:shadow-xl transition-shadow cursor-pointer border-2 hover:border-blue-300" onClick={() => handleOpenDialog(event)}>
+                    <CardContent className="p-8">
+                      <div className="flex items-start gap-6">
                         <div className="flex-shrink-0">
-                          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                            <Calendar className="h-6 w-6 text-blue-600" />
+                          <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center">
+                            <Calendar className="h-10 w-10 text-blue-600" />
                           </div>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-semibold text-gray-900 mb-2">{event.title}</h3>
-                          <div className="space-y-1 text-sm text-gray-600">
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-4 w-4 text-gray-400" />
+                          <h3 className="text-3xl font-bold text-gray-900 mb-4">{event.title}</h3>
+                          <div className="space-y-3 text-xl text-gray-600">
+                            <div className="flex items-center gap-3">
+                              <Calendar className="h-6 w-6 text-gray-400" />
                               <span>{format(new Date(event.start_date), 'EEEE, MMMM d, yyyy')}</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Clock className="h-4 w-4 text-gray-400" />
+                            <div className="flex items-center gap-3">
+                              <Clock className="h-6 w-6 text-gray-400" />
                               <span>{format(new Date(event.start_date), 'h:mm a')} - {format(new Date(event.end_date), 'h:mm a')}</span>
                             </div>
                             {event.location && (
-                              <div className="flex items-center gap-2">
-                                <MapPin className="h-4 w-4 text-gray-400" />
+                              <div className="flex items-center gap-3">
+                                <MapPin className="h-6 w-6 text-gray-400" />
                                 <span>{event.location}</span>
                               </div>
                             )}
                           </div>
-                          <div className="mt-3">
-                            <Badge variant="secondary" className="bg-green-100 text-green-800">
-                              <Users className="mr-1 h-3 w-3" />
+                          <div className="mt-4">
+                            <Badge variant="secondary" className="bg-green-100 text-green-800 text-lg px-4 py-2">
+                              <Users className="mr-2 h-5 w-5" />
                               {event.attendance || 0} checked in
                             </Badge>
                           </div>
                         </div>
                         <div className="flex-shrink-0">
-                          <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                          <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-xl px-8 py-4 h-auto">
                             Check In
                           </Button>
                         </div>
@@ -5401,20 +5401,20 @@ export default function Events() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12">
-                <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No upcoming events</h3>
-                <p className="text-gray-500">No events available for check-in at this time.</p>
+              <div className="text-center py-16">
+                <Calendar className="mx-auto h-24 w-24 text-gray-400 mb-6" />
+                <h3 className="text-3xl font-bold text-gray-900 mb-4">No upcoming events</h3>
+                <p className="text-xl text-gray-500">No events available for check-in at this time.</p>
               </div>
             )}
           </div>
 
           {/* Member Selection Dialog for Kiosk Mode */}
           <Dialog open={isMemberDialogOpen} onOpenChange={setIsMemberDialogOpen}>
-            <DialogContent className="w-[95vw] max-w-full h-[90vh] md:h-auto md:max-w-3xl p-0 z-50">
-              <DialogHeader className="p-3 md:p-6 border-b">
-                <div className="space-y-2">
-                  <DialogTitle className="text-lg md:text-2xl lg:text-3xl">
+            <DialogContent className="w-[95vw] max-w-full h-[90vh] md:h-auto md:max-w-4xl p-0 z-50">
+              <DialogHeader className="p-6 md:p-8 border-b">
+                <div className="space-y-4">
+                  <DialogTitle className="text-2xl md:text-3xl lg:text-4xl">
                     {isEditingPastEvent 
                       ? 'Edit Attendance' 
                       : selectedEvent?.attendance_type === 'check-in' 
@@ -5423,15 +5423,15 @@ export default function Events() {
                     } - {selectedEvent?.title}
                   </DialogTitle>
                   {suggestedMembers.length > 0 && (
-                    <div className="flex items-center gap-2">
-                      <Star className="h-4 w-4 md:h-5 md:w-5 text-green-600" />
-                      <span className="text-sm md:text-lg text-green-600 font-normal">
+                    <div className="flex items-center gap-3">
+                      <Star className="h-6 w-6 md:h-7 md:w-7 text-green-600" />
+                      <span className="text-lg md:text-xl text-green-600 font-normal">
                         Smart suggestions available
                       </span>
                     </div>
                   )}
                 </div>
-                <DialogDescription className="text-sm md:text-lg mt-2">
+                <DialogDescription className="text-lg md:text-xl mt-4">
                   {isEditingPastEvent
                     ? `Edit attendance records for ${selectedEvent?.title}`
                     : selectedEvent?.attendance_type === 'check-in'
@@ -5440,59 +5440,59 @@ export default function Events() {
                   }
                 </DialogDescription>
                 {suggestedMembers.length > 0 && (
-                  <div className="mt-2 text-xs md:text-sm text-green-600">
+                  <div className="mt-3 text-sm md:text-base text-green-600">
                     Members who frequently attend similar events are highlighted below
                   </div>
                 )}
               </DialogHeader>
 
-              <div className="p-3 md:p-6 flex-1 overflow-hidden">
+              <div className="p-6 md:p-8 flex-1 overflow-hidden">
                 <Tabs defaultValue="available" className="w-full h-full flex flex-col">
-                  <TabsList className="grid w-full grid-cols-2 h-10 md:h-14">
-                    <TabsTrigger value="available" className="text-sm md:text-lg">
+                  <TabsList className="grid w-full grid-cols-2 h-14 md:h-16">
+                    <TabsTrigger value="available" className="text-lg md:text-xl">
                       {isEditingPastEvent ? 'Add Attendance' : 'Available People'}
                     </TabsTrigger>
-                    <TabsTrigger value="checked-in" className="text-sm md:text-lg">
+                    <TabsTrigger value="checked-in" className="text-lg md:text-xl">
                       {selectedEvent?.attendance_type === 'check-in' ? 'Checked In' : 'RSVP\'d'}
                     </TabsTrigger>
                   </TabsList>
 
-                  <TabsContent value="available" className="mt-3 md:mt-8 flex-1 overflow-y-auto">
-                    <div className="space-y-3 md:space-y-6">
-                      <div className="flex flex-col md:flex-row gap-2 md:gap-3">
+                  <TabsContent value="available" className="mt-6 md:mt-8 flex-1 overflow-y-auto">
+                    <div className="space-y-6 md:space-y-8">
+                      <div className="flex flex-col md:flex-row gap-4 md:gap-6">
                         <div className="flex-1">
                           <Input
                             placeholder="Search people..."
                             value={memberSearchQuery}
                             onChange={(e) => setMemberSearchQuery(e.target.value)}
-                            className="w-full h-10 md:h-14 text-sm md:text-lg"
+                            className="w-full h-16 md:h-20 text-lg md:text-xl"
                           />
                         </div>
                         <Button
                           onClick={() => setIsCreateMemberOpen(true)}
-                          className="w-full md:w-auto h-10 md:h-14 text-sm md:text-lg bg-blue-600 hover:bg-blue-700"
+                          className="w-full md:w-auto h-16 md:h-20 text-lg md:text-xl bg-blue-600 hover:bg-blue-700"
                         >
-                          <Plus className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+                          <Plus className="mr-2 md:mr-3 h-5 w-5 md:h-6 md:w-6" />
                           Add New Person
                         </Button>
                         {selectedEvent?.attendance_type === 'check-in' && (
                           <Button
                             onClick={() => setIsAnonymousCheckinOpen(true)}
-                            className="w-full md:w-auto h-10 md:h-14 text-sm md:text-lg bg-orange-600 hover:bg-orange-700"
+                            className="w-full md:w-auto h-16 md:h-20 text-lg md:text-xl bg-orange-600 hover:bg-orange-700"
                           >
-                            <UserPlus className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+                            <UserPlus className="mr-2 md:mr-3 h-5 w-5 md:h-6 md:w-6" />
                             Anonymous Check-in
                           </Button>
                         )}
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-4">
                         {suggestedMembers.length > 0 && (
-                          <div className="mb-3 md:mb-4">
-                            <h3 className="text-sm md:text-lg font-semibold text-green-700 mb-2 flex items-center gap-2">
-                              <Star className="h-4 w-4 md:h-5 md:w-5" />
+                          <div className="mb-6 md:mb-8">
+                            <h3 className="text-xl md:text-2xl font-bold text-green-700 mb-4 flex items-center gap-3">
+                              <Star className="h-6 w-6 md:h-7 md:w-7" />
                               Suggested Based on Previous Attendance
                             </h3>
-                            <div className="space-y-2">
+                            <div className="space-y-4">
                               {suggestedMembers
                                 .filter(member => 
                                   member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
@@ -5501,17 +5501,17 @@ export default function Events() {
                                 .map((member) => (
                                 <div
                                   key={member.id}
-                                  className="flex items-center space-x-3 md:space-x-4 p-2 md:p-3 lg:p-4 rounded-lg border-2 border-green-200 bg-green-50 cursor-pointer hover:bg-green-100 transition-colors"
+                                  className="flex items-center space-x-4 md:space-x-6 p-4 md:p-6 lg:p-8 rounded-xl border-3 border-green-200 bg-green-50 cursor-pointer hover:bg-green-100 transition-colors"
                                   onClick={() => handleMemberClick(member)}
                                 >
-                                  <Avatar className="h-10 w-10 md:h-12 md:w-12 lg:h-16 lg:w-16">
+                                  <Avatar className="h-16 w-16 md:h-20 md:w-20 lg:h-24 lg:w-24">
                                     <AvatarImage src={member.image_url} />
-                                    <AvatarFallback className="text-sm md:text-lg lg:text-xl">
+                                    <AvatarFallback className="text-xl md:text-2xl lg:text-3xl">
                                       {getInitials(member.firstname, member.lastname)}
                                     </AvatarFallback>
                                   </Avatar>
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-sm md:text-lg lg:text-xl font-medium truncate">
+                                    <p className="text-xl md:text-2xl lg:text-3xl font-bold truncate">
                                       {member.firstname} {member.lastname}
                                     </p>
                                     <div className="flex items-center gap-1 md:gap-2 mt-1">
@@ -5613,18 +5613,18 @@ export default function Events() {
                 </Tabs>
               </div>
 
-              <DialogFooter className="p-3 md:p-6 border-t">
-                <div className="flex flex-col md:flex-row gap-2 md:gap-3 w-full">
+              <DialogFooter className="p-6 md:p-8 border-t">
+                <div className="flex flex-col md:flex-row gap-4 md:gap-6 w-full">
                   <Button
                     variant="outline"
                     onClick={handleCloseDialog}
-                    className="w-full md:w-auto text-sm md:text-lg h-10 md:h-14"
+                    className="w-full md:w-auto text-lg md:text-xl h-16 md:h-20"
                   >
                     Cancel
                   </Button>
                   <Button
                     onClick={handleDone}
-                    className="w-full md:w-auto text-sm md:text-lg h-10 md:h-14"
+                    className="w-full md:w-auto text-lg md:text-xl h-16 md:h-20"
                   >
                     Done
                   </Button>
@@ -6836,7 +6836,7 @@ export default function Events() {
                       </div>
                     )}
                     
-                    <div className="space-y-2">
+                    <div className="space-y-4">
                       {members
                         .filter(member => 
                           !suggestedMembers.find(s => s.id === member.id) &&
@@ -6846,22 +6846,22 @@ export default function Events() {
                         .map((member) => (
                         <div
                           key={member.id}
-                          className="flex items-center space-x-3 md:space-x-4 p-2 md:p-3 lg:p-4 rounded-lg border cursor-pointer hover:bg-gray-50"
+                          className="flex items-center space-x-4 md:space-x-6 p-4 md:p-6 lg:p-8 rounded-xl border-2 cursor-pointer hover:bg-gray-50 transition-colors"
                           onClick={() => handleMemberClick(member)}
                         >
-                          <Avatar className="h-10 w-10 md:h-12 md:w-12 lg:h-16 lg:w-16">
+                          <Avatar className="h-16 w-16 md:h-20 md:w-20 lg:h-24 lg:w-24">
                             <AvatarImage src={member.image_url} />
-                            <AvatarFallback className="text-sm md:text-lg lg:text-xl">
+                            <AvatarFallback className="text-xl md:text-2xl lg:text-3xl">
                               {getInitials(member.firstname, member.lastname)}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm md:text-lg lg:text-xl font-medium truncate">
+                            <p className="text-xl md:text-2xl lg:text-3xl font-bold truncate">
                               {member.firstname} {member.lastname}
                             </p>
                             {memberAttendanceCount[member.id] && (
-                              <div className="mt-1">
-                                <Badge variant="outline" className="text-xs">
+                              <div className="mt-2">
+                                <Badge variant="outline" className="text-lg px-4 py-2">
                                   {memberAttendanceCount[member.id]} previous attendances
                                 </Badge>
                               </div>
@@ -6874,26 +6874,26 @@ export default function Events() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="checked-in" className="mt-3 md:mt-8 flex-1 overflow-y-auto">
-                <div className="space-y-2">
+              <TabsContent value="checked-in" className="mt-6 md:mt-8 flex-1 overflow-y-auto">
+                <div className="space-y-4">
                   {alreadyRSVPMembers.filter(member => member && member.id).map((member) => (
                     <div
                       key={member.id}
-                      className="flex items-center justify-between p-2 md:p-3 lg:p-4 rounded-lg border"
+                      className="flex items-center justify-between p-4 md:p-6 lg:p-8 rounded-xl border-2"
                     >
-                      <div className="flex items-center space-x-3 md:space-x-4 min-w-0 flex-1">
-                        <Avatar className="h-10 w-10 md:h-12 md:w-12 lg:h-16 lg:w-16">
+                      <div className="flex items-center space-x-4 md:space-x-6 min-w-0 flex-1">
+                        <Avatar className="h-16 w-16 md:h-20 md:w-20 lg:h-24 lg:w-24">
                           <AvatarImage src={member.image_url} />
-                          <AvatarFallback className="text-sm md:text-lg lg:text-xl">
+                          <AvatarFallback className="text-xl md:text-2xl lg:text-3xl">
                             {member.isAnonymous ? member.firstname.charAt(0) : getInitials(member.firstname, member.lastname)}
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm md:text-lg lg:text-xl font-medium truncate">
+                          <p className="text-xl md:text-2xl lg:text-3xl font-bold truncate">
                             {member.firstname} {member.lastname}
                           </p>
                           {member.isAnonymous && (
-                            <Badge variant="outline" className="text-xs text-orange-600 border-orange-600">
+                            <Badge variant="outline" className="text-lg px-4 py-2 text-orange-600 border-orange-600">
                               Anonymous Attendee
                             </Badge>
                           )}
@@ -6901,16 +6901,16 @@ export default function Events() {
                       </div>
                       <Button
                         variant="ghost"
-                        size="sm"
+                        size="lg"
                         onClick={() => handleRemoveMember(member.id)}
-                        className="h-8 w-8 md:h-10 md:w-10 lg:h-12 lg:w-12 p-0 flex-shrink-0"
+                        className="h-12 w-12 md:h-16 md:w-16 lg:h-20 lg:w-20 p-0 flex-shrink-0"
                       >
-                        <X className="h-4 w-4 md:h-5 md:w-5 lg:h-6 lg:w-6" />
+                        <X className="h-6 w-6 md:h-8 md:w-8 lg:h-10 lg:w-10" />
                       </Button>
                     </div>
                   ))}
                   {alreadyRSVPMembers.length === 0 && (
-                    <p className="text-sm md:text-base lg:text-lg text-gray-500 italic p-4">
+                    <p className="text-xl md:text-2xl text-gray-500 italic p-8">
                       {selectedEvent?.attendance_type === 'check-in'
                         ? 'No members have checked in yet'
                         : "No members have RSVP'd yet"}
@@ -6921,19 +6921,19 @@ export default function Events() {
             </Tabs>
           </div>
 
-          <DialogFooter className="p-3 md:p-6 border-t">
-            <div className="flex flex-col md:flex-row gap-2 md:gap-3 w-full">
+          <DialogFooter className="p-6 md:p-8 border-t">
+            <div className="flex flex-col md:flex-row gap-4 md:gap-6 w-full">
               <Button
                 onClick={() => setIsCreateMemberOpen(true)}
-                className="w-full md:w-auto text-sm md:text-lg h-10 md:h-14 bg-blue-600 hover:bg-blue-700"
+                className="w-full md:w-auto text-lg md:text-xl h-16 md:h-20 bg-blue-600 hover:bg-blue-700"
               >
-                <Plus className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+                <Plus className="mr-2 md:mr-3 h-5 w-5 md:h-6 md:w-6" />
                 Create New Person
               </Button>
               <Button
                 variant={selectedEvent?.attendance_type === 'check-in' ? 'default' : 'outline'}
                 onClick={handleCloseDialog}
-                className={`w-full md:w-auto text-sm md:text-lg h-10 md:h-14 ${
+                className={`w-full md:w-auto text-lg md:text-xl h-16 md:h-20 ${
                   selectedEvent?.attendance_type === 'check-in' ? 'bg-green-600 hover:bg-green-700' : ''
                 }`}
               >
