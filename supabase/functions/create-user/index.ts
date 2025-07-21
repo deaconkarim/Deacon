@@ -103,8 +103,7 @@ serve(async (req) => {
         user_id: authUser.user.id,
         organization_id: organizationId,
         role: databaseRole,
-        status: 'active',
-        approval_status: 'approved'
+        status: 'active'
       }])
 
     if (orgError) {

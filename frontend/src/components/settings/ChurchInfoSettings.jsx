@@ -28,7 +28,7 @@ const getCurrentUserOrganizationId = async () => {
       .from('organization_users')
       .select('organization_id')
       .eq('user_id', user.id)
-      .eq('approval_status', 'approved')
+      .eq('status', 'active')
       .limit(1);
 
     if (error) throw error;

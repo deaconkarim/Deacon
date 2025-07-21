@@ -153,7 +153,6 @@ export function SMS() {
         .select('organization_id')
         .eq('user_id', user.id)
         .eq('status', 'active')
-        .eq('approval_status', 'approved')
         .order('created_at', { ascending: true }) // Get the oldest association first
         .limit(1);
 
@@ -997,7 +996,6 @@ export function SMS() {
       .select('organization_id')
       .eq('user_id', user.id)
       .eq('status', 'active')
-      .eq('approval_status', 'approved')
       .order('created_at', { ascending: true })
       .limit(1);
 
