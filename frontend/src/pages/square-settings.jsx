@@ -751,6 +751,20 @@ export function SquareSettings() {
         </Card>
       </motion.div>
 
+      {/* Debug: Show current Square settings for this organization */}
+      <motion.div variants={itemVariants} className="mt-8">
+        <Card className="border border-dashed border-gray-300 bg-gray-50">
+          <CardHeader>
+            <CardTitle className="text-xs text-gray-500">Debug: Current Square Settings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <pre className="text-xs text-gray-700 bg-gray-100 p-2 rounded overflow-x-auto">
+              {JSON.stringify(squareSettings, null, 2)}
+            </pre>
+          </CardContent>
+        </Card>
+      </motion.div>
+
       {/* Create/Edit URL Dialog */}
       <Dialog open={isUrlDialogOpen} onOpenChange={setIsUrlDialogOpen}>
         <DialogContent className="max-w-md">
