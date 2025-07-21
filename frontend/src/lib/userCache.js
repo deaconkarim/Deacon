@@ -60,8 +60,7 @@ export const userCacheService = {
         organizationCache = {
           organization_id: impersonationData.organization_id,
           organization_name: impersonationData.organization_name,
-          role: impersonationData.role || 'member',
-          approval_status: 'approved'
+          role: impersonationData.role || 'member'
         };
         organizationCacheTimestamp = now;
         return organizationCache;
@@ -74,8 +73,7 @@ export const userCacheService = {
         organizationCache = {
           organization_id: impersonationData.organization_id,
           organization_name: impersonationData.organization_name,
-          role: 'admin',
-          approval_status: 'approved'
+          role: 'admin'
         };
         organizationCacheTimestamp = now;
         return organizationCache;
@@ -87,11 +85,9 @@ export const userCacheService = {
         .select(`
           organization_id,
           role,
-          approval_status,
           organizations(name)
         `)
         .eq('user_id', user.id)
-        .eq('approval_status', 'approved')
         .order('created_at', { ascending: true })
         .limit(1);
 
@@ -107,8 +103,7 @@ export const userCacheService = {
       organizationCache = {
         organization_id: orgUser.organization_id,
         organization_name: orgUser.organizations?.name,
-        role: orgUser.role,
-        approval_status: orgUser.approval_status
+        role: orgUser.role
       };
       organizationCacheTimestamp = now;
 
@@ -128,7 +123,7 @@ export const userCacheService = {
   // Check if user is approved
   async isUserApproved() {
     const org = await this.getCurrentUserOrganization();
-    return org?.approval_status === 'approved';
+    return org?.role === 'admin'; // Assuming 'admin' means approved for now
   },
 
   // Check if user is admin

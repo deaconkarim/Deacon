@@ -389,7 +389,6 @@ export class AutomationService {
               .eq('organization_id', orgData.organization_id)
               .eq('role', 'admin')
               .eq('status', 'active')
-              .eq('approval_status', 'approved')
               .limit(1);
             
             if (staffMembers && staffMembers.length > 0) {
@@ -413,7 +412,6 @@ export class AutomationService {
               .eq('organization_id', orgData.organization_id)
               .eq('role', 'deacon')
               .eq('status', 'active')
-              .eq('approval_status', 'approved')
               .limit(1);
             
             if (staffMembers && staffMembers.length > 0) {

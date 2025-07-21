@@ -139,10 +139,9 @@ export function Tasks() {
       const [orgUsersResult, membersResult] = await Promise.all([
         supabase
           .from('organization_users')
-          .select('user_id, role, approval_status')
+          .select('user_id, role')
           .eq('organization_id', organizationId)
           .eq('status', 'active')
-          .eq('approval_status', 'approved')
           .order('created_at', { ascending: false }),
         supabase
           .from('members')

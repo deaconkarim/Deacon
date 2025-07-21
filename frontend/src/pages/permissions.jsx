@@ -152,7 +152,7 @@ export function Permissions() {
           .order('created_at', { ascending: false }),
         supabase
           .from('organization_users')
-          .select('user_id, role, approval_status')
+          .select('user_id, role, created_at')
           .eq('organization_id', orgId)
           .order('created_at', { ascending: false })
       ]);
