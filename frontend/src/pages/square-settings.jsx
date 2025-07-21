@@ -37,7 +37,8 @@ import {
   updateDonationUrl,
   deleteDonationUrl,
   getSquareDonationAnalytics,
-  generateDonationUrl
+  generateDonationUrl,
+  syncAllSquareDonations
 } from '@/lib/squareService';
 import { getCampaigns } from '@/lib/donationService';
 
@@ -62,6 +63,7 @@ export function SquareSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   
   // Dialog states
   const [isUrlDialogOpen, setIsUrlDialogOpen] = useState(false);
@@ -78,9 +80,7 @@ export function SquareSettings() {
     application_id: '',
     access_token: '',
     environment: 'sandbox',
-    is_active: false,
-    webhook_url: '',
-    webhook_secret: ''
+    is_active: false
   });
   
   const [urlForm, setUrlForm] = useState({
@@ -94,7 +94,6 @@ export function SquareSettings() {
   
   // UI states
   const [showAccessToken, setShowAccessToken] = useState(false);
-  const [showWebhookSecret, setShowWebhookSecret] = useState(false);
   
   const { toast } = useToast();
 
@@ -120,9 +119,7 @@ export function SquareSettings() {
           application_id: settings.application_id || '',
           access_token: settings.access_token || '',
           environment: settings.environment || 'sandbox',
-          is_active: settings.is_active || false,
-          webhook_url: settings.webhook_url || '',
-          webhook_secret: settings.webhook_secret || ''
+          is_active: settings.is_active || false
         });
       }
     } catch (error) {
@@ -260,6 +257,29 @@ export function SquareSettings() {
     }
   };
 
+  const handleSyncDonations = async () => {
+    try {
+      setIsSyncing(true);
+      const result = await syncAllSquareDonations();
+      
+      toast({
+        title: "Sync Complete",
+        description: `Successfully synced ${result.successful} donations to main system`,
+      });
+      
+      await loadData();
+    } catch (error) {
+      console.error('Error syncing donations:', error);
+      toast({
+        title: "Error",
+        description: "Failed to sync donations",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const resetUrlForm = () => {
     setUrlForm({
       name: '',
@@ -387,8 +407,6 @@ export function SquareSettings() {
                   </div>
                 </div>
                 
-
-                
                 <div className="flex items-start space-x-3">
                   <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
                     3
@@ -421,6 +439,8 @@ export function SquareSettings() {
           </Card>
         </motion.div>
       )}
+
+
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Square Settings */}
@@ -508,9 +528,15 @@ export function SquareSettings() {
                         </SelectItem>
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Start with Sandbox to test, then switch to Production when ready
-                    </p>
+                    <div className="text-xs text-gray-500 mt-1 space-y-1">
+                      <p><strong>Sandbox:</strong> Test with fake cards, no real money processed</p>
+                      <p><strong>Production:</strong> Real payments, requires activated Square account</p>
+                      {settingsForm.environment === 'production' && (
+                        <p className="text-orange-600 font-medium">
+                          ⚠️ Make sure your Square account is activated before using Production
+                        </p>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     <input
@@ -524,50 +550,7 @@ export function SquareSettings() {
                   </div>
                 </div>
 
-                <div className="border-t pt-4">
-                  <h4 className="font-medium text-gray-900 mb-2">Advanced Settings (Optional)</h4>
-                  <p className="text-sm text-gray-600 mb-4">
-                    These settings are optional and only needed for advanced webhook integrations.
-                  </p>
-                  
-                  <div>
-                    <Label htmlFor="webhook_url">Webhook URL (Optional)</Label>
-                    <Input
-                      id="webhook_url"
-                      value={settingsForm.webhook_url}
-                      onChange={(e) => setSettingsForm(prev => ({ ...prev, webhook_url: e.target.value }))}
-                      placeholder="https://your-domain.com/webhook"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Only needed if you want real-time payment notifications
-                    </p>
-                  </div>
 
-                  <div className="mt-4">
-                    <Label htmlFor="webhook_secret">Webhook Secret (Optional)</Label>
-                    <div className="relative">
-                      <Input
-                        id="webhook_secret"
-                        type={showWebhookSecret ? "text" : "password"}
-                        value={settingsForm.webhook_secret}
-                        onChange={(e) => setSettingsForm(prev => ({ ...prev, webhook_secret: e.target.value }))}
-                        placeholder="Secret key for webhook verification"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3"
-                        onClick={() => setShowWebhookSecret(!showWebhookSecret)}
-                      >
-                        {showWebhookSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </Button>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Used to verify webhook authenticity
-                    </p>
-                  </div>
-                </div>
 
                 <Button type="submit" disabled={isSaving} className="w-full">
                   {isSaving ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Settings className="w-4 h-4 mr-2" />}
@@ -608,13 +591,23 @@ export function SquareSettings() {
                     Create shareable donation pages for your church
                   </CardDescription>
                 </div>
-                <Button 
-                  onClick={() => setIsUrlDialogOpen(true)}
-                  disabled={!squareSettings?.is_active}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create URL
-                </Button>
+                <div className="flex items-center space-x-2">
+                  <Button 
+                    variant="outline"
+                    onClick={handleSyncDonations}
+                    disabled={isSyncing || !squareSettings?.is_active}
+                  >
+                    <RefreshCw className={`w-4 h-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+                    {isSyncing ? 'Syncing...' : 'Sync to Main System'}
+                  </Button>
+                  <Button 
+                    onClick={() => setIsUrlDialogOpen(true)}
+                    disabled={!squareSettings?.is_active}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create URL
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -754,6 +747,20 @@ export function SquareSettings() {
                 <p className="text-sm">Click refresh to load recent donation data</p>
               </div>
             )}
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Debug: Show current Square settings for this organization */}
+      <motion.div variants={itemVariants} className="mt-8">
+        <Card className="border border-dashed border-gray-300 bg-gray-50">
+          <CardHeader>
+            <CardTitle className="text-xs text-gray-500">Debug: Current Square Settings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <pre className="text-xs text-gray-700 bg-gray-100 p-2 rounded overflow-x-auto">
+              {JSON.stringify(squareSettings, null, 2)}
+            </pre>
           </CardContent>
         </Card>
       </motion.div>

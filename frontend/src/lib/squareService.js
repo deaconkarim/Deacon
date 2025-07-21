@@ -181,7 +181,7 @@ export async function getDonationUrlBySlug(slug) {
       .from('donation_urls')
       .select(`
         *,
-        organization:organizations(id, name, logo_url, primary_color, secondary_color),
+        organization:organizations(id, name, logo_url),
         campaign:donation_campaigns(id, name, description, goal_amount, current_amount)
       `)
       .eq('slug', slug)
@@ -216,6 +216,15 @@ export async function processSquareDonation(donationData) {
       .single();
 
     if (error) throw error;
+
+    // Automatically sync to main donations table
+    try {
+      await syncSquareDonationToMainSystem(data.id);
+    } catch (syncError) {
+      console.error('Failed to sync Square donation to main system:', syncError);
+      // Don't fail the entire transaction if sync fails
+    }
+
     return data;
   } catch (error) {
     throw error;
@@ -346,4 +355,235 @@ export function createSquarePaymentForm(amount, currency = 'USD') {
     currency: currency,
     intent: 'CAPTURE'
   };
+}
+
+// ================== DEBUG FUNCTIONS ==================
+
+export async function debugDonationUrls() {
+  try {
+    console.log('Checking if donation_urls table exists...');
+    
+    // Try to query the table
+    const { data, error } = await supabase
+      .from('donation_urls')
+      .select('*')
+      .limit(1);
+
+    if (error) {
+      console.error('Error accessing donation_urls table:', error);
+      return {
+        tableExists: false,
+        error: error.message,
+        code: error.code
+      };
+    }
+
+    console.log('donation_urls table exists, found', data?.length || 0, 'records');
+    
+    // Get all donation URLs for debugging
+    const { data: allUrls, error: allError } = await supabase
+      .from('donation_urls')
+      .select('*');
+
+    if (allError) {
+      console.error('Error getting all donation URLs:', allError);
+    } else {
+      console.log('All donation URLs:', allUrls);
+    }
+
+    return {
+      tableExists: true,
+      recordCount: data?.length || 0,
+      allUrls: allUrls || []
+    };
+  } catch (error) {
+    console.error('Debug function error:', error);
+    return {
+      tableExists: false,
+      error: error.message
+    };
+  }
+}
+
+// ================== INTEGRATION WITH EXISTING DONATION SYSTEM ==================
+
+export async function syncSquareDonationToMainSystem(squareDonationId) {
+  try {
+    // Get the Square donation with full details
+    const { data: squareDonation, error: squareError } = await supabase
+      .from('square_donations')
+      .select(`
+        *,
+        donation_url:donation_urls(
+          id,
+          name,
+          campaign_id,
+          organization_id
+        )
+      `)
+      .eq('id', squareDonationId)
+      .single();
+
+    if (squareError) throw squareError;
+
+    // Check if this Square donation has already been synced
+    const { data: existingDonation, error: checkError } = await supabase
+      .from('donations')
+      .select('id')
+      .eq('square_donation_id', squareDonationId)
+      .single();
+
+    if (existingDonation) {
+      console.log('Square donation already synced to main system');
+      return existingDonation;
+    }
+
+    // Create donation in main donations table
+    const mainDonation = {
+      organization_id: squareDonation.organization_id,
+      date: new Date().toISOString().split('T')[0], // Today's date
+      amount: squareDonation.amount,
+      payment_method: 'online',
+      fund_designation: squareDonation.fund_designation,
+      notes: `Online donation via Square - ${squareDonation.donation_url?.name || 'Donation Page'}`,
+      is_anonymous: squareDonation.is_anonymous,
+      campaign_id: squareDonation.donation_url?.campaign_id,
+      donation_url_id: squareDonation.donation_url_id,
+      square_donation_id: squareDonation.id, // Link back to Square donation
+      metadata: {
+        square_payment_id: squareDonation.square_payment_id,
+        square_transaction_id: squareDonation.square_transaction_id,
+        donor_email: squareDonation.donor_email,
+        donor_name: squareDonation.donor_name,
+        message: squareDonation.message,
+        source: 'square_online'
+      }
+    };
+
+    const { data: newDonation, error: insertError } = await supabase
+      .from('donations')
+      .insert(mainDonation)
+      .select()
+      .single();
+
+    if (insertError) throw insertError;
+
+    console.log('Square donation synced to main donation system:', newDonation.id);
+    return newDonation;
+  } catch (error) {
+    console.error('Error syncing Square donation to main system:', error);
+    throw error;
+  }
+}
+
+export async function syncAllSquareDonations() {
+  try {
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
+    // Get all Square donations that haven't been synced yet
+    const { data: unsyncedDonations, error } = await supabase
+      .from('square_donations')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .not('id', 'in', `(
+        SELECT square_donation_id 
+        FROM donations 
+        WHERE square_donation_id IS NOT NULL
+      )`);
+
+    if (error) throw error;
+
+    console.log(`Found ${unsyncedDonations?.length || 0} unsynced Square donations`);
+
+    // Sync each unsynced donation
+    const syncPromises = unsyncedDonations?.map(donation => 
+      syncSquareDonationToMainSystem(donation.id)
+    ) || [];
+
+    const results = await Promise.allSettled(syncPromises);
+    
+    const successful = results.filter(r => r.status === 'fulfilled').length;
+    const failed = results.filter(r => r.status === 'rejected').length;
+
+    console.log(`Sync completed: ${successful} successful, ${failed} failed`);
+    
+    return {
+      total: unsyncedDonations?.length || 0,
+      successful,
+      failed
+    };
+  } catch (error) {
+    console.error('Error syncing all Square donations:', error);
+    throw error;
+  }
+}
+
+export async function getIntegratedDonations(filters = {}) {
+  try {
+    const organizationId = await getCurrentUserOrganizationId();
+    if (!organizationId) {
+      throw new Error('User not associated with any organization');
+    }
+
+    let query = supabase
+      .from('donations')
+      .select(`
+        *,
+        donor:members(id, firstname, lastname, email, phone),
+        campaign:donation_campaigns(id, name),
+        pledge:donation_pledges(id, pledge_amount),
+        batch:donation_batches(id, name, batch_number, description, status),
+        square_donation:square_donations(id, square_payment_id, square_transaction_id, donor_email, donor_name)
+      `)
+      .eq('organization_id', organizationId);
+
+    // Apply filters
+    if (filters.startDate) {
+      query = query.gte('date', filters.startDate);
+    }
+    if (filters.endDate) {
+      query = query.lte('date', filters.endDate);
+    }
+    if (filters.paymentMethod && filters.paymentMethod !== 'all') {
+      query = query.eq('payment_method', filters.paymentMethod);
+    }
+    if (filters.source === 'square') {
+      query = query.not('square_donation_id', 'is', null);
+    }
+    if (filters.source === 'manual') {
+      query = query.is('square_donation_id', null);
+    }
+
+    query = query.order('date', { ascending: false });
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function getSquareSettingsForDonationUrl(organizationId) {
+  try {
+    const { data, error } = await supabase
+      .from('square_settings')
+      .select('*')
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+      .single();
+
+    if (error) {
+      console.log('No active Square settings found for organization:', organizationId);
+      return null;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error getting Square settings:', error);
+    return null;
+  }
 }
