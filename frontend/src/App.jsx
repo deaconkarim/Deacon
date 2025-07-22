@@ -23,7 +23,7 @@ import AlertsPage from './pages/alerts';
 import { AdminCenter } from './pages/admin-center';
 import { Permissions } from './pages/permissions';
 import { SquareSettings } from './pages/square-settings';
-import { DonatePage } from './pages/donate';
+import DonatePage from './pages/donate';
 
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AdminRoute } from './components/AdminRoute';
