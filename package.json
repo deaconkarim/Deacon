@@ -14,8 +14,10 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^4.6.0"
   },
+  "type": "module",
   "dependencies": {
     "@supabase/supabase-js": "^2.52.0",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "stripe": "^18.3.0"
   }
 }
