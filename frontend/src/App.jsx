@@ -22,7 +22,6 @@ import { SMS } from './pages/sms';
 import AlertsPage from './pages/alerts';
 import { AdminCenter } from './pages/admin-center';
 import { Permissions } from './pages/permissions';
-import { SquareSettings } from './pages/square-settings';
 import DonatePage from './pages/donate';
 
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -70,7 +69,6 @@ function App() {
           <Route path="/edit-child/:childId" element={<EditChild />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/settings" element={<Settings />} />
-          <Route path="/square-settings" element={<SquareSettings />} />
           <Route path="/permissions" element={<Permissions />} />
           <Route path="/sms" element={<SMS />} />
           <Route path="/alerts" element={<AlertsPage />} />
