@@ -225,6 +225,25 @@ const ChurchInfoSettings = () => {
           <CardDescription>Update your church's basic information.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Stripe Connect Setup Guide */}
+          <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="mb-2 text-blue-900 font-semibold text-lg flex items-center gap-2">
+              <LinkIcon className="w-5 h-5 text-blue-600" />
+              Accept Online Donations & Payouts
+            </div>
+            <ol className="list-decimal ml-6 space-y-1 text-blue-900">
+              <li><b>Click “Connect Payouts (Stripe)” below.</b></li>
+              <li><b>Follow the Stripe onboarding process</b> to securely enter your church’s bank info.</li>
+              <li><b>Done!</b> You’ll be able to receive donations directly to your bank account.</li>
+            </ol>
+            <div className="mt-3 p-3 bg-white rounded text-blue-900 border border-blue-100">
+              <b>What is Stripe Connect?</b><br />
+              Stripe Connect is a secure, industry-standard way for platforms like Deacon to send donations directly to your church’s bank account. <a href="https://stripe.com/connect" target="_blank" rel="noopener noreferrer" className="underline">Learn more</a>.
+            </div>
+            <div className="mt-2 text-sm text-blue-800">
+              <b>Need help?</b> <a href="mailto:support@yourapp.com" className="underline">Contact support</a>
+            </div>
+          </div>
           {/* Stripe Connect status and button */}
           <div className="mb-4">
             <Label>Payouts (Stripe Connect)</Label>
@@ -232,9 +251,9 @@ const ChurchInfoSettings = () => {
               {stripeStatus.loading ? (
                 <span className="text-blue-600">Checking status...</span>
               ) : stripeStatus.connected ? (
-                <span className="flex items-center text-green-600"><CheckCircle className="w-4 h-4 mr-1" /> Connected</span>
+                <span className="flex items-center text-green-600"><CheckCircle className="w-4 h-4 mr-1" /> Connected — Donations will be paid out to your bank account.</span>
               ) : (
-                <span className="flex items-center text-red-600"><AlertCircle className="w-4 h-4 mr-1" /> Not Connected</span>
+                <span className="flex items-center text-red-600"><AlertCircle className="w-4 h-4 mr-1" /> Not Connected — You must connect to receive online donations.</span>
               )}
               <Button
                 variant={stripeStatus.connected ? 'outline' : 'default'}
@@ -247,7 +266,7 @@ const ChurchInfoSettings = () => {
                 <LinkIcon className="w-4 h-4 ml-2" />
               </Button>
             </div>
-            {stripeStatus.error && <div className="text-red-600 text-xs mt-1">{stripeStatus.error}</div>}
+            {stripeStatus.error && <div className="text-red-600 text-xs mt-1">{stripeStatus.error} <br />If this keeps happening, please contact support.</div>}
           </div>
           <motion.div variants={itemVariants} className="space-y-2">
             <Label htmlFor="church-name">Church Name</Label>
