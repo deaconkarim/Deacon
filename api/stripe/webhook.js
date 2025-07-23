@@ -1,13 +1,13 @@
-const Stripe = require('stripe');
+import Stripe from 'stripe';
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
-const { createClient } = require('@supabase/supabase-js');
+import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 // Set your Stripe webhook secret in .env
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-module.exports = async (req, res) => {
+export default async (req, res) => {
   let event;
   try {
     const sig = req.headers['stripe-signature'];
