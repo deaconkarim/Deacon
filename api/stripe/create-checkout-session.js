@@ -117,10 +117,9 @@ export default async (req, res) => {
       console.log(`Donation will go directly to main account (no transfer needed)`);
     }
 
-    // Create the checkout session using the church's Stripe account
-    const session = await stripe.checkout.sessions.create(sessionData, {
-      stripeAccount: org.stripe_account_id,
-    });
+    // Create the checkout session from the MAIN account (not the church account)
+    // This way we can transfer TO the church account
+    const session = await stripe.checkout.sessions.create(sessionData);
 
     console.log(`Checkout session created: ${session.id}`);
     
