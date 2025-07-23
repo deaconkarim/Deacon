@@ -18,7 +18,7 @@ export default async (req, res) => {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { organization_id, amount, donor_email, fund_designation, campaign_id, cover_fees } = req.body;
+  const { organization_id, amount, donor_email, fund_designation, campaign_id, cover_fees, payment_method } = req.body;
   
   // Validate required fields
   if (!organization_id || !amount || !donor_email) {
@@ -61,14 +61,26 @@ export default async (req, res) => {
 
     // Calculate the amount to charge (original amount + fees if covering)
     const originalAmount = amount;
-    const feeAmount = cover_fees ? Math.round(amount * 0.029 + 30) : 0;
+    
+    // Calculate fee based on payment method
+    let feeAmount = 0;
+    if (cover_fees) {
+      if (payment_method === 'ach') {
+        // ACH transfers: 0.8% + 25 cents
+        feeAmount = Math.round(amount * 0.008 + 25);
+      } else {
+        // Credit/debit cards: 2.9% + 30 cents
+        feeAmount = Math.round(amount * 0.029 + 30);
+      }
+    }
+    
     const totalAmount = cover_fees ? amount + feeAmount : amount;
 
-    console.log(`Original amount: ${originalAmount}, Fee amount: ${feeAmount}, Total amount: ${totalAmount}, Cover fees: ${cover_fees}`);
+    console.log(`Original amount: ${originalAmount}, Fee amount: ${feeAmount}, Total amount: ${totalAmount}, Cover fees: ${cover_fees}, Payment method: ${payment_method}`);
 
     // Build the session creation object
     const sessionData = {
-      payment_method_types: ['card'],
+      payment_method_types: payment_method === 'ach' ? ['us_bank_account'] : ['card'],
       line_items: [
         {
           price_data: {
@@ -87,6 +99,7 @@ export default async (req, res) => {
         organization_id,
         fund_designation: fund_designation || '',
         campaign_id: campaign_id || '',
+        payment_method: payment_method || 'card',
         original_amount: originalAmount,
         fee_amount: feeAmount,
         cover_fees: cover_fees ? 'true' : 'false',
@@ -104,9 +117,16 @@ export default async (req, res) => {
         console.log(`Church account type: ${churchAccount.type}, charges_enabled: ${churchAccount.charges_enabled}`);
         
         if (churchAccount.type === 'express' || churchAccount.type === 'standard') {
-          // Calculate application fee (platform fee) based on the original donation amount
+          // Calculate application fee (platform fee) based on the original donation amount and payment method
           // This ensures the church receives the full intended donation amount
-          const application_fee_amount = Math.round(originalAmount * 0.029 + 30); // in cents
+          let application_fee_amount;
+          if (payment_method === 'ach') {
+            // ACH transfers: 0.8% + 25 cents
+            application_fee_amount = Math.round(originalAmount * 0.008 + 25);
+          } else {
+            // Credit/debit cards: 2.9% + 30 cents
+            application_fee_amount = Math.round(originalAmount * 0.029 + 30);
+          }
           sessionData.payment_intent_data = {
             application_fee_amount,
             transfer_data: {

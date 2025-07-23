@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, Gift, DollarSign, Mail, CheckCircle, AlertCircle } from 'lucide-react';
+import { Loader2, Gift, DollarSign, Mail, CheckCircle, AlertCircle, CreditCard, Banknote } from 'lucide-react';
 
 const FUNDS = [
   { value: 'general', label: 'General Fund' },
@@ -22,6 +22,7 @@ export default function DonatePage() {
   const [amount, setAmount] = useState('');
   const [fund, setFund] = useState('tithe');
   const [email, setEmail] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('card');
   const [coverFees, setCoverFees] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -38,14 +39,23 @@ export default function DonatePage() {
     fetchOrg();
   }, [slug]);
 
-  // Calculate the fee amount (2.9% + 30 cents)
-  const calculateFee = (amount) => {
+  // Calculate the fee amount based on payment method
+  const calculateFee = (amount, method) => {
     const amountNum = parseFloat(amount) || 0;
-    const fee = (amountNum * 0.029) + 0.30;
+    let fee;
+    
+    if (method === 'ach') {
+      // ACH transfers have much lower fees: 0.8% + 25 cents
+      fee = (amountNum * 0.008) + 0.25;
+    } else {
+      // Credit/debit cards: 2.9% + 30 cents
+      fee = (amountNum * 0.029) + 0.30;
+    }
+    
     return Math.round(fee * 100) / 100; // Round to 2 decimal places
   };
 
-  const feeAmount = calculateFee(amount);
+  const feeAmount = calculateFee(amount, paymentMethod);
   const totalAmount = parseFloat(amount) + feeAmount;
 
   const handleSubmit = async (e) => {
@@ -77,6 +87,7 @@ export default function DonatePage() {
           amount: Math.round(parseFloat(amount) * 100),
           donor_email: email,
           fund_designation: fund,
+          payment_method: paymentMethod,
           cover_fees: coverFees,
         }),
       });
@@ -203,6 +214,34 @@ export default function DonatePage() {
                 </SelectContent>
               </Select>
             </div>
+            
+            <div>
+              <Label htmlFor="payment-method">Payment Method</Label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod} disabled={loading}>
+                <SelectTrigger id="payment-method">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="card">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="w-4 h-4" />
+                      Credit/Debit Card
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="ach">
+                    <div className="flex items-center gap-2">
+                      <Banknote className="w-4 h-4" />
+                      Bank Transfer (ACH) - Lower Fees
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              {paymentMethod === 'ach' && (
+                <p className="text-xs text-emerald-600 mt-1">
+                  💰 Save money with ACH transfers - only 0.8% + $0.25 vs 2.9% + $0.30 for cards
+                </p>
+              )}
+            </div>
             <div>
               <Label htmlFor="email">Email</Label>
               <div className="flex items-center mt-1">
@@ -240,7 +279,7 @@ export default function DonatePage() {
                     <span>${parseFloat(amount).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Processing fee (2.9% + $0.30):</span>
+                    <span>Processing fee ({paymentMethod === 'ach' ? '0.8% + $0.25' : '2.9% + $0.30'}):</span>
                     <span>${feeAmount.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between font-medium border-t pt-1">
@@ -251,6 +290,12 @@ export default function DonatePage() {
                     <span>Church receives:</span>
                     <span>${parseFloat(amount).toFixed(2)}</span>
                   </div>
+                  {paymentMethod === 'ach' && (
+                    <div className="flex justify-between text-blue-600 text-xs">
+                      <span>💰 You save:</span>
+                      <span>${(calculateFee(amount, 'card') - feeAmount).toFixed(2)} vs card payment</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

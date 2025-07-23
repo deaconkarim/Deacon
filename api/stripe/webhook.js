@@ -50,7 +50,7 @@ export default async (req, res) => {
          const fund_designation = metadata.fund_designation || null;
          const campaign_id = metadata.campaign_id || null;
          const donor_email = session.customer_email;
-         const payment_method = 'online'; // Use 'online' instead of 'stripe' to match the constraint
+         const payment_method = metadata.payment_method === 'ach' ? 'ach' : 'online'; // Use metadata payment method
          const date = new Date().toISOString().split('T')[0];
 
          // Handle fee coverage metadata
