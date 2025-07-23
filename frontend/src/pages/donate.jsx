@@ -41,7 +41,8 @@ export default function DonatePage() {
   // Calculate the fee amount (2.9% + 30 cents)
   const calculateFee = (amount) => {
     const amountNum = parseFloat(amount) || 0;
-    return Math.round(amountNum * 0.029 + 0.30);
+    const fee = (amountNum * 0.029) + 0.30;
+    return Math.round(fee * 100) / 100; // Round to 2 decimal places
   };
 
   const feeAmount = calculateFee(amount);
