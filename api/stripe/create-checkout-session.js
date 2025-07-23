@@ -22,7 +22,7 @@ export default async (req, res) => {
   }
 
   try {
-    // Look up the church's Stripe account
+    // Look up the church's Stripe account from the organizations table
     const { data: org, error: orgError } = await supabase
       .from('organizations')
       .select('stripe_account_id, name')
@@ -38,10 +38,16 @@ export default async (req, res) => {
       return res.status(400).json({ error: 'Church is not onboarded with Stripe Connect' });
     }
 
-    // Optionally set a platform fee (e.g., 2.9% + 30c)
-    const application_fee_amount = Math.round(amount * 0.029 + 30); // in cents
+    console.log(`Creating checkout session for church: ${org.name} (${org.stripe_account_id})`);
 
-    const session = await stripe.checkout.sessions.create({
+    // Get the main Stripe account ID to check if it's the same as the church's account
+    const mainAccount = await stripe.accounts.retrieve();
+    const isSameAccount = mainAccount.id === org.stripe_account_id;
+
+    console.log(`Main account: ${mainAccount.id}, Church account: ${org.stripe_account_id}, Same account: ${isSameAccount}`);
+
+    // Build the session creation object
+    const sessionData = {
       payment_method_types: ['card'],
       line_items: [
         {
@@ -64,21 +70,33 @@ export default async (req, res) => {
       },
       success_url: `${req.headers.origin || 'https://getdeacon.com'}/donate/success`,
       cancel_url: `${req.headers.origin || 'https://getdeacon.com'}/donate/cancel`,
-      payment_intent_data: {
+    };
+
+    // Only add transfer_data if the church's account is different from the main account
+    if (!isSameAccount) {
+      const application_fee_amount = Math.round(amount * 0.029 + 30); // in cents
+      sessionData.payment_intent_data = {
         application_fee_amount,
         transfer_data: {
-          destination: org.stripe_account_id,
+          destination: org.stripe_account_id, // Use church's Stripe account from organizations table
         },
         metadata: {
           organization_id,
           fund_designation: fund_designation || '',
           campaign_id: campaign_id || '',
         },
-      },
-    }, {
-      stripeAccount: org.stripe_account_id,
+      };
+      console.log(`Will transfer ${amount} cents to church account: ${org.stripe_account_id}`);
+    } else {
+      console.log(`Donation will go directly to main account (no transfer needed)`);
+    }
+
+    // Create the checkout session using the church's Stripe account
+    const session = await stripe.checkout.sessions.create(sessionData, {
+      stripeAccount: org.stripe_account_id, // Use church's Stripe account from organizations table
     });
 
+    console.log(`Checkout session created: ${session.id}`);
     res.json({ url: session.url });
   } catch (err) {
     console.error('Stripe error:', err);
