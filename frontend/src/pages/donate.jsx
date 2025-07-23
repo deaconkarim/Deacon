@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, Gift, DollarSign, Mail, CheckCircle, AlertCircle } from 'lucide-react';
 
 const FUNDS = [
@@ -21,6 +22,7 @@ export default function DonatePage() {
   const [amount, setAmount] = useState('');
   const [fund, setFund] = useState(FUNDS[0].value);
   const [email, setEmail] = useState('');
+  const [coverFees, setCoverFees] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [org, setOrg] = useState(null);
@@ -36,6 +38,15 @@ export default function DonatePage() {
     fetchOrg();
   }, [slug]);
 
+  // Calculate the fee amount (2.9% + 30 cents)
+  const calculateFee = (amount) => {
+    const amountNum = parseFloat(amount) || 0;
+    return Math.round(amountNum * 0.029 + 0.30);
+  };
+
+  const feeAmount = calculateFee(amount);
+  const totalAmount = parseFloat(amount) + feeAmount;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
@@ -50,6 +61,9 @@ export default function DonatePage() {
       amount_cents: Math.round(parseFloat(amount) * 100),
       donor_email: email,
       fund_designation: fund,
+      cover_fees: coverFees,
+      fee_amount: feeAmount,
+      total_amount: totalAmount,
     });
     
     try {
@@ -62,6 +76,7 @@ export default function DonatePage() {
           amount: Math.round(parseFloat(amount) * 100),
           donor_email: email,
           fund_designation: fund,
+          cover_fees: coverFees,
         }),
       });
       
@@ -203,6 +218,42 @@ export default function DonatePage() {
                 />
               </div>
             </div>
+            
+            {/* Fee Coverage Option */}
+            {amount && parseFloat(amount) > 0 && (
+              <div className="space-y-2 p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="coverFees"
+                    checked={coverFees}
+                    onCheckedChange={setCoverFees}
+                    disabled={loading}
+                  />
+                  <Label htmlFor="coverFees" className="text-sm font-medium">
+                    Cover processing fees so {org.name} receives the full amount
+                  </Label>
+                </div>
+                <div className="text-xs text-gray-600 space-y-1">
+                  <div className="flex justify-between">
+                    <span>Donation amount:</span>
+                    <span>${parseFloat(amount).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Processing fee (2.9% + $0.30):</span>
+                    <span>${feeAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between font-medium border-t pt-1">
+                    <span>Total you'll pay:</span>
+                    <span>${totalAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-emerald-600 font-medium">
+                    <span>Church receives:</span>
+                    <span>${parseFloat(amount).toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {error && (
               <div className="flex items-center text-red-600 text-sm mt-2">
                 <AlertCircle className="w-4 h-4 mr-1" /> {error}
@@ -210,7 +261,7 @@ export default function DonatePage() {
             )}
             <Button type="submit" className="w-full mt-2" disabled={loading}>
               {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Give Now
+              {coverFees ? `Give $${totalAmount.toFixed(2)}` : 'Give Now'}
             </Button>
           </form>
         </CardContent>

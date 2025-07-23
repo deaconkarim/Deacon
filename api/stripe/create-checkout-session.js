@@ -18,7 +18,7 @@ export default async (req, res) => {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { organization_id, amount, donor_email, fund_designation, campaign_id } = req.body;
+  const { organization_id, amount, donor_email, fund_designation, campaign_id, cover_fees } = req.body;
   
   // Validate required fields
   if (!organization_id || !amount || !donor_email) {
@@ -59,6 +59,13 @@ export default async (req, res) => {
 
     console.log(`Main account: ${mainAccount.id}, Church account: ${org.stripe_account_id}, Same account: ${isSameAccount}`);
 
+    // Calculate the amount to charge (original amount + fees if covering)
+    const originalAmount = amount;
+    const feeAmount = cover_fees ? Math.round(amount * 0.029 + 30) : 0;
+    const totalAmount = cover_fees ? amount + feeAmount : amount;
+
+    console.log(`Original amount: ${originalAmount}, Fee amount: ${feeAmount}, Total amount: ${totalAmount}, Cover fees: ${cover_fees}`);
+
     // Build the session creation object
     const sessionData = {
       payment_method_types: ['card'],
@@ -69,7 +76,7 @@ export default async (req, res) => {
             product_data: {
               name: `Donation to ${org.name}`,
             },
-            unit_amount: amount,
+            unit_amount: totalAmount, // Use total amount if covering fees
           },
           quantity: 1,
         },
@@ -80,6 +87,9 @@ export default async (req, res) => {
         organization_id,
         fund_designation: fund_designation || '',
         campaign_id: campaign_id || '',
+        original_amount: originalAmount,
+        fee_amount: feeAmount,
+        cover_fees: cover_fees ? 'true' : 'false',
       },
       success_url: `${req.headers.origin || 'https://getdeacon.com'}/donate/success`,
       cancel_url: `${req.headers.origin || 'https://getdeacon.com'}/donate/cancel`,
@@ -94,7 +104,8 @@ export default async (req, res) => {
         console.log(`Church account type: ${churchAccount.type}, charges_enabled: ${churchAccount.charges_enabled}`);
         
         if (churchAccount.type === 'express' || churchAccount.type === 'standard') {
-          const application_fee_amount = Math.round(amount * 0.029 + 30); // in cents
+          // Calculate application fee (platform fee)
+          const application_fee_amount = Math.round(totalAmount * 0.029 + 30); // in cents
           sessionData.payment_intent_data = {
             application_fee_amount,
             transfer_data: {
@@ -104,9 +115,12 @@ export default async (req, res) => {
               organization_id,
               fund_designation: fund_designation || '',
               campaign_id: campaign_id || '',
+              original_amount: originalAmount,
+              fee_amount: feeAmount,
+              cover_fees: cover_fees ? 'true' : 'false',
             },
           };
-          console.log(`Will transfer ${amount} cents to church account: ${org.stripe_account_id}`);
+          console.log(`Will transfer ${totalAmount} cents to church account: ${org.stripe_account_id} (includes ${feeAmount} cents in fees)`);
         } else {
           console.log(`Church account is not a connected account type, skipping transfer_data`);
         }
@@ -132,7 +146,11 @@ export default async (req, res) => {
         is_same_account: isSameAccount,
         has_transfer_data: !!sessionData.payment_intent_data,
         session_id: session.id,
-        organization_name: org.name
+        organization_name: org.name,
+        original_amount: originalAmount,
+        fee_amount: feeAmount,
+        total_amount: totalAmount,
+        cover_fees: cover_fees
       }
     });
   } catch (err) {

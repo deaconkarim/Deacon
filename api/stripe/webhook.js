@@ -36,7 +36,13 @@ export default async (req, res) => {
     const payment_method = 'stripe';
     const date = new Date().toISOString().split('T')[0];
 
+    // Handle fee coverage metadata
+    const original_amount = metadata.original_amount ? parseFloat(metadata.original_amount) / 100 : amount;
+    const fee_amount = metadata.fee_amount ? parseFloat(metadata.fee_amount) / 100 : 0;
+    const cover_fees = metadata.cover_fees === 'true';
+
     console.log(`Processing donation for church ID: ${organization_id}, Amount: $${amount}, Email: ${donor_email}`);
+    console.log(`Fee details - Original: $${original_amount}, Fee: $${fee_amount}, Cover fees: ${cover_fees}`);
 
     // Get church name for logging
     const { data: org } = await supabase
@@ -68,20 +74,27 @@ export default async (req, res) => {
     const { error: insertError } = await supabase.from('donations').insert({
       organization_id,
       donor_id,
-      amount,
+      amount: original_amount, // Store the original amount (what church receives)
       date,
       fund_designation,
       campaign_id,
       payment_method,
       is_tax_deductible: true,
-      notes: 'Stripe Connect donation',
-      metadata: session,
+      notes: `Stripe Connect donation${cover_fees ? ' (fees covered by donor)' : ''}`,
+      metadata: {
+        ...session,
+        original_amount: original_amount,
+        fee_amount: fee_amount,
+        cover_fees: cover_fees,
+        total_paid: amount
+      },
     });
 
     if (insertError) {
       console.error('Error inserting donation:', insertError);
     } else {
       console.log(`Successfully recorded donation for church: ${org?.name || organization_id}`);
+      console.log(`Church receives: $${original_amount}, Donor paid: $${amount}`);
     }
   }
 
