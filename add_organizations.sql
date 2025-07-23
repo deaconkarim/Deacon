@@ -40,3 +40,5 @@ WHERE NOT EXISTS (SELECT 1 FROM organizations WHERE slug = 'first-baptist');
 
 -- Show organizations after adding
 SELECT id, name, slug, description FROM organizations; 
+
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS stripe_account_id TEXT; 

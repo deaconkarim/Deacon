@@ -168,13 +168,6 @@ export function Layout() {
       permission: PERMISSIONS.USERS_EDIT
     });
     baseNavigation.push({ 
-      name: 'Square Settings', 
-      href: '/square-settings', 
-      icon: CreditCard, 
-      color: 'text-green-600',
-      permission: PERMISSIONS.SETTINGS_VIEW
-    });
-    baseNavigation.push({ 
       name: 'Settings', 
       href: '/settings', 
       icon: Settings, 

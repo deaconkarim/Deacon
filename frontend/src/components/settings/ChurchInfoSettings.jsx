@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Save, Building, Mail, Phone, Globe, MapPin, User } from 'lucide-react';
+import { Save, Building, Mail, Phone, Globe, MapPin, User, Link as LinkIcon, CheckCircle, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,6 +51,7 @@ const ChurchInfoSettings = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [organizationId, setOrganizationId] = useState(null);
   const { toast } = useToast();
+  const [stripeStatus, setStripeStatus] = useState({ connected: false, loading: false, error: null });
 
   const handleChurchSettingsChange = (e) => {
     const { name, value } = e.target;
@@ -164,6 +165,46 @@ const ChurchInfoSettings = () => {
     fetchChurchSettings();
   }, [toast]);
 
+  // Fetch Stripe Connect status
+  useEffect(() => {
+    if (!organizationId) return;
+    const fetchStripeStatus = async () => {
+      setStripeStatus(s => ({ ...s, loading: true }));
+      const { data, error } = await supabase
+        .from('organizations')
+        .select('stripe_account_id')
+        .eq('id', organizationId)
+        .single();
+      if (error) {
+        setStripeStatus({ connected: false, loading: false, error: error.message });
+      } else {
+        setStripeStatus({ connected: !!data?.stripe_account_id, loading: false, error: null });
+      }
+    };
+    fetchStripeStatus();
+  }, [organizationId]);
+
+  // Stripe Connect onboarding handler
+  const handleStripeConnect = async () => {
+    setStripeStatus(s => ({ ...s, loading: true, error: null }));
+    try {
+      const email = churchSettings.email || '';
+      const res = await fetch('/api/stripe/onboard-church', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ organization_id: organizationId, email }),
+      });
+      const result = await res.json();
+      if (result.url) {
+        window.location.href = result.url;
+      } else {
+        setStripeStatus(s => ({ ...s, loading: false, error: result.error || 'Failed to start onboarding.' }));
+      }
+    } catch (err) {
+      setStripeStatus(s => ({ ...s, loading: false, error: err.message }));
+    }
+  };
+
   if (!organizationId && !isLoading) {
     return (
       <Card>
@@ -184,6 +225,49 @@ const ChurchInfoSettings = () => {
           <CardDescription>Update your church's basic information.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Stripe Connect Setup Guide */}
+          <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="mb-2 text-blue-900 font-semibold text-lg flex items-center gap-2">
+              <LinkIcon className="w-5 h-5 text-blue-600" />
+              Accept Online Donations & Payouts
+            </div>
+            <ol className="list-decimal ml-6 space-y-1 text-blue-900">
+              <li><b>Click “Connect Payouts (Stripe)” below.</b></li>
+              <li><b>Follow the Stripe onboarding process</b> to securely enter your church’s bank info.</li>
+              <li><b>Done!</b> You’ll be able to receive donations directly to your bank account.</li>
+            </ol>
+            <div className="mt-3 p-3 bg-white rounded text-blue-900 border border-blue-100">
+              <b>What is Stripe Connect?</b><br />
+              Stripe Connect is a secure, industry-standard way for platforms like Deacon to send donations directly to your church’s bank account. <a href="https://stripe.com/connect" target="_blank" rel="noopener noreferrer" className="underline">Learn more</a>.
+            </div>
+            <div className="mt-2 text-sm text-blue-800">
+              <b>Need help?</b> <a href="mailto:support@yourapp.com" className="underline">Contact support</a>
+            </div>
+          </div>
+          {/* Stripe Connect status and button */}
+          <div className="mb-4">
+            <Label>Payouts (Stripe Connect)</Label>
+            <div className="flex items-center gap-3 mt-1">
+              {stripeStatus.loading ? (
+                <span className="text-blue-600">Checking status...</span>
+              ) : stripeStatus.connected ? (
+                <span className="flex items-center text-green-600"><CheckCircle className="w-4 h-4 mr-1" /> Connected — Donations will be paid out to your bank account.</span>
+              ) : (
+                <span className="flex items-center text-red-600"><AlertCircle className="w-4 h-4 mr-1" /> Not Connected — You must connect to receive online donations.</span>
+              )}
+              <Button
+                variant={stripeStatus.connected ? 'outline' : 'default'}
+                size="sm"
+                onClick={handleStripeConnect}
+                disabled={stripeStatus.loading}
+                className="ml-2"
+              >
+                {stripeStatus.connected ? 'Update Payout Info' : 'Connect Payouts (Stripe)'}
+                <LinkIcon className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+            {stripeStatus.error && <div className="text-red-600 text-xs mt-1">{stripeStatus.error} <br />If this keeps happening, please contact support.</div>}
+          </div>
           <motion.div variants={itemVariants} className="space-y-2">
             <Label htmlFor="church-name">Church Name</Label>
             <div className="flex items-center">
