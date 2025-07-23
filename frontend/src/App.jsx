@@ -23,6 +23,7 @@ import AlertsPage from './pages/alerts';
 import { AdminCenter } from './pages/admin-center';
 import { Permissions } from './pages/permissions';
 import DonatePage from './pages/donate';
+import DonateSuccess from './pages/donate/success';
 
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AdminRoute } from './components/AdminRoute';
@@ -48,6 +49,7 @@ function App() {
         <Route path="/invite/:invitationId" element={<PublicLayout><Invite /></PublicLayout>} />
         <Route path="/privacy-policy" element={<PublicLayout><PrivacyPolicy /></PublicLayout>} />
         <Route path="/terms-of-service" element={<PublicLayout><TermsOfService /></PublicLayout>} />
+        <Route path="/donate/success" element={<DonateSuccess />} />
         <Route path="/donate/:slug" element={<DonatePage />} />
         
         {/* Approval status route */}

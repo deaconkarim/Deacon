@@ -104,8 +104,9 @@ export default async (req, res) => {
         console.log(`Church account type: ${churchAccount.type}, charges_enabled: ${churchAccount.charges_enabled}`);
         
         if (churchAccount.type === 'express' || churchAccount.type === 'standard') {
-          // Calculate application fee (platform fee)
-          const application_fee_amount = Math.round(totalAmount * 0.029 + 30); // in cents
+          // Calculate application fee (platform fee) based on the original donation amount
+          // This ensures the church receives the full intended donation amount
+          const application_fee_amount = Math.round(originalAmount * 0.029 + 30); // in cents
           sessionData.payment_intent_data = {
             application_fee_amount,
             transfer_data: {
@@ -120,7 +121,7 @@ export default async (req, res) => {
               cover_fees: cover_fees ? 'true' : 'false',
             },
           };
-          console.log(`Will transfer ${totalAmount} cents to church account: ${org.stripe_account_id} (includes ${feeAmount} cents in fees)`);
+          console.log(`Will transfer ${totalAmount} cents to church account: ${org.stripe_account_id} (church receives ${originalAmount} cents, platform fee: ${application_fee_amount} cents)`);
         } else {
           console.log(`Church account is not a connected account type, skipping transfer_data`);
         }
