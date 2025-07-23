@@ -18,7 +18,7 @@ export default async (req, res) => {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { organization_id, amount, donor_email, fund_designation, campaign_id, cover_fees, payment_method, is_recurring, recurring_interval } = req.body;
+  const { organization_id, amount, donor_email, fund_designation, campaign_id, cover_fees, payment_method } = req.body;
   
   // Validate required fields
   if (!organization_id || !amount || !donor_email) {
@@ -81,47 +81,7 @@ export default async (req, res) => {
     // Build the session creation object
     const sessionData = {
       payment_method_types: payment_method === 'ach' ? ['us_bank_account'] : ['card'],
-      mode: is_recurring ? 'subscription' : 'payment',
-      customer_email: donor_email,
-      metadata: {
-        organization_id,
-        fund_designation: fund_designation || '',
-        campaign_id: campaign_id || '',
-        payment_method: payment_method || 'card',
-        original_amount: originalAmount,
-        fee_amount: feeAmount,
-        cover_fees: cover_fees ? 'true' : 'false',
-        is_recurring: is_recurring ? 'true' : 'false',
-        recurring_interval: recurring_interval || '',
-      },
-      success_url: `${req.headers.origin || 'https://getdeacon.com'}/donate/success?recurring=${is_recurring}&interval=${recurring_interval}`,
-      cancel_url: `${req.headers.origin || 'https://getdeacon.com'}/donate/cancel`,
-    };
-
-    // Add line items based on mode
-    if (is_recurring) {
-      // For subscriptions, we need to create a price first
-      const price = await stripe.prices.create({
-        unit_amount: totalAmount,
-        currency: 'usd',
-        recurring: {
-          interval: recurring_interval,
-        },
-        product_data: {
-          name: `Recurring Donation to ${org.name}`,
-          description: `${fund_designation} - ${recurring_interval}ly recurring donation`,
-        },
-      });
-
-      sessionData.line_items = [
-        {
-          price: price.id,
-          quantity: 1,
-        },
-      ];
-    } else {
-      // For one-time payments
-      sessionData.line_items = [
+      line_items: [
         {
           price_data: {
             currency: 'usd',
@@ -132,8 +92,21 @@ export default async (req, res) => {
           },
           quantity: 1,
         },
-      ];
-    }
+      ],
+      mode: 'payment',
+      customer_email: donor_email,
+      metadata: {
+        organization_id,
+        fund_designation: fund_designation || '',
+        campaign_id: campaign_id || '',
+        payment_method: payment_method || 'card',
+        original_amount: originalAmount,
+        fee_amount: feeAmount,
+        cover_fees: cover_fees ? 'true' : 'false',
+      },
+      success_url: `${req.headers.origin || 'https://getdeacon.com'}/donate/success`,
+      cancel_url: `${req.headers.origin || 'https://getdeacon.com'}/donate/cancel`,
+    };
 
     // For Stripe Connect, we need to be more careful about transfer_data
     // Only add transfer_data if we're sure the accounts are different AND the church account is a connected account
