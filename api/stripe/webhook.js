@@ -8,6 +8,15 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
 export default async (req, res) => {
+  // Handle CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Stripe-Signature');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   let event;
   try {
     const sig = req.headers['stripe-signature'];
@@ -27,6 +36,19 @@ export default async (req, res) => {
     const payment_method = 'stripe';
     const date = new Date().toISOString().split('T')[0];
 
+    console.log(`Processing donation for church ID: ${organization_id}, Amount: $${amount}, Email: ${donor_email}`);
+
+    // Get church name for logging
+    const { data: org } = await supabase
+      .from('organizations')
+      .select('name')
+      .eq('id', organization_id)
+      .single();
+
+    if (org) {
+      console.log(`Donation for church: ${org.name}`);
+    }
+
     // Optionally, look up donor/member by email
     let donor_id = null;
     if (donor_email) {
@@ -36,11 +58,14 @@ export default async (req, res) => {
         .eq('email', donor_email)
         .eq('organization_id', organization_id)
         .single();
-      if (!memberError && member) donor_id = member.id;
+      if (!memberError && member) {
+        donor_id = member.id;
+        console.log(`Found existing member: ${donor_id}`);
+      }
     }
 
     // Insert donation record
-    await supabase.from('donations').insert({
+    const { error: insertError } = await supabase.from('donations').insert({
       organization_id,
       donor_id,
       amount,
@@ -52,6 +77,12 @@ export default async (req, res) => {
       notes: 'Stripe Connect donation',
       metadata: session,
     });
+
+    if (insertError) {
+      console.error('Error inserting donation:', insertError);
+    } else {
+      console.log(`Successfully recorded donation for church: ${org?.name || organization_id}`);
+    }
   }
 
   res.json({ received: true });
