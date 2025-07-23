@@ -41,7 +41,7 @@ export default function DonatePage() {
     setError(null);
     setLoading(true);
     try {
-      const res = await fetch('/api/stripe/create-checkout-session', {
+      const res = await fetch('https://getdeacon.com/api/stripe/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -51,6 +51,12 @@ export default function DonatePage() {
           fund_designation: fund,
         }),
       });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`);
+      }
+      
       const result = await res.json();
       if (result.url) {
         window.location.href = result.url;
@@ -58,7 +64,8 @@ export default function DonatePage() {
         setError(result.error || 'Failed to start payment.');
       }
     } catch (err) {
-      setError(err.message);
+      console.error('Payment error:', err);
+      setError(err.message || 'An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
