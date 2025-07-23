@@ -2176,3 +2176,19 @@ export const getAttendanceStats = async () => {
     throw error;
   }
 };
+
+// Fetch organization by slug
+export async function getOrganizationBySlug(slug) {
+  try {
+    const { data, error } = await supabase
+      .from('organizations')
+      .select('*')
+      .eq('slug', slug)
+      .single();
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error fetching organization by slug:', error);
+    return null;
+  }
+}

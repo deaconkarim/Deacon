@@ -88,7 +88,7 @@ export const userCacheService = {
           organization_id,
           role,
           approval_status,
-          organizations(name)
+          organizations(name, slug)
         `)
         .eq('user_id', user.id)
         .eq('approval_status', 'approved')
@@ -107,6 +107,7 @@ export const userCacheService = {
       organizationCache = {
         organization_id: orgUser.organization_id,
         organization_name: orgUser.organizations?.name,
+        organization_slug: orgUser.organizations?.slug,
         role: orgUser.role,
         approval_status: orgUser.approval_status
       };

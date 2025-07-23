@@ -68,6 +68,8 @@ import {
   getBatchDetails
 } from '@/lib/donationService';
 import { getMembers, getAllEvents } from '@/lib/data';
+import { getOrganizationName } from '@/lib/data';
+import { userCacheService } from '@/lib/userCache';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -91,6 +93,7 @@ export function Donations() {
   const [categories, setCategories] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [receipts, setReceipts] = useState([]);
+  const [orgSlug, setOrgSlug] = useState('');
   
   // Loading states
   const [isLoading, setIsLoading] = useState(true);
@@ -181,6 +184,14 @@ export function Donations() {
   // Load initial data
   useEffect(() => {
     loadAllData();
+  }, []);
+
+  useEffect(() => {
+    async function fetchOrgSlug() {
+      const org = await userCacheService.getCurrentUserOrganization();
+      setOrgSlug(org?.organization_slug || '');
+    }
+    fetchOrgSlug();
   }, []);
 
   // Load analytics when filters change
@@ -745,6 +756,18 @@ export function Donations() {
 
   return (
     <div className="w-full max-w-full overflow-x-hidden">
+      {/* Unique Donation URL for this church */}
+      {orgSlug && (
+        <div className="mb-6 flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <span className="font-semibold text-blue-700">Your Donation Page URL:</span>
+          <span className="bg-white px-2 py-1 rounded text-blue-700 border border-blue-200 text-sm">
+            {window.location.origin + '/donate/' + orgSlug}
+          </span>
+          <Button size="sm" variant="outline" onClick={() => navigator.clipboard.writeText(window.location.origin + '/donate/' + orgSlug)}>Copy</Button>
+          <Button size="sm" variant="outline" onClick={() => window.open('/donate/' + orgSlug, '_blank')}>Open</Button>
+        </div>
+      )}
+
       {/* Mobile Header */}
       <div className="block md:hidden">
         <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white">
@@ -2859,6 +2882,55 @@ export function Donations() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <motion.div className="mb-8" variants={itemVariants}>
+        <Card>
+          <CardHeader>
+            <CardTitle>Stripe Integration Settings</CardTitle>
+            <CardDescription>
+              Set up your church's Stripe account to accept online donations securely.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Connection Status */}
+            <div className="flex items-center gap-3">
+              <span className="font-medium">Status:</span>
+              <span className="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-emerald-100 text-emerald-700">Connected</span>
+              {/* If not connected, show a red badge and Connect button */}
+              {/* <span className="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-700">Not Connected</span>
+              <Button size="sm" className="ml-2">Connect with Stripe</Button> */}
+            </div>
+            {/* Environment */}
+            <div className="flex items-center gap-3">
+              <span className="font-medium">Environment:</span>
+              <span className="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-700">Live</span>
+              {/* <span className="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-gray-100 text-gray-700">Test</span> */}
+            </div>
+            {/* Enable/Disable Integration */}
+            <div className="flex items-center gap-3">
+              <span className="font-medium">Enable Stripe Donations:</span>
+              <input type="checkbox" checked readOnly className="form-checkbox h-5 w-5 text-blue-600" />
+            </div>
+            {/* Donation URLs */}
+            <div>
+              <h4 className="font-semibold mb-2">Donation URLs</h4>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="bg-gray-100 px-2 py-1 rounded text-sm">/donate</span>
+                  <Button size="sm" variant="outline" onClick={() => navigator.clipboard.writeText(window.location.origin + '/donate')}>Copy</Button>
+                  <Button size="sm" variant="outline" onClick={() => window.open('/donate', '_blank')}>Open</Button>
+                </div>
+                {/* Add more URLs as needed */}
+              </div>
+            </div>
+            {/* Analytics Placeholder */}
+            <div>
+              <h4 className="font-semibold mb-2">Stripe Donation Analytics</h4>
+              <p className="text-sm text-muted-foreground">Analytics coming soon.</p>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
       </motion.div>
     </div>
   );

@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import { getOrganizationBySlug } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,11 +17,24 @@ const FUNDS = [
 ];
 
 export default function DonatePage() {
+  const { slug } = useParams();
   const [amount, setAmount] = useState('');
   const [fund, setFund] = useState(FUNDS[0].value);
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [org, setOrg] = useState(null);
+  const [orgLoading, setOrgLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchOrg() {
+      setOrgLoading(true);
+      const orgData = await getOrganizationBySlug(slug);
+      setOrg(orgData);
+      setOrgLoading(false);
+    }
+    fetchOrg();
+  }, [slug]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -30,7 +45,7 @@ export default function DonatePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organization_id: window.ORG_ID || '', // Set this globally or fetch dynamically
+          organization_id: org?.id || '',
           amount: Math.round(parseFloat(amount) * 100),
           donor_email: email,
           fund_designation: fund,
@@ -49,13 +64,20 @@ export default function DonatePage() {
     }
   };
 
+  if (orgLoading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
+  if (!org) {
+    return <div className="min-h-screen flex items-center justify-center text-red-600 font-bold">Church not found.</div>;
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-2xl font-bold text-blue-700">
             <Gift className="w-6 h-6 text-emerald-500" />
-            Give Online
+            Give to {org.name}
           </CardTitle>
           <p className="text-muted-foreground mt-2">Support your church with a secure online donation.</p>
         </CardHeader>
