@@ -68,12 +68,27 @@ export default function DonatePage() {
       console.log('📥 API Response Status:', res.status, res.statusText);
       
       if (!res.ok) {
-        const errorData = await res.json();
+        let errorData;
+        try {
+          errorData = await res.json();
+        } catch (parseError) {
+          // If response is not JSON, get the text
+          const errorText = await res.text();
+          console.error('❌ Non-JSON error response:', errorText);
+          errorData = { error: `HTTP ${res.status}: ${res.statusText}` };
+        }
         console.error('❌ API Error Response:', errorData);
         throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`);
       }
       
-      const result = await res.json();
+      let result;
+      try {
+        result = await res.json();
+      } catch (parseError) {
+        console.error('❌ Failed to parse JSON response:', parseError);
+        throw new Error('Invalid response from server');
+      }
+      
       console.log('✅ API Success Response:', result);
       
       // Log debug information if available
