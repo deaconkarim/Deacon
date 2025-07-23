@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Loader2, Gift, DollarSign, Mail, CheckCircle, AlertCircle } from 'lucide-react';
+import { Loader2, Gift, DollarSign, Mail, AlertCircle, Target } from 'lucide-react';
 import supabase from '@/lib/supabaseClient';
 
 export default function ChurchDonatePage() {
@@ -15,11 +15,15 @@ export default function ChurchDonatePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [amount, setAmount] = useState('');
-  const [fund, setFund] = useState('general');
+  const [fund, setFund] = useState('');
+  const [campaign, setCampaign] = useState('');
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState(null);
+  const [funds, setFunds] = useState([]);
+  const [campaigns, setCampaigns] = useState([]);
 
+  // Fetch church info by slug
   useEffect(() => {
     if (!slug) return;
     setLoading(true);
@@ -28,13 +32,32 @@ export default function ChurchDonatePage() {
       .select('*')
       .eq('slug', slug)
       .single()
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
         if (error || !data) {
           setError('Church not found.');
           setChurch(null);
-        } else {
-          setChurch(data);
+          setLoading(false);
+          return;
         }
+        setChurch(data);
+        // Fetch funds (donation categories)
+        const { data: fundData } = await supabase
+          .from('donation_categories')
+          .select('*')
+          .eq('organization_id', data.id)
+          .eq('is_active', true)
+          .order('sort_order', { ascending: true });
+        setFunds(fundData || []);
+        // Fetch active campaigns
+        const { data: campaignData } = await supabase
+          .from('donation_campaigns')
+          .select('*')
+          .eq('organization_id', data.id)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false });
+        setCampaigns(campaignData || []);
+        setFund((fundData && fundData[0]?.id) || '');
+        setCampaign((campaignData && campaignData[0]?.id) || '');
         setLoading(false);
       });
   }, [slug]);
@@ -60,6 +83,7 @@ export default function ChurchDonatePage() {
           amount: Math.round(Number(amount) * 100),
           donor_email: email,
           fund_designation: fund,
+          campaign_id: campaign || undefined,
         }),
       });
       const data = await res.json();
@@ -94,15 +118,6 @@ export default function ChurchDonatePage() {
     return null;
   }
 
-  // Example funds, or use church.funds if available
-  const FUNDS = [
-    { value: 'general', label: 'General Fund' },
-    { value: 'tithe', label: 'Tithes' },
-    { value: 'building_fund', label: 'Building Fund' },
-    { value: 'missions', label: 'Missions' },
-    { value: 'other', label: 'Other' },
-  ];
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-emerald-50 py-12 px-4">
       <Card className="w-full max-w-md shadow-xl">
@@ -132,21 +147,40 @@ export default function ChurchDonatePage() {
                 required
               />
             </div>
-            <div>
-              <Label htmlFor="fund" className="flex items-center gap-1">
-                <Gift className="w-4 h-4 text-blue-500" /> Fund
-              </Label>
-              <Select value={fund} onValueChange={setFund}>
-                <SelectTrigger id="fund">
-                  <SelectValue placeholder="Select fund" />
-                </SelectTrigger>
-                <SelectContent>
-                  {FUNDS.map(f => (
-                    <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {funds.length > 0 && (
+              <div>
+                <Label htmlFor="fund" className="flex items-center gap-1">
+                  <Gift className="w-4 h-4 text-blue-500" /> Fund
+                </Label>
+                <Select value={fund} onValueChange={setFund}>
+                  <SelectTrigger id="fund">
+                    <SelectValue placeholder="Select fund" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {funds.map(f => (
+                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {campaigns.length > 0 && (
+              <div>
+                <Label htmlFor="campaign" className="flex items-center gap-1">
+                  <Target className="w-4 h-4 text-blue-500" /> Campaign
+                </Label>
+                <Select value={campaign} onValueChange={setCampaign}>
+                  <SelectTrigger id="campaign">
+                    <SelectValue placeholder="Select campaign (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {campaigns.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div>
               <Label htmlFor="email" className="flex items-center gap-1">
                 <Mail className="w-4 h-4 text-blue-500" /> Email
