@@ -70,6 +70,28 @@ import {
 import { getMembers, getAllEvents } from '@/lib/data';
 import { getOrganizationName } from '@/lib/data';
 import { userCacheService } from '@/lib/userCache';
+import { supabase } from '@/lib/supabaseClient';
+
+// Helper function to get current user's organization ID
+const getCurrentUserOrganizationId = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const { data, error } = await supabase
+      .from('organization_users')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .eq('approval_status', 'approved')
+      .limit(1);
+
+    if (error) throw error;
+    return data && data.length > 0 ? data[0].organization_id : null;
+  } catch (error) {
+    console.error('Error getting user organization:', error);
+    return null;
+  }
+};
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -94,6 +116,8 @@ export function Donations() {
   const [analytics, setAnalytics] = useState(null);
   const [receipts, setReceipts] = useState([]);
   const [orgSlug, setOrgSlug] = useState('');
+  const [organizationId, setOrganizationId] = useState(null);
+  const [stripeStatus, setStripeStatus] = useState({ connected: false, loading: false, error: null });
   
   // Loading states
   const [isLoading, setIsLoading] = useState(true);
@@ -183,7 +207,21 @@ export function Donations() {
 
   // Load initial data
   useEffect(() => {
-    loadAllData();
+    const loadData = async () => {
+      try {
+        // Get organization ID first
+        const orgId = await getCurrentUserOrganizationId();
+        setOrganizationId(orgId);
+        
+        await Promise.all([
+          loadAllData(),
+          fetchOrgSlug()
+        ]);
+      } catch (error) {
+        console.error('Error loading data:', error);
+      }
+    };
+    loadData();
   }, []);
 
   useEffect(() => {
@@ -193,6 +231,35 @@ export function Donations() {
     }
     fetchOrgSlug();
   }, []);
+
+  // Fetch Stripe Connect status
+  useEffect(() => {
+    if (!organizationId) return;
+    const fetchStripeStatus = async () => {
+      setStripeStatus(s => ({ ...s, loading: true }));
+      try {
+        const { data, error } = await supabase
+          .from('organizations')
+          .select('stripe_account_id, name')
+          .eq('id', organizationId)
+          .single();
+        
+        if (error) {
+          setStripeStatus({ connected: false, loading: false, error: error.message });
+        } else {
+          setStripeStatus({ 
+            connected: !!data?.stripe_account_id, 
+            loading: false, 
+            error: null,
+            organizationName: data?.name
+          });
+        }
+      } catch (error) {
+        setStripeStatus({ connected: false, loading: false, error: error.message });
+      }
+    };
+    fetchStripeStatus();
+  }, [organizationId]);
 
   // Load analytics when filters change
   useEffect(() => {
@@ -2895,39 +2962,97 @@ export function Donations() {
             {/* Connection Status */}
             <div className="flex items-center gap-3">
               <span className="font-medium">Status:</span>
-              <span className="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-emerald-100 text-emerald-700">Connected</span>
-              {/* If not connected, show a red badge and Connect button */}
-              {/* <span className="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-700">Not Connected</span>
-              <Button size="sm" className="ml-2">Connect with Stripe</Button> */}
+              {stripeStatus.loading ? (
+                <span className="text-blue-600">Checking...</span>
+              ) : stripeStatus.connected ? (
+                <span className="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-emerald-100 text-emerald-700">
+                  <CheckCircle className="w-3 h-3 mr-1" />
+                  Connected
+                </span>
+              ) : (
+                <span className="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-700">
+                  <AlertCircle className="w-3 h-3 mr-1" />
+                  Not Connected
+                </span>
+              )}
             </div>
+            
             {/* Environment */}
             <div className="flex items-center gap-3">
               <span className="font-medium">Environment:</span>
               <span className="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-700">Live</span>
-              {/* <span className="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-gray-100 text-gray-700">Test</span> */}
             </div>
+            
             {/* Enable/Disable Integration */}
             <div className="flex items-center gap-3">
               <span className="font-medium">Enable Stripe Donations:</span>
-              <input type="checkbox" checked readOnly className="form-checkbox h-5 w-5 text-blue-600" />
+              <input 
+                type="checkbox" 
+                checked={stripeStatus.connected} 
+                readOnly 
+                className="form-checkbox h-5 w-5 text-blue-600" 
+              />
             </div>
+            
             {/* Donation URLs */}
             <div>
               <h4 className="font-semibold mb-2">Donation URLs</h4>
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
-                  <span className="bg-gray-100 px-2 py-1 rounded text-sm">/donate</span>
-                  <Button size="sm" variant="outline" onClick={() => navigator.clipboard.writeText(window.location.origin + '/donate')}>Copy</Button>
-                  <Button size="sm" variant="outline" onClick={() => window.open('/donate', '_blank')}>Open</Button>
+                  <span className="bg-gray-100 px-2 py-1 rounded text-sm">
+                    {window.location.origin}/donate/{orgSlug}
+                  </span>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => navigator.clipboard.writeText(`${window.location.origin}/donate/${orgSlug}`)}
+                  >
+                    Copy
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => window.open(`/donate/${orgSlug}`, '_blank')}
+                  >
+                    Open
+                  </Button>
                 </div>
-                {/* Add more URLs as needed */}
               </div>
             </div>
-            {/* Analytics Placeholder */}
-            <div>
-              <h4 className="font-semibold mb-2">Stripe Donation Analytics</h4>
-              <p className="text-sm text-muted-foreground">Analytics coming soon.</p>
-            </div>
+            
+            {/* Connection Details */}
+            {stripeStatus.connected && (
+              <div>
+                <h4 className="font-semibold mb-2">Connection Details</h4>
+                <div className="text-sm text-muted-foreground">
+                  <p>✅ Connected to Stripe Connect</p>
+                  <p>🏛️ Organization: {stripeStatus.organizationName}</p>
+                  <p>💳 Ready to accept online donations</p>
+                </div>
+              </div>
+            )}
+            
+            {!stripeStatus.connected && !stripeStatus.loading && (
+              <div>
+                <h4 className="font-semibold mb-2">Setup Required</h4>
+                <div className="text-sm text-muted-foreground mb-3">
+                  <p>To accept online donations, you need to connect your Stripe account.</p>
+                </div>
+                <Button 
+                  size="sm" 
+                  onClick={() => window.location.href = '/settings?tab=church'}
+                >
+                  Connect Stripe Account
+                </Button>
+              </div>
+            )}
+            
+            {/* Error State */}
+            {stripeStatus.error && (
+              <div className="text-red-600 text-sm">
+                Error: {stripeStatus.error}
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>
