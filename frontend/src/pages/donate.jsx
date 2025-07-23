@@ -40,7 +40,20 @@ export default function DonatePage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
+    
+    // Log donation attempt details
+    console.log('🔄 Starting donation process...');
+    console.log('📊 Donation Details:', {
+      organization_id: org?.id,
+      organization_name: org?.name,
+      amount: amount,
+      amount_cents: Math.round(parseFloat(amount) * 100),
+      donor_email: email,
+      fund_designation: fund,
+    });
+    
     try {
+      console.log('📡 Making API request to create checkout session...');
       const res = await fetch('https://getdeacon.com/api/stripe/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -52,22 +65,60 @@ export default function DonatePage() {
         }),
       });
       
+      console.log('📥 API Response Status:', res.status, res.statusText);
+      
       if (!res.ok) {
         const errorData = await res.json();
+        console.error('❌ API Error Response:', errorData);
         throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`);
       }
       
       const result = await res.json();
+      console.log('✅ API Success Response:', result);
+      
+      // Log debug information if available
+      if (result.debug) {
+        console.log('🔍 Stripe Account Debug Info:', {
+          main_account_id: result.debug.main_account_id,
+          church_account_id: result.debug.church_account_id,
+          is_same_account: result.debug.is_same_account,
+          has_transfer_data: result.debug.has_transfer_data,
+          session_id: result.debug.session_id,
+          organization_name: result.debug.organization_name
+        });
+        
+        if (result.debug.is_same_account) {
+          console.log('⚠️  WARNING: Church account is the same as main account - no transfer needed');
+        } else {
+          console.log('✅ Church account is different from main account - transfer will be used');
+        }
+      }
+      
       if (result.url) {
+        console.log('🔗 Redirecting to Stripe checkout:', result.url);
         window.location.href = result.url;
       } else {
+        console.error('❌ No checkout URL in response:', result);
         setError(result.error || 'Failed to start payment.');
       }
     } catch (err) {
-      console.error('Payment error:', err);
+      console.error('💥 Payment error:', err);
+      console.error('🔍 Error details:', {
+        message: err.message,
+        stack: err.stack,
+        organization_id: org?.id,
+        organization_name: org?.name
+      });
+      
+      // Log debug information from error response if available
+      if (err.debug) {
+        console.log('🔍 Error Debug Info:', err.debug);
+      }
+      
       setError(err.message || 'An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
+      console.log('🏁 Donation process completed');
     }
   };
 

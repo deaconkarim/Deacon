@@ -106,12 +106,30 @@ export default async (req, res) => {
     });
 
     console.log(`Checkout session created: ${session.id}`);
-    res.json({ url: session.url });
+    
+    // Return detailed response for debugging
+    res.json({ 
+      url: session.url,
+      debug: {
+        main_account_id: mainAccount.id,
+        church_account_id: org.stripe_account_id,
+        is_same_account: isSameAccount,
+        has_transfer_data: !isSameAccount,
+        session_id: session.id,
+        organization_name: org.name
+      }
+    });
   } catch (err) {
     console.error('Stripe error:', err);
     res.status(500).json({ 
       error: 'An error occurred with our connection to Stripe. Request was retried 2 times.',
-      details: err.message 
+      details: err.message,
+      debug: {
+        main_account_id: mainAccount?.id || 'unknown',
+        church_account_id: org?.stripe_account_id || 'unknown',
+        is_same_account: mainAccount?.id === org?.stripe_account_id,
+        organization_name: org?.name || 'unknown'
+      }
     });
   }
 };
