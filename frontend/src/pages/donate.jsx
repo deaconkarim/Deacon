@@ -20,7 +20,7 @@ const FUNDS = [
 export default function DonatePage() {
   const { slug } = useParams();
   const [amount, setAmount] = useState('');
-  const [fund, setFund] = useState(FUNDS[0].value);
+  const [fund, setFund] = useState('tithe');
   const [email, setEmail] = useState('');
   const [coverFees, setCoverFees] = useState(false);
   const [loading, setLoading] = useState(false);
