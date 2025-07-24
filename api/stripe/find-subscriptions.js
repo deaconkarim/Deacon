@@ -55,6 +55,17 @@ export default async function handler(req, res) {
     );
 
     console.log(`Found ${relevantSubscriptions.length} subscriptions for email: ${email}`);
+    
+    // Log subscription details for debugging
+    relevantSubscriptions.forEach((sub, index) => {
+      console.log(`Subscription ${index + 1}:`, {
+        id: sub.id,
+        status: sub.status,
+        amount: sub.items?.data?.[0]?.price?.unit_amount,
+        interval: sub.items?.data?.[0]?.price?.recurring?.interval,
+        current_period_end: sub.current_period_end
+      });
+    });
 
     res.json({ 
       subscriptions: relevantSubscriptions,

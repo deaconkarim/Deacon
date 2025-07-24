@@ -33,6 +33,7 @@ export default function ManageDonations() {
       }
 
       const data = await response.json();
+      console.log('📋 Subscriptions data:', data.subscriptions);
       setSubscriptions(data.subscriptions || []);
       
       if (data.subscriptions?.length === 0) {
@@ -78,8 +79,24 @@ export default function ManageDonations() {
     }
   };
 
-  const formatAmount = (amount) => `$${(amount / 100).toFixed(2)}`;
-  const formatDate = (timestamp) => new Date(timestamp * 1000).toLocaleDateString();
+  const formatAmount = (amount) => {
+    if (!amount) return '$0.00';
+    // If amount is greater than 1000, it's likely in cents
+    if (amount > 1000) {
+      return `$${(amount / 100).toFixed(2)}`;
+    }
+    // Otherwise, treat as dollars
+    return `$${parseFloat(amount).toFixed(2)}`;
+  };
+  const formatDate = (timestamp) => {
+    if (!timestamp) return 'N/A';
+    try {
+      return new Date(timestamp * 1000).toLocaleDateString();
+    } catch (error) {
+      console.error('Date formatting error:', error, timestamp);
+      return 'Invalid Date';
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
