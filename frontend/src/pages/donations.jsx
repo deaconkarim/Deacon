@@ -1693,12 +1693,6 @@ export function Donations() {
                                       </div>
                                     </div>
                                   </div>
-                                  <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-600">
-                                    <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                                      <span>Click to view profile</span>
-                                      <ChevronRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
-                                    </div>
-                                  </div>
                                 </div>
                               ))}
                             </div>

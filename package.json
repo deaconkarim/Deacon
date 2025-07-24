@@ -12,7 +12,8 @@
     "node": ">=18.0.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^4.6.0"
+    "@vitejs/plugin-react": "^4.6.0",
+    "supabase": "^2.31.8"
   },
   "type": "module",
   "dependencies": {
