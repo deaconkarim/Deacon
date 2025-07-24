@@ -96,7 +96,7 @@ export default async (req, res) => {
 
          // Insert donation record
          console.log('💾 Inserting donation record...');
-         const { error: insertError } = await supabase.from('donations').insert({
+         const donationData = {
            organization_id,
            donor_id,
            amount: cover_fees ? amount : original_amount, // Credit donor with full amount if they covered fees
@@ -108,6 +108,7 @@ export default async (req, res) => {
            is_recurring: is_recurring,
            subscription_id: is_recurring ? session.subscription : null,
            recurring_interval: is_recurring ? metadata.recurring_interval : null,
+           type: is_recurring ? metadata.recurring_interval : null, // For backward compatibility
            notes: `Stripe Connect donation${cover_fees ? ' (fees covered by donor)' : ''}${is_recurring ? ' - Recurring' : ''}`,
            metadata: {
              ...session,
@@ -119,7 +120,16 @@ export default async (req, res) => {
              is_recurring: is_recurring,
              subscription_id: is_recurring ? session.subscription : null
            },
+         };
+         
+         console.log('📋 Donation data to insert:', {
+           is_recurring: donationData.is_recurring,
+           subscription_id: donationData.subscription_id,
+           recurring_interval: donationData.recurring_interval,
+           type: donationData.type
          });
+         
+         const { error: insertError } = await supabase.from('donations').insert(donationData);
 
          if (insertError) {
            console.error('❌ Error inserting donation:', insertError);
