@@ -143,12 +143,15 @@ export function Donations() {
   
   // Filters
   const [filters, setFilters] = useState({
-    startDate: format(startOfYear(new Date(new Date().getFullYear() - 1, 0, 1)), 'yyyy-MM-dd'), // Start of last year
-    endDate: format(endOfYear(new Date(new Date().getFullYear() + 1, 11, 31)), 'yyyy-MM-dd'), // End of next year
+    startDate: format(startOfYear(new Date(new Date().getFullYear() - 1, 0, 1)), 'yyyy-MM-dd'),
+    endDate: format(endOfYear(new Date(new Date().getFullYear() + 1, 11, 31)), 'yyyy-MM-dd'),
     donorId: '',
     campaignId: '',
     fundDesignation: 'all',
     paymentMethod: 'all',
+    isRecurring: 'all',
+    recurringInterval: 'all',
+    recurringStatus: 'all',
     search: '',
     minAmount: '',
     maxAmount: ''
@@ -213,10 +216,7 @@ export function Donations() {
         const orgId = await getCurrentUserOrganizationId();
         setOrganizationId(orgId);
         
-        await Promise.all([
-          loadAllData(),
-          fetchOrgSlug()
-        ]);
+        await loadAllData();
       } catch (error) {
         console.error('Error loading data:', error);
       }
@@ -664,7 +664,11 @@ export function Donations() {
     switch (method) {
       case 'credit_card':
       case 'debit_card':
+      case 'Deacon - Credit Card':
         return <CreditCard className="h-4 w-4" />;
+      case 'ach':
+      case 'Deacon - ACH Transfer':
+        return <Banknote className="h-4 w-4" />;
       case 'cash':
         return <Banknote className="h-4 w-4" />;
       case 'check':
@@ -820,6 +824,60 @@ export function Donations() {
       progressPercentage: totalGoal > 0 ? (totalRaised / totalGoal) * 100 : 0
     };
   }, [campaigns]);
+
+  const filteredDonations = useMemo(() => {
+    return donations.filter(d => {
+      // Existing filters...
+      if (filters.isRecurring !== 'all') {
+        if (filters.isRecurring === 'true' && !d.is_recurring) return false;
+        if (filters.isRecurring === 'false' && d.is_recurring) return false;
+      }
+      if (filters.recurringInterval !== 'all') {
+        if (!d.is_recurring || d.recurring_interval !== filters.recurringInterval) return false;
+      }
+      if (filters.recurringStatus !== 'all') {
+        if (!d.is_recurring) return false;
+        // Assume d.subscription_status is available, or infer from metadata if needed
+        if (filters.recurringStatus === 'active' && d.subscription_status !== 'active') return false;
+        if (filters.recurringStatus === 'pending_cancellation' && d.subscription_status !== 'pending_cancellation' && !d.cancel_at_period_end) return false;
+        if (filters.recurringStatus === 'canceled' && d.subscription_status !== 'canceled') return false;
+      }
+      // ...other filters...
+      return true;
+    });
+  }, [donations, filters]);
+
+  const recurringStats = useMemo(() => {
+    const recurring = donations.filter(d => d.is_recurring === true || d.is_recurring === 'true' || d.is_recurring === 1 || d.is_recurring === '1');
+    const oneTime = donations.filter(d => !d.is_recurring || d.is_recurring === false || d.is_recurring === 'false' || d.is_recurring === 0 || d.is_recurring === '0');
+    const byInterval = {};
+    const byStatus = { active: 0, pending_cancellation: 0, canceled: 0 };
+    recurring.forEach(d => {
+      const interval = d.recurring_interval || 'unknown';
+      byInterval[interval] = (byInterval[interval] || 0) + parseFloat(d.amount);
+      // Status: use d.subscription_status or infer from metadata/cancel_at_period_end
+      if (d.subscription_status === 'canceled') byStatus.canceled++;
+      else if (d.cancel_at_period_end) byStatus.pending_cancellation++;
+      else byStatus.active++;
+    });
+    return {
+      recurringCount: recurring.length,
+      recurringTotal: recurring.reduce((sum, d) => sum + parseFloat(d.amount), 0),
+      oneTimeCount: oneTime.length,
+      oneTimeTotal: oneTime.reduce((sum, d) => sum + parseFloat(d.amount), 0),
+      byInterval,
+      byStatus
+    };
+  }, [donations]);
+
+  const paymentMethodStats = useMemo(() => {
+    const stats = {};
+    donations.forEach(d => {
+      const method = d.payment_method || 'unknown';
+      stats[method] = (stats[method] || 0) + parseFloat(d.amount);
+    });
+    return stats;
+  }, [donations]);
 
   return (
     <div className="w-full max-w-full overflow-x-hidden">
@@ -1551,7 +1609,7 @@ export function Donations() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="payment-method">Payment Method</Label>
-                <Select value={filters.paymentMethod} onValueChange={(value) => setFilters({...filters, paymentMethod: value})}>
+                <Select value={filters.paymentMethod} onValueChange={value => setFilters({...filters, paymentMethod: value})}>
                   <SelectTrigger>
                     <SelectValue placeholder="All methods" />
                   </SelectTrigger>
@@ -1560,7 +1618,11 @@ export function Donations() {
                     <SelectItem value="cash">Cash</SelectItem>
                     <SelectItem value="check">Check</SelectItem>
                     <SelectItem value="credit_card">Credit Card</SelectItem>
+                    <SelectItem value="debit_card">Debit Card</SelectItem>
+                    <SelectItem value="ach">ACH Transfer</SelectItem>
                     <SelectItem value="online">Online</SelectItem>
+                    <SelectItem value="Deacon - Credit Card">Deacon - Credit Card</SelectItem>
+                    <SelectItem value="Deacon - ACH Transfer">Deacon - ACH Transfer</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1582,6 +1644,48 @@ export function Donations() {
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Apply Filters
                 </Button>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="is-recurring">Recurring</Label>
+                <Select value={filters.isRecurring} onValueChange={value => setFilters({...filters, isRecurring: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="true">Recurring</SelectItem>
+                    <SelectItem value="false">One-time</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="recurring-interval">Interval</Label>
+                <Select value={filters.recurringInterval} onValueChange={value => setFilters({...filters, recurringInterval: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="week">Weekly</SelectItem>
+                    <SelectItem value="month">Monthly</SelectItem>
+                    <SelectItem value="quarter">Quarterly</SelectItem>
+                    <SelectItem value="year">Yearly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="recurring-status">Recurring Status</Label>
+                <Select value={filters.recurringStatus} onValueChange={value => setFilters({...filters, recurringStatus: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="pending_cancellation">Pending Cancellation</SelectItem>
+                    <SelectItem value="canceled">Canceled</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardContent>
@@ -1736,7 +1840,7 @@ export function Donations() {
                         </div>
                       ))}
                     </div>
-                  ) : donations.length === 0 ? (
+                  ) : filteredDonations.length === 0 ? (
                     <div className="p-8 text-center text-muted-foreground">
                       <DollarSign className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
                       <h3 className="text-lg font-semibold mb-2">No Donations Found</h3>
@@ -1748,7 +1852,7 @@ export function Donations() {
                     </div>
                   ) : (
                     <div className="space-y-3 p-4">
-                      {donations.map((donation) => (
+                      {filteredDonations.map((donation) => (
                         <div key={donation.id} className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4 shadow-sm hover:shadow-md transition-shadow">
                           {/* Header with date and amount */}
                           <div className="flex justify-between items-start mb-3">
@@ -1908,6 +2012,7 @@ export function Donations() {
                         <th className="p-3 sm:p-4 font-medium text-xs sm:text-sm">Date</th>
                         <th className="p-3 sm:p-4 font-medium text-xs sm:text-sm">Donor</th>
                         <th className="p-3 sm:p-4 font-medium text-xs sm:text-sm">Amount</th>
+                        <th className="p-3 sm:p-4 font-medium text-xs sm:text-sm">Recurring</th>
                         <th className="p-3 sm:p-4 font-medium text-xs sm:text-sm">Method</th>
                         <th className="p-3 sm:p-4 font-medium text-xs sm:text-sm">Fund</th>
                         <th className="p-3 sm:p-4 font-medium text-xs sm:text-sm hidden lg:table-cell">Campaign</th>
@@ -1923,20 +2028,21 @@ export function Donations() {
                             <td className="p-3 sm:p-4"><Skeleton className="h-4 w-24 sm:w-32" /></td>
                             <td className="p-3 sm:p-4"><Skeleton className="h-4 w-12 sm:w-16" /></td>
                             <td className="p-3 sm:p-4"><Skeleton className="h-4 w-16 sm:w-20" /></td>
+                            <td className="p-3 sm:p-4"><Skeleton className="h-4 w-16 sm:w-20" /></td>
                             <td className="p-3 sm:p-4"><Skeleton className="h-4 w-20 sm:w-24" /></td>
                             <td className="p-3 sm:p-4 hidden lg:table-cell"><Skeleton className="h-4 w-24 sm:w-28" /></td>
                             <td className="p-3 sm:p-4 hidden lg:table-cell"><Skeleton className="h-4 w-20 sm:w-24" /></td>
                             <td className="p-3 sm:p-4"><Skeleton className="h-4 w-16 sm:w-20" /></td>
                           </tr>
                         ))
-                      ) : donations.length === 0 ? (
+                      ) : filteredDonations.length === 0 ? (
                         <tr>
-                          <td colSpan="8" className="p-6 sm:p-8 text-center text-muted-foreground text-sm sm:text-base">
+                          <td colSpan="9" className="p-6 sm:p-8 text-center text-muted-foreground text-sm sm:text-base">
                             No donations found for the selected filters
                           </td>
                         </tr>
                       ) : (
-                        donations.map((donation) => (
+                        filteredDonations.map((donation) => (
                           <tr key={donation.id} className="border-b hover:bg-muted/50 transition-colors">
                             <td className="p-3 sm:p-4">
                               <div className="text-xs sm:text-sm font-medium">
@@ -1965,6 +2071,17 @@ export function Donations() {
                               <div className="font-semibold text-emerald-600 text-sm sm:text-base">
                                 {formatCurrency(donation.amount)}
                               </div>
+                            </td>
+                            <td className="p-3 sm:p-4">
+                              {(donation.is_recurring === true || donation.is_recurring === 'true' || donation.is_recurring === 1 || donation.is_recurring === '1') ? (
+                                <Badge variant="default" className="bg-purple-600 text-white border-purple-700" title={`Recurring ${donation.recurring_interval}ly donation`}>
+                                  {donation.recurring_interval === 'week' ? 'Weekly' :
+                                   donation.recurring_interval === 'month' ? 'Monthly' :
+                                   donation.recurring_interval === 'quarter' ? 'Quarterly' :
+                                   donation.recurring_interval === 'year' ? 'Yearly' :
+                                   'Recurring'}
+                                </Badge>
+                              ) : null}
                             </td>
                             <td className="p-3 sm:p-4">
                               <div className="flex items-center space-x-2">
@@ -2328,8 +2445,9 @@ export function Donations() {
                       <SelectItem value="check">Check</SelectItem>
                       <SelectItem value="credit_card">Credit Card</SelectItem>
                       <SelectItem value="debit_card">Debit Card</SelectItem>
-                      <SelectItem value="ach">ACH Transfer</SelectItem>
                       <SelectItem value="online">Online Payment</SelectItem>
+                      <SelectItem value="Deacon - Credit Card">Deacon - Credit Card</SelectItem>
+                      <SelectItem value="Deacon - ACH Transfer">Deacon - ACH Transfer</SelectItem>
                       <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
@@ -2344,6 +2462,8 @@ export function Donations() {
                   />
                 </div>
               </div>
+              
+
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -3056,6 +3176,54 @@ export function Donations() {
           </CardContent>
         </Card>
       </motion.div>
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Donation Analytics</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <div className="text-xs text-slate-500 mb-1">Recurring Donations</div>
+              <div className="text-lg font-bold text-purple-700">{recurringStats.recurringCount}</div>
+              <div className="text-xs text-slate-500">Total: {formatCurrency(recurringStats.recurringTotal)}</div>
+            </div>
+            <div>
+              <div className="text-xs text-slate-500 mb-1">One-time Donations</div>
+              <div className="text-lg font-bold text-blue-700">{recurringStats.oneTimeCount}</div>
+              <div className="text-xs text-slate-500">Total: {formatCurrency(recurringStats.oneTimeTotal)}</div>
+            </div>
+            <div>
+              <div className="text-xs text-slate-500 mb-1">Recurring by Interval</div>
+              <div className="text-xs">
+                {Object.entries(recurringStats.byInterval).map(([interval, total]) => (
+                  <div key={interval} className="capitalize">{interval}: {formatCurrency(total)}</div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-slate-500 mb-1">Recurring Status</div>
+              <div className="text-xs">
+                <div>Active: {recurringStats.byStatus.active}</div>
+                <div>Pending Cancellation: {recurringStats.byStatus.pending_cancellation}</div>
+                <div>Canceled: {recurringStats.byStatus.canceled}</div>
+              </div>
+            </div>
+            <div className="col-span-2 md:col-span-4">
+              <div className="text-xs text-slate-500 mb-1">Totals by Payment Method</div>
+              <div className="flex flex-wrap gap-4">
+                {Object.entries(paymentMethodStats).map(([method, total]) => (
+                  <div key={method} className="flex items-center gap-2">
+                    {getPaymentMethodIcon(method)}
+                    <span className="capitalize">{method}:</span>
+                    <span className="font-bold">{formatCurrency(total)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
       </motion.div>
     </div>
   );
