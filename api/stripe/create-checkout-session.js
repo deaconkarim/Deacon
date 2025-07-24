@@ -73,17 +73,20 @@ export default async (req, res) => {
     if (cover_fees) {
       if (payment_method === 'ach') {
         // ACH transfers: 0.8% + 25 cents
-        feeAmount = Math.round(amount * 0.008 + 0.25);
+        feeAmount = (amount * 0.008) + 0.25;
       } else {
         // Credit/debit cards: 2.9% + 30 cents
-        feeAmount = Math.round(amount * 0.029 + 0.30);
+        feeAmount = (amount * 0.029) + 0.30;
       }
     }
     
     const totalAmount = cover_fees ? amount + feeAmount : amount;
 
+    // Only round when converting to cents for Stripe
+    const unitAmount = Math.round(totalAmount * 100);
+
     console.log(`Original amount: ${originalAmount}, Fee amount: ${feeAmount}, Total amount: ${totalAmount}, Cover fees: ${cover_fees}, Payment method: ${payment_method}`);
-    console.log(`Fee calculation: ${amount} * 0.029 + 0.30 = ${amount * 0.029} + 0.30 = ${amount * 0.029 + 0.30} = ${Math.round(amount * 0.029 + 0.30)}`);
+    console.log(`Fee calculation: ${amount} * 0.029 + 0.30 = ${amount * 0.029} + 0.30 = ${amount * 0.029 + 0.30}`);
 
     // Build the session creation object
     const sessionData = {
@@ -109,7 +112,7 @@ export default async (req, res) => {
     if (is_recurring) {
       // For subscriptions, we need to create a price first
       const price = await stripe.prices.create({
-        unit_amount: Math.round(totalAmount * 100), // Convert to cents for Stripe
+        unit_amount: unitAmount, // Use correct cents value
         currency: 'usd',
         recurring: {
           interval: recurring_interval,
@@ -154,7 +157,7 @@ export default async (req, res) => {
             product_data: {
               name: `Donation to ${org.name}`,
             },
-            unit_amount: Math.round(totalAmount * 100), // Convert to cents for Stripe
+            unit_amount: unitAmount, // Use correct cents value
           },
           quantity: 1,
         },
