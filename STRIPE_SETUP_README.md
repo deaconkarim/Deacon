@@ -57,6 +57,7 @@ For your Stripe integration to work fully (including recurring and one-time dona
 - `checkout.session.completed`
 - `invoice.payment_succeeded`
 - `customer.subscription.created`
+- `customer.subscription.updated`
 
 (And, for Connect platforms, optionally:
 - `account.updated`

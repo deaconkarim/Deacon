@@ -20,11 +20,21 @@ export default async function handler(req, res) {
 
   try {
     // Cancel the subscription at the end of the current period
-    const canceledSubscription = await stripe.subscriptions.update(subscriptionId, {
+    const subscription = await stripe.subscriptions.update(subscriptionId, {
       cancel_at_period_end: true,
     });
 
-    res.json({ success: true, subscription: canceledSubscription });
+    console.log(`✅ Subscription ${subscriptionId} will be canceled at period end`);
+
+    res.json({ 
+      success: true, 
+      subscription: {
+        id: subscription.id,
+        status: subscription.status,
+        cancel_at_period_end: subscription.cancel_at_period_end,
+        current_period_end: subscription.current_period_end
+      }
+    });
   } catch (error) {
     console.error('Error canceling subscription:', error);
     res.status(500).json({ error: 'Failed to cancel subscription' });

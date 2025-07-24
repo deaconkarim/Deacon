@@ -55,13 +55,14 @@ export default async (req, res) => {
          const fund_designation = metadata.fund_designation || null;
          const campaign_id = metadata.campaign_id || null;
          const donor_email = session.customer_email;
-         const payment_method = metadata.payment_method === 'ach' ? 'ach' : 'online'; // Use metadata payment method
+         const payment_method = metadata.payment_method === 'ach' ? 'Deacon - ACH Transfer' : 'Deacon - Credit Card'; // Use descriptive payment method names
          const date = new Date().toISOString().split('T')[0];
 
          // Handle fee coverage metadata
          const original_amount = metadata.original_amount ? parseFloat(metadata.original_amount) / 100 : amount;
          const fee_amount = metadata.fee_amount ? parseFloat(metadata.fee_amount) / 100 : 0;
          const cover_fees = metadata.cover_fees === 'true';
+         const is_recurring = metadata.is_recurring === 'true';
 
          console.log(`📊 Processing donation for church ID: ${organization_id}, Amount: $${amount}, Email: ${donor_email}`);
          console.log(`💸 Fee details - Original: $${original_amount}, Fee: $${fee_amount}, Cover fees: ${cover_fees}`);
@@ -97,19 +98,20 @@ export default async (req, res) => {
          const { error: insertError } = await supabase.from('donations').insert({
            organization_id,
            donor_id,
-           amount: original_amount, // Store the original amount (what church receives)
+           amount: cover_fees ? amount : original_amount, // Credit donor with full amount if they covered fees
            date,
            fund_designation,
            campaign_id,
            payment_method,
            is_tax_deductible: true,
-           notes: `Stripe Connect donation${cover_fees ? ' (fees covered by donor)' : ''}`,
+           notes: `Stripe Connect donation${cover_fees ? ' (fees covered by donor)' : ''}${is_recurring ? ' - Recurring' : ''}`,
            metadata: {
              ...session,
              original_amount: original_amount,
              fee_amount: fee_amount,
              cover_fees: cover_fees,
-             total_paid: amount
+             total_paid: amount,
+             church_receives: original_amount
            },
          });
 
@@ -127,7 +129,8 @@ export default async (req, res) => {
      } else if (event.type === 'invoice.payment_succeeded') {
                 console.log('🔄 Processing invoice.payment_succeeded event (unverified)');
          
-         try {
+                  try {
+           const invoice = event.data.object;
            console.log('📋 Invoice data:', {
              id: invoice.id,
              subscription: invoice.subscription,
@@ -135,7 +138,6 @@ export default async (req, res) => {
              amount_paid: invoice.amount_paid,
              status: invoice.status
            });
-         const invoice = event.data.object;
          const subscription = invoice.subscription;
          const customer = invoice.customer;
          
@@ -153,13 +155,14 @@ export default async (req, res) => {
          const organization_id = metadata.organization_id;
          const fund_designation = metadata.fund_designation || null;
          const campaign_id = metadata.campaign_id || null;
-         const payment_method = metadata.payment_method === 'ach' ? 'ach' : 'online';
+         const payment_method = metadata.payment_method === 'ach' ? 'Deacon - ACH Transfer' : 'Deacon - Credit Card';
          const date = new Date().toISOString().split('T')[0];
          
          // Handle fee coverage metadata
          const original_amount = metadata.original_amount ? parseFloat(metadata.original_amount) / 100 : amount;
          const fee_amount = metadata.fee_amount ? parseFloat(metadata.fee_amount) / 100 : 0;
          const cover_fees = metadata.cover_fees === 'true';
+         const is_recurring = metadata.is_recurring === 'true';
          
          console.log(`📊 Processing recurring donation for church ID: ${organization_id}, Amount: $${amount}`);
          
@@ -189,7 +192,7 @@ export default async (req, res) => {
          const { error: insertError } = await supabase.from('donations').insert({
            organization_id,
            donor_id,
-           amount: original_amount,
+           amount: cover_fees ? amount : original_amount, // Credit donor with full amount if they covered fees
            date,
            fund_designation,
            campaign_id,
@@ -205,7 +208,8 @@ export default async (req, res) => {
              original_amount: original_amount,
              fee_amount: fee_amount,
              cover_fees: cover_fees,
-             total_paid: amount
+             total_paid: amount,
+             church_receives: original_amount
            },
          });
          
@@ -220,6 +224,44 @@ export default async (req, res) => {
          console.error('💥 Error processing recurring donation:', error);
          return res.status(500).json({ error: 'Failed to process recurring donation', details: error.message });
        }
+     } else if (event.type === 'customer.subscription.updated') {
+       console.log('📅 Processing customer.subscription.updated event');
+       
+       try {
+         const subscription = event.data.object;
+         const metadata = subscription.metadata || {};
+         const customer = subscription.customer;
+         const organization_id = metadata.organization_id;
+         
+         console.log(`📅 Subscription updated for church ID: ${organization_id}, Customer: ${customer}, Status: ${subscription.status}`);
+         
+         // Skip if no organization_id in metadata
+         if (!organization_id) {
+           console.log('⚠️  Subscription missing organization_id in metadata, skipping member update');
+           return res.json({ received: true });
+         }
+         
+         // Update member record with subscription info
+         const { error: updateError } = await supabase
+           .from('members')
+           .update({
+             stripe_customer_id: customer,
+             subscription_id: subscription.id,
+             subscription_status: subscription.status,
+             updated_at: new Date().toISOString()
+           })
+           .eq('stripe_customer_id', customer)
+           .eq('organization_id', organization_id);
+         
+         if (updateError) {
+           console.error('❌ Error updating member subscription:', updateError);
+         } else {
+           console.log(`✅ Successfully updated member subscription status to: ${subscription.status}`);
+         }
+       } catch (error) {
+         console.error('💥 Error processing subscription update:', error);
+         return res.status(500).json({ error: 'Failed to process subscription update', details: error.message });
+       }
      } else if (event.type === 'customer.subscription.created') {
        console.log('📅 Processing customer.subscription.created event (unverified)');
        
@@ -230,6 +272,12 @@ export default async (req, res) => {
          const organization_id = metadata.organization_id;
          
          console.log(`📅 New subscription created for church ID: ${organization_id}, Customer: ${customer}`);
+         
+         // Skip if no organization_id in metadata
+         if (!organization_id) {
+           console.log('⚠️  Subscription missing organization_id in metadata, skipping member update');
+           return res.json({ received: true });
+         }
          
          // Update member record with subscription info
          const { error: updateError } = await supabase

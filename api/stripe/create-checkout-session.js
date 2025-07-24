@@ -73,10 +73,10 @@ export default async (req, res) => {
     if (cover_fees) {
       if (payment_method === 'ach') {
         // ACH transfers: 0.8% + 25 cents
-        feeAmount = Math.round(amount * 0.008 + 25);
+        feeAmount = Math.round(amount * 0.008 + 0.25);
       } else {
         // Credit/debit cards: 2.9% + 30 cents
-        feeAmount = Math.round(amount * 0.029 + 30);
+        feeAmount = Math.round(amount * 0.029 + 0.30);
       }
     }
     
@@ -94,8 +94,8 @@ export default async (req, res) => {
         fund_designation: fund_designation || '',
         campaign_id: campaign_id || '',
         payment_method: payment_method || 'card',
-        original_amount: originalAmount,
-        fee_amount: feeAmount,
+        original_amount: Math.round(originalAmount * 100), // Store in cents
+        fee_amount: Math.round(feeAmount * 100), // Store in cents
         cover_fees: cover_fees ? 'true' : 'false',
         is_recurring: is_recurring ? 'true' : 'false',
         recurring_interval: recurring_interval || '',
@@ -108,7 +108,7 @@ export default async (req, res) => {
     if (is_recurring) {
       // For subscriptions, we need to create a price first
       const price = await stripe.prices.create({
-        unit_amount: totalAmount,
+        unit_amount: Math.round(totalAmount * 100), // Convert to cents for Stripe
         currency: 'usd',
         recurring: {
           interval: recurring_interval,
@@ -129,6 +129,21 @@ export default async (req, res) => {
           quantity: 1,
         },
       ];
+      
+      // Add subscription metadata
+      sessionData.subscription_data = {
+        metadata: {
+          organization_id,
+          fund_designation: fund_designation || '',
+          campaign_id: campaign_id || '',
+          payment_method: payment_method || 'card',
+          original_amount: Math.round(originalAmount * 100), // Store in cents
+          fee_amount: Math.round(feeAmount * 100), // Store in cents
+          cover_fees: cover_fees ? 'true' : 'false',
+          is_recurring: 'true',
+          recurring_interval: recurring_interval || '',
+        },
+      };
     } else {
       // For one-time payments
       sessionData.line_items = [
@@ -138,7 +153,7 @@ export default async (req, res) => {
             product_data: {
               name: `Donation to ${org.name}`,
             },
-            unit_amount: totalAmount, // Use total amount if covering fees
+            unit_amount: Math.round(totalAmount * 100), // Convert to cents for Stripe
           },
           quantity: 1,
         },
@@ -159,10 +174,10 @@ export default async (req, res) => {
           let application_fee_amount;
           if (payment_method === 'ach') {
             // ACH transfers: 0.8% + 25 cents
-            application_fee_amount = Math.round(originalAmount * 0.008 + 25);
+            application_fee_amount = Math.round(originalAmount * 0.008 * 100 + 25); // Convert to cents
           } else {
             // Credit/debit cards: 2.9% + 30 cents
-            application_fee_amount = Math.round(originalAmount * 0.029 + 30);
+            application_fee_amount = Math.round(originalAmount * 0.029 * 100 + 30); // Convert to cents
           }
           sessionData.payment_intent_data = {
             application_fee_amount,
@@ -173,8 +188,8 @@ export default async (req, res) => {
               organization_id,
               fund_designation: fund_designation || '',
               campaign_id: campaign_id || '',
-              original_amount: originalAmount,
-              fee_amount: feeAmount,
+              original_amount: Math.round(originalAmount * 100), // Store in cents
+              fee_amount: Math.round(feeAmount * 100), // Store in cents
               cover_fees: cover_fees ? 'true' : 'false',
             },
           };

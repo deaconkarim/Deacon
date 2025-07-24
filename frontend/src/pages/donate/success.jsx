@@ -28,12 +28,31 @@ export default function DonateSuccess() {
             )}
             {isRecurring ? 'Recurring Donation Set Up!' : 'Thank You!'}
           </CardTitle>
-          <p className="text-muted-foreground mt-2">
-            {isRecurring 
-              ? `Your recurring donation has been set up successfully! You'll be charged ${interval}ly until you cancel. You can manage your subscription anytime.`
-              : 'Your donation was received and has been recorded to your account. We appreciate your support!'
-            }
-          </p>
+                     <p className="text-muted-foreground mt-2">
+             {isRecurring 
+               ? `Your recurring donation has been set up successfully! You'll be charged ${interval}ly until you cancel. You can manage your subscription anytime.`
+               : 'Your donation was received and has been recorded to your account. We appreciate your support!'
+             }
+           </p>
+           {isRecurring && (
+             <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+               <h3 className="font-semibold text-blue-800 mb-2">Manage Your Recurring Donation</h3>
+               <p className="text-sm text-blue-700 mb-3">
+                 You can view, modify, or cancel your recurring donation anytime using the link below.
+               </p>
+               <Button 
+                 onClick={() => {
+                   // For now, we'll redirect to a general management page
+                   // The customer can enter their email to find their subscriptions
+                   window.open(`/donate/manage`, '_blank');
+                 }}
+                 variant="outline"
+                 className="w-full"
+               >
+                 Manage Recurring Donation
+               </Button>
+             </div>
+           )}
         </CardHeader>
         <CardContent>
           <Button onClick={handleClose} className="w-full mt-4" size="lg">
