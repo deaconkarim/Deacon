@@ -23,8 +23,6 @@ export default function DonatePage() {
   const [fund, setFund] = useState('tithe');
   const [email, setEmail] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('card');
-  const [isRecurring, setIsRecurring] = useState(false);
-  const [recurringInterval, setRecurringInterval] = useState('month');
   const [coverFees, setCoverFees] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -91,8 +89,6 @@ export default function DonatePage() {
           fund_designation: fund,
           payment_method: paymentMethod,
           cover_fees: coverFees,
-          is_recurring: isRecurring,
-          recurring_interval: recurringInterval,
         }),
       });
       
@@ -246,44 +242,6 @@ export default function DonatePage() {
                 </p>
               )}
             </div>
-            
-            {/* Recurring Payment Options */}
-            <div className="space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="isRecurring"
-                  checked={isRecurring}
-                  onCheckedChange={setIsRecurring}
-                  disabled={loading}
-                />
-                <Label htmlFor="isRecurring" className="text-sm font-medium">
-                  Make this a recurring donation
-                </Label>
-              </div>
-              
-              {isRecurring && (
-                <div className="space-y-2">
-                  <Label htmlFor="recurring-interval">Frequency</Label>
-                  <Select value={recurringInterval} onValueChange={setRecurringInterval} disabled={loading}>
-                    <SelectTrigger id="recurring-interval">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="week">Weekly</SelectItem>
-                      <SelectItem value="month">Monthly</SelectItem>
-                      <SelectItem value="quarter">Quarterly</SelectItem>
-                      <SelectItem value="year">Yearly</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-blue-600">
-                    🔄 Your donation will be automatically charged every {recurringInterval === 'week' ? 'week' : 
-                    recurringInterval === 'month' ? 'month' : 
-                    recurringInterval === 'quarter' ? '3 months' : 'year'}
-                  </p>
-                </div>
-              )}
-            </div>
-            
             <div>
               <Label htmlFor="email">Email</Label>
               <div className="flex items-center mt-1">
@@ -349,10 +307,7 @@ export default function DonatePage() {
             )}
             <Button type="submit" className="w-full mt-2" disabled={loading}>
               {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              {isRecurring 
-                ? (coverFees ? `Start Recurring $${totalAmount.toFixed(2)}` : `Start Recurring $${parseFloat(amount).toFixed(2)}`)
-                : (coverFees ? `Give $${totalAmount.toFixed(2)}` : 'Give Now')
-              }
+              {coverFees ? `Give $${totalAmount.toFixed(2)}` : 'Give Now'}
             </Button>
           </form>
         </CardContent>
