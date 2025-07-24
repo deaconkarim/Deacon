@@ -19,7 +19,7 @@ export async function getDonations(filters = {}) {
       .from('donations')
       .select(`
         *,
-        donor:members(id, firstname, lastname, email, phone),
+        donor:members(id, firstname, lastname, email, phone, image_url),
         campaign:donation_campaigns(id, name),
         pledge:donation_pledges(id, pledge_amount),
         batch:donation_batches(id, name, batch_number, description, status)
@@ -82,7 +82,7 @@ export async function getDonation(id) {
       .from('donations')
       .select(`
         *,
-        donor:members(id, firstname, lastname, email, phone),
+        donor:members(id, firstname, lastname, email, phone, image_url),
         campaign:donation_campaigns(id, name),
         pledge:donation_pledges(id, pledge_amount),
         batch:donation_batches(id, name, batch_number, description, status)
@@ -793,7 +793,7 @@ export async function getDonationAnalytics(startDate, endDate) {
       .select(`
         donor_id,
         amount,
-        donor:members(firstname, lastname)
+        donor:members(id, firstname, lastname, image_url)
       `)
       .eq('organization_id', organizationId)
       .gte('date', startDate)
@@ -822,12 +822,13 @@ export async function getDonationAnalytics(startDate, endDate) {
         topDonorsData.reduce((acc, d) => {
           const key = d.donor_id;
           if (!acc[key]) {
-            acc[key] = {
-              donorId: d.donor_id,
-              name: `${d.donor.firstname} ${d.donor.lastname}`,
-              totalAmount: 0,
-              donationCount: 0
-            };
+                      acc[key] = {
+            donorId: d.donor_id,
+            name: `${d.donor.firstname} ${d.donor.lastname}`,
+            profile_image: d.donor.image_url || null,
+            totalAmount: 0,
+            donationCount: 0
+          };
           }
           acc[key].totalAmount += parseFloat(d.amount);
           acc[key].donationCount += 1;

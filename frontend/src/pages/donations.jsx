@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { format, parseISO, isValid, startOfYear, endOfYear, startOfMonth, endOfMonth } from 'date-fns';
 import { 
@@ -202,6 +203,9 @@ export function Donations() {
   // Donor search state for the donation dialog
   const [donorSearch, setDonorSearch] = useState('');
   const [isDonorDropdownOpen, setIsDonorDropdownOpen] = useState(false);
+  
+  // Navigation
+  const navigate = useNavigate();
 
   // Intelligence section visibility
   const [showIntelligence, setShowIntelligence] = useState(false);
@@ -1358,7 +1362,7 @@ export function Donations() {
                   <div className="space-y-2">
                     <div className="text-2xl font-bold text-indigo-600">
                       {(() => {
-                        const anonymousDonations = donations.filter(d => d.is_anonymous);
+                        const anonymousDonations = donations.filter(d => d.is_anonymous || !d.donor_id);
                         const anonymousTotal = anonymousDonations.reduce((sum, d) => sum + parseFloat(d.amount), 0);
                         const totalAmount = donations.reduce((sum, d) => sum + parseFloat(d.amount), 0);
                         return totalAmount > 0 ? `${(anonymousTotal / totalAmount * 100).toFixed(1)}%` : '0%';
@@ -1369,7 +1373,7 @@ export function Donations() {
                     </p>
                     <div className="text-xs text-slate-500 dark:text-slate-500">
                       {(() => {
-                        const anonymousDonations = donations.filter(d => d.is_anonymous);
+                        const anonymousDonations = donations.filter(d => d.is_anonymous || !d.donor_id);
                         const anonymousRate = anonymousDonations.length / Math.max(donations.length, 1) * 100;
                         if (anonymousRate > 25) return 'High privacy preference';
                         if (anonymousRate > 10) return 'Moderate anonymous giving';
@@ -1427,7 +1431,10 @@ export function Donations() {
                     <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950 dark:to-emerald-900 rounded-xl p-3 border border-emerald-200 dark:border-emerald-800">
                       <div className="text-xs font-medium text-emerald-700 dark:text-emerald-300 mb-1">Lowest</div>
                       <div className="text-lg font-bold text-emerald-900 dark:text-emerald-100">
-                        {formatCurrency(Math.min(...recentDonations.map(d => parseFloat(d.amount) || 0).filter(a => a > 0), 0))}
+                        {(() => {
+                          const positiveAmounts = recentDonations.map(d => parseFloat(d.amount) || 0).filter(a => a > 0);
+                          return positiveAmounts.length > 0 ? formatCurrency(Math.min(...positiveAmounts)) : formatCurrency(0);
+                        })()}
                       </div>
                     </div>
                     
@@ -1476,7 +1483,7 @@ export function Donations() {
                     <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 rounded-xl p-3 border border-gray-200 dark:border-gray-800">
                       <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Anonymous</div>
                       <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                        {recentDonations.filter(d => d.is_anonymous).length}
+                        {recentDonations.filter(d => d.is_anonymous || !d.donor_id).length}
                       </div>
                     </div>
                     
@@ -1547,6 +1554,158 @@ export function Donations() {
                         ));
                       })()}
                     </div>
+                  </div>
+
+                  {/* Top Donors */}
+                  <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Top Donors (Last 90 Days)</h4>
+                      <Button variant="outline" size="sm" className="text-xs">
+                        <TrendingUp className="h-3 w-3 mr-1" />
+                        View All Donors
+                      </Button>
+                    </div>
+                    
+                    {(() => {
+                      // Calculate donor statistics once
+                      const donorStats = {};
+                      recentDonations.forEach(donation => {
+                        if (donation.donor_id && donation.donor) {
+                          const donorKey = donation.donor_id;
+                          if (!donorStats[donorKey]) {
+                            donorStats[donorKey] = {
+                              id: donation.donor_id,
+                              name: `${donation.donor.firstname} ${donation.donor.lastname}`,
+                              profile_image: donation.donor.image_url || null,
+                              totalAmount: 0,
+                              donationCount: 0,
+                              lastDonation: donation.date
+                            };
+                          }
+                          donorStats[donorKey].totalAmount += parseFloat(donation.amount) || 0;
+                          donorStats[donorKey].donationCount += 1;
+                          if (donation.date > donorStats[donorKey].lastDonation) {
+                            donorStats[donorKey].lastDonation = donation.date;
+                          }
+                        }
+                      });
+
+                      const topDonors = Object.values(donorStats)
+                        .sort((a, b) => b.totalAmount - a.totalAmount)
+                        .slice(0, 10);
+
+                      const totalFromTopDonors = topDonors.reduce((sum, donor) => sum + donor.totalAmount, 0);
+                      const totalDonations = recentDonations.reduce((sum, d) => sum + parseFloat(d.amount), 0);
+                      const topDonorsPercentage = totalDonations > 0 ? Math.round((totalFromTopDonors / totalDonations) * 100) : 0;
+
+                      return (
+                        <>
+                          {/* Top Donors Summary */}
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                              <div className="flex items-center space-x-2">
+                                <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                <div className="text-sm font-medium text-blue-700 dark:text-blue-300">Active Donors</div>
+                              </div>
+                              <div className="text-2xl font-bold text-blue-900 dark:text-blue-100 mt-1">
+                                {Object.keys(donorStats).length}
+                              </div>
+                              <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                                In last 90 days
+                              </div>
+                            </div>
+                            
+                            <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 rounded-lg p-4 border border-green-200 dark:border-green-800">
+                              <div className="flex items-center space-x-2">
+                                <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
+                                <div className="text-sm font-medium text-green-700 dark:text-green-300">Top 10 Total</div>
+                              </div>
+                              <div className="text-2xl font-bold text-green-900 dark:text-green-100 mt-1">
+                                {formatCurrency(totalFromTopDonors)}
+                              </div>
+                              <div className="text-xs text-green-600 dark:text-green-400 mt-1">
+                                {topDonorsPercentage}% of total
+                              </div>
+                            </div>
+                            
+                            <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+                              <div className="flex items-center space-x-2">
+                                <Target className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                                <div className="text-sm font-medium text-purple-700 dark:text-purple-300">Avg Gift</div>
+                              </div>
+                              <div className="text-2xl font-bold text-purple-900 dark:text-purple-100 mt-1">
+                                {formatCurrency(Object.keys(donorStats).length > 0 ? Math.round(totalFromTopDonors / Object.keys(donorStats).length) : 0)}
+                              </div>
+                              <div className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+                                Per donor
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Top Donors List */}
+                          {topDonors.length === 0 ? (
+                            <div className="text-center py-8">
+                              <Users className="h-12 w-12 text-slate-400 mx-auto mb-3" />
+                              <p className="text-slate-600 dark:text-slate-400 mb-2">No donor data available</p>
+                              <p className="text-sm text-slate-500 dark:text-slate-300">
+                                Donor information will appear here once donations are recorded
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {topDonors.map((donor, index) => (
+                                <div 
+                                  key={donor.id} 
+                                  className="group cursor-pointer p-4 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200"
+                                  onClick={() => navigate(`/members/${donor.id}`)}
+                                  title={`View ${donor.name}'s profile`}
+                                >
+                                  <div className="flex items-center space-x-4">
+                                    <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full text-white font-bold text-sm">
+                                      {index + 1}
+                                    </div>
+                                    <div className="flex items-center space-x-3 flex-1">
+                                      <Avatar className="w-12 h-12 border-2 border-slate-200 dark:border-slate-600">
+                                        <AvatarImage 
+                                          src={donor.profile_image} 
+                                          alt={donor.name}
+                                        />
+                                        <AvatarFallback className="bg-gradient-to-br from-slate-400 to-slate-500 text-white font-semibold">
+                                          {donor.name ? donor.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : '??'}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="font-semibold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                          {donor.name}
+                                        </div>
+                                        <div className="text-sm text-slate-600 dark:text-slate-400">
+                                          {donor.donationCount} donation{donor.donationCount !== 1 ? 's' : ''} • 
+                                          Last: {format(parseISO(donor.lastDonation), 'MMM d, yyyy')}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="text-lg font-bold text-green-600 dark:text-green-400">
+                                        {formatCurrency(donor.totalAmount)}
+                                      </div>
+                                      <div className="text-sm text-slate-500 dark:text-slate-400">
+                                        Avg: {formatCurrency(Math.round(donor.totalAmount / donor.donationCount))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-600">
+                                    <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                                      <span>Click to view profile</span>
+                                      <ChevronRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 </>
               );
@@ -2056,7 +2215,15 @@ export function Donations() {
                                 ) : donation.donor ? (
                                   <div className="min-w-0 flex-1">
                                     <div className="font-medium text-xs sm:text-sm truncate">
-                                      {donation.donor.firstname} {donation.donor.lastname}
+                                      <a
+                                        href={`/members/${donation.donor.id}`}
+                                        className="text-blue-600 hover:underline font-medium"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        title={`View ${donation.donor.firstname} ${donation.donor.lastname}'s profile`}
+                                      >
+                                        {donation.donor.firstname} {donation.donor.lastname}
+                                      </a>
                                     </div>
                                     <div className="text-xs text-muted-foreground truncate hidden sm:block">
                                       {donation.donor.email}
@@ -2924,7 +3091,17 @@ export function Donations() {
                             <div className="flex-1">
                               <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
                                 {donation.is_anonymous ? 'Anonymous' : 
-                                 donation.donor ? `${donation.donor.firstname} ${donation.donor.lastname}` : 'N/A'}
+                                 donation.donor ? (
+                                   <a
+                                     href={`/members/${donation.donor.id}`}
+                                     className="text-blue-600 hover:underline font-medium"
+                                     target="_blank"
+                                     rel="noopener noreferrer"
+                                     title={`View ${donation.donor.firstname} ${donation.donor.lastname}'s profile`}
+                                   >
+                                     {donation.donor.firstname} {donation.donor.lastname}
+                                   </a>
+                                 ) : 'N/A'}
                               </div>
                             </div>
                           </div>
@@ -2980,7 +3157,17 @@ export function Donations() {
                                   </td>
                                   <td className="px-4 py-2 text-sm">
                                     {donation.is_anonymous ? 'Anonymous' : 
-                                     donation.donor ? `${donation.donor.firstname} ${donation.donor.lastname}` : 'N/A'}
+                                     donation.donor ? (
+                                       <a
+                                         href={`/members/${donation.donor.id}`}
+                                         className="text-blue-600 hover:underline font-medium"
+                                         target="_blank"
+                                         rel="noopener noreferrer"
+                                         title={`View ${donation.donor.firstname} ${donation.donor.lastname}'s profile`}
+                                       >
+                                         {donation.donor.firstname} {donation.donor.lastname}
+                                       </a>
+                                     ) : 'N/A'}
                                   </td>
                                   <td className="px-4 py-2 text-sm font-medium">
                                     {formatCurrency(donation.amount)}

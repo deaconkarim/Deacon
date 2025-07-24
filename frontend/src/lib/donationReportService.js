@@ -138,7 +138,7 @@ export const donationReportService = {
     const donorDemographics = {
       newDonors: 0,
       returningDonors: 0,
-      anonymousDonors: donations.filter(d => !d.members && !d.donor_name).length
+      anonymousDonors: donations.filter(d => d.is_anonymous || !d.donor_id).length
     };
 
     // Calculate new vs returning donors
