@@ -24,6 +24,7 @@ import { AdminCenter } from './pages/admin-center';
 import { Permissions } from './pages/permissions';
 import DonatePage from './pages/donate';
 import DonateSuccess from './pages/donate/success';
+import ManageSubscription from './pages/donate/manage-subscription';
 
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AdminRoute } from './components/AdminRoute';
@@ -49,8 +50,9 @@ function App() {
         <Route path="/invite/:invitationId" element={<PublicLayout><Invite /></PublicLayout>} />
         <Route path="/privacy-policy" element={<PublicLayout><PrivacyPolicy /></PublicLayout>} />
         <Route path="/terms-of-service" element={<PublicLayout><TermsOfService /></PublicLayout>} />
-        <Route path="/donate/success" element={<DonateSuccess />} />
-        <Route path="/donate/:slug" element={<DonatePage />} />
+                        <Route path="/donate/success" element={<DonateSuccess />} />
+                <Route path="/donate/manage" element={<ManageSubscription />} />
+                <Route path="/donate/:slug" element={<DonatePage />} />
         
         {/* Approval status route */}
         <Route path="/approval-status" element={<ApprovalStatus />} />
