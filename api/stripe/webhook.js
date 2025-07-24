@@ -125,12 +125,25 @@ export default async (req, res) => {
          return res.status(500).json({ error: 'Failed to process donation', details: error.message });
        }
      } else if (event.type === 'invoice.payment_succeeded') {
-       console.log('🔄 Processing invoice.payment_succeeded event (unverified)');
-       
-       try {
+                console.log('🔄 Processing invoice.payment_succeeded event (unverified)');
+         
+         try {
+           console.log('📋 Invoice data:', {
+             id: invoice.id,
+             subscription: invoice.subscription,
+             customer: invoice.customer,
+             amount_paid: invoice.amount_paid,
+             status: invoice.status
+           });
          const invoice = event.data.object;
          const subscription = invoice.subscription;
          const customer = invoice.customer;
+         
+         // Check if this invoice is associated with a subscription
+         if (!subscription) {
+           console.log('⚠️  Invoice is not associated with a subscription, skipping');
+           return res.json({ received: true });
+         }
          
          // Get subscription details
          const subscriptionData = await stripe.subscriptions.retrieve(subscription);
