@@ -86,7 +86,7 @@ export default function DonatePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           organization_id: org?.id || '',
-          amount: Math.round(parseFloat(amount) * 100),
+          amount: parseFloat(amount),
           donor_email: email,
           fund_designation: fund,
           payment_method: paymentMethod,

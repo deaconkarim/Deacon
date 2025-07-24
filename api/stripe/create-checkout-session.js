@@ -83,6 +83,7 @@ export default async (req, res) => {
     const totalAmount = cover_fees ? amount + feeAmount : amount;
 
     console.log(`Original amount: ${originalAmount}, Fee amount: ${feeAmount}, Total amount: ${totalAmount}, Cover fees: ${cover_fees}, Payment method: ${payment_method}`);
+    console.log(`Fee calculation: ${amount} * 0.029 + 0.30 = ${amount * 0.029} + 0.30 = ${amount * 0.029 + 0.30} = ${Math.round(amount * 0.029 + 0.30)}`);
 
     // Build the session creation object
     const sessionData = {
