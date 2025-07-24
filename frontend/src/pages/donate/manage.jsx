@@ -156,11 +156,17 @@ export default function ManageDonations() {
                         <span className="font-medium">{subscription.customer_email}</span>
                       </div>
                       <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                        subscription.status === 'active' 
-                          ? 'bg-green-100 text-green-700' 
+                        subscription.status === 'active' && subscription.cancel_at_period_end
+                          ? 'bg-yellow-100 text-yellow-700'
+                          : subscription.status === 'active'
+                          ? 'bg-green-100 text-green-700'
                           : 'bg-red-100 text-red-700'
                       }`}>
-                        {subscription.status === 'active' ? 'Active' : 'Canceled'}
+                        {subscription.status === 'active' && subscription.cancel_at_period_end
+                          ? 'Pending Cancellation'
+                          : subscription.status === 'active'
+                          ? 'Active'
+                          : 'Canceled'}
                       </span>
                     </div>
                     
@@ -178,7 +184,7 @@ export default function ManageDonations() {
                       </div>
                     </div>
 
-                    {subscription.status === 'active' && (
+                    {subscription.status === 'active' && !subscription.cancel_at_period_end && (
                       <div className="mt-4 pt-3 border-t">
                         <Button 
                           onClick={() => cancelSubscription(subscription.id)} 
@@ -187,6 +193,11 @@ export default function ManageDonations() {
                         >
                           Cancel Recurring Donation
                         </Button>
+                      </div>
+                    )}
+                    {subscription.status === 'active' && subscription.cancel_at_period_end && (
+                      <div className="mt-4 pt-3 border-t">
+                        <p className="text-xs text-yellow-700 text-center">This recurring donation will be canceled at the end of the current period.</p>
                       </div>
                     )}
                   </CardContent>

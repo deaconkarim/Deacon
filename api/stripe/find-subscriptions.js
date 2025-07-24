@@ -36,12 +36,15 @@ export default async function handler(req, res) {
       const subscriptions = await stripe.subscriptions.list({
         customer: customer.id,
         limit: 100,
+        expand: ['data.latest_invoice'],
       });
       
-      // Add customer email to each subscription for display
+      // Add customer email and current_period_end to each subscription for display
       const subscriptionsWithEmail = subscriptions.data.map(sub => ({
         ...sub,
         customer_email: customer.email,
+        current_period_end: sub.current_period_end,
+        // Optionally, you can add next_payment_attempt: sub.latest_invoice?.next_payment_attempt
       }));
       
       allSubscriptions.push(...subscriptionsWithEmail);
