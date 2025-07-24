@@ -50,6 +50,8 @@ export default function ManageDonations() {
       return;
     }
 
+    console.log('🔄 Canceling subscription:', subscriptionId);
+    
     try {
       const response = await fetch('/api/stripe/cancel-subscription', {
         method: 'POST',
@@ -57,13 +59,21 @@ export default function ManageDonations() {
         body: JSON.stringify({ subscriptionId }),
       });
 
+      console.log('📥 Cancel response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Failed to cancel subscription');
+        const errorText = await response.text();
+        console.error('❌ Cancel error response:', errorText);
+        throw new Error(`Failed to cancel subscription: ${response.status} ${response.statusText}`);
       }
+
+      const result = await response.json();
+      console.log('✅ Cancel success:', result);
 
       // Refresh the subscriptions list
       await findSubscriptions();
     } catch (err) {
+      console.error('💥 Cancel error:', err);
       setError(err.message);
     }
   };

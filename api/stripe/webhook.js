@@ -66,6 +66,7 @@ export default async (req, res) => {
 
          console.log(`📊 Processing donation for church ID: ${organization_id}, Amount: $${amount}, Email: ${donor_email}`);
          console.log(`💸 Fee details - Original: $${original_amount}, Fee: $${fee_amount}, Cover fees: ${cover_fees}`);
+         console.log(`🔄 Recurring details - Is recurring: ${is_recurring}, Subscription: ${session.subscription}, Mode: ${session.mode}`);
 
          // Get church name for logging
          const { data: org } = await supabase
@@ -104,6 +105,9 @@ export default async (req, res) => {
            campaign_id,
            payment_method,
            is_tax_deductible: true,
+           is_recurring: is_recurring,
+           subscription_id: is_recurring ? session.subscription : null,
+           recurring_interval: is_recurring ? metadata.recurring_interval : null,
            notes: `Stripe Connect donation${cover_fees ? ' (fees covered by donor)' : ''}${is_recurring ? ' - Recurring' : ''}`,
            metadata: {
              ...session,
@@ -111,7 +115,9 @@ export default async (req, res) => {
              fee_amount: fee_amount,
              cover_fees: cover_fees,
              total_paid: amount,
-             church_receives: original_amount
+             church_receives: original_amount,
+             is_recurring: is_recurring,
+             subscription_id: is_recurring ? session.subscription : null
            },
          });
 
@@ -121,6 +127,26 @@ export default async (req, res) => {
          } else {
            console.log(`✅ Successfully recorded donation for church: ${org?.name || organization_id}`);
            console.log(`💰 Church receives: $${original_amount}, Donor paid: $${amount}`);
+         }
+
+         // For recurring payments, update member record with subscription info
+         if (is_recurring && session.subscription && donor_id) {
+           console.log('📅 Updating member with subscription info...');
+           const { error: updateError } = await supabase
+             .from('members')
+             .update({
+               stripe_customer_id: session.customer,
+               subscription_id: session.subscription,
+               subscription_status: 'active',
+               updated_at: new Date().toISOString()
+             })
+             .eq('id', donor_id);
+           
+           if (updateError) {
+             console.error('❌ Error updating member subscription:', updateError);
+           } else {
+             console.log(`✅ Successfully updated member subscription info`);
+           }
          }
        } catch (error) {
          console.error('💥 Error processing donation:', error);
