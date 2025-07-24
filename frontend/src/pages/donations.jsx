@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { format, parseISO, isValid, startOfYear, endOfYear, startOfMonth, endOfMonth } from 'date-fns';
 import { 
@@ -143,12 +144,15 @@ export function Donations() {
   
   // Filters
   const [filters, setFilters] = useState({
-    startDate: format(startOfYear(new Date(new Date().getFullYear() - 1, 0, 1)), 'yyyy-MM-dd'), // Start of last year
-    endDate: format(endOfYear(new Date(new Date().getFullYear() + 1, 11, 31)), 'yyyy-MM-dd'), // End of next year
+    startDate: format(startOfYear(new Date(new Date().getFullYear() - 1, 0, 1)), 'yyyy-MM-dd'),
+    endDate: format(endOfYear(new Date(new Date().getFullYear() + 1, 11, 31)), 'yyyy-MM-dd'),
     donorId: '',
     campaignId: '',
     fundDesignation: 'all',
     paymentMethod: 'all',
+    isRecurring: 'all',
+    recurringInterval: 'all',
+    recurringStatus: 'all',
     search: '',
     minAmount: '',
     maxAmount: ''
@@ -199,6 +203,9 @@ export function Donations() {
   // Donor search state for the donation dialog
   const [donorSearch, setDonorSearch] = useState('');
   const [isDonorDropdownOpen, setIsDonorDropdownOpen] = useState(false);
+  
+  // Navigation
+  const navigate = useNavigate();
 
   // Intelligence section visibility
   const [showIntelligence, setShowIntelligence] = useState(false);
@@ -213,10 +220,7 @@ export function Donations() {
         const orgId = await getCurrentUserOrganizationId();
         setOrganizationId(orgId);
         
-        await Promise.all([
-          loadAllData(),
-          fetchOrgSlug()
-        ]);
+        await loadAllData();
       } catch (error) {
         console.error('Error loading data:', error);
       }
@@ -664,7 +668,11 @@ export function Donations() {
     switch (method) {
       case 'credit_card':
       case 'debit_card':
+      case 'Deacon - Credit Card':
         return <CreditCard className="h-4 w-4" />;
+      case 'ach':
+      case 'Deacon - ACH Transfer':
+        return <Banknote className="h-4 w-4" />;
       case 'cash':
         return <Banknote className="h-4 w-4" />;
       case 'check':
@@ -820,6 +828,60 @@ export function Donations() {
       progressPercentage: totalGoal > 0 ? (totalRaised / totalGoal) * 100 : 0
     };
   }, [campaigns]);
+
+  const filteredDonations = useMemo(() => {
+    return donations.filter(d => {
+      // Existing filters...
+      if (filters.isRecurring !== 'all') {
+        if (filters.isRecurring === 'true' && !d.is_recurring) return false;
+        if (filters.isRecurring === 'false' && d.is_recurring) return false;
+      }
+      if (filters.recurringInterval !== 'all') {
+        if (!d.is_recurring || d.recurring_interval !== filters.recurringInterval) return false;
+      }
+      if (filters.recurringStatus !== 'all') {
+        if (!d.is_recurring) return false;
+        // Assume d.subscription_status is available, or infer from metadata if needed
+        if (filters.recurringStatus === 'active' && d.subscription_status !== 'active') return false;
+        if (filters.recurringStatus === 'pending_cancellation' && d.subscription_status !== 'pending_cancellation' && !d.cancel_at_period_end) return false;
+        if (filters.recurringStatus === 'canceled' && d.subscription_status !== 'canceled') return false;
+      }
+      // ...other filters...
+      return true;
+    });
+  }, [donations, filters]);
+
+  const recurringStats = useMemo(() => {
+    const recurring = donations.filter(d => d.is_recurring === true || d.is_recurring === 'true' || d.is_recurring === 1 || d.is_recurring === '1');
+    const oneTime = donations.filter(d => !d.is_recurring || d.is_recurring === false || d.is_recurring === 'false' || d.is_recurring === 0 || d.is_recurring === '0');
+    const byInterval = {};
+    const byStatus = { active: 0, pending_cancellation: 0, canceled: 0 };
+    recurring.forEach(d => {
+      const interval = d.recurring_interval || 'unknown';
+      byInterval[interval] = (byInterval[interval] || 0) + parseFloat(d.amount);
+      // Status: use d.subscription_status or infer from metadata/cancel_at_period_end
+      if (d.subscription_status === 'canceled') byStatus.canceled++;
+      else if (d.cancel_at_period_end) byStatus.pending_cancellation++;
+      else byStatus.active++;
+    });
+    return {
+      recurringCount: recurring.length,
+      recurringTotal: recurring.reduce((sum, d) => sum + parseFloat(d.amount), 0),
+      oneTimeCount: oneTime.length,
+      oneTimeTotal: oneTime.reduce((sum, d) => sum + parseFloat(d.amount), 0),
+      byInterval,
+      byStatus
+    };
+  }, [donations]);
+
+  const paymentMethodStats = useMemo(() => {
+    const stats = {};
+    donations.forEach(d => {
+      const method = d.payment_method || 'unknown';
+      stats[method] = (stats[method] || 0) + parseFloat(d.amount);
+    });
+    return stats;
+  }, [donations]);
 
   return (
     <div className="w-full max-w-full overflow-x-hidden">
@@ -1300,7 +1362,7 @@ export function Donations() {
                   <div className="space-y-2">
                     <div className="text-2xl font-bold text-indigo-600">
                       {(() => {
-                        const anonymousDonations = donations.filter(d => d.is_anonymous);
+                        const anonymousDonations = donations.filter(d => d.is_anonymous || !d.donor_id);
                         const anonymousTotal = anonymousDonations.reduce((sum, d) => sum + parseFloat(d.amount), 0);
                         const totalAmount = donations.reduce((sum, d) => sum + parseFloat(d.amount), 0);
                         return totalAmount > 0 ? `${(anonymousTotal / totalAmount * 100).toFixed(1)}%` : '0%';
@@ -1311,7 +1373,7 @@ export function Donations() {
                     </p>
                     <div className="text-xs text-slate-500 dark:text-slate-500">
                       {(() => {
-                        const anonymousDonations = donations.filter(d => d.is_anonymous);
+                        const anonymousDonations = donations.filter(d => d.is_anonymous || !d.donor_id);
                         const anonymousRate = anonymousDonations.length / Math.max(donations.length, 1) * 100;
                         if (anonymousRate > 25) return 'High privacy preference';
                         if (anonymousRate > 10) return 'Moderate anonymous giving';
@@ -1369,7 +1431,10 @@ export function Donations() {
                     <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950 dark:to-emerald-900 rounded-xl p-3 border border-emerald-200 dark:border-emerald-800">
                       <div className="text-xs font-medium text-emerald-700 dark:text-emerald-300 mb-1">Lowest</div>
                       <div className="text-lg font-bold text-emerald-900 dark:text-emerald-100">
-                        {formatCurrency(Math.min(...recentDonations.map(d => parseFloat(d.amount) || 0).filter(a => a > 0), 0))}
+                        {(() => {
+                          const positiveAmounts = recentDonations.map(d => parseFloat(d.amount) || 0).filter(a => a > 0);
+                          return positiveAmounts.length > 0 ? formatCurrency(Math.min(...positiveAmounts)) : formatCurrency(0);
+                        })()}
                       </div>
                     </div>
                     
@@ -1418,7 +1483,7 @@ export function Donations() {
                     <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 rounded-xl p-3 border border-gray-200 dark:border-gray-800">
                       <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Anonymous</div>
                       <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                        {recentDonations.filter(d => d.is_anonymous).length}
+                        {recentDonations.filter(d => d.is_anonymous || !d.donor_id).length}
                       </div>
                     </div>
                     
@@ -1490,6 +1555,158 @@ export function Donations() {
                       })()}
                     </div>
                   </div>
+
+                  {/* Top Donors */}
+                  <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Top Donors (Last 90 Days)</h4>
+                      <Button variant="outline" size="sm" className="text-xs">
+                        <TrendingUp className="h-3 w-3 mr-1" />
+                        View All Donors
+                      </Button>
+                    </div>
+                    
+                    {(() => {
+                      // Calculate donor statistics once
+                      const donorStats = {};
+                      recentDonations.forEach(donation => {
+                        if (donation.donor_id && donation.donor) {
+                          const donorKey = donation.donor_id;
+                          if (!donorStats[donorKey]) {
+                            donorStats[donorKey] = {
+                              id: donation.donor_id,
+                              name: `${donation.donor.firstname} ${donation.donor.lastname}`,
+                              profile_image: donation.donor.image_url || null,
+                              totalAmount: 0,
+                              donationCount: 0,
+                              lastDonation: donation.date
+                            };
+                          }
+                          donorStats[donorKey].totalAmount += parseFloat(donation.amount) || 0;
+                          donorStats[donorKey].donationCount += 1;
+                          if (donation.date > donorStats[donorKey].lastDonation) {
+                            donorStats[donorKey].lastDonation = donation.date;
+                          }
+                        }
+                      });
+
+                      const topDonors = Object.values(donorStats)
+                        .sort((a, b) => b.totalAmount - a.totalAmount)
+                        .slice(0, 10);
+
+                      const totalFromTopDonors = topDonors.reduce((sum, donor) => sum + donor.totalAmount, 0);
+                      const totalDonations = recentDonations.reduce((sum, d) => sum + parseFloat(d.amount), 0);
+                      const topDonorsPercentage = totalDonations > 0 ? Math.round((totalFromTopDonors / totalDonations) * 100) : 0;
+
+                      return (
+                        <>
+                          {/* Top Donors Summary */}
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                              <div className="flex items-center space-x-2">
+                                <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                <div className="text-sm font-medium text-blue-700 dark:text-blue-300">Active Donors</div>
+                              </div>
+                              <div className="text-2xl font-bold text-blue-900 dark:text-blue-100 mt-1">
+                                {Object.keys(donorStats).length}
+                              </div>
+                              <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                                In last 90 days
+                              </div>
+                            </div>
+                            
+                            <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 rounded-lg p-4 border border-green-200 dark:border-green-800">
+                              <div className="flex items-center space-x-2">
+                                <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
+                                <div className="text-sm font-medium text-green-700 dark:text-green-300">Top 10 Total</div>
+                              </div>
+                              <div className="text-2xl font-bold text-green-900 dark:text-green-100 mt-1">
+                                {formatCurrency(totalFromTopDonors)}
+                              </div>
+                              <div className="text-xs text-green-600 dark:text-green-400 mt-1">
+                                {topDonorsPercentage}% of total
+                              </div>
+                            </div>
+                            
+                            <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+                              <div className="flex items-center space-x-2">
+                                <Target className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                                <div className="text-sm font-medium text-purple-700 dark:text-purple-300">Avg Gift</div>
+                              </div>
+                              <div className="text-2xl font-bold text-purple-900 dark:text-purple-100 mt-1">
+                                {formatCurrency(Object.keys(donorStats).length > 0 ? Math.round(totalFromTopDonors / Object.keys(donorStats).length) : 0)}
+                              </div>
+                              <div className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+                                Per donor
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Top Donors List */}
+                          {topDonors.length === 0 ? (
+                            <div className="text-center py-8">
+                              <Users className="h-12 w-12 text-slate-400 mx-auto mb-3" />
+                              <p className="text-slate-600 dark:text-slate-400 mb-2">No donor data available</p>
+                              <p className="text-sm text-slate-500 dark:text-slate-300">
+                                Donor information will appear here once donations are recorded
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {topDonors.map((donor, index) => (
+                                <div 
+                                  key={donor.id} 
+                                  className="group cursor-pointer p-4 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200"
+                                  onClick={() => navigate(`/members/${donor.id}`)}
+                                  title={`View ${donor.name}'s profile`}
+                                >
+                                  <div className="flex items-center space-x-4">
+                                    <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full text-white font-bold text-sm">
+                                      {index + 1}
+                                    </div>
+                                    <div className="flex items-center space-x-3 flex-1">
+                                      <Avatar className="w-12 h-12 border-2 border-slate-200 dark:border-slate-600">
+                                        <AvatarImage 
+                                          src={donor.profile_image} 
+                                          alt={donor.name}
+                                        />
+                                        <AvatarFallback className="bg-gradient-to-br from-slate-400 to-slate-500 text-white font-semibold">
+                                          {donor.name ? donor.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : '??'}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="font-semibold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                          {donor.name}
+                                        </div>
+                                        <div className="text-sm text-slate-600 dark:text-slate-400">
+                                          {donor.donationCount} donation{donor.donationCount !== 1 ? 's' : ''} • 
+                                          Last: {format(parseISO(donor.lastDonation), 'MMM d, yyyy')}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="text-lg font-bold text-green-600 dark:text-green-400">
+                                        {formatCurrency(donor.totalAmount)}
+                                      </div>
+                                      <div className="text-sm text-slate-500 dark:text-slate-400">
+                                        Avg: {formatCurrency(Math.round(donor.totalAmount / donor.donationCount))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-600">
+                                    <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                                      <span>Click to view profile</span>
+                                      <ChevronRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
                 </>
               );
             })()}
@@ -1551,7 +1768,7 @@ export function Donations() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="payment-method">Payment Method</Label>
-                <Select value={filters.paymentMethod} onValueChange={(value) => setFilters({...filters, paymentMethod: value})}>
+                <Select value={filters.paymentMethod} onValueChange={value => setFilters({...filters, paymentMethod: value})}>
                   <SelectTrigger>
                     <SelectValue placeholder="All methods" />
                   </SelectTrigger>
@@ -1560,7 +1777,11 @@ export function Donations() {
                     <SelectItem value="cash">Cash</SelectItem>
                     <SelectItem value="check">Check</SelectItem>
                     <SelectItem value="credit_card">Credit Card</SelectItem>
+                    <SelectItem value="debit_card">Debit Card</SelectItem>
+                    <SelectItem value="ach">ACH Transfer</SelectItem>
                     <SelectItem value="online">Online</SelectItem>
+                    <SelectItem value="Deacon - Credit Card">Deacon - Credit Card</SelectItem>
+                    <SelectItem value="Deacon - ACH Transfer">Deacon - ACH Transfer</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1582,6 +1803,48 @@ export function Donations() {
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Apply Filters
                 </Button>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="is-recurring">Recurring</Label>
+                <Select value={filters.isRecurring} onValueChange={value => setFilters({...filters, isRecurring: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="true">Recurring</SelectItem>
+                    <SelectItem value="false">One-time</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="recurring-interval">Interval</Label>
+                <Select value={filters.recurringInterval} onValueChange={value => setFilters({...filters, recurringInterval: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="week">Weekly</SelectItem>
+                    <SelectItem value="month">Monthly</SelectItem>
+                    <SelectItem value="quarter">Quarterly</SelectItem>
+                    <SelectItem value="year">Yearly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="recurring-status">Recurring Status</Label>
+                <Select value={filters.recurringStatus} onValueChange={value => setFilters({...filters, recurringStatus: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="pending_cancellation">Pending Cancellation</SelectItem>
+                    <SelectItem value="canceled">Canceled</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardContent>
@@ -1736,7 +1999,7 @@ export function Donations() {
                         </div>
                       ))}
                     </div>
-                  ) : donations.length === 0 ? (
+                  ) : filteredDonations.length === 0 ? (
                     <div className="p-8 text-center text-muted-foreground">
                       <DollarSign className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
                       <h3 className="text-lg font-semibold mb-2">No Donations Found</h3>
@@ -1748,7 +2011,7 @@ export function Donations() {
                     </div>
                   ) : (
                     <div className="space-y-3 p-4">
-                      {donations.map((donation) => (
+                      {filteredDonations.map((donation) => (
                         <div key={donation.id} className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4 shadow-sm hover:shadow-md transition-shadow">
                           {/* Header with date and amount */}
                           <div className="flex justify-between items-start mb-3">
@@ -1908,6 +2171,7 @@ export function Donations() {
                         <th className="p-3 sm:p-4 font-medium text-xs sm:text-sm">Date</th>
                         <th className="p-3 sm:p-4 font-medium text-xs sm:text-sm">Donor</th>
                         <th className="p-3 sm:p-4 font-medium text-xs sm:text-sm">Amount</th>
+                        <th className="p-3 sm:p-4 font-medium text-xs sm:text-sm">Recurring</th>
                         <th className="p-3 sm:p-4 font-medium text-xs sm:text-sm">Method</th>
                         <th className="p-3 sm:p-4 font-medium text-xs sm:text-sm">Fund</th>
                         <th className="p-3 sm:p-4 font-medium text-xs sm:text-sm hidden lg:table-cell">Campaign</th>
@@ -1923,20 +2187,21 @@ export function Donations() {
                             <td className="p-3 sm:p-4"><Skeleton className="h-4 w-24 sm:w-32" /></td>
                             <td className="p-3 sm:p-4"><Skeleton className="h-4 w-12 sm:w-16" /></td>
                             <td className="p-3 sm:p-4"><Skeleton className="h-4 w-16 sm:w-20" /></td>
+                            <td className="p-3 sm:p-4"><Skeleton className="h-4 w-16 sm:w-20" /></td>
                             <td className="p-3 sm:p-4"><Skeleton className="h-4 w-20 sm:w-24" /></td>
                             <td className="p-3 sm:p-4 hidden lg:table-cell"><Skeleton className="h-4 w-24 sm:w-28" /></td>
                             <td className="p-3 sm:p-4 hidden lg:table-cell"><Skeleton className="h-4 w-20 sm:w-24" /></td>
                             <td className="p-3 sm:p-4"><Skeleton className="h-4 w-16 sm:w-20" /></td>
                           </tr>
                         ))
-                      ) : donations.length === 0 ? (
+                      ) : filteredDonations.length === 0 ? (
                         <tr>
-                          <td colSpan="8" className="p-6 sm:p-8 text-center text-muted-foreground text-sm sm:text-base">
+                          <td colSpan="9" className="p-6 sm:p-8 text-center text-muted-foreground text-sm sm:text-base">
                             No donations found for the selected filters
                           </td>
                         </tr>
                       ) : (
-                        donations.map((donation) => (
+                        filteredDonations.map((donation) => (
                           <tr key={donation.id} className="border-b hover:bg-muted/50 transition-colors">
                             <td className="p-3 sm:p-4">
                               <div className="text-xs sm:text-sm font-medium">
@@ -1950,7 +2215,15 @@ export function Donations() {
                                 ) : donation.donor ? (
                                   <div className="min-w-0 flex-1">
                                     <div className="font-medium text-xs sm:text-sm truncate">
-                                      {donation.donor.firstname} {donation.donor.lastname}
+                                      <a
+                                        href={`/members/${donation.donor.id}`}
+                                        className="text-blue-600 hover:underline font-medium"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        title={`View ${donation.donor.firstname} ${donation.donor.lastname}'s profile`}
+                                      >
+                                        {donation.donor.firstname} {donation.donor.lastname}
+                                      </a>
                                     </div>
                                     <div className="text-xs text-muted-foreground truncate hidden sm:block">
                                       {donation.donor.email}
@@ -1965,6 +2238,17 @@ export function Donations() {
                               <div className="font-semibold text-emerald-600 text-sm sm:text-base">
                                 {formatCurrency(donation.amount)}
                               </div>
+                            </td>
+                            <td className="p-3 sm:p-4">
+                              {(donation.is_recurring === true || donation.is_recurring === 'true' || donation.is_recurring === 1 || donation.is_recurring === '1') ? (
+                                <Badge variant="default" className="bg-purple-600 text-white border-purple-700" title={`Recurring ${donation.recurring_interval}ly donation`}>
+                                  {donation.recurring_interval === 'week' ? 'Weekly' :
+                                   donation.recurring_interval === 'month' ? 'Monthly' :
+                                   donation.recurring_interval === 'quarter' ? 'Quarterly' :
+                                   donation.recurring_interval === 'year' ? 'Yearly' :
+                                   'Recurring'}
+                                </Badge>
+                              ) : null}
                             </td>
                             <td className="p-3 sm:p-4">
                               <div className="flex items-center space-x-2">
@@ -2328,8 +2612,9 @@ export function Donations() {
                       <SelectItem value="check">Check</SelectItem>
                       <SelectItem value="credit_card">Credit Card</SelectItem>
                       <SelectItem value="debit_card">Debit Card</SelectItem>
-                      <SelectItem value="ach">ACH Transfer</SelectItem>
                       <SelectItem value="online">Online Payment</SelectItem>
+                      <SelectItem value="Deacon - Credit Card">Deacon - Credit Card</SelectItem>
+                      <SelectItem value="Deacon - ACH Transfer">Deacon - ACH Transfer</SelectItem>
                       <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
@@ -2344,6 +2629,8 @@ export function Donations() {
                   />
                 </div>
               </div>
+              
+
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -2804,7 +3091,17 @@ export function Donations() {
                             <div className="flex-1">
                               <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
                                 {donation.is_anonymous ? 'Anonymous' : 
-                                 donation.donor ? `${donation.donor.firstname} ${donation.donor.lastname}` : 'N/A'}
+                                 donation.donor ? (
+                                   <a
+                                     href={`/members/${donation.donor.id}`}
+                                     className="text-blue-600 hover:underline font-medium"
+                                     target="_blank"
+                                     rel="noopener noreferrer"
+                                     title={`View ${donation.donor.firstname} ${donation.donor.lastname}'s profile`}
+                                   >
+                                     {donation.donor.firstname} {donation.donor.lastname}
+                                   </a>
+                                 ) : 'N/A'}
                               </div>
                             </div>
                           </div>
@@ -2860,7 +3157,17 @@ export function Donations() {
                                   </td>
                                   <td className="px-4 py-2 text-sm">
                                     {donation.is_anonymous ? 'Anonymous' : 
-                                     donation.donor ? `${donation.donor.firstname} ${donation.donor.lastname}` : 'N/A'}
+                                     donation.donor ? (
+                                       <a
+                                         href={`/members/${donation.donor.id}`}
+                                         className="text-blue-600 hover:underline font-medium"
+                                         target="_blank"
+                                         rel="noopener noreferrer"
+                                         title={`View ${donation.donor.firstname} ${donation.donor.lastname}'s profile`}
+                                       >
+                                         {donation.donor.firstname} {donation.donor.lastname}
+                                       </a>
+                                     ) : 'N/A'}
                                   </td>
                                   <td className="px-4 py-2 text-sm font-medium">
                                     {formatCurrency(donation.amount)}
@@ -3056,6 +3363,54 @@ export function Donations() {
           </CardContent>
         </Card>
       </motion.div>
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Donation Analytics</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <div className="text-xs text-slate-500 mb-1">Recurring Donations</div>
+              <div className="text-lg font-bold text-purple-700">{recurringStats.recurringCount}</div>
+              <div className="text-xs text-slate-500">Total: {formatCurrency(recurringStats.recurringTotal)}</div>
+            </div>
+            <div>
+              <div className="text-xs text-slate-500 mb-1">One-time Donations</div>
+              <div className="text-lg font-bold text-blue-700">{recurringStats.oneTimeCount}</div>
+              <div className="text-xs text-slate-500">Total: {formatCurrency(recurringStats.oneTimeTotal)}</div>
+            </div>
+            <div>
+              <div className="text-xs text-slate-500 mb-1">Recurring by Interval</div>
+              <div className="text-xs">
+                {Object.entries(recurringStats.byInterval).map(([interval, total]) => (
+                  <div key={interval} className="capitalize">{interval}: {formatCurrency(total)}</div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-slate-500 mb-1">Recurring Status</div>
+              <div className="text-xs">
+                <div>Active: {recurringStats.byStatus.active}</div>
+                <div>Pending Cancellation: {recurringStats.byStatus.pending_cancellation}</div>
+                <div>Canceled: {recurringStats.byStatus.canceled}</div>
+              </div>
+            </div>
+            <div className="col-span-2 md:col-span-4">
+              <div className="text-xs text-slate-500 mb-1">Totals by Payment Method</div>
+              <div className="flex flex-wrap gap-4">
+                {Object.entries(paymentMethodStats).map(([method, total]) => (
+                  <div key={method} className="flex items-center gap-2">
+                    {getPaymentMethodIcon(method)}
+                    <span className="capitalize">{method}:</span>
+                    <span className="font-bold">{formatCurrency(total)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
       </motion.div>
     </div>
   );
