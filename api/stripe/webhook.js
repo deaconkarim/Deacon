@@ -1,11 +1,16 @@
 import Stripe from 'stripe';
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+
+// Use test mode if STRIPE_TEST_MODE is set to 'true'
+const isTestMode = process.env.STRIPE_TEST_MODE === 'true';
+const stripeKey = isTestMode ? process.env.STRIPE_TEST_SECRET_KEY : process.env.STRIPE_SECRET_KEY;
+const endpointSecret = isTestMode ? process.env.STRIPE_TEST_WEBHOOK_SECRET : process.env.STRIPE_WEBHOOK_SECRET;
+
+const stripe = Stripe(stripeKey);
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-// Set your Stripe webhook secret in .env
-const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+console.log(`🔧 Webhook Mode: ${isTestMode ? 'TEST' : 'LIVE'}`);
 
 // Log environment variables for debugging (without exposing secrets)
 console.log('🔧 Environment check:', {
@@ -118,6 +123,121 @@ export default async (req, res) => {
        } catch (error) {
          console.error('💥 Error processing donation:', error);
          return res.status(500).json({ error: 'Failed to process donation', details: error.message });
+       }
+     } else if (event.type === 'invoice.payment_succeeded') {
+       console.log('🔄 Processing invoice.payment_succeeded event (unverified)');
+       
+       try {
+         const invoice = event.data.object;
+         const subscription = invoice.subscription;
+         const customer = invoice.customer;
+         
+         // Get subscription details
+         const subscriptionData = await stripe.subscriptions.retrieve(subscription);
+         const metadata = subscriptionData.metadata || {};
+         
+         const amount = invoice.amount_paid / 100;
+         const organization_id = metadata.organization_id;
+         const fund_designation = metadata.fund_designation || null;
+         const campaign_id = metadata.campaign_id || null;
+         const payment_method = metadata.payment_method === 'ach' ? 'ach' : 'online';
+         const date = new Date().toISOString().split('T')[0];
+         
+         // Handle fee coverage metadata
+         const original_amount = metadata.original_amount ? parseFloat(metadata.original_amount) / 100 : amount;
+         const fee_amount = metadata.fee_amount ? parseFloat(metadata.fee_amount) / 100 : 0;
+         const cover_fees = metadata.cover_fees === 'true';
+         
+         console.log(`📊 Processing recurring donation for church ID: ${organization_id}, Amount: $${amount}`);
+         
+         // Get church name for logging
+         const { data: org } = await supabase
+           .from('organizations')
+           .select('name')
+           .eq('id', organization_id)
+           .single();
+         
+         // Look up donor/member by customer ID
+         let donor_id = null;
+         const { data: member, error: memberError } = await supabase
+           .from('members')
+           .select('id')
+           .eq('stripe_customer_id', customer)
+           .eq('organization_id', organization_id)
+           .single();
+         
+         if (!memberError && member) {
+           donor_id = member.id;
+           console.log(`👤 Found existing member: ${donor_id}`);
+         }
+         
+         // Insert donation record
+         console.log('💾 Inserting recurring donation record...');
+         const { error: insertError } = await supabase.from('donations').insert({
+           organization_id,
+           donor_id,
+           amount: original_amount,
+           date,
+           fund_designation,
+           campaign_id,
+           payment_method,
+           is_tax_deductible: true,
+           is_recurring: true,
+           subscription_id: subscription,
+           notes: `Recurring donation${cover_fees ? ' (fees covered by donor)' : ''}`,
+           metadata: {
+             ...invoice,
+             subscription_id: subscription,
+             customer_id: customer,
+             original_amount: original_amount,
+             fee_amount: fee_amount,
+             cover_fees: cover_fees,
+             total_paid: amount
+           },
+         });
+         
+         if (insertError) {
+           console.error('❌ Error inserting recurring donation:', insertError);
+           throw new Error(`Database error: ${insertError.message}`);
+         } else {
+           console.log(`✅ Successfully recorded recurring donation for church: ${org?.name || organization_id}`);
+           console.log(`💰 Church receives: $${original_amount}, Donor paid: $${amount}`);
+         }
+       } catch (error) {
+         console.error('💥 Error processing recurring donation:', error);
+         return res.status(500).json({ error: 'Failed to process recurring donation', details: error.message });
+       }
+     } else if (event.type === 'customer.subscription.created') {
+       console.log('📅 Processing customer.subscription.created event (unverified)');
+       
+       try {
+         const subscription = event.data.object;
+         const metadata = subscription.metadata || {};
+         const customer = subscription.customer;
+         const organization_id = metadata.organization_id;
+         
+         console.log(`📅 New subscription created for church ID: ${organization_id}, Customer: ${customer}`);
+         
+         // Update member record with subscription info
+         const { error: updateError } = await supabase
+           .from('members')
+           .update({
+             stripe_customer_id: customer,
+             subscription_id: subscription.id,
+             subscription_status: subscription.status,
+             updated_at: new Date().toISOString()
+           })
+           .eq('stripe_customer_id', customer)
+           .eq('organization_id', organization_id);
+         
+         if (updateError) {
+           console.error('❌ Error updating member subscription:', updateError);
+         } else {
+           console.log(`✅ Successfully updated member subscription info`);
+         }
+       } catch (error) {
+         console.error('💥 Error processing subscription creation:', error);
+         return res.status(500).json({ error: 'Failed to process subscription creation', details: error.message });
        }
      }
     
@@ -261,6 +381,121 @@ export default async (req, res) => {
     } catch (error) {
       console.error('💥 Error processing donation:', error);
       return res.status(500).json({ error: 'Failed to process donation', details: error.message });
+    }
+  } else if (event.type === 'invoice.payment_succeeded') {
+    console.log('🔄 Processing invoice.payment_succeeded event');
+    
+    try {
+      const invoice = event.data.object;
+      const subscription = invoice.subscription;
+      const customer = invoice.customer;
+      
+      // Get subscription details
+      const subscriptionData = await stripe.subscriptions.retrieve(subscription);
+      const metadata = subscriptionData.metadata || {};
+      
+      const amount = invoice.amount_paid / 100;
+      const organization_id = metadata.organization_id;
+      const fund_designation = metadata.fund_designation || null;
+      const campaign_id = metadata.campaign_id || null;
+      const payment_method = metadata.payment_method === 'ach' ? 'ach' : 'online';
+      const date = new Date().toISOString().split('T')[0];
+      
+      // Handle fee coverage metadata
+      const original_amount = metadata.original_amount ? parseFloat(metadata.original_amount) / 100 : amount;
+      const fee_amount = metadata.fee_amount ? parseFloat(metadata.fee_amount) / 100 : 0;
+      const cover_fees = metadata.cover_fees === 'true';
+      
+      console.log(`📊 Processing recurring donation for church ID: ${organization_id}, Amount: $${amount}`);
+      
+      // Get church name for logging
+      const { data: org } = await supabase
+        .from('organizations')
+        .select('name')
+        .eq('id', organization_id)
+        .single();
+      
+      // Look up donor/member by customer ID
+      let donor_id = null;
+      const { data: member, error: memberError } = await supabase
+        .from('members')
+        .select('id')
+        .eq('stripe_customer_id', customer)
+        .eq('organization_id', organization_id)
+        .single();
+      
+      if (!memberError && member) {
+        donor_id = member.id;
+        console.log(`👤 Found existing member: ${donor_id}`);
+      }
+      
+      // Insert donation record
+      console.log('💾 Inserting recurring donation record...');
+      const { error: insertError } = await supabase.from('donations').insert({
+        organization_id,
+        donor_id,
+        amount: original_amount,
+        date,
+        fund_designation,
+        campaign_id,
+        payment_method,
+        is_tax_deductible: true,
+        is_recurring: true,
+        subscription_id: subscription,
+        notes: `Recurring donation${cover_fees ? ' (fees covered by donor)' : ''}`,
+        metadata: {
+          ...invoice,
+          subscription_id: subscription,
+          customer_id: customer,
+          original_amount: original_amount,
+          fee_amount: fee_amount,
+          cover_fees: cover_fees,
+          total_paid: amount
+        },
+      });
+      
+      if (insertError) {
+        console.error('❌ Error inserting recurring donation:', insertError);
+        throw new Error(`Database error: ${insertError.message}`);
+      } else {
+        console.log(`✅ Successfully recorded recurring donation for church: ${org?.name || organization_id}`);
+        console.log(`💰 Church receives: $${original_amount}, Donor paid: $${amount}`);
+      }
+    } catch (error) {
+      console.error('💥 Error processing recurring donation:', error);
+      return res.status(500).json({ error: 'Failed to process recurring donation', details: error.message });
+    }
+  } else if (event.type === 'customer.subscription.created') {
+    console.log('📅 Processing customer.subscription.created event');
+    
+    try {
+      const subscription = event.data.object;
+      const metadata = subscription.metadata || {};
+      const customer = subscription.customer;
+      const organization_id = metadata.organization_id;
+      
+      console.log(`📅 New subscription created for church ID: ${organization_id}, Customer: ${customer}`);
+      
+      // Update member record with subscription info
+      const { error: updateError } = await supabase
+        .from('members')
+        .update({
+          stripe_customer_id: customer,
+          subscription_id: subscription.id,
+          subscription_status: subscription.status,
+          updated_at: new Date().toISOString()
+        })
+        .eq('stripe_customer_id', customer)
+        .eq('organization_id', organization_id);
+      
+      if (updateError) {
+        console.error('❌ Error updating member subscription:', updateError);
+      } else {
+        console.log(`✅ Successfully updated member subscription info`);
+      }
+    } catch (error) {
+      console.error('💥 Error processing subscription creation:', error);
+      return res.status(500).json({ error: 'Failed to process subscription creation', details: error.message });
     }
   }
 
