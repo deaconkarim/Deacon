@@ -1,5 +1,11 @@
 import Stripe from 'stripe';
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+
+// Use test mode if STRIPE_TEST_MODE is set to 'true'
+const isTestMode = process.env.STRIPE_TEST_MODE === 'true';
+const stripeKey = isTestMode ? process.env.STRIPE_TEST_SECRET_KEY : process.env.STRIPE_SECRET_KEY;
+const stripe = Stripe(stripeKey);
+
+console.log(`🔧 Stripe Mode: ${isTestMode ? 'TEST' : 'LIVE'}`);
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);

@@ -1,6 +1,11 @@
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+// Use test mode if STRIPE_TEST_MODE is set to 'true'
+const isTestMode = process.env.STRIPE_TEST_MODE === 'true';
+const stripeKey = isTestMode ? process.env.STRIPE_TEST_SECRET_KEY : process.env.STRIPE_SECRET_KEY;
+const stripe = new Stripe(stripeKey);
+
+console.log(`🔧 Get Subscription Mode: ${isTestMode ? 'TEST' : 'LIVE'}`);
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
