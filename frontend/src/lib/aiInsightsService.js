@@ -171,24 +171,24 @@ export class SmartInsightsQueries {
       sixMonthsAgo.setDate(sixMonthsAgo.getDate() - 180); // 6 months
 
       const { data: historicalAttendance, error } = await supabase
-        .from('event_attendance')
-        .select(`
+      .from('event_attendance')
+      .select(`
           id,
-          member_id,
+        member_id,
           event_id,
           created_at,
           events (
-            id,
-            title,
+          id,
+          title,
             end_date,
             event_type
-          )
-        `)
+        )
+      `)
         .eq('organization_id', organizationId)
         .gte('created_at', sixMonthsAgo.toISOString())
         .order('created_at', { ascending: false });
 
-      if (error) {
+    if (error) {
         console.error('Error fetching historical attendance:', error);
         return null;
       }
@@ -872,7 +872,7 @@ export class AIInsightsService {
         atRiskMembers: insights.insights?.atRisk?.data || [],
         atRiskSummary: insights.insights?.atRisk?.summary || '',
         atRiskActions: insights.insights?.atRisk?.actions || '',
-        predictiveAttendance: insights.insights?.predictiveAttendance?.data?.predictions || [],
+        attendancePredictions: insights.insights?.predictiveAttendance?.data?.predictions || [],
         timestamp: insights.timestamp
       };
 
@@ -907,7 +907,7 @@ ${digestData.atRiskMembers.map(member => `
 TOTAL AT-RISK MEMBERS: ${digestData.atRiskMembers.length}
 
 ATTENDANCE PREDICTIONS:
-${digestData.predictiveAttendance.map(prediction => `
+${digestData.attendancePredictions.map(prediction => `
 - ${prediction.eventTitle} (${prediction.eventType})
   Date: ${new Date(prediction.eventDate).toLocaleDateString()}
   Predicted Attendance: ${prediction.predictedAttendance} people
@@ -915,7 +915,7 @@ ${digestData.predictiveAttendance.map(prediction => `
   Factors: ${prediction.factors?.comprehensiveFactors?.join(', ') || 'Standard factors'}
 `).join('\n')}
 
-TOTAL UPCOMING EVENTS: ${digestData.predictiveAttendance.length}
+TOTAL UPCOMING EVENTS: ${digestData.attendancePredictions.length}
 
 Please provide a compelling weekly digest that includes:
 
@@ -924,13 +924,13 @@ Weekly Church Digest
 Dear Church Leadership Team,
 
 Summary of Current State:
-[Provide a warm, encouraging summary based on the ACTUAL data above. Include both member engagement and attendance predictions]
+[Provide a warm, encouraging summary based on the ACTUAL data above. Include both at-risk members and attendance predictions]
 
 Areas Needing Attention:
 [Detail specific concerns using the ACTUAL member names and data provided above. Be specific about each at-risk member's situation]
 
-Attendance Forecast:
-[Summarize the attendance predictions and highlight any concerning trends or positive indicators]
+Attendance Outlook:
+[Provide insights about upcoming events and attendance predictions. Highlight any concerning trends or positive indicators]
 
 Recommended Actions:
 • [Specific action for each at-risk member by name]
