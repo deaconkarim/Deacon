@@ -208,3 +208,50 @@
     scroll-behavior: smooth;
   }
 }
+
+/* Weekly Digest Styling */
+.weekly-digest {
+  /* Add your custom styles here */
+  line-height: 1.6;
+  font-size: .95rem;
+}
+
+.weekly-digest h1 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.weekly-digest h2 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.weekly-digest h3 {
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.weekly-digest p {
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.weekly-digest ul {
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding-left: 1.5rem;
+}
+
+.weekly-digest li {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
