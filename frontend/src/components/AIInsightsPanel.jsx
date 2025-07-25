@@ -422,15 +422,22 @@ export function AIInsightsPanel({ organizationId }) {
                     </div>
                   </div>
                 </motion.div>
-              ) : insights?.insights?.predictiveAttendance?.data?.predictions ? (
-                insights.insights.predictiveAttendance.data.predictions.slice(0, 3).map((prediction, index) => (
+                              ) : insights?.insights?.predictiveAttendance?.data?.predictions ? (
+                insights.insights.predictiveAttendance.data.predictions.slice(0, 4).map((prediction, index) => (
                   <motion.div 
                     key={index}
                     className="group/card relative"
                   >
                     <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                    <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300"
-                         title={prediction.factors?.comprehensiveFactors?.length > 0 ? `Factors Considered: ${prediction.factors.comprehensiveFactors.join(', ')}` : ''}>
+                    <div 
+                      className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
+                      onClick={() => {
+                        if (prediction.factors?.comprehensiveFactors?.length > 0) {
+                          const factors = prediction.factors.comprehensiveFactors.join('\n• ');
+                          alert(`Factors Considered for ${prediction.eventTitle}:\n\n• ${factors}`);
+                        }
+                      }}
+                      title={prediction.factors?.comprehensiveFactors?.length > 0 ? `Click to see factors considered` : ''}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
@@ -463,7 +470,7 @@ export function AIInsightsPanel({ organizationId }) {
                         </Badge>
                         {prediction.factors?.comprehensiveFactors?.length > 0 && (
                           <div className="text-xs text-blue-600 dark:text-blue-400">
-                            ℹ️ Hover for factors
+                            ℹ️ Click to see factors
                           </div>
                         )}
                       </div>
@@ -502,9 +509,9 @@ export function AIInsightsPanel({ organizationId }) {
                   </div>
                 </motion.div>
               )}
-              {insights?.insights?.predictiveAttendance?.data?.predictions?.length > 3 && (
+              {insights?.insights?.predictiveAttendance?.data?.predictions?.length > 4 && (
                 <p className="text-xs text-slate-500 text-center">
-                  +{insights.insights.predictiveAttendance.data.predictions.length - 3} more events
+                  +{insights.insights.predictiveAttendance.data.predictions.length - 4} more events
                 </p>
               )}
             </div>
