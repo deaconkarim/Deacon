@@ -88,6 +88,7 @@ export class SmartInsightsQueries {
   
   /**
    * Detect at-risk members (no check-in + no giving + no events in 60 days)
+   * Only includes active adult members (excludes children and visitors)
    */
   static async getAtRiskMembers(organizationId) {
     if (!organizationId) {
@@ -107,10 +108,12 @@ export class SmartInsightsQueries {
         email,
         phone,
         created_at,
-        status
+        status,
+        member_type
       `)
       .eq('organization_id', organizationId)
-      .eq('status', 'active');
+      .eq('status', 'active')
+      .eq('member_type', 'adult');
 
     if (error) {
       console.error('Error fetching at-risk members:', error);
@@ -124,6 +127,8 @@ export class SmartInsightsQueries {
       const hasRecentEvents = await this.checkRecentEvents(member.id, sixtyDaysAgo);
       
       if (!hasRecentGiving && !hasRecentEvents) {
+        // Add profile link to member data
+        member.profileUrl = `/members/${member.id}`;
         atRiskMembers.push(member);
       }
     }
@@ -217,7 +222,7 @@ export class SmartInsightsQueries {
     const totalAmount = data.reduce((sum, d) => sum + parseFloat(d.amount || 0), 0);
     const avgAmount = data.length > 0 ? totalAmount / data.length : 0;
     const trend = this.calculateTrend(data);
-    
+
     return {
       totalAmount,
       avgAmount,
@@ -469,7 +474,7 @@ export class AIInsightsGenerator {
 • ${insights.newVisitors} new visitors this week
 
 Please provide a concise, encouraging summary of the week's key developments and trends.`;
-
+    
     try {
       const response = await fetch('/api/ai/generate-digest', {
         method: 'POST',
@@ -791,11 +796,11 @@ export class AIInsightsService {
         }
       });
       
-      return {
+    return {
         totalEntries: cacheKeys.length,
         entries: cacheData,
         totalSize: cacheKeys.reduce((size, key) => size + (localStorage.getItem(key)?.length || 0), 0)
-      };
+    };
     } catch (error) {
       console.warn('Error getting cache stats:', error);
       return { totalEntries: 0, entries: [], totalSize: 0 };
