@@ -200,7 +200,7 @@ app.post('/api/ai/generate-digest', async (req, res) => {
       messages: [
         {
           role: 'system',
-          content: 'You are a church communications director with expertise in data storytelling. Create a compelling weekly digest that tells the story of your church\'s ministry through numbers and trends. Highlight specific achievements, identify areas needing attention, and provide context for the data. Use specific names and numbers when available. Make it encouraging but honest - celebrate wins while addressing challenges constructively. Keep it concise but informative. IMPORTANT: Write in clear, concise paragraphs. Use simple formatting - avoid excessive bold text, bullet points, or complex lists. Write naturally as if explaining to a colleague.'
+          content: 'You are a church communications director with expertise in data storytelling. Create a compelling weekly digest that tells the story of your church\'s ministry through numbers and trends. Highlight specific achievements, identify areas needing attention, and provide context for the data. Use specific names and numbers when available. Make it encouraging but honest - celebrate wins while addressing challenges constructively. Keep it concise but informative. IMPORTANT: Format the response with proper HTML tags for nice formatting - use <h2> for main sections, <h3> for subsections, <p> for paragraphs, <ul> and <li> for lists, and <strong> for emphasis. Write naturally as if explaining to a colleague.'
         },
         {
           role: 'user',
@@ -239,6 +239,73 @@ app.post('/api/ai/generate-digest', async (req, res) => {
     }
 
     res.status(500).json({ error: 'Failed to generate digest' });
+  }
+});
+
+// Generate prediction endpoint
+app.post('/api/ai/generate-prediction', async (req, res) => {
+  try {
+    const { prompt, model = 'gpt-3.5-turbo-16k', max_tokens = 800 } = req.body;
+
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt is required' });
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({ error: 'OpenAI API key not configured' });
+    }
+
+    // Validate model
+    const allowedModels = ['gpt-3.5-turbo', 'gpt-4o-mini', 'gpt-3.5-turbo-16k'];
+    if (!allowedModels.includes(model)) {
+      return res.status(400).json({ error: 'Invalid model specified' });
+    }
+
+    // Create the chat completion
+    const completion = await openai.chat.completions.create({
+      model: model,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an expert church attendance analyst. You must ALWAYS respond with ONLY valid JSON format. Never include explanations, markdown, or any text outside the JSON structure. Return pure JSON that can be parsed directly. If the user asks for JSON, return exactly that format.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      max_tokens: Math.min(max_tokens, 800),
+      temperature: 0.3,
+      top_p: 0.9,
+      frequency_penalty: 0.1,
+      presence_penalty: 0.1
+    });
+
+    const response = completion.choices[0]?.message?.content || 'Unable to generate prediction';
+
+    console.log(`AI Prediction generated - Model: ${model}, Tokens: ${completion.usage?.total_tokens || 'unknown'}`);
+
+    res.status(200).json({
+      choices: [{
+        message: {
+          content: response
+        }
+      }],
+      usage: completion.usage
+    });
+
+  } catch (error) {
+    console.error('AI prediction generation error:', error);
+    
+    if (error.response?.status === 429) {
+      return res.status(429).json({ error: 'Rate limit exceeded. Please try again later.' });
+    }
+    
+    if (error.response?.status === 401) {
+      return res.status(401).json({ error: 'Invalid API key' });
+    }
+
+    res.status(500).json({ error: 'Failed to generate prediction' });
   }
 });
 
