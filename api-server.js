@@ -267,7 +267,7 @@ app.post('/api/ai/generate-prediction', async (req, res) => {
       messages: [
         {
           role: 'system',
-          content: 'You are an expert church attendance analyst. Analyze attendance predictions and provide enhanced insights with specific recommendations. Always respond with valid JSON format.'
+          content: 'You are an expert church attendance analyst. You must ALWAYS respond with ONLY valid JSON format. Never include explanations, markdown, or any text outside the JSON structure. Return pure JSON that can be parsed directly. If the user asks for JSON, return exactly that format.'
         },
         {
           role: 'user',

@@ -889,13 +889,20 @@ Confidence: ${p.confidence}
 Factors: ${JSON.stringify(p.factors)}
 `).join('\n')}
 
-Please provide:
-1. Enhanced attendance predictions with reasoning
-2. Confidence adjustments based on patterns
-3. Specific factors that could affect attendance
-4. Recommendations for improving attendance
+Please provide enhanced predictions in this EXACT JSON format:
+{
+  "predictions": [
+    {
+      "eventTitle": "Sunday Morning Worship Service",
+      "enhancedAttendance": 25,
+      "enhancedConfidence": "High",
+      "insights": ["Reasoning for the prediction"],
+      "factors": ["Key factors affecting attendance"]
+    }
+  ]
+}
 
-Format as JSON with enhanced predictions.`,
+CRITICAL: Return ONLY the JSON object above. No explanations, no markdown, no extra text. Just the JSON.`,
           model: AI_CONFIG.OPENAI_MODEL,
           max_tokens: 800
         })
@@ -926,8 +933,17 @@ Format as JSON with enhanced predictions.`,
    */
   static parseAIEnhancement(predictions, aiAnalysis) {
     try {
+      // Clean the AI response - remove any non-JSON text
+      let cleanedResponse = aiAnalysis.trim();
+      
+      // Try to extract JSON if there's extra text
+      const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        cleanedResponse = jsonMatch[0];
+      }
+      
       // Try to parse JSON from AI response
-      const aiData = JSON.parse(aiAnalysis);
+      const aiData = JSON.parse(cleanedResponse);
       
       // Apply AI enhancements to predictions
       return predictions.map(prediction => {
@@ -947,6 +963,7 @@ Format as JSON with enhanced predictions.`,
       });
     } catch (error) {
       console.warn('Failed to parse AI enhancement, using original predictions');
+      console.debug('AI Response:', aiAnalysis);
       return predictions;
     }
   }
