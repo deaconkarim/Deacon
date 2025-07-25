@@ -1,6 +1,6 @@
 # Twilio SMS Setup Guide
 
-This guide will help you set up Twilio SMS functionality for your church app.
+This guide will help you set up Twilio SMS functionality for your Deacon.
 
 ## Prerequisites
 
