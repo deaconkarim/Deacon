@@ -26,7 +26,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/use-toast';
 import AIInsightsService from '@/lib/aiInsightsService';
 
-const InsightCard = ({ title, summary, actions, icon: Icon, color, count, loading }) => {
+const InsightCard = ({ title, summary, actions, icon: Icon, color, count, loading, isCached = false }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Helper function to format AI text into readable sections
@@ -79,11 +79,19 @@ const InsightCard = ({ title, summary, actions, icon: Icon, color, count, loadin
               </div>
               <div>
                 <CardTitle className="text-base font-semibold text-gray-800">{title}</CardTitle>
-                {count !== undefined && (
-                  <Badge variant="secondary" className="text-xs mt-1">
-                    {count} {count === 1 ? 'item' : 'items'}
-                  </Badge>
-                )}
+                <div className="flex items-center gap-2 mt-1">
+                  {count !== undefined && (
+                    <Badge variant="secondary" className="text-xs">
+                      {count} {count === 1 ? 'item' : 'items'}
+                    </Badge>
+                  )}
+                  {isCached && (
+                    <Badge variant="outline" className="text-xs text-blue-600 border-blue-200">
+                      <Clock className="h-3 w-3 mr-1" />
+                      Cached
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
             <Button
@@ -134,7 +142,7 @@ const InsightCard = ({ title, summary, actions, icon: Icon, color, count, loadin
   );
 };
 
-const WeeklyDigestCard = ({ digest, loading, onRefresh }) => {
+const WeeklyDigestCard = ({ digest, loading, onRefresh, isCached = false }) => {
   // Helper function to format digest text
   const formatDigestText = (text) => {
     if (!text) return [];
@@ -182,7 +190,15 @@ const WeeklyDigestCard = ({ digest, loading, onRefresh }) => {
               </div>
               <div>
                 <CardTitle className="text-lg font-semibold text-gray-800">Weekly AI Digest</CardTitle>
-                <CardDescription className="text-gray-600">AI-powered insights for your ministry</CardDescription>
+                <div className="flex items-center gap-2">
+                  <CardDescription className="text-gray-600">AI-powered insights for your ministry</CardDescription>
+                  {isCached && (
+                    <Badge variant="outline" className="text-xs text-blue-600 border-blue-200">
+                      <Clock className="h-3 w-3 mr-1" />
+                      Cached
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
             <Button
@@ -215,6 +231,7 @@ export function AIInsightsPanel({ organizationId }) {
   const [weeklyDigest, setWeeklyDigest] = useState(null);
   const [loading, setLoading] = useState(true);
   const [digestLoading, setDigestLoading] = useState(false);
+  const [cacheStatus, setCacheStatus] = useState({});
   const { toast } = useToast();
 
   const loadInsights = async (forceRefresh = false) => {
@@ -223,7 +240,32 @@ export function AIInsightsPanel({ organizationId }) {
       // Clear cache if force refresh
       if (forceRefresh) {
         AIInsightsService.clearCache();
+        setCacheStatus({});
       }
+      
+      // Check cache status before loading
+      const cacheStats = AIInsightsService.getCacheStats();
+      const newCacheStatus = {};
+      
+      // Check if each insight type is cached
+      const insightTypes = ['summary_at-risk-members', 'summary_volunteer-burnout', 'summary_giving-trends', 'summary_visitor-retention'];
+      insightTypes.forEach(type => {
+        const cacheKey = `ai_insights_${type}_${organizationId}`;
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            if (Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000) {
+              newCacheStatus[type.replace('summary_', '')] = true;
+            }
+          } catch (e) {
+            // Invalid cache entry
+          }
+        }
+      });
+      
+      setCacheStatus(newCacheStatus);
+      
       const result = await AIInsightsService.getDashboardInsights(organizationId, forceRefresh);
       setInsights(result);
     } catch (error) {
@@ -245,6 +287,21 @@ export function AIInsightsPanel({ organizationId }) {
       if (forceRefresh) {
         AIInsightsService.clearCache();
       }
+      
+      // Check if weekly digest is cached
+      const cacheKey = `ai_insights_weekly_digest_${organizationId}`;
+      const cached = localStorage.getItem(cacheKey);
+      const isCached = cached && (() => {
+        try {
+          const parsed = JSON.parse(cached);
+          return Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000;
+        } catch (e) {
+          return false;
+        }
+      })();
+      
+      setCacheStatus(prev => ({ ...prev, weeklyDigest: isCached }));
+      
       const result = await AIInsightsService.getWeeklyDigest(organizationId, forceRefresh);
       setWeeklyDigest(result);
     } catch (error) {
@@ -335,6 +392,7 @@ export function AIInsightsPanel({ organizationId }) {
         digest={weeklyDigest?.content}
         loading={digestLoading}
         onRefresh={loadWeeklyDigest}
+        isCached={cacheStatus.weeklyDigest}
       />
 
       {/* Insight Cards Grid */}
@@ -349,6 +407,7 @@ export function AIInsightsPanel({ organizationId }) {
             summary={card.summary}
             actions={card.actions}
             loading={loading}
+            isCached={cacheStatus[card.key]}
           />
         ))}
       </div>

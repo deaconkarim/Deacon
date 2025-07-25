@@ -12,15 +12,73 @@ const AI_CONFIG = {
   CACHE_DURATION: 24 * 60 * 60 * 1000,
 };
 
-// Cache for storing insights to reduce API calls
-const insightsCache = new Map();
+// Persistent cache using localStorage for 24-hour caching
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+const CACHE_PREFIX = 'ai_insights_';
 
 // Cache structure: { data, timestamp }
-const getCacheKey = (type, organizationId) => `${type}_${organizationId}`;
+const getCacheKey = (type, organizationId) => `${CACHE_PREFIX}${type}_${organizationId}`;
 
 const isCacheValid = (timestamp) => {
   return Date.now() - timestamp < CACHE_DURATION;
+};
+
+// Get cached data from localStorage
+const getCachedData = (cacheKey) => {
+  try {
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (isCacheValid(parsed.timestamp)) {
+        return parsed.data;
+      } else {
+        // Remove expired cache
+        localStorage.removeItem(cacheKey);
+      }
+    }
+    return null;
+  } catch (error) {
+    console.warn('Error reading cache:', error);
+    return null;
+  }
+};
+
+// Set cached data in localStorage
+const setCachedData = (cacheKey, data) => {
+  try {
+    const cacheData = {
+      data,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+  } catch (error) {
+    console.warn('Error writing cache:', error);
+    // If localStorage is full, clear old entries
+    clearOldCache();
+  }
+};
+
+// Clear old cache entries to prevent localStorage overflow
+const clearOldCache = () => {
+  try {
+    const keys = Object.keys(localStorage);
+    const cacheKeys = keys.filter(key => key.startsWith(CACHE_PREFIX));
+    
+    // Sort by timestamp and remove oldest entries if we have too many
+    if (cacheKeys.length > 50) {
+      const cacheData = cacheKeys.map(key => ({
+        key,
+        timestamp: JSON.parse(localStorage.getItem(key))?.timestamp || 0
+      })).sort((a, b) => a.timestamp - b.timestamp);
+      
+      // Remove oldest 20 entries
+      cacheData.slice(0, 20).forEach(({ key }) => {
+        localStorage.removeItem(key);
+      });
+    }
+  } catch (error) {
+    console.warn('Error clearing old cache:', error);
+  }
 };
 
 /**
@@ -296,11 +354,12 @@ export class AIInsightsGenerator {
   static async generateInsightSummary(data, insightType, organizationId, forceRefresh = false) {
     const cacheKey = getCacheKey(`summary_${insightType}`, organizationId);
     
-    // Check cache first (unless force refresh)
+    // Check persistent cache first (unless force refresh)
     if (!forceRefresh) {
-      const cached = insightsCache.get(cacheKey);
-      if (cached && isCacheValid(cached.timestamp)) {
-        return cached.data;
+      const cached = getCachedData(cacheKey);
+      if (cached) {
+        console.log(`Using cached insight for ${insightType}`);
+        return cached;
       }
     }
 
@@ -308,55 +367,6 @@ export class AIInsightsGenerator {
     
     try {
       const response = await fetch('/api/ai/generate-insight', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          prompt,
-          model: AI_CONFIG.OPENAI_MODEL,
-          max_tokens: 200
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('AI service unavailable');
-      }
-
-      const result = await response.json();
-      const summary = result.choices?.[0]?.message?.content || 'Unable to generate insight';
-
-      // Cache the result
-      insightsCache.set(cacheKey, {
-        data: summary,
-        timestamp: Date.now()
-      });
-
-      return summary;
-    } catch (error) {
-      console.error('AI insight generation failed:', error);
-      return this.generateFallbackSummary(data, insightType);
-    }
-  }
-
-  /**
-   * Generate action suggestions
-   */
-  static async generateActionSuggestions(data, insightType, organizationId, forceRefresh = false) {
-    const cacheKey = getCacheKey(`action_${insightType}`, organizationId);
-    
-    // Check cache first (unless force refresh)
-    if (!forceRefresh) {
-      const cached = insightsCache.get(cacheKey);
-      if (cached && isCacheValid(cached.timestamp)) {
-        return cached.data;
-      }
-    }
-
-    const prompt = this.buildActionPrompt(data, insightType);
-    
-    try {
-      const response = await fetch('/api/ai/generate-action', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -373,13 +383,57 @@ export class AIInsightsGenerator {
       }
 
       const result = await response.json();
+      const summary = result.choices?.[0]?.message?.content || 'Unable to generate insight';
+
+      // Cache the result persistently
+      setCachedData(cacheKey, summary);
+
+      return summary;
+    } catch (error) {
+      console.error('AI insight generation failed:', error);
+      return this.generateFallbackSummary(data, insightType);
+    }
+  }
+
+  /**
+   * Generate action suggestions
+   */
+  static async generateActionSuggestions(data, insightType, organizationId, forceRefresh = false) {
+    const cacheKey = getCacheKey(`action_${insightType}`, organizationId);
+    
+    // Check persistent cache first (unless force refresh)
+    if (!forceRefresh) {
+      const cached = getCachedData(cacheKey);
+      if (cached) {
+        console.log(`Using cached action for ${insightType}`);
+        return cached;
+      }
+    }
+
+    const prompt = this.buildActionPrompt(data, insightType);
+    
+    try {
+      const response = await fetch('/api/ai/generate-action', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt,
+          model: AI_CONFIG.OPENAI_MODEL,
+          max_tokens: 300
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('AI service unavailable');
+      }
+
+      const result = await response.json();
       const actions = result.choices?.[0]?.message?.content || 'Consider reviewing the data manually';
 
-      // Cache the result
-      insightsCache.set(cacheKey, {
-        data: actions,
-        timestamp: Date.now()
-      });
+      // Cache the result persistently
+      setCachedData(cacheKey, actions);
 
       return actions;
     } catch (error) {
@@ -394,11 +448,12 @@ export class AIInsightsGenerator {
   static async generateWeeklyDigest(organizationId, forceRefresh = false) {
     const cacheKey = getCacheKey('weekly_digest', organizationId);
     
-    // Check cache first (unless force refresh)
+    // Check persistent cache first (unless force refresh)
     if (!forceRefresh) {
-      const cached = insightsCache.get(cacheKey);
-      if (cached && isCacheValid(cached.timestamp)) {
-        return cached.data;
+      const cached = getCachedData(cacheKey);
+      if (cached) {
+        console.log('Using cached weekly digest');
+        return cached;
       }
     }
 
@@ -424,7 +479,7 @@ Please provide a concise, encouraging summary of the week's key developments and
         body: JSON.stringify({
           prompt,
           model: AI_CONFIG.OPENAI_MODEL,
-          max_tokens: 300
+          max_tokens: 400
         })
       });
 
@@ -435,11 +490,8 @@ Please provide a concise, encouraging summary of the week's key developments and
       const result = await response.json();
       const digest = result.choices?.[0]?.message?.content || 'Weekly digest unavailable';
 
-      // Cache the result
-      insightsCache.set(cacheKey, {
-        data: digest,
-        timestamp: Date.now()
-      });
+      // Cache the result persistently
+      setCachedData(cacheKey, digest);
 
       return digest;
     } catch (error) {
@@ -706,21 +758,48 @@ export class AIInsightsService {
   }
 
   /**
-   * Clear cache
+   * Clear all AI insights cache from localStorage
    */
   static clearCache() {
-    insightsCache.clear();
-    console.log('AI insights cache cleared');
+    try {
+      const keys = Object.keys(localStorage);
+      const cacheKeys = keys.filter(key => key.startsWith(CACHE_PREFIX));
+      cacheKeys.forEach(key => localStorage.removeItem(key));
+      console.log(`AI insights cache cleared: ${cacheKeys.length} entries removed`);
+    } catch (error) {
+      console.warn('Error clearing cache:', error);
+    }
   }
 
   /**
-   * Get cache statistics
+   * Get cache statistics from localStorage
    */
   static getCacheStats() {
-    return {
-      size: insightsCache.size,
-      keys: Array.from(insightsCache.keys())
-    };
+    try {
+      const keys = Object.keys(localStorage);
+      const cacheKeys = keys.filter(key => key.startsWith(CACHE_PREFIX));
+      const cacheData = cacheKeys.map(key => {
+        try {
+          const data = JSON.parse(localStorage.getItem(key));
+          return {
+            key,
+            timestamp: data.timestamp,
+            age: Date.now() - data.timestamp
+          };
+        } catch {
+          return { key, timestamp: 0, age: 0 };
+        }
+      });
+      
+      return {
+        totalEntries: cacheKeys.length,
+        entries: cacheData,
+        totalSize: cacheKeys.reduce((size, key) => size + (localStorage.getItem(key)?.length || 0), 0)
+      };
+    } catch (error) {
+      console.warn('Error getting cache stats:', error);
+      return { totalEntries: 0, entries: [], totalSize: 0 };
+    }
   }
 }
 
