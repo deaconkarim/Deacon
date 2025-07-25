@@ -30,22 +30,23 @@ const InsightCard = ({ title, summary, actions, icon: Icon, color, count, loadin
 
   if (loading) {
     return (
-      <Card className="h-full">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-8 w-8 rounded-full" />
-            <div className="space-y-2">
+      <motion.div className="group/card relative" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-slate-500/20 to-slate-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+        <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+          <div className="flex items-center gap-3 mb-3">
+            <Skeleton className="h-8 w-8 rounded-lg" />
+            <div className="space-y-2 flex-1">
               <Skeleton className="h-4 w-32" />
               <Skeleton className="h-3 w-24" />
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-4 w-1/2" />
-        </CardContent>
-      </Card>
+          <div className="space-y-3">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
+          </div>
+        </div>
+      </motion.div>
     );
   }
 
@@ -53,38 +54,30 @@ const InsightCard = ({ title, summary, actions, icon: Icon, color, count, loadin
   const formattedActions = formatAIText(actions);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-    >
-      <Card className={`h-full border-l-4 ${color} hover:shadow-md transition-shadow`}>
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-full ${color.replace('border-', 'bg-').replace('-500', '-100')}`}>
-                <Icon className="h-5 w-5 text-gray-700" />
-              </div>
-              <div>
-                <CardTitle className="text-base font-semibold text-gray-800">{title}</CardTitle>
-                <div className="flex items-center gap-2 mt-1">
-                {count !== undefined && (
-                  <Badge variant="secondary" className="text-xs">
-                    {count} {count === 1 ? 'item' : 'items'}
-                  </Badge>
-                )}
-                </div>
-              </div>
-            </div>
-
+    <motion.div className="group/card relative" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+      <div className={`absolute -inset-0.5 bg-gradient-to-r ${color.replace('border-', 'from-').replace('-500', '-500/20')} to-${color.replace('border-', '').replace('-500', '-600/20')} rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300`}></div>
+      <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+        <div className="flex items-center gap-3 mb-4">
+          <div className={`w-8 h-8 bg-gradient-to-br ${color.replace('border-', 'from-').replace('-500', '-500')} to-${color.replace('border-', '').replace('-500', '-600')} rounded-lg flex items-center justify-center shadow-lg`}>
+            <Icon className="h-4 w-4 text-white" />
           </div>
-        </CardHeader>
+          <div className="flex-1">
+            <h4 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h4>
+            {count !== undefined && (
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant="secondary" className="text-xs">
+                  {count} {count === 1 ? 'item' : 'items'}
+                </Badge>
+              </div>
+            )}
+          </div>
+        </div>
         
-        <CardContent className="space-y-4">
+        <div className="space-y-4">
           {/* Summary Section */}
           <div className="space-y-3">
             {formattedSummary.map((section, index) => (
-              <div key={index} className="text-sm text-gray-600 leading-relaxed">
+              <div key={index} className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
                 {section.content}
               </div>
             ))}
@@ -93,21 +86,21 @@ const InsightCard = ({ title, summary, actions, icon: Icon, color, count, loadin
           {/* Member List Section - Only for At-Risk Members */}
           {memberData && memberData.length > 0 && (
             <div className="space-y-2">
-              <div className="text-sm font-medium text-gray-700">At-Risk Members:</div>
+              <div className="text-sm font-medium text-slate-700 dark:text-slate-300">At-Risk Members:</div>
               <div className="space-y-1">
                 {memberData.map((member, index) => (
                   <div 
                     key={member.id || index}
-                    className="flex items-center justify-between p-2 rounded-md bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors"
+                    className="flex items-center justify-between p-2 rounded-md bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors"
                     onClick={() => navigate(member.profileUrl)}
                   >
                     <div className="flex items-center gap-2">
                       <UserX className="h-4 w-4 text-red-500" />
-                      <span className="text-sm font-medium text-gray-800">
+                      <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
                         {member.firstname} {member.lastname}
                       </span>
                     </div>
-                    <ExternalLink className="h-3 w-3 text-gray-400" />
+                    <ExternalLink className="h-3 w-3 text-slate-400" />
                   </div>
                 ))}
               </div>
@@ -116,21 +109,19 @@ const InsightCard = ({ title, summary, actions, icon: Icon, color, count, loadin
           
           {/* Actions Section */}
           {actions && (
-            <div className="pt-4 border-t border-gray-200">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-sm font-semibold text-gray-800">Suggested Actions</span>
-              </div>
-              <div className="space-y-3">
-                {formattedActions.map((section, index) => (
-                  <div key={index} className="text-sm text-gray-600 leading-relaxed">
-                    {section.content}
+            <div className="space-y-2">
+              <div className="text-sm font-medium text-slate-700 dark:text-slate-300">Recommended Actions:</div>
+              <div className="space-y-1">
+                {formattedActions.map((action, index) => (
+                  <div key={index} className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                    {action.content}
                   </div>
                 ))}
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </motion.div>
   );
 };
@@ -138,71 +129,67 @@ const InsightCard = ({ title, summary, actions, icon: Icon, color, count, loadin
 const WeeklyDigestCard = ({ content, loading, onRefresh }) => {
   if (loading) {
     return (
-      <Card className="h-full">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-8 w-8 rounded-full" />
-            <div className="space-y-2">
+      <motion.div className="group/card relative" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500/20 to-purple-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+        <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+          <div className="flex items-center gap-3 mb-3">
+            <Skeleton className="h-8 w-8 rounded-lg" />
+            <div className="space-y-2 flex-1">
               <Skeleton className="h-4 w-32" />
               <Skeleton className="h-3 w-24" />
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-4 w-1/2" />
-        </CardContent>
-      </Card>
+          <div className="space-y-3">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
+          </div>
+        </div>
+      </motion.div>
     );
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-    >
-      <Card className="h-full border-l-4 border-purple-500 hover:shadow-md transition-shadow">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-purple-100">
-                <Mail className="h-5 w-5 text-purple-700" />
-              </div>
-              <div>
-                <CardTitle className="text-base font-semibold text-gray-800">Weekly Digest</CardTitle>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge variant="secondary" className="text-xs">
-                    AI Generated
-                  </Badge>
-                </div>
+    <motion.div className="group/card relative" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+      <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500/20 to-purple-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+      <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
+              <Mail className="h-4 w-4 text-white" />
+            </div>
+            <div className="flex-1">
+              <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Weekly Digest</h4>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant="secondary" className="text-xs">
+                  AI Generated
+                </Badge>
               </div>
             </div>
-            {onRefresh && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onRefresh(true)}
-                className="h-8 w-8 p-0"
-                title="Refresh digest"
-              >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-            )}
           </div>
-        </CardHeader>
+          {onRefresh && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onRefresh(true)}
+              className="h-8 w-8 p-0"
+              title="Refresh digest"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
         
-        <CardContent className="space-y-4">
+        <div className="space-y-4">
           {/* Full Content - Render as HTML */}
           <div 
-            className="text-sm text-gray-600 leading-relaxed prose prose-sm max-w-none weekly-digest"
+            className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed prose prose-sm max-w-none weekly-digest"
             dangerouslySetInnerHTML={{ 
               __html: content || 'No weekly digest available. Click refresh to generate one.' 
             }}
           />
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </motion.div>
   );
 };
@@ -320,31 +307,24 @@ export function AIInsightsPanel({ organizationId }) {
         />
         
         {/* Predictive Attendance Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <Card className="h-full border-l-4 border-blue-500 hover:shadow-md transition-shadow">
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full bg-blue-100">
-                    <Brain className="h-5 w-5 text-blue-700" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base font-semibold text-gray-800">Predictive Attendance</CardTitle>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="secondary" className="text-xs">
-                        {insights?.insights?.predictiveAttendance?.data?.predictions?.length || 0} Events
-                      </Badge>
-                    </div>
-                  </div>
+        <motion.div className="group/card relative" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+          <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-lg">
+                <Brain className="h-4 w-4 text-white" />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Predictive Attendance</h4>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge variant="secondary" className="text-xs">
+                    {insights?.insights?.predictiveAttendance?.data?.predictions?.length || 0} Events
+                  </Badge>
                 </div>
               </div>
-            </CardHeader>
+            </div>
             
-            <CardContent className="space-y-4">
+            <div className="space-y-4">
               {loading ? (
                 <div className="space-y-3">
                   <Skeleton className="h-4 w-full" />
@@ -353,12 +333,12 @@ export function AIInsightsPanel({ organizationId }) {
                 </div>
               ) : insights?.insights?.predictiveAttendance?.data?.predictions ? (
                 <div className="space-y-3">
-                  <div className="text-sm text-gray-600 leading-relaxed">
+                  <div className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
                     <p className="mb-3 font-medium">Upcoming Event Predictions:</p>
                     {insights.insights.predictiveAttendance.data.predictions.slice(0, 3).map((prediction, index) => (
-                      <div key={index} className="mb-3 p-3 bg-gray-50 rounded-lg">
+                      <div key={index} className="mb-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
                         <div className="flex justify-between items-start mb-2">
-                          <div className="font-medium text-gray-800 text-sm">
+                          <div className="font-medium text-slate-800 dark:text-slate-200 text-sm">
                             {prediction.eventTitle}
                           </div>
                           <Badge 
@@ -366,13 +346,13 @@ export function AIInsightsPanel({ organizationId }) {
                             className={`text-xs ${
                               prediction.confidence === 'High' ? 'bg-green-100 text-green-800' :
                               prediction.confidence === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-gray-100 text-gray-600'
+                              'bg-slate-100 text-slate-600'
                             }`}
                           >
                             {prediction.confidence}
                           </Badge>
                         </div>
-                        <div className="text-xs text-gray-600">
+                        <div className="text-xs text-slate-600 dark:text-slate-400">
                           <div className="flex justify-between mb-1">
                             <span>Predicted Attendance:</span>
                             <span className="font-medium">{prediction.predictedAttendance} people</span>
@@ -388,14 +368,14 @@ export function AIInsightsPanel({ organizationId }) {
                           {prediction.factors?.comprehensiveFactors?.length > 0 && (
                             <div className="group relative">
                               <div className="text-xs text-blue-600 cursor-help">ℹ️ Hover for factors</div>
-                              <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded-lg p-3 shadow-lg z-10 min-w-48">
+                              <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-slate-800 text-white text-xs rounded-lg p-3 shadow-lg z-10 min-w-48">
                                 <div className="font-medium mb-1">Factors Considered:</div>
                                 <div className="space-y-1">
                                   {prediction.factors.comprehensiveFactors.map((factor, idx) => (
-                                    <div key={idx} className="text-gray-200">• {factor}</div>
+                                    <div key={idx} className="text-slate-200">• {factor}</div>
                                   ))}
                                 </div>
-                                <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
+                                <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-800"></div>
                               </div>
                             </div>
                           )}
@@ -403,24 +383,24 @@ export function AIInsightsPanel({ organizationId }) {
                       </div>
                     ))}
                     {insights.insights.predictiveAttendance.data.predictions.length > 3 && (
-                      <p className="text-xs text-gray-500 text-center">
+                      <p className="text-xs text-slate-500 text-center">
                         +{insights.insights.predictiveAttendance.data.predictions.length - 3} more events
                       </p>
                     )}
                   </div>
                 </div>
               ) : (
-                <div className="text-sm text-gray-600 leading-relaxed">
+                <div className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
                   <p className="mb-3">
                     No upcoming events found. Create events to see attendance predictions based on historical data.
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-slate-500">
                     Predictions are based on historical attendance patterns, event types, and seasonal trends.
                   </p>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </motion.div>
       </div>
     </div>
