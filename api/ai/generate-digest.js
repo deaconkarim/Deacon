@@ -11,28 +11,17 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { insights, model = 'gpt-3.5-turbo', max_tokens = 300 } = req.body;
+    const { prompt, model = 'gpt-3.5-turbo-16k', max_tokens = 300 } = req.body;
 
-    if (!insights) {
-      return res.status(400).json({ error: 'Insights data is required' });
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt is required' });
     }
 
     // Validate model to ensure cost efficiency
-    const allowedModels = ['gpt-3.5-turbo', 'gpt-4o-mini'];
+    const allowedModels = ['gpt-3.5-turbo', 'gpt-4o-mini', 'gpt-3.5-turbo-16k'];
     if (!allowedModels.includes(model)) {
       return res.status(400).json({ error: 'Invalid model specified' });
     }
-
-    // Build the prompt from insights data
-    const prompt = `Create a weekly church insights digest based on this data:
-
-    • At-risk members: ${insights.atRiskCount || 0}
-    • Volunteers at burnout risk: ${insights.volunteerBurnoutCount || 0}
-    • Monthly giving: $${insights.monthlyGiving || 0}
-    • Visitor retention rate: ${insights.visitorRetentionRate?.toFixed(1) || 0}%
-    • New visitors this week: ${insights.newVisitors || 0}
-
-    Write a brief, encouraging summary highlighting key areas for attention and celebration. Keep it under 150 words.`;
 
     // Create the chat completion
     const completion = await openai.chat.completions.create({
@@ -40,14 +29,14 @@ export default async function handler(req, res) {
       messages: [
         {
           role: 'system',
-          content: 'You are a church leadership assistant. Create encouraging weekly digests that highlight both areas needing attention and reasons to celebrate. Be concise and actionable.'
+          content: 'You are a church communications director with expertise in data storytelling. Create a compelling weekly digest that tells the story of your church\'s ministry through numbers and trends. Highlight specific achievements, identify areas needing attention, and provide context for the data. Use specific names and numbers when available. Make it encouraging but honest - celebrate wins while addressing challenges constructively. Keep it concise but informative. IMPORTANT: Write in clear, concise paragraphs. Use simple formatting - avoid excessive bold text, bullet points, or complex lists. Write naturally as if explaining to a colleague.'
         },
         {
           role: 'user',
           content: prompt
         }
       ],
-      max_tokens: Math.min(max_tokens, 350), // Cap at 350 tokens for cost efficiency
+      max_tokens: Math.min(max_tokens, 400), // Cap at 400 tokens for cost efficiency
       temperature: 0.7, // Balanced creativity
       top_p: 0.9,
       frequency_penalty: 0.1,

@@ -11,14 +11,14 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { prompt, model = 'gpt-3.5-turbo', max_tokens = 200 } = req.body;
+    const { prompt, model = 'gpt-3.5-turbo-16k', max_tokens = 250 } = req.body;
 
     if (!prompt) {
       return res.status(400).json({ error: 'Prompt is required' });
     }
 
     // Validate model to ensure cost efficiency
-    const allowedModels = ['gpt-3.5-turbo', 'gpt-4o-mini'];
+    const allowedModels = ['gpt-3.5-turbo', 'gpt-4o-mini', 'gpt-3.5-turbo-16k'];
     if (!allowedModels.includes(model)) {
       return res.status(400).json({ error: 'Invalid model specified' });
     }
@@ -29,14 +29,14 @@ export default async function handler(req, res) {
       messages: [
         {
           role: 'system',
-          content: 'You are a church leadership consultant. Provide 2-3 specific, actionable steps that church leaders can take. Be practical and encouraging. Format as numbered list.'
+          content: 'You are a senior church leadership consultant specializing in data-driven ministry strategies. Based on the provided data, give 2-3 specific, immediate action steps that church leaders can implement this week. Include specific names, numbers, and timeframes when available. Focus on high-impact, low-effort actions that will show immediate results. IMPORTANT: Write in clear, concise paragraphs. Use simple formatting - avoid excessive bold text, bullet points, or complex lists. Write naturally as if explaining to a colleague.'
         },
         {
           role: 'user',
           content: prompt
         }
       ],
-      max_tokens: Math.min(max_tokens, 250), // Cap at 250 tokens for cost efficiency
+      max_tokens: Math.min(max_tokens, 300), // Cap at 300 tokens for cost efficiency
       temperature: 0.6, // Slightly more focused for action items
       top_p: 0.9,
       frequency_penalty: 0.1,
