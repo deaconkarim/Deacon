@@ -374,10 +374,23 @@ export function AIInsightsPanel({ organizationId }) {
                           <span>Event Type:</span>
                           <span className="capitalize">{prediction.eventType}</span>
                         </div>
-                        <div className="flex justify-between">
+                        <div className="flex justify-between mb-1">
                           <span>Date:</span>
                           <span>{new Date(prediction.eventDate).toLocaleDateString()}</span>
                         </div>
+                        {prediction.factors?.comprehensiveFactors?.length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-gray-200">
+                            <div className="text-xs font-medium text-gray-700 mb-1">Factors Considered:</div>
+                            <div className="space-y-1">
+                              {prediction.factors.comprehensiveFactors.slice(0, 3).map((factor, idx) => (
+                                <div key={idx} className="text-xs text-gray-500">• {factor}</div>
+                              ))}
+                              {prediction.factors.comprehensiveFactors.length > 3 && (
+                                <div className="text-xs text-gray-400">+{prediction.factors.comprehensiveFactors.length - 3} more factors</div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}

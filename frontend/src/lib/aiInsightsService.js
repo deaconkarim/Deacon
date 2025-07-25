@@ -353,8 +353,8 @@ export class SmartInsightsQueries {
       // Calculate base prediction from similar events
       let basePrediction = this.calculateBasePredictionFromSimilarEvents(similarEvents, eventTypeDefaults, eventType);
       
-      // Adjust for seasonal trends
-      const seasonalAdjustment = this.calculateSeasonalAdjustment(eventDate);
+      // Adjust for comprehensive factors including weather, community events, and travel patterns
+      const comprehensiveAdjustment = this.calculateComprehensiveAdjustment(eventDate);
       
       // Calculate trend adjustment based on recent attendance patterns
       const trendAdjustment = this.calculateTrendAdjustment(similarEvents, eventDate);
@@ -362,7 +362,7 @@ export class SmartInsightsQueries {
       // Calculate confidence based on data quality
       const confidence = this.calculateDetailedConfidence(similarEvents, patterns, eventTitle, recurringEventName);
       
-      const predictedAttendance = Math.round(basePrediction * seasonalAdjustment * trendAdjustment);
+      const predictedAttendance = Math.round(basePrediction * comprehensiveAdjustment.adjustment * trendAdjustment);
 
       predictions.push({
         eventId: event.id,
@@ -375,7 +375,8 @@ export class SmartInsightsQueries {
         factors: {
           similarEvents: similarEvents.length,
           historicalAverage: basePrediction,
-          seasonalFactor: seasonalAdjustment,
+          comprehensiveFactors: comprehensiveAdjustment.factors,
+          adjustmentFactor: comprehensiveAdjustment.adjustment,
           trendFactor: trendAdjustment,
           recurringEventName: recurringEventName,
           eventTypeFactor: patterns.eventTypePatterns[eventType] || 0
@@ -455,20 +456,117 @@ export class SmartInsightsQueries {
   }
 
   /**
-   * Calculate seasonal adjustment
+   * Calculate comprehensive adjustment including weather, community events, and travel patterns
    */
-  static calculateSeasonalAdjustment(eventDate) {
+  static calculateComprehensiveAdjustment(eventDate) {
     const month = eventDate.getMonth();
-    const isSummer = month >= 5 && month <= 8; // June to September
-    const isHoliday = month === 11 || month === 0; // December and January
-    const isWeekend = eventDate.getDay() === 0; // Sunday
+    const dayOfWeek = eventDate.getDay();
+    const dayOfMonth = eventDate.getDate();
     
     let adjustment = 1.0;
-    if (isSummer) adjustment *= 0.85; // 15% decrease in summer
-    if (isHoliday) adjustment *= 0.75; // 25% decrease during holidays
-    if (isWeekend) adjustment *= 1.1; // 10% increase for weekend events
+    let factors = [];
     
-    return adjustment;
+    // Weather patterns (seasonal)
+    const isSummer = month >= 5 && month <= 8; // June to September
+    const isWinter = month === 11 || month === 0 || month === 1; // Dec, Jan, Feb
+    const isSpring = month >= 2 && month <= 4; // March to May
+    const isFall = month >= 9 && month <= 10; // September to October
+    
+    if (isSummer) {
+      adjustment *= 0.85; // 15% decrease in summer (vacations, outdoor activities)
+      factors.push('Summer vacation season');
+    }
+    if (isWinter) {
+      adjustment *= 0.9; // 10% decrease in winter (weather concerns)
+      factors.push('Winter weather patterns');
+    }
+    if (isSpring) {
+      adjustment *= 1.05; // 5% increase in spring (renewal, better weather)
+      factors.push('Spring renewal period');
+    }
+    if (isFall) {
+      adjustment *= 1.02; // 2% increase in fall (back to routine)
+      factors.push('Fall routine return');
+    }
+    
+    // Community events and holidays
+    const isHolidaySeason = month === 11 || month === 0; // December and January
+    const isSchoolBreak = (month === 6 || month === 7) || (month === 11 && dayOfMonth > 20) || (month === 0 && dayOfMonth < 10);
+    const isMajorHoliday = this.isMajorHoliday(eventDate);
+    
+    if (isHolidaySeason) {
+      adjustment *= 0.75; // 25% decrease during holidays
+      factors.push('Holiday season travel');
+    }
+    if (isSchoolBreak) {
+      adjustment *= 0.8; // 20% decrease during school breaks
+      factors.push('School break family travel');
+    }
+    if (isMajorHoliday) {
+      adjustment *= 0.7; // 30% decrease on major holidays
+      factors.push('Major holiday conflict');
+    }
+    
+    // Weekend vs weekday patterns
+    if (dayOfWeek === 0) { // Sunday
+      adjustment *= 1.1; // 10% increase for Sunday services
+      factors.push('Sunday service tradition');
+    } else if (dayOfWeek === 6) { // Saturday
+      adjustment *= 0.9; // 10% decrease for Saturday events
+      factors.push('Weekend family activities');
+    } else if (dayOfWeek >= 1 && dayOfWeek <= 5) { // Weekdays
+      adjustment *= 0.85; // 15% decrease for weekday events
+      factors.push('Weekday work commitments');
+    }
+    
+    // Family travel patterns
+    const isTravelSeason = this.isTravelSeason(eventDate);
+    if (isTravelSeason) {
+      adjustment *= 0.8; // 20% decrease during travel seasons
+      factors.push('Family travel season');
+    }
+    
+    return { adjustment, factors };
+  }
+  
+  /**
+   * Check if date falls on a major holiday
+   */
+  static isMajorHoliday(date) {
+    const month = date.getMonth();
+    const day = date.getDate();
+    
+    // Major US holidays that affect church attendance
+    const holidays = [
+      { month: 0, day: 1 }, // New Year's Day
+      { month: 6, day: 4 }, // Independence Day
+      { month: 10, day: 11 }, // Veterans Day
+      { month: 11, day: 25 }, // Christmas
+      { month: 11, day: 31 }, // New Year's Eve
+    ];
+    
+    return holidays.some(holiday => holiday.month === month && holiday.day === day);
+  }
+  
+  /**
+   * Check if date is during travel season
+   */
+  static isTravelSeason(date) {
+    const month = date.getMonth();
+    const day = date.getDate();
+    
+    // Common travel periods
+    const travelPeriods = [
+      { startMonth: 6, startDay: 15, endMonth: 8, endDay: 15 }, // Summer travel
+      { startMonth: 11, startDay: 20, endMonth: 0, endDay: 5 }, // Holiday travel
+      { startMonth: 2, startDay: 15, endMonth: 3, endDay: 15 }, // Spring break
+    ];
+    
+    return travelPeriods.some(period => {
+      const isAfterStart = (month > period.startMonth) || (month === period.startMonth && day >= period.startDay);
+      const isBeforeEnd = (month < period.endMonth) || (month === period.endMonth && day <= period.endDay);
+      return isAfterStart && isBeforeEnd;
+    });
   }
 
   /**
@@ -795,12 +893,17 @@ export class AIInsightsService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          prompt: `Create a comprehensive weekly church digest based on this data:
+          prompt: `Create a comprehensive weekly church digest based on this REAL data:
 
-AT-RISK MEMBERS:
-- ${digestData.atRiskMembers.length} members with no activity in 60 days
-- Summary: ${digestData.atRiskSummary}
-- Recommended Actions: ${digestData.atRiskActions}
+AT-RISK MEMBERS DATA:
+${digestData.atRiskMembers.map(member => `
+- ${member.firstname} ${member.lastname} (${member.email || 'No email'})
+  Last Activity: ${new Date(member.created_at).toLocaleDateString()}
+  Status: ${member.status}
+  Member Type: ${member.member_type}
+`).join('\n')}
+
+TOTAL AT-RISK MEMBERS: ${digestData.atRiskMembers.length}
 
 Please provide a compelling weekly digest that includes:
 
@@ -809,20 +912,20 @@ Weekly Church Digest
 Dear Church Leadership Team,
 
 Summary of Current State:
-[Provide a warm, encouraging summary of the church's current state, focusing on positive aspects while acknowledging areas needing attention]
+[Provide a warm, encouraging summary based on the ACTUAL data above. Use real member names and specific details from the data provided]
 
 Areas Needing Attention:
-[Detail specific concerns, focusing on the at-risk members identified, with their names and specific situations]
+[Detail specific concerns using the ACTUAL member names and data provided above. Be specific about each at-risk member's situation]
 
 Recommended Actions:
-• [First specific action with timeline and responsible parties]
-• [Second specific action with timeline and responsible parties]
+• [Specific action for each at-risk member by name]
+• [Timeline and responsible parties for each action]
 • [Additional actions as needed]
 
 Positive Insights:
 [End with encouraging, positive insights that motivate leadership and emphasize the church's strengths]
 
-Write in a professional but warm tone suitable for church leadership. IMPORTANT: Format it nicely in HTML with headings, paragraphs, and lists.`,
+IMPORTANT: Use ONLY the real data provided above. Do not make up names or details. If no at-risk members, acknowledge that as a positive sign.`,
           model: AI_CONFIG.OPENAI_MODEL,
           max_tokens: 500
         })
