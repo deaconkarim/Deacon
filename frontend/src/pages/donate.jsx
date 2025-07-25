@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { getOrganizationBySlug } from '@/lib/data';
+import { getOrganizationBySlug, getCurrentUserMember } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +30,8 @@ export default function DonatePage() {
   const [error, setError] = useState(null);
   const [org, setOrg] = useState(null);
   const [orgLoading, setOrgLoading] = useState(true);
+  const [member, setMember] = useState(null);
+  const [memberLoading, setMemberLoading] = useState(true);
 
   useEffect(() => {
     async function fetchOrg() {
@@ -40,6 +42,20 @@ export default function DonatePage() {
     }
     fetchOrg();
   }, [slug]);
+
+  useEffect(() => {
+    async function fetchMember() {
+      setMemberLoading(true);
+      try {
+        const m = await getCurrentUserMember();
+        setMember(m);
+      } catch (e) {
+        setMember(null);
+      }
+      setMemberLoading(false);
+    }
+    fetchMember();
+  }, []);
 
   // Calculate the fee amount based on payment method
   const calculateFee = (amount, method) => {
@@ -356,6 +372,22 @@ export default function DonatePage() {
             </Button>
           </form>
         </CardContent>
+        {/* Manage Recurring Payments Link for Members */}
+        {(!memberLoading && member && member.stripe_customer_id) && (
+          <div className="px-6 pb-6">
+            <a
+              href={`/donate/manage?customer=${member.stripe_customer_id}`}
+              className="w-full inline-block"
+            >
+              <Button variant="secondary" className="w-full mt-2">
+                Manage Recurring Payments
+              </Button>
+            </a>
+            <p className="text-xs text-center text-muted-foreground mt-1">
+              View or cancel your recurring donations
+            </p>
+          </div>
+        )}
       </Card>
     </div>
   );
