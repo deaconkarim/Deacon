@@ -1,4 +1,4 @@
--- Create SMS tables for church app
+-- Create SMS tables for Deacon
 -- This migration creates the necessary tables for SMS functionality
 
 -- Create sms_conversations table

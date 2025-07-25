@@ -1,6 +1,6 @@
 # E2E Testing Setup for CI/CD
 
-This setup provides end-to-end testing for your Church App that runs in your continuous deployment pipeline.
+This setup provides end-to-end testing for your Deacon that runs in your continuous deployment pipeline.
 
 ## 🚀 Quick Start
 
@@ -98,4 +98,4 @@ PLAYWRIGHT_BASE_URL=https://your-app.vercel.app npx playwright test auth.spec.js
 - ✅ **Automated CI/CD** - No manual testing required
 - ✅ **Visual Feedback** - Screenshots and videos for debugging
 
-Your Church App now has robust e2e testing that runs automatically in your deployment pipeline! 🎉 
+Your Deacon now has robust e2e testing that runs automatically in your deployment pipeline! 🎉 

@@ -60,7 +60,7 @@ export function Layout() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSystemAdminUser, setIsSystemAdminUser] = useState(false);
   const [pendingApprovals, setPendingApprovals] = useState(0);
-  const [organizationName, setOrganizationName] = useState('Church App');
+  const [organizationName, setOrganizationName] = useState('Deacon');
   const [hoveredNav, setHoveredNav] = useState(null);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [isImpersonating, setIsImpersonating] = useState(false);

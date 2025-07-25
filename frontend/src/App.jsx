@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from "@vercel/speed-insights/react"
+import CapacitorService from './lib/capacitorService';
 import { Layout } from './components/layout';
 import { Dashboard } from './pages/dashboard';
 import { People } from './pages/members';
@@ -38,6 +39,24 @@ import PWAUpdateNotification from './components/PWAUpdateNotification';
 import PWATest from './components/PWATest';
 
 function App() {
+  useEffect(() => {
+    // Initialize Capacitor when app starts
+    CapacitorService.initialize();
+    
+    // Set up network change listener
+    CapacitorService.onNetworkChange((status) => {
+      console.log('Network status changed:', status);
+      if (!status.connected) {
+        console.warn('No internet connection');
+      }
+    });
+    
+    // Set up app state change listener
+    CapacitorService.onAppStateChange(({ isActive }) => {
+      console.log('App state changed:', isActive ? 'active' : 'inactive');
+    });
+  }, []);
+
   return (
     <>
       <Analytics />

@@ -1,6 +1,6 @@
 # End-to-End Testing
 
-This directory contains end-to-end (e2e) tests for the Church App using Playwright.
+This directory contains end-to-end (e2e) tests for the Deacon using Playwright.
 
 ## Setup
 

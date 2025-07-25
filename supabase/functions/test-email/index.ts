@@ -29,11 +29,11 @@ serve(async (req) => {
       body: JSON.stringify({
         from: 'noreply@getdeacon.com',
         to: email,
-        subject: 'Test Email from Church App',
+        subject: 'Test Email from Deacon',
         html: `
           <h1>Test Email</h1>
           <p>Hello ${name},</p>
-          <p>This is a test email from your church app to verify that Resend is working correctly.</p>
+          <p>This is a test email from your Deacon to verify that Resend is working correctly.</p>
           <p>If you received this email, the email system is working!</p>
         `,
       }),

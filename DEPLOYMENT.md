@@ -1,4 +1,4 @@
-# Church App Deployment Guide
+# Deacon Deployment Guide
 
 ## Prerequisites
 - A GitHub account
