@@ -925,7 +925,15 @@ Recommended Actions:
 Positive Insights:
 [End with encouraging, positive insights that motivate leadership and emphasize the church's strengths]
 
-IMPORTANT: Use ONLY the real data provided above. Do not make up names or details. If no at-risk members, acknowledge that as a positive sign.`,
+IMPORTANT: Use ONLY the real data provided above. Do not make up names or details. If no at-risk members, acknowledge that as a positive sign.
+
+Format the response with proper HTML tags for nice formatting:
+- Use <h2> for main sections
+- Use <h3> for subsections  
+- Use <p> for paragraphs
+- Use <ul> and <li> for lists
+- Use <strong> for emphasis
+- Add proper spacing and structure`,
           model: AI_CONFIG.OPENAI_MODEL,
           max_tokens: 500
         })

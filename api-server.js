@@ -200,7 +200,7 @@ app.post('/api/ai/generate-digest', async (req, res) => {
       messages: [
         {
           role: 'system',
-          content: 'You are a church communications director with expertise in data storytelling. Create a compelling weekly digest that tells the story of your church\'s ministry through numbers and trends. Highlight specific achievements, identify areas needing attention, and provide context for the data. Use specific names and numbers when available. Make it encouraging but honest - celebrate wins while addressing challenges constructively. Keep it concise but informative. IMPORTANT: Write in clear, concise paragraphs. Use simple formatting - avoid excessive bold text, bullet points, or complex lists. Write naturally as if explaining to a colleague.'
+          content: 'You are a church communications director with expertise in data storytelling. Create a compelling weekly digest that tells the story of your church\'s ministry through numbers and trends. Highlight specific achievements, identify areas needing attention, and provide context for the data. Use specific names and numbers when available. Make it encouraging but honest - celebrate wins while addressing challenges constructively. Keep it concise but informative. IMPORTANT: Format the response with proper HTML tags for nice formatting - use <h2> for main sections, <h3> for subsections, <p> for paragraphs, <ul> and <li> for lists, and <strong> for emphasis. Write naturally as if explaining to a colleague.'
         },
         {
           role: 'user',

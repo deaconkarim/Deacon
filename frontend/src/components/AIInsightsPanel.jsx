@@ -379,15 +379,16 @@ export function AIInsightsPanel({ organizationId }) {
                           <span>{new Date(prediction.eventDate).toLocaleDateString()}</span>
                         </div>
                         {prediction.factors?.comprehensiveFactors?.length > 0 && (
-                          <div className="mt-2 pt-2 border-t border-gray-200">
-                            <div className="text-xs font-medium text-gray-700 mb-1">Factors Considered:</div>
-                            <div className="space-y-1">
-                              {prediction.factors.comprehensiveFactors.slice(0, 3).map((factor, idx) => (
-                                <div key={idx} className="text-xs text-gray-500">• {factor}</div>
-                              ))}
-                              {prediction.factors.comprehensiveFactors.length > 3 && (
-                                <div className="text-xs text-gray-400">+{prediction.factors.comprehensiveFactors.length - 3} more factors</div>
-                              )}
+                          <div className="group relative">
+                            <div className="text-xs text-blue-600 cursor-help">ℹ️ Hover for factors</div>
+                            <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded-lg p-3 shadow-lg z-10 min-w-48">
+                              <div className="font-medium mb-1">Factors Considered:</div>
+                              <div className="space-y-1">
+                                {prediction.factors.comprehensiveFactors.map((factor, idx) => (
+                                  <div key={idx} className="text-gray-200">• {factor}</div>
+                                ))}
+                              </div>
+                              <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
                             </div>
                           </div>
                         )}
