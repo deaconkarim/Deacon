@@ -289,6 +289,8 @@ export function AIInsightsPanel({ organizationId }) {
   const [weeklyDigest, setWeeklyDigest] = useState(null);
   const [loading, setLoading] = useState(true);
   const [digestLoading, setDigestLoading] = useState(false);
+  const [selectedFactors, setSelectedFactors] = useState(null);
+  const [factorsPopoverOpen, setFactorsPopoverOpen] = useState(false);
   const { toast } = useToast();
 
   const loadInsights = async (forceRefresh = false) => {
@@ -433,8 +435,11 @@ export function AIInsightsPanel({ organizationId }) {
                       className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
                       onClick={() => {
                         if (prediction.factors?.comprehensiveFactors?.length > 0) {
-                          const factors = prediction.factors.comprehensiveFactors.join('\n• ');
-                          alert(`Factors Considered for ${prediction.eventTitle}:\n\n• ${factors}`);
+                          setSelectedFactors({
+                            eventTitle: prediction.eventTitle,
+                            factors: prediction.factors.comprehensiveFactors
+                          });
+                          setFactorsPopoverOpen(true);
                         }
                       }}
                       title={prediction.factors?.comprehensiveFactors?.length > 0 ? `Click to see factors considered` : ''}>
@@ -518,6 +523,55 @@ export function AIInsightsPanel({ organizationId }) {
           </div>
         </motion.div>
       </div>
+
+      {/* Factors Popover */}
+      {factorsPopoverOpen && selectedFactors && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl border border-slate-200 dark:border-slate-700"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                Factors Considered
+              </h3>
+              <button
+                onClick={() => setFactorsPopoverOpen(false)}
+                className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              >
+                <X className="h-5 w-5 text-slate-500" />
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                {selectedFactors.eventTitle}
+              </h4>
+              <div className="space-y-2">
+                {selectedFactors.factors.map((factor, index) => (
+                  <div key={index} className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">{factor}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setFactorsPopoverOpen(false)}
+                className="text-sm"
+              >
+                Close
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
