@@ -224,6 +224,7 @@ export function Dashboard() {
   const [personalTasks, setPersonalTasks] = useState([]);
   const [donationTrendAnalysis, setDonationTrendAnalysis] = useState({});
   const [weeklyDonationBreakdown, setWeeklyDonationBreakdown] = useState([]);
+  const [organizationId, setOrganizationId] = useState(null);
 
   // SMS Conversation Dialog state
   const [selectedSMSConversation, setSelectedSMSConversation] = useState(null);
@@ -271,6 +272,9 @@ export function Dashboard() {
       
       // Use the consolidated dashboard service instead of multiple API calls
       const dashboardData = await dashboardService.getDashboardData();
+      
+      // Set organization ID for AI insights
+      setOrganizationId(dashboardData.organizationId);
       
       // Extract data from the consolidated response
       const { members, donations: donationsData, events: eventsData, tasks, sms, celebrations, attendance, family } = dashboardData;
@@ -1570,7 +1574,7 @@ export function Dashboard() {
         {/* AI Ministry Insights Panel */}
         <PermissionFeature permission={PERMISSIONS.MEMBERS_VIEW}>
           <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
-            <AIInsightsPanel organizationId={user?.user_metadata?.organization_id} />
+            <AIInsightsPanel organizationId={organizationId} />
           </motion.div>
         </PermissionFeature>
 

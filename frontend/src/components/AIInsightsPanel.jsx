@@ -29,6 +29,17 @@ import AIInsightsService from '@/lib/aiInsightsService';
 const InsightCard = ({ title, summary, actions, icon: Icon, color, count, loading }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
+  // Helper function to format AI text into readable sections
+  const formatAIText = (text) => {
+    if (!text) return [];
+    
+    // Simple split by newlines and filter out empty lines
+    return text.split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0)
+      .map(line => ({ type: 'text', content: line }));
+  };
+
   if (loading) {
     return (
       <Card className="h-full">
@@ -50,6 +61,9 @@ const InsightCard = ({ title, summary, actions, icon: Icon, color, count, loadin
     );
   }
 
+  const formattedSummary = formatAIText(summary);
+  const formattedActions = formatAIText(actions);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -57,16 +71,16 @@ const InsightCard = ({ title, summary, actions, icon: Icon, color, count, loadin
       transition={{ duration: 0.3 }}
     >
       <Card className={`h-full border-l-4 ${color} hover:shadow-md transition-shadow`}>
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <div className={`p-2 rounded-full ${color.replace('border-', 'bg-').replace('-500', '-100')}`}>
                 <Icon className="h-5 w-5 text-gray-700" />
               </div>
               <div>
-                <CardTitle className="text-sm font-semibold">{title}</CardTitle>
+                <CardTitle className="text-base font-semibold text-gray-800">{title}</CardTitle>
                 {count !== undefined && (
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="secondary" className="text-xs mt-1">
                     {count} {count === 1 ? 'item' : 'items'}
                   </Badge>
                 )}
@@ -76,30 +90,41 @@ const InsightCard = ({ title, summary, actions, icon: Icon, color, count, loadin
               variant="ghost"
               size="sm"
               onClick={() => setIsExpanded(!isExpanded)}
-              className="h-6 w-6 p-0"
+              className="h-8 w-8 p-0"
             >
-              <ArrowRight className={`h-3 w-3 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+              <ArrowRight className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="text-sm text-gray-600 leading-relaxed">
-            {summary}
+        
+        <CardContent className="space-y-4">
+          {/* Summary Section */}
+          <div className="space-y-3">
+            {formattedSummary.map((section, index) => (
+              <div key={index} className="text-sm text-gray-600 leading-relaxed">
+                {section.content}
+              </div>
+            ))}
           </div>
           
+          {/* Actions Section */}
           {isExpanded && actions && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="pt-3 border-t border-gray-100"
+              className="pt-4 border-t border-gray-200"
             >
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-3">
                 <Target className="h-4 w-4 text-blue-600" />
-                <span className="text-sm font-medium text-gray-700">Suggested Actions</span>
+                <span className="text-sm font-semibold text-gray-800">Suggested Actions</span>
               </div>
-              <div className="text-sm text-gray-600 whitespace-pre-line">
-                {actions}
+              <div className="space-y-3">
+                {formattedActions.map((section, index) => (
+                  <div key={index} className="text-sm text-gray-600 leading-relaxed">
+                    {section.content}
+                  </div>
+                ))}
               </div>
             </motion.div>
           )}
@@ -110,6 +135,17 @@ const InsightCard = ({ title, summary, actions, icon: Icon, color, count, loadin
 };
 
 const WeeklyDigestCard = ({ digest, loading, onRefresh }) => {
+  // Helper function to format digest text
+  const formatDigestText = (text) => {
+    if (!text) return [];
+    
+    // Simple split by newlines and filter out empty lines
+    return text.split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0)
+      .map(line => ({ type: 'text', content: line }));
+  };
+
   if (loading) {
     return (
       <Card className="col-span-full">
@@ -128,6 +164,8 @@ const WeeklyDigestCard = ({ digest, loading, onRefresh }) => {
     );
   }
 
+  const formattedDigest = formatDigestText(digest);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -136,21 +174,21 @@ const WeeklyDigestCard = ({ digest, loading, onRefresh }) => {
       className="col-span-full"
     >
       <Card className="border-l-4 border-blue-500">
-        <CardHeader>
+        <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <div className="p-2 rounded-full bg-blue-100">
                 <Sparkles className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <CardTitle className="text-lg">Weekly AI Digest</CardTitle>
-                <CardDescription>AI-powered insights for your ministry</CardDescription>
+                <CardTitle className="text-lg font-semibold text-gray-800">Weekly AI Digest</CardTitle>
+                <CardDescription className="text-gray-600">AI-powered insights for your ministry</CardDescription>
               </div>
             </div>
             <Button
               variant="outline"
               size="sm"
-              onClick={onRefresh}
+              onClick={() => onRefresh(true)}
               className="flex items-center gap-2"
             >
               <RefreshCw className="h-4 w-4" />
@@ -158,9 +196,13 @@ const WeeklyDigestCard = ({ digest, loading, onRefresh }) => {
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
-            {digest}
+        <CardContent className="space-y-4">
+          <div className="space-y-3">
+            {formattedDigest.map((section, index) => (
+              <div key={index} className="text-sm text-gray-600 leading-relaxed">
+                {section.content}
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
@@ -175,10 +217,14 @@ export function AIInsightsPanel({ organizationId }) {
   const [digestLoading, setDigestLoading] = useState(false);
   const { toast } = useToast();
 
-  const loadInsights = async () => {
+  const loadInsights = async (forceRefresh = false) => {
     try {
       setLoading(true);
-      const result = await AIInsightsService.getDashboardInsights(organizationId);
+      // Clear cache if force refresh
+      if (forceRefresh) {
+        AIInsightsService.clearCache();
+      }
+      const result = await AIInsightsService.getDashboardInsights(organizationId, forceRefresh);
       setInsights(result);
     } catch (error) {
       console.error('Error loading insights:', error);
@@ -192,10 +238,14 @@ export function AIInsightsPanel({ organizationId }) {
     }
   };
 
-  const loadWeeklyDigest = async () => {
+  const loadWeeklyDigest = async (forceRefresh = false) => {
     try {
       setDigestLoading(true);
-      const result = await AIInsightsService.getWeeklyDigest(organizationId);
+      // Clear cache if force refresh
+      if (forceRefresh) {
+        AIInsightsService.clearCache();
+      }
+      const result = await AIInsightsService.getWeeklyDigest(organizationId, forceRefresh);
       setWeeklyDigest(result);
     } catch (error) {
       console.error('Error loading weekly digest:', error);
@@ -256,22 +306,22 @@ export function AIInsightsPanel({ organizationId }) {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-full bg-purple-100">
-            <Brain className="h-5 w-5 text-purple-600" />
+        <div className="flex items-center gap-3">
+          <div className="p-3 rounded-full bg-purple-100">
+            <Brain className="h-6 w-6 text-purple-600" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold">AI Ministry Insights</h2>
-            <p className="text-sm text-gray-600">Powered by intelligent analysis of your data</p>
+            <h2 className="text-2xl font-bold text-gray-800">AI Ministry Insights</h2>
+            <p className="text-sm text-gray-600 mt-1">Powered by intelligent analysis of your data</p>
           </div>
         </div>
         <Button
           variant="outline"
           size="sm"
-          onClick={loadInsights}
+          onClick={() => loadInsights(true)}
           disabled={loading}
           className="flex items-center gap-2"
         >
@@ -288,7 +338,7 @@ export function AIInsightsPanel({ organizationId }) {
       />
 
       {/* Insight Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {insightCards.map((card) => (
           <InsightCard
             key={card.key}
@@ -304,11 +354,11 @@ export function AIInsightsPanel({ organizationId }) {
       </div>
 
       {/* Cost Efficiency Info */}
-      <Card className="bg-gray-50 border-dashed">
-        <CardContent className="pt-4">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Lightbulb className="h-4 w-4" />
-            <span>
+      <Card className="bg-gradient-to-r from-gray-50 to-gray-100 border-dashed">
+        <CardContent className="pt-6 pb-4">
+          <div className="flex items-center gap-3 text-sm text-gray-600">
+            <Lightbulb className="h-5 w-5 text-yellow-600" />
+            <span className="font-medium">
               💡 Cost-efficient AI: Using smart SQL queries + lightweight AI APIs. 
               Estimated cost: ~$0.75-1.00 per church per month.
             </span>
