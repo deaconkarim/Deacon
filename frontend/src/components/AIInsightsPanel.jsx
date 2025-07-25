@@ -6,7 +6,8 @@ import {
   RefreshCw,
   ExternalLink,
   User,
-  Mail
+  Mail,
+  Calendar
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -54,62 +55,137 @@ const InsightCard = ({ title, summary, actions, icon: Icon, color, count, loadin
   const formattedActions = formatAIText(actions);
 
   return (
-    <motion.div className="group/card relative" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-      <div className={`absolute -inset-0.5 bg-gradient-to-r ${color.replace('border-', 'from-').replace('-500', '-500/20')} to-${color.replace('border-', '').replace('-500', '-600/20')} rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300`}></div>
-      <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
-        <div className="flex items-center gap-3 mb-3">
-          <div className={`w-8 h-8 bg-gradient-to-br ${color.replace('border-', 'from-').replace('-500', '-500')} to-${color.replace('border-', '').replace('-500', '-600')} rounded-lg flex items-center justify-center`}>
-            <Icon className="h-4 w-4 text-white" />
+    <motion.div className="group relative" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+      <div className={`absolute -inset-1 bg-gradient-to-r ${color.replace('border-', 'from-').replace('-500', '-500')} to-${color.replace('border-', '').replace('-500', '-600')} rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300`}></div>
+      <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+        <div className="flex items-center gap-3 mb-6">
+          <div className={`w-12 h-12 bg-gradient-to-br ${color.replace('border-', 'from-').replace('-500', '-500')} to-${color.replace('border-', '').replace('-500', '-600')} rounded-2xl flex items-center justify-center shadow-lg`}>
+            <Icon className="h-6 w-6 text-white" />
           </div>
-          <h4 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h4>
+          <div>
+            <h3 className="text-2xl font-bold text-slate-900 dark:text-white">{title}</h3>
+            <p className="text-slate-600 dark:text-slate-400">
+              {count !== undefined ? `${count} ${count === 1 ? 'item' : 'items'}` : 'AI-powered insights'}
+            </p>
+          </div>
         </div>
         
-        <div className="space-y-2">
+        <div className="grid gap-4 grid-cols-1">
           {/* Summary Section */}
-          <div className="text-sm text-slate-600 dark:text-slate-400">
-            {formattedSummary.map((section, index) => (
-              <div key={index} className="leading-relaxed">
-                {section.content}
+          <motion.div className="group/card relative">
+            <div className={`absolute -inset-0.5 bg-gradient-to-r ${color.replace('border-', 'from-').replace('-500', '-500/20')} to-${color.replace('border-', '').replace('-500', '-600/20')} rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300`}></div>
+            <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 bg-gradient-to-br ${color.replace('border-', 'from-').replace('-500', '-500')} to-${color.replace('border-', '').replace('-500', '-600')} rounded-xl flex items-center justify-center`}>
+                    <Icon className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-semibold text-slate-900 dark:text-white">Summary</h4>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">
+                      AI-generated insights
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-slate-600 dark:text-slate-400">
+                    {memberData?.length || 0}
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-500">members</p>
+                </div>
               </div>
-            ))}
-          </div>
-          
-          {/* Member List Section - Only for At-Risk Members */}
-          {memberData && memberData.length > 0 && (
-            <div className="space-y-2">
-              <div className="text-sm font-medium text-slate-700 dark:text-slate-300">At-Risk Members:</div>
-              <div className="space-y-1">
-                {memberData.map((member, index) => (
-                  <div 
-                    key={member.id || index}
-                    className="flex items-center justify-between p-2 rounded-md bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors"
-                    onClick={() => navigate(member.profileUrl)}
-                  >
-                    <div className="flex items-center gap-2">
-                      <UserX className="h-4 w-4 text-red-500" />
-                      <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
-                        {member.firstname} {member.lastname}
-                      </span>
-                    </div>
-                    <ExternalLink className="h-3 w-3 text-slate-400" />
+              <div className="mt-3 text-sm text-slate-600 dark:text-slate-400">
+                {formattedSummary.map((section, index) => (
+                  <div key={index} className="leading-relaxed">
+                    {section.content}
                   </div>
                 ))}
               </div>
             </div>
+          </motion.div>
+          
+          {/* Member List Section - Only for At-Risk Members */}
+          {memberData && memberData.length > 0 && (
+            <motion.div className="group/card relative">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-red-500/20 to-red-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+              <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center">
+                      <UserX className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h4 className="text-base font-semibold text-slate-900 dark:text-white">At-Risk Members</h4>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">
+                        {memberData.length} members • No recent activity
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-red-600">
+                      {memberData.length}
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-500">members</p>
+                  </div>
+                </div>
+                <div className="mt-3 space-y-1">
+                  {memberData.slice(0, 3).map((member, index) => (
+                    <div 
+                      key={member.id || index}
+                      className="flex items-center justify-between p-2 rounded-md bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors"
+                      onClick={() => navigate(member.profileUrl)}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                          {member.firstname} {member.lastname}
+                        </span>
+                      </div>
+                      <ExternalLink className="h-3 w-3 text-slate-400" />
+                    </div>
+                  ))}
+                  {memberData.length > 3 && (
+                    <p className="text-xs text-slate-500 text-center">
+                      +{memberData.length - 3} more members
+                    </p>
+                  )}
+                </div>
+              </div>
+            </motion.div>
           )}
           
           {/* Actions Section */}
           {actions && (
-            <div className="space-y-2">
-              <div className="text-sm font-medium text-slate-700 dark:text-slate-300">Recommended Actions:</div>
-              <div className="space-y-1">
-                {formattedActions.map((action, index) => (
-                  <div key={index} className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                    {action.content}
+            <motion.div className="group/card relative">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-green-500/20 to-green-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+              <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
+                      <CheckSquare className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h4 className="text-base font-semibold text-slate-900 dark:text-white">Recommended Actions</h4>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">
+                        AI-generated suggestions
+                      </p>
+                    </div>
                   </div>
-                ))}
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-green-600">
+                      {formattedActions.length}
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-500">actions</p>
+                  </div>
+                </div>
+                <div className="mt-3 space-y-1">
+                  {formattedActions.map((action, index) => (
+                    <div key={index} className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                      {action.content}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            </motion.div>
           )}
         </div>
       </div>
@@ -141,15 +217,18 @@ const WeeklyDigestCard = ({ content, loading, onRefresh }) => {
   }
 
   return (
-    <motion.div className="group/card relative" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-      <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500/20 to-purple-600/20 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-      <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
-        <div className="flex items-center justify-between mb-3">
+    <motion.div className="group relative" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+      <div className="absolute -inset-1 bg-gradient-to-r from-purple-500 to-purple-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+      <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
-              <Mail className="h-4 w-4 text-white" />
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+              <Mail className="h-6 w-6 text-white" />
             </div>
-            <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Weekly Digest</h4>
+            <div>
+              <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Weekly Digest</h3>
+              <p className="text-slate-600 dark:text-slate-400">AI-generated church insights</p>
+            </div>
           </div>
           {onRefresh && (
             <Button
@@ -164,14 +243,40 @@ const WeeklyDigestCard = ({ content, loading, onRefresh }) => {
           )}
         </div>
         
-        <div className="space-y-2">
-          {/* Full Content - Render as HTML */}
-          <div 
-            className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed prose prose-sm max-w-none weekly-digest"
-            dangerouslySetInnerHTML={{ 
-              __html: content || 'No weekly digest available. Click refresh to generate one.' 
-            }}
-          />
+        <div className="grid gap-4 grid-cols-1">
+          <motion.div className="group/card relative">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500/20 to-purple-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+            <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center">
+                    <Mail className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-semibold text-slate-900 dark:text-white">Weekly Summary</h4>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">
+                      AI-generated insights
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-purple-600">
+                    Weekly
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-500">digest</p>
+                </div>
+              </div>
+              <div className="mt-3">
+                {/* Full Content - Render as HTML */}
+                <div 
+                  className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed prose prose-sm max-w-none weekly-digest"
+                  dangerouslySetInnerHTML={{ 
+                    __html: content || 'No weekly digest available. Click refresh to generate one.' 
+                  }}
+                />
+              </div>
+            </div>
+          </motion.div>
         </div>
       </div>
     </motion.div>
@@ -291,85 +396,115 @@ export function AIInsightsPanel({ organizationId }) {
         />
         
         {/* Predictive Attendance Card */}
-        <motion.div className="group/card relative" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-          <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-          <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                <Brain className="h-4 w-4 text-white" />
+        <motion.div className="group relative" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+          <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-blue-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                <Brain className="h-6 w-6 text-white" />
               </div>
-              <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Predictive Attendance</h4>
+              <div>
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Predictive Attendance</h3>
+                <p className="text-slate-600 dark:text-slate-400">AI-powered attendance forecasting</p>
+              </div>
             </div>
             
-            <div className="space-y-2">
+            <div className="grid gap-4 grid-cols-1">
               {loading ? (
-                <div className="space-y-3">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
-                </div>
+                <motion.div className="group/card relative">
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                  <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                    <div className="space-y-3">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-4 w-1/2" />
+                    </div>
+                  </div>
+                </motion.div>
               ) : insights?.insights?.predictiveAttendance?.data?.predictions ? (
-                <div className="space-y-3">
-                  <div className="text-sm text-slate-600 dark:text-slate-400">
-                    <p className="mb-3 font-medium">Upcoming Event Predictions:</p>
-                    {insights.insights.predictiveAttendance.data.predictions.slice(0, 3).map((prediction, index) => (
-                      <div 
-                        key={index} 
-                        className="mb-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer group"
-                        title={prediction.factors?.comprehensiveFactors?.length > 0 ? `Factors Considered: ${prediction.factors.comprehensiveFactors.join(', ')}` : ''}
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="font-medium text-slate-800 dark:text-slate-200 text-sm">
-                            {prediction.eventTitle}
+                insights.insights.predictiveAttendance.data.predictions.slice(0, 3).map((prediction, index) => (
+                  <motion.div 
+                    key={index}
+                    className="group/card relative"
+                  >
+                    <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                    <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300"
+                         title={prediction.factors?.comprehensiveFactors?.length > 0 ? `Factors Considered: ${prediction.factors.comprehensiveFactors.join(', ')}` : ''}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                            <Calendar className="h-5 w-5 text-white" />
                           </div>
-                          <Badge 
-                            variant={prediction.confidence === 'High' ? 'default' : prediction.confidence === 'Medium' ? 'secondary' : 'outline'} 
-                            className={`text-xs ${
-                              prediction.confidence === 'High' ? 'bg-green-100 text-green-800' :
-                              prediction.confidence === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-slate-100 text-slate-600'
-                            }`}
-                          >
-                            {prediction.confidence}
-                          </Badge>
+                          <div>
+                            <h4 className="text-base font-semibold text-slate-900 dark:text-white">{prediction.eventTitle}</h4>
+                            <p className="text-xs text-slate-600 dark:text-slate-400">
+                              {new Date(prediction.eventDate).toLocaleDateString()} • {prediction.eventType}
+                            </p>
+                          </div>
                         </div>
-                        <div className="text-xs text-slate-600 dark:text-slate-400">
-                          <div className="flex justify-between mb-1">
-                            <span>Predicted Attendance:</span>
-                            <span className="font-medium">{prediction.predictedAttendance} people</span>
+                        <div className="text-right">
+                          <div className="text-2xl font-bold text-blue-600">
+                            {prediction.predictedAttendance}
                           </div>
-                          <div className="flex justify-between mb-1">
-                            <span>Event Type:</span>
-                            <span className="capitalize">{prediction.eventType}</span>
-                          </div>
-                          <div className="flex justify-between mb-1">
-                            <span>Date:</span>
-                            <span>{new Date(prediction.eventDate).toLocaleDateString()}</span>
-                          </div>
-                          {prediction.factors?.comprehensiveFactors?.length > 0 && (
-                            <div className="mt-2 text-xs text-blue-600 dark:text-blue-400">
-                              ℹ️ Hover to see factors considered
-                            </div>
-                          )}
+                          <p className="text-xs text-slate-500 dark:text-slate-500">predicted</p>
                         </div>
                       </div>
-                    ))}
-                    {insights.insights.predictiveAttendance.data.predictions.length > 3 && (
-                      <p className="text-xs text-slate-500 text-center">
-                        +{insights.insights.predictiveAttendance.data.predictions.length - 3} more events
-                      </p>
-                    )}
-                  </div>
-                </div>
+                      <div className="mt-3 flex justify-between items-center">
+                        <Badge 
+                          variant={prediction.confidence === 'High' ? 'default' : prediction.confidence === 'Medium' ? 'secondary' : 'outline'} 
+                          className={`text-xs ${
+                            prediction.confidence === 'High' ? 'bg-green-100 text-green-800' :
+                            prediction.confidence === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          {prediction.confidence} confidence
+                        </Badge>
+                        {prediction.factors?.comprehensiveFactors?.length > 0 && (
+                          <div className="text-xs text-blue-600 dark:text-blue-400">
+                            ℹ️ Hover for factors
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                ))
               ) : (
-                <div className="text-sm text-slate-600 dark:text-slate-400">
-                  <p className="mb-3">
-                    No upcoming events found. Create events to see attendance predictions based on historical data.
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    Predictions are based on historical attendance patterns, event types, and seasonal trends.
-                  </p>
-                </div>
+                <motion.div className="group/card relative">
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                  <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                          <Calendar className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <h4 className="text-base font-semibold text-slate-900 dark:text-white">No Predictions</h4>
+                          <p className="text-xs text-slate-600 dark:text-slate-400">
+                            Create events to see predictions
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-slate-400">
+                          0
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-500">events</p>
+                      </div>
+                    </div>
+                    <div className="mt-3 text-sm text-slate-600 dark:text-slate-400">
+                      <p>No upcoming events found. Create events to see attendance predictions based on historical data.</p>
+                      <p className="text-xs text-slate-500 mt-2">
+                        Predictions are based on historical attendance patterns, event types, and seasonal trends.
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+              {insights?.insights?.predictiveAttendance?.data?.predictions?.length > 3 && (
+                <p className="text-xs text-slate-500 text-center">
+                  +{insights.insights.predictiveAttendance.data.predictions.length - 3} more events
+                </p>
               )}
             </div>
           </div>
