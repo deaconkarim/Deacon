@@ -91,6 +91,7 @@ import { useAttendanceStats } from '../lib/data/attendanceStats';
 import LeadershipVerse from '@/components/LeadershipVerse';
 import { PermissionFeature } from '@/components/PermissionGuard';
 import { PERMISSIONS } from '@/lib/permissions';
+import AIInsightsPanel from '@/components/AIInsightsPanel';
 
 // Function to check if user has access to any dashboard sections
 const getUserAccessiblePages = (userPermissions) => {
@@ -1565,6 +1566,14 @@ export function Dashboard() {
         </div>
       </motion.div>
         </PermissionFeature>
+
+        {/* AI Ministry Insights Panel */}
+        <PermissionFeature permission={PERMISSIONS.MEMBERS_VIEW}>
+          <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
+            <AIInsightsPanel organizationId={user?.user_metadata?.organization_id} />
+          </motion.div>
+        </PermissionFeature>
+
       {/* Recent Activity Feed & Attendance by Event Type */}
       <PermissionFeature permission={PERMISSIONS.SETTINGS_VIEW}>
         <motion.div variants={itemVariants} className="mb-6 sm:mb-12">

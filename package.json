@@ -19,6 +19,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.52.0",
     "dotenv": "^16.3.1",
+    "openai": "^4.28.0",
     "stripe": "^18.3.0"
   }
 }
