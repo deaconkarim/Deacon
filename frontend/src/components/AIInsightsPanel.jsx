@@ -322,18 +322,29 @@ export function AIInsightsPanel({ organizationId }) {
         {/* Predictive Attendance Card */}
         <Card className="h-full border-l-4 border-blue-500 hover:shadow-md transition-shadow">
           <CardHeader className="pb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-blue-100">
-                <Brain className="h-5 w-5 text-blue-700" />
-              </div>
-              <div>
-                <CardTitle className="text-base font-semibold text-gray-800">Predictive Attendance</CardTitle>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge variant="secondary" className="text-xs">
-                    {insights?.insights?.predictiveAttendance?.data?.predictions?.length || 0} Events
-                  </Badge>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-blue-100">
+                  <Brain className="h-5 w-5 text-blue-700" />
+                </div>
+                <div>
+                  <CardTitle className="text-base font-semibold text-gray-800">Predictive Attendance</CardTitle>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant="secondary" className="text-xs">
+                      {insights?.insights?.predictiveAttendance?.data?.predictions?.length || 0} Events
+                    </Badge>
+                  </div>
                 </div>
               </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => loadInsights(true)}
+                disabled={loading}
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              </Button>
             </div>
           </CardHeader>
           
@@ -349,9 +360,9 @@ export function AIInsightsPanel({ organizationId }) {
                 <div className="text-sm text-gray-600">
                   <p className="mb-3 font-medium">Upcoming Event Predictions:</p>
                   {insights.insights.predictiveAttendance.data.predictions.slice(0, 3).map((prediction, index) => (
-                    <div key={index} className="mb-3 p-3 bg-gray-50 rounded-lg">
+                    <div key={index} className="mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                       <div className="flex justify-between items-start mb-2">
-                        <div className="font-medium text-gray-800 text-sm">
+                        <div className="font-medium text-gray-800 text-sm truncate flex-1 mr-2">
                           {prediction.eventTitle}
                         </div>
                         <Badge 
@@ -365,22 +376,25 @@ export function AIInsightsPanel({ organizationId }) {
                           {prediction.confidence}
                         </Badge>
                       </div>
-                      <div className="text-xs text-gray-600">
-                        <div className="flex justify-between mb-1">
-                          <span>Predicted Attendance:</span>
+                      <div className="text-xs text-gray-600 space-y-1">
+                        <div className="flex justify-between">
+                          <span>Predicted:</span>
                           <span className="font-medium">{prediction.predictedAttendance} people</span>
                         </div>
-                        <div className="flex justify-between mb-1">
-                          <span>Event Type:</span>
+                        <div className="flex justify-between">
+                          <span>Type:</span>
                           <span className="capitalize">{prediction.eventType}</span>
                         </div>
-                        <div className="flex justify-between mb-1">
+                        <div className="flex justify-between">
                           <span>Date:</span>
                           <span>{new Date(prediction.eventDate).toLocaleDateString()}</span>
                         </div>
                         {prediction.factors?.comprehensiveFactors?.length > 0 && (
-                          <div className="group relative">
-                            <div className="text-xs text-blue-600 cursor-help">ℹ️ Hover for factors</div>
+                          <div className="group relative mt-2 pt-2 border-t border-gray-200">
+                            <div className="text-xs text-blue-600 cursor-help flex items-center gap-1">
+                              <span>ℹ️</span>
+                              <span>Factors</span>
+                            </div>
                             <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded-lg p-3 shadow-lg z-10 min-w-48">
                               <div className="font-medium mb-1">Factors Considered:</div>
                               <div className="space-y-1">
@@ -404,12 +418,15 @@ export function AIInsightsPanel({ organizationId }) {
               </div>
             ) : (
               <div className="text-sm text-gray-600 leading-relaxed">
-                <p className="mb-3">
-                  No upcoming events found. Create events to see attendance predictions based on historical data.
-                </p>
-                <p className="text-xs text-gray-500">
-                  Predictions are based on historical attendance patterns, event types, and seasonal trends.
-                </p>
+                <div className="text-center py-8">
+                  <div className="text-gray-400 mb-2">
+                    <Brain className="h-8 w-8 mx-auto" />
+                  </div>
+                  <p className="font-medium text-gray-700 mb-2">No upcoming events found</p>
+                  <p className="text-xs text-gray-500">
+                    Create events to see AI-powered attendance predictions based on historical data, weather patterns, and community factors.
+                  </p>
+                </div>
               </div>
             )}
           </CardContent>

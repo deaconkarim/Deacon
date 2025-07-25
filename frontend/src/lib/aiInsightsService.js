@@ -872,6 +872,7 @@ export class AIInsightsService {
         atRiskMembers: insights.insights?.atRisk?.data || [],
         atRiskSummary: insights.insights?.atRisk?.summary || '',
         atRiskActions: insights.insights?.atRisk?.actions || '',
+        predictiveAttendance: insights.insights?.predictiveAttendance?.data?.predictions || [],
         timestamp: insights.timestamp
       };
 
@@ -905,6 +906,17 @@ ${digestData.atRiskMembers.map(member => `
 
 TOTAL AT-RISK MEMBERS: ${digestData.atRiskMembers.length}
 
+ATTENDANCE PREDICTIONS:
+${digestData.predictiveAttendance.map(prediction => `
+- ${prediction.eventTitle} (${prediction.eventType})
+  Date: ${new Date(prediction.eventDate).toLocaleDateString()}
+  Predicted Attendance: ${prediction.predictedAttendance} people
+  Confidence: ${prediction.confidence}
+  Factors: ${prediction.factors?.comprehensiveFactors?.join(', ') || 'Standard factors'}
+`).join('\n')}
+
+TOTAL UPCOMING EVENTS: ${digestData.predictiveAttendance.length}
+
 Please provide a compelling weekly digest that includes:
 
 Weekly Church Digest
@@ -912,14 +924,18 @@ Weekly Church Digest
 Dear Church Leadership Team,
 
 Summary of Current State:
-[Provide a warm, encouraging summary based on the ACTUAL data above. Use real member names and specific details from the data provided]
+[Provide a warm, encouraging summary based on the ACTUAL data above. Include both member engagement and attendance predictions]
 
 Areas Needing Attention:
 [Detail specific concerns using the ACTUAL member names and data provided above. Be specific about each at-risk member's situation]
 
+Attendance Forecast:
+[Summarize the attendance predictions and highlight any concerning trends or positive indicators]
+
 Recommended Actions:
 • [Specific action for each at-risk member by name]
 • [Timeline and responsible parties for each action]
+• [Actions to improve attendance if needed]
 • [Additional actions as needed]
 
 Positive Insights:
