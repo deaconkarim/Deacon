@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     }
 
     // Validate model to ensure cost efficiency
-    const allowedModels = ['gpt-3.5-turbo', 'gpt-4o-mini', 'gpt-3.5-turbo-16k'];
+    const allowedModels = ['gpt-3.5-turbo', 'gpt-4o-mini', 'gpt-3.5-turbo-16k', 'gpt-4o', 'gpt-4-turbo'];
     if (!allowedModels.includes(model)) {
       return res.status(400).json({ error: 'Invalid model specified' });
     }
@@ -36,7 +36,7 @@ export default async function handler(req, res) {
           content: prompt
         }
       ],
-      max_tokens: Math.min(max_tokens, 250), // Cap at 250 tokens for cost efficiency
+      max_tokens: Math.min(max_tokens, 1000), // Allow up to 1000 tokens for testing
       temperature: 0.7, // Balanced creativity
       top_p: 0.9,
       frequency_penalty: 0.1,

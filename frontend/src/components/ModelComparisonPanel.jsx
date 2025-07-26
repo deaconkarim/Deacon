@@ -80,28 +80,28 @@ const TEST_SCENARIOS = [
     id: 'member_insights',
     name: 'Member Insights Analysis',
     description: 'Analyze member engagement patterns and provide actionable insights',
-    prompt: 'Analyze the following member data and provide insights about engagement patterns, at-risk members, and recommendations for improving member retention and participation.',
+    prompt: 'Analyze member engagement patterns and provide specific, actionable insights about at-risk members and recommendations for improving member retention and participation. Focus on concrete steps church leaders can implement immediately.',
     category: 'Analytics'
   },
   {
     id: 'attendance_prediction',
     name: 'Attendance Prediction',
     description: 'Predict attendance for upcoming events based on historical data',
-    prompt: 'Based on the historical attendance data provided, predict attendance for upcoming events and explain the factors influencing these predictions.',
+    prompt: 'Based on historical attendance data, predict attendance for upcoming events and explain the key factors influencing these predictions. Provide specific recommendations for improving attendance.',
     category: 'Predictions'
   },
   {
     id: 'communication_strategy',
     name: 'Communication Strategy',
     description: 'Generate communication strategies for different member segments',
-    prompt: 'Create personalized communication strategies for different member segments based on their engagement levels and preferences.',
+    prompt: 'Create personalized communication strategies for different member segments based on their engagement levels and preferences. Provide specific messaging approaches and timing recommendations.',
     category: 'Strategy'
   },
   {
     id: 'event_optimization',
     name: 'Event Optimization',
     description: 'Suggest optimizations for event planning and scheduling',
-    prompt: 'Analyze event performance data and suggest optimizations for timing, content, and engagement strategies.',
+    prompt: 'Analyze event performance data and suggest specific optimizations for timing, content, and engagement strategies. Focus on practical improvements that can be implemented quickly.',
     category: 'Optimization'
   }
 ];
@@ -294,16 +294,16 @@ export function ModelComparisonPanel({ organizationId }) {
     try {
       const startTime = Date.now();
       
-      // Simulate API call to your backend
-      const response = await fetch('/api/test-model', {
+      // Use existing AI endpoint with model parameter
+      const response = await fetch('/api/ai/generate-insight', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: modelId,
           prompt: prompt,
-          organizationId: organizationId
+          model: modelId,
+          max_tokens: 500
         })
       });
 
@@ -316,13 +316,19 @@ export function ModelComparisonPanel({ organizationId }) {
 
       const data = await response.json();
       
+      // Calculate estimated cost based on model
+      const modelConfig = MODELS[modelId];
+      const estimatedTokens = prompt.length / 4 + 200; // Rough estimation
+      const estimatedCost = (estimatedTokens / 1000) * modelConfig.input_cost + 
+                          (estimatedTokens / 1000) * modelConfig.output_cost;
+      
       return {
         model: modelId,
         success: true,
-        response: data.response,
-        cost: data.cost || 0,
+        response: data.choices?.[0]?.message?.content || 'No response generated',
+        cost: estimatedCost,
         duration: duration,
-        tokens: data.tokens || 0
+        tokens: estimatedTokens
       };
     } catch (error) {
       return {
