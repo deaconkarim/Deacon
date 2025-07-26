@@ -294,16 +294,17 @@ export function ModelComparisonPanel({ organizationId }) {
     try {
       const startTime = Date.now();
       
-      // Use existing AI endpoint with model parameter
-      const response = await fetch('/api/ai/generate-insight', {
+      // Use dedicated model testing endpoint
+      const response = await fetch('/api/test-model', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          prompt: prompt,
           model: modelId,
-          max_tokens: 500
+          prompt: prompt,
+          organizationId: organizationId,
+          scenario: selectedScenario.id
         })
       });
 
@@ -316,19 +317,13 @@ export function ModelComparisonPanel({ organizationId }) {
 
       const data = await response.json();
       
-      // Calculate estimated cost based on model
-      const modelConfig = MODELS[modelId];
-      const estimatedTokens = prompt.length / 4 + 200; // Rough estimation
-      const estimatedCost = (estimatedTokens / 1000) * modelConfig.input_cost + 
-                          (estimatedTokens / 1000) * modelConfig.output_cost;
-      
       return {
         model: modelId,
         success: true,
-        response: data.choices?.[0]?.message?.content || 'No response generated',
-        cost: estimatedCost,
+        response: data.response,
+        cost: data.cost,
         duration: duration,
-        tokens: estimatedTokens
+        tokens: data.tokens
       };
     } catch (error) {
       return {

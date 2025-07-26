@@ -73,8 +73,9 @@ Estimated costs per test:
 ## 🔧 Technical Details
 
 ### Backend Integration
-- Uses your existing OpenAI API key and AI endpoints
-- Leverages existing `/api/ai/generate-insight` endpoint
+- Uses your existing OpenAI API key
+- Dedicated `/api/test-model` endpoint for model testing
+- Integrates with your Supabase database for real data
 - Includes proper error handling and rate limiting
 - Logs all usage for cost tracking
 
@@ -106,7 +107,7 @@ Estimated costs per test:
 
 The panel automatically uses the latest model configurations. If OpenAI releases new models, you can update the `MODELS` configuration in:
 - Frontend: `frontend/src/components/ModelComparisonPanel.jsx`
-- Backend: `api/ai/generate-insight.js` (add new models to allowedModels array)
+- Backend: `api/test-model.js`
 
 ## 📈 Next Steps
 
