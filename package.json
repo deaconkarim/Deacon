@@ -6,7 +6,9 @@
     "build": "cd frontend && npm install && npm run build",
     "dev": "cd frontend && npm run dev",
     "start": "cd frontend && npm run preview",
-    "fix-events": "node run_event_fix.js"
+    "fix-events": "node run_event_fix.js",
+    "test-models": "node model_comparison_tool.js",
+    "assess-quality": "node quality_assessment.js"
   },
   "engines": {
     "node": ">=18.0.0"
