@@ -4123,13 +4123,20 @@ export default function Events() {
     }
 
     try {
+      // Get organization_id for the new member
+      const currentOrgId = await getCurrentUserOrganizationId();
+      if (!currentOrgId) {
+        throw new Error('User not associated with any organization');
+      }
+
       // If email is empty, set it to null to avoid unique constraint issues
       const memberData = {
         firstname: newMember.firstname,
         lastname: newMember.lastname,
         email: newMember.email || null,
         phone: newMember.phone || null,
-        status: 'visitor' // Always set to visitor for new people added during check-in
+        status: 'visitor', // Always set to visitor for new people added during check-in
+        organization_id: currentOrgId
       };
 
       const { data, error } = await supabase
@@ -4157,10 +4164,7 @@ export default function Events() {
       console.log('🔍 User object:', user);
       console.log('🔍 Automation service:', automationService);
       
-      // Get organization_id (including impersonation)
-      const organizationId = await getCurrentUserOrganizationId();
-      
-      if (organizationId) {
+      if (currentOrgId) {
         try {
           console.log('🚀 Triggering member_created automation for new visitor:', data);
           await automationService.triggerAutomation(
@@ -4175,7 +4179,7 @@ export default function Events() {
               member_type: 'visitor',
               created_at: data.created_at
             },
-            organizationId
+            currentOrgId
           );
         } catch (automationError) {
           console.error('Automation trigger failed for new visitor:', automationError);

@@ -212,9 +212,20 @@ export function PotluckRSVPDialog({ isOpen, onClose, event, onRSVP }) {
     }
 
     try {
+      // Get organization_id for the new member
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User not associated with any organization');
+      }
+
+      const memberData = {
+        ...newMember,
+        organization_id: organizationId
+      };
+
       const { data, error } = await supabase
         .from('members')
-        .insert([newMember])
+        .insert([memberData])
         .select()
         .single();
 

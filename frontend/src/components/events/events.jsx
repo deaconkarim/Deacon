@@ -959,13 +959,20 @@ export function Events() {
     }
 
     try {
+      // Get organization_id for the new member
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User not associated with any organization');
+      }
+
       // If email is empty, set it to null to avoid unique constraint issues
       const memberData = {
         firstname: newMember.firstname,
         lastname: newMember.lastname,
         email: newMember.email || null,
         phone: newMember.phone || null,
-        status: newMember.status
+        status: newMember.status,
+        organization_id: organizationId
       };
 
       const { data, error } = await supabase
