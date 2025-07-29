@@ -5571,7 +5571,7 @@ export default function Events() {
                {/* Custom overlay for kiosk mode */}
                {isMemberDialogOpen && (
                  <div 
-                   className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40"
+                   className="fixed inset-0 bg-black/90 z-40"
                    onClick={handleCloseDialog}
                  />
                )}
@@ -5814,7 +5814,7 @@ export default function Events() {
           {/* Kiosk Mode - Create New Member Modal */}
           {isKioskMode && isCreateMemberOpen && (
             <div 
-              className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[999999] flex items-center justify-center p-4"
+              className="fixed inset-0 bg-black/90 z-[999999] flex items-center justify-center p-4"
               style={{
                 position: 'fixed',
                 top: 0,
@@ -5824,90 +5824,90 @@ export default function Events() {
                 width: '100vw',
                 height: '100vh',
                 zIndex: 999999,
-                backgroundColor: 'rgba(0, 0, 0, 0.8)'
+                backgroundColor: 'rgba(0, 0, 0, 0.9)'
               }}
             >
               {console.log('🔍 Kiosk Create New Member Modal rendering')}
-              <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-                <div className="p-4 border-b bg-blue-50 flex-shrink-0">
-                  <h2 className="text-xl font-bold">Create New Person</h2>
-                  <p className="text-sm text-gray-600 mt-1">
+              <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border-2 border-gray-200">
+                <div className="p-6 border-b bg-blue-50 flex-shrink-0">
+                  <h2 className="text-2xl font-bold text-gray-900">Create New Person</h2>
+                  <p className="text-lg text-gray-700 mt-2">
                     Add a new person and automatically {selectedEvent?.attendance_type === 'check-in' ? 'check them in' : 'RSVP them'} to this event.
                   </p>
                 </div>
                 
-                <div className="p-4 flex-1 overflow-y-auto">
-                  <form onSubmit={handleCreateMember} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="firstname" className="text-sm">First Name</Label>
+                <div className="p-6 flex-1 overflow-y-auto">
+                  <form onSubmit={handleCreateMember} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-3">
+                        <Label htmlFor="firstname" className="text-lg font-semibold">First Name</Label>
                         <Input
                           id="firstname"
                           name="firstname"
                           value={newMember.firstname}
                           onChange={(e) => setNewMember({...newMember, firstname: e.target.value})}
-                          className="h-12 text-base"
+                          className="h-14 text-lg border-2"
                           required
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="lastname" className="text-sm">Last Name</Label>
+                      <div className="space-y-3">
+                        <Label htmlFor="lastname" className="text-lg font-semibold">Last Name</Label>
                         <Input
                           id="lastname"
                           name="lastname"
                           value={newMember.lastname}
                           onChange={(e) => setNewMember({...newMember, lastname: e.target.value})}
-                          className="h-12 text-base"
+                          className="h-14 text-lg border-2"
                           required
                         />
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email" className="text-sm">Email</Label>
+                    <div className="space-y-3">
+                      <Label htmlFor="email" className="text-lg font-semibold">Email</Label>
                       <Input
                         id="email"
                         name="email"
                         type="email"
                         value={newMember.email}
                         onChange={(e) => setNewMember({...newMember, email: e.target.value})}
-                        className="h-12 text-base"
+                        className="h-14 text-lg border-2"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone" className="text-sm">Phone</Label>
+                    <div className="space-y-3">
+                      <Label htmlFor="phone" className="text-lg font-semibold">Phone</Label>
                       <Input
                         id="phone"
                         name="phone"
                         value={newMember.phone}
                         onChange={(e) => setNewMember({...newMember, phone: e.target.value})}
-                        className="h-12 text-base"
+                        className="h-14 text-lg border-2"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="notes" className="text-sm">Notes</Label>
+                    <div className="space-y-3">
+                      <Label htmlFor="notes" className="text-lg font-semibold">Notes</Label>
                       <Textarea
                         id="notes"
                         name="notes"
                         value={newMember.notes}
                         onChange={(e) => setNewMember({...newMember, notes: e.target.value})}
-                        className="h-24 text-base"
+                        className="h-32 text-lg border-2"
                       />
                     </div>
                   </form>
                 </div>
 
-                <div className="p-4 border-t flex gap-3">
+                <div className="p-6 border-t flex gap-4">
                   <Button
                     variant="outline"
                     onClick={() => setIsCreateMemberOpen(false)}
-                    className="flex-1 h-12 text-base"
+                    className="flex-1 h-14 text-lg font-semibold border-2"
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
                     onClick={handleCreateMember}
-                    className="flex-1 h-12 text-base"
+                    className="flex-1 h-14 text-lg font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
                   >
                     Create and {selectedEvent?.attendance_type === 'check-in' ? 'Check In' : 'RSVP'}
                   </Button>
@@ -5919,7 +5919,7 @@ export default function Events() {
           {/* Kiosk Mode - Anonymous Check-in Modal */}
           {isKioskMode && isAnonymousCheckinOpen && (
             <div 
-              className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[999999] flex items-center justify-center p-4"
+              className="fixed inset-0 bg-black/90 z-[999999] flex items-center justify-center p-4"
               style={{
                 position: 'fixed',
                 top: 0,
@@ -5929,38 +5929,48 @@ export default function Events() {
                 width: '100vw',
                 height: '100vh',
                 zIndex: 999999,
-                backgroundColor: 'rgba(0, 0, 0, 0.8)'
+                backgroundColor: 'rgba(0, 0, 0, 0.9)'
               }}
             >
               {console.log('🔍 Kiosk Anonymous Check-in Modal rendering')}
-              <div className="bg-white rounded-lg w-full max-w-md p-6">
-                <div className="text-center space-y-4">
-                  <div className="flex items-center justify-center w-16 h-16 mx-auto bg-orange-100 rounded-full">
-                    <UserPlus className="h-8 w-8 text-orange-600" />
+              <div className="bg-white rounded-xl w-full max-w-md p-8 shadow-2xl border-2 border-gray-200 relative">
+                {/* Force close button for stuck modals */}
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setIsAnonymousCheckinOpen(false)}
+                  className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white z-10"
+                >
+                  ✕
+                </Button>
+                
+                <div className="text-center space-y-6">
+                  <div className="flex items-center justify-center w-20 h-20 mx-auto bg-orange-100 rounded-full border-4 border-orange-200">
+                    <UserPlus className="h-10 w-10 text-orange-600" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-3">
                       Anonymous Check-in
                     </h3>
-                    <p className="text-base text-gray-600 mb-6">
-                      Check in an anonymous attendee to {selectedEvent?.title}. This will update the event attendance count but won't create a member record.
+                    <p className="text-lg text-gray-700 mb-8 leading-relaxed">
+                      Check in an anonymous attendee to <strong>{selectedEvent?.title}</strong>. This will update the event attendance count but won't create a member record.
                     </p>
                   </div>
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex gap-4">
                   <Button
                     variant="outline"
                     onClick={() => setIsAnonymousCheckinOpen(false)}
-                    className="flex-1 h-12 text-base"
+                    className="flex-1 h-14 text-lg font-semibold border-2"
                   >
                     Cancel
                   </Button>
                   <Button
                     onClick={handleAnonymousCheckin}
-                    className="flex-1 h-12 text-base bg-orange-600 hover:bg-orange-700"
+                    className="flex-1 h-14 text-lg font-semibold bg-orange-600 hover:bg-orange-700 text-white shadow-lg"
                   >
-                    <UserPlus className="mr-2 h-4 w-4" />
+                    <UserPlus className="mr-3 h-5 w-5" />
                     Add Anonymous Attendee
                   </Button>
                 </div>
