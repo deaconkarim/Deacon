@@ -4916,7 +4916,13 @@ export default function Events() {
 
   const handleCloseDialog = () => {
     try {
-      console.log('Closing dialog');
+      console.log('🔍 handleCloseDialog called');
+      console.log('🔍 Current modal states:', {
+        isMemberDialogOpen,
+        isCreateMemberOpen,
+        isAnonymousCheckinOpen,
+        isKioskMode
+      });
       // Reset all modal states to ensure nothing is stuck open
       setIsMemberDialogOpen(false);
       setSelectedEvent(null);
@@ -5470,6 +5476,25 @@ export default function Events() {
 
   return (
     <PermissionGuard permission={PERMISSIONS.EVENTS_VIEW}>
+      {/* Debug modal states */}
+      {isKioskMode && (
+        <div style={{
+          position: 'fixed',
+          bottom: '10px',
+          left: '10px',
+          background: 'black',
+          color: 'white',
+          padding: '10px',
+          zIndex: 999999,
+          fontSize: '12px',
+          fontFamily: 'monospace'
+        }}>
+          Kiosk Mode Debug:<br/>
+          isCreateMemberOpen: {isCreateMemberOpen.toString()}<br/>
+          isAnonymousCheckinOpen: {isAnonymousCheckinOpen.toString()}<br/>
+          isMemberDialogOpen: {isMemberDialogOpen.toString()}
+        </div>
+      )}
              {/* Full Kiosk Mode - Mobile Optimized */}
        {isFullKioskMode ? (
          <div className="fixed inset-0 bg-white z-40 flex flex-col">
@@ -5587,7 +5612,7 @@ export default function Events() {
                  }}
                >
                  <DialogContent 
-                   className={`!fixed !inset-0 !w-screen !h-screen !max-w-none !p-0 bg-white flex flex-col overflow-hidden !translate-x-0 !translate-y-0 !left-0 !top-0 ${(isCreateMemberOpen || isAnonymousCheckinOpen) ? '!z-10' : '!z-50'}`}
+                   className={`!fixed !inset-0 !w-screen !h-screen !max-w-none !p-0 bg-white flex flex-col overflow-hidden !translate-x-0 !translate-y-0 !left-0 !top-0 !z-50`}
                    style={{
                      position: 'fixed',
                      top: 0,
@@ -5639,7 +5664,10 @@ export default function Events() {
                        {/* Action Buttons */}
                        <div className="flex gap-2">
                          <Button
-                           onClick={() => setIsCreateMemberOpen(true)}
+                           onClick={() => {
+                             console.log('🔍 Add New Person button clicked in kiosk mode');
+                             setIsCreateMemberOpen(true);
+                           }}
                            className="flex-1 h-12 text-base bg-blue-600 hover:bg-blue-700 px-3"
                          >
                            <Plus className="mr-2 h-5 w-5" />
@@ -5647,7 +5675,10 @@ export default function Events() {
                          </Button>
                          {selectedEvent?.attendance_type === 'check-in' && (
                            <Button
-                             onClick={() => setIsAnonymousCheckinOpen(true)}
+                             onClick={() => {
+                               console.log('🔍 Anonymous Check-in button clicked in kiosk mode');
+                               setIsAnonymousCheckinOpen(true);
+                             }}
                              className="flex-1 h-12 text-base bg-orange-600 hover:bg-orange-700 px-3"
                            >
                              <UserPlus className="mr-2 h-5 w-5" />
@@ -5813,6 +5844,21 @@ export default function Events() {
 
           {/* Kiosk Mode - Create New Member Modal */}
           {isKioskMode && isCreateMemberOpen && (
+            <>
+              {console.log('🔍 Rendering Kiosk Create New Member Modal')}
+              {/* Debug indicator */}
+              <div style={{
+                position: 'fixed',
+                top: '10px',
+                left: '10px',
+                background: 'red',
+                color: 'white',
+                padding: '10px',
+                zIndex: 999999,
+                fontSize: '12px'
+              }}>
+                CREATE MEMBER MODAL SHOULD BE VISIBLE
+              </div>
             <div 
               className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[999999] flex items-center justify-center p-4"
               style={{
@@ -5824,11 +5870,22 @@ export default function Events() {
                 width: '100vw',
                 height: '100vh',
                 zIndex: 999999,
-                backgroundColor: 'rgba(0, 0, 0, 0.8)'
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                border: '3px solid red' // Debug border
+              }}
+              onClick={(e) => {
+                console.log('🔍 Backdrop clicked in Create Member Modal');
+                if (e.target === e.currentTarget) {
+                  setIsCreateMemberOpen(false);
+                }
               }}
             >
               {console.log('🔍 Kiosk Create New Member Modal rendering')}
-              <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+              <div 
+                className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+                style={{ border: '3px solid green' }} // Debug border
+              >
                 <div className="p-4 border-b bg-blue-50 flex-shrink-0">
                   <h2 className="text-xl font-bold">Create New Person</h2>
                   <p className="text-sm text-gray-600 mt-1">
@@ -5899,14 +5956,20 @@ export default function Events() {
                 <div className="p-4 border-t flex gap-3">
                   <Button
                     variant="outline"
-                    onClick={() => setIsCreateMemberOpen(false)}
+                    onClick={() => {
+                      console.log('🔍 Cancel button clicked in Create Member Modal');
+                      setIsCreateMemberOpen(false);
+                    }}
                     className="flex-1 h-12 text-base"
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
-                    onClick={handleCreateMember}
+                    onClick={() => {
+                      console.log('🔍 Create Member button clicked in kiosk modal');
+                      handleCreateMember();
+                    }}
                     className="flex-1 h-12 text-base"
                   >
                     Create and {selectedEvent?.attendance_type === 'check-in' ? 'Check In' : 'RSVP'}
@@ -5918,6 +5981,21 @@ export default function Events() {
 
           {/* Kiosk Mode - Anonymous Check-in Modal */}
           {isKioskMode && isAnonymousCheckinOpen && (
+            <>
+              {console.log('🔍 Rendering Kiosk Anonymous Check-in Modal')}
+              {/* Debug indicator */}
+              <div style={{
+                position: 'fixed',
+                top: '10px',
+                right: '10px',
+                background: 'blue',
+                color: 'white',
+                padding: '10px',
+                zIndex: 999999,
+                fontSize: '12px'
+              }}>
+                ANONYMOUS CHECK-IN MODAL SHOULD BE VISIBLE
+              </div>
             <div 
               className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[999999] flex items-center justify-center p-4"
               style={{
@@ -5929,11 +6007,22 @@ export default function Events() {
                 width: '100vw',
                 height: '100vh',
                 zIndex: 999999,
-                backgroundColor: 'rgba(0, 0, 0, 0.8)'
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                border: '3px solid blue' // Debug border
+              }}
+              onClick={(e) => {
+                console.log('🔍 Backdrop clicked in Anonymous Check-in Modal');
+                if (e.target === e.currentTarget) {
+                  setIsAnonymousCheckinOpen(false);
+                }
               }}
             >
               {console.log('🔍 Kiosk Anonymous Check-in Modal rendering')}
-              <div className="bg-white rounded-lg w-full max-w-md p-6">
+              <div 
+                className="bg-white rounded-lg w-full max-w-md p-6"
+                onClick={(e) => e.stopPropagation()}
+                style={{ border: '3px solid orange' }} // Debug border
+              >
                 <div className="text-center space-y-4">
                   <div className="flex items-center justify-center w-16 h-16 mx-auto bg-orange-100 rounded-full">
                     <UserPlus className="h-8 w-8 text-orange-600" />
@@ -5951,13 +6040,19 @@ export default function Events() {
                 <div className="flex gap-3">
                   <Button
                     variant="outline"
-                    onClick={() => setIsAnonymousCheckinOpen(false)}
+                    onClick={() => {
+                      console.log('🔍 Cancel button clicked in Anonymous Check-in Modal');
+                      setIsAnonymousCheckinOpen(false);
+                    }}
                     className="flex-1 h-12 text-base"
                   >
                     Cancel
                   </Button>
                   <Button
-                    onClick={handleAnonymousCheckin}
+                    onClick={() => {
+                      console.log('🔍 Add Anonymous Attendee button clicked in kiosk modal');
+                      handleAnonymousCheckin();
+                    }}
                     className="flex-1 h-12 text-base bg-orange-600 hover:bg-orange-700"
                   >
                     <UserPlus className="mr-2 h-4 w-4" />
