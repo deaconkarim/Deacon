@@ -383,12 +383,6 @@ export default function ChildrenCheckin() {
           >
             Add Child
           </a>
-          <a
-            href="/members"
-            className="flex-1 md:flex-none bg-secondary text-secondary-foreground px-6 md:px-6 py-3 md:py-3 rounded-lg text-lg md:text-lg font-medium hover:bg-secondary/90 h-14 md:h-14 flex items-center justify-center transition-colors"
-          >
-            Manage Members
-          </a>
         </div>
       </div>
 
