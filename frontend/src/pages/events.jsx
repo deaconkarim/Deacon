@@ -5989,8 +5989,7 @@ export default function Events() {
             </div>
                      )}
 
-          {/* Desktop Member Selection Dialog */}
-          {!isKioskMode && (
+
             <Dialog open={isMemberDialogOpen} onOpenChange={setIsMemberDialogOpen}>
               <DialogContent className="w-[95vw] max-w-full h-[90vh] md:h-auto md:max-w-4xl p-0 z-50">
                 {/* Force close button for stuck modals */}
@@ -7508,88 +7507,7 @@ export default function Events() {
         </DialogContent>
       </Dialog>
 
-      {/* Create New Member Dialog */}
-      <Dialog open={isCreateMemberOpen} onOpenChange={setIsCreateMemberOpen}>
-        <DialogContent className="w-[95vw] max-w-full h-[90vh] md:h-auto md:max-w-3xl p-0" style={{ zIndex: 999999 }}>
-          {console.log('🔍 Create New Member Dialog rendering, isCreateMemberOpen:', isCreateMemberOpen)}
-          <DialogHeader className="p-3 md:p-6 border-b">
-            <DialogTitle className="text-lg md:text-2xl lg:text-3xl">Create New Person</DialogTitle>
-            <DialogDescription className="text-sm md:text-lg mt-2">
-              Add a new person and automatically {selectedEvent?.attendance_type === 'check-in' ? 'check them in' : 'RSVP them'} to this event.
-            </DialogDescription>
-          </DialogHeader>
 
-          <div className="p-3 md:p-6 flex-1 overflow-y-auto">
-            <form onSubmit={handleCreateMember} className="space-y-3 md:space-y-4 lg:space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 lg:gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="firstname" className="text-sm md:text-lg">First Name</Label>
-                  <Input
-                    id="firstname"
-                    name="firstname"
-                    value={newMember.firstname}
-                    onChange={(e) => setNewMember({...newMember, firstname: e.target.value})}
-                    className="h-10 md:h-14 text-sm md:text-lg"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastname" className="text-sm md:text-lg">Last Name</Label>
-                  <Input
-                    id="lastname"
-                    name="lastname"
-                    value={newMember.lastname}
-                    onChange={(e) => setNewMember({...newMember, lastname: e.target.value})}
-                    className="h-10 md:h-14 text-sm md:text-lg"
-                    required
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm md:text-lg">Email</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={newMember.email}
-                  onChange={(e) => setNewMember({...newMember, email: e.target.value})}
-                  className="h-10 md:h-14 text-sm md:text-lg"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone" className="text-sm md:text-lg">Phone</Label>
-                <Input
-                  id="phone"
-                  name="phone"
-                  value={newMember.phone}
-                  onChange={(e) => setNewMember({...newMember, phone: e.target.value})}
-                  className="h-10 md:h-14 text-sm md:text-lg"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="notes" className="text-sm md:text-lg">Notes</Label>
-                <Textarea
-                  id="notes"
-                  name="notes"
-                  value={newMember.notes}
-                  onChange={(e) => setNewMember({...newMember, notes: e.target.value})}
-                  className="h-24 md:h-32 text-sm md:text-lg"
-                />
-              </div>
-            </form>
-          </div>
-
-          <DialogFooter className="p-3 md:p-6 border-t">
-            <Button
-              type="submit"
-              onClick={handleCreateMember}
-              className="w-full md:w-auto text-sm md:text-lg h-10 md:h-14"
-            >
-              Create and {selectedEvent?.attendance_type === 'check-in' ? 'Check In' : 'RSVP'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Edit Event Dialog */}
       <Dialog open={isEditEventOpen} onOpenChange={setIsEditEventOpen}>
@@ -8086,6 +8004,548 @@ export default function Events() {
           </div>
         </>
       )}
+
+      {/* Create/Edit Event Dialog */}
+      <Dialog open={isCreateEventOpen} onOpenChange={setIsCreateEventOpen}>
+        <DialogContent className="w-full max-w-full h-full md:h-auto md:max-w-3xl p-0">
+          <DialogHeader className="p-3 md:p-6 border-b">
+            <DialogTitle className="text-2xl md:text-3xl">
+              {editingEvent ? 'Edit Event' : 'Create New Event'}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="p-3 md:p-6">
+            <EventForm
+              initialData={{
+                title: '',
+                description: '',
+                startDate: '',
+                endDate: '',
+                location: '',
+                url: '',
+                is_recurring: false,
+                recurrence_pattern: '',
+                allow_rsvp: true,
+                attendance_type: 'rsvp',
+                event_type: 'Worship Service'
+              }}
+              onSave={handleCreateEvent}
+              onCancel={() => setIsCreateEventOpen(false)}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Member Selection Dialog for Regular Mode */}
+      <Dialog open={isMemberDialogOpen} onOpenChange={setIsMemberDialogOpen}>
+        <DialogContent className="w-[95vw] max-w-full h-[90vh] md:h-auto md:max-w-3xl p-0 z-50">
+          <DialogHeader className="p-3 md:p-6 border-b">
+            <div className="space-y-2">
+              <DialogTitle className="text-lg md:text-2xl lg:text-3xl">
+                {isEditingPastEvent 
+                  ? 'Edit Attendance' 
+                  : selectedEvent?.attendance_type === 'check-in' 
+                    ? 'Check In People' 
+                    : 'RSVP Members'
+                } - {selectedEvent?.title}
+              </DialogTitle>
+              {suggestedMembers.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <Star className="h-4 w-4 md:h-5 md:w-5 text-green-600" />
+                  <span className="text-sm md:text-lg text-green-600 font-normal">
+                    Smart suggestions available
+                  </span>
+                </div>
+              )}
+            </div>
+            <DialogDescription className="text-sm md:text-lg mt-2">
+              {isEditingPastEvent
+                ? `Edit attendance records for ${selectedEvent?.title}`
+                : selectedEvent?.attendance_type === 'check-in'
+                ? 'Check In People for the event'
+                  : `Select members to RSVP for ${selectedEvent?.title}`
+              }
+            </DialogDescription>
+            {suggestedMembers.length > 0 && (
+              <div className="mt-2 text-xs md:text-sm text-green-600">
+                Members who frequently attend similar events are highlighted below
+              </div>
+            )}
+          </DialogHeader>
+
+          <div className="p-3 md:p-6 flex-1 overflow-hidden">
+            <Tabs defaultValue="available" className="w-full h-full flex flex-col">
+              <TabsList className="grid w-full grid-cols-2 h-10 md:h-14">
+                <TabsTrigger value="available" className="text-sm md:text-lg">
+                  {isEditingPastEvent ? 'Add Attendance' : 'Available People'}
+                </TabsTrigger>
+                <TabsTrigger value="checked-in" className="text-sm md:text-lg">
+                  {selectedEvent?.attendance_type === 'check-in' ? 'Checked In' : 'RSVP\'d'}
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="available" className="mt-3 md:mt-8 flex-1 overflow-y-auto">
+                <div className="space-y-3 md:space-y-6">
+                  <div className="flex flex-col md:flex-row gap-2 md:gap-3">
+                    <div className="flex-1">
+                      <Input
+                        placeholder="Search people..."
+                        value={memberSearchQuery}
+                        onChange={(e) => setMemberSearchQuery(e.target.value)}
+                        className="w-full h-10 md:h-14 text-sm md:text-lg"
+                      />
+                    </div>
+                    <Button
+                      onClick={() => setIsCreateMemberOpen(true)}
+                      className="w-full md:w-auto h-10 md:h-14 text-sm md:text-lg bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Plus className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+                      Add New Person
+                    </Button>
+                    {selectedEvent?.attendance_type === 'check-in' && (
+                      <Button
+                        onClick={() => setIsAnonymousCheckinOpen(true)}
+                        className="w-full md:w-auto h-10 md:h-14 text-sm md:text-lg bg-orange-600 hover:bg-orange-700"
+                      >
+                        <UserPlus className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+                        Anonymous Check-in
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Member List */}
+                  <div className="space-y-2">
+                    {filteredMembers.map((member) => (
+                      <div
+                        key={member.id}
+                        className={`p-3 md:p-4 rounded-lg border cursor-pointer transition-all ${
+                          suggestedMembers.includes(member.id)
+                            ? 'border-green-200 bg-green-50 dark:bg-green-900/20'
+                            : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50 dark:border-gray-700 dark:hover:border-blue-400 dark:hover:bg-blue-900/20'
+                        }`}
+                        onClick={() => handleMemberClick(member)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                              <span className="text-sm md:text-base font-semibold text-blue-600 dark:text-blue-400">
+                                {member.firstname?.[0]}{member.lastname?.[0]}
+                              </span>
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-sm md:text-base">
+                                {member.firstname} {member.lastname}
+                              </h4>
+                              {member.email && (
+                                <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                                  {member.email}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {suggestedMembers.includes(member.id) && (
+                              <Star className="h-4 w-4 text-green-600" />
+                            )}
+                            <Button size="sm" className="h-8 md:h-10 text-xs md:text-sm">
+                              {selectedEvent?.attendance_type === 'check-in' ? 'Check In' : 'RSVP'}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="checked-in" className="mt-3 md:mt-8 flex-1 overflow-y-auto">
+                <div className="space-y-3 md:space-y-6">
+                  {alreadyRSVPMembers.length > 0 ? (
+                    alreadyRSVPMembers.map((member) => (
+                      <div
+                        key={member.id}
+                        className="p-3 md:p-4 rounded-lg border border-green-200 bg-green-50 dark:bg-green-900/20"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 md:w-12 md:h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
+                              <span className="text-sm md:text-base font-semibold text-green-600 dark:text-green-400">
+                                {member.firstname?.[0]}{member.lastname?.[0]}
+                              </span>
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-sm md:text-base">
+                                {member.firstname} {member.lastname}
+                              </h4>
+                              {member.email && (
+                                <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                                  {member.email}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRemoveMember(member.id)}
+                            className="h-8 md:h-10 text-xs md:text-sm border-red-200 text-red-600 hover:bg-red-50"
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-base lg:text-lg text-gray-500 italic p-4">
+                      {selectedEvent?.attendance_type === 'check-in'
+                        ? 'No members have checked in yet'
+                        : 'No members have RSVP\'d yet'}
+                    </p>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          <DialogFooter className="p-4 md:p-6 border-t">
+            <div className="flex flex-row gap-3 md:gap-4 w-full">
+              <Button
+                variant="outline"
+                onClick={handleCloseDialog}
+                className="flex-1 md:w-auto text-base md:text-lg h-12 md:h-14"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleDone}
+                className="flex-1 md:w-auto text-base md:text-lg h-12 md:h-14"
+              >
+                Done
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Member Dialog for Regular Mode */}
+      <Dialog open={isCreateMemberOpen} onOpenChange={setIsCreateMemberOpen}>
+        <DialogContent className="w-full max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Create New Person</DialogTitle>
+            <DialogDescription>
+              Add a new person and automatically {selectedEvent?.attendance_type === 'check-in' ? 'check them in' : 'RSVP them'} to this event.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <form onSubmit={handleCreateMember} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstname">First Name</Label>
+                  <Input
+                    id="firstname"
+                    name="firstname"
+                    value={newMember.firstname}
+                    onChange={(e) => setNewMember({...newMember, firstname: e.target.value})}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastname">Last Name</Label>
+                  <Input
+                    id="lastname"
+                    name="lastname"
+                    value={newMember.lastname}
+                    onChange={(e) => setNewMember({...newMember, lastname: e.target.value})}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={newMember.email}
+                  onChange={(e) => setNewMember({...newMember, email: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  name="phone"
+                  value={newMember.phone}
+                  onChange={(e) => setNewMember({...newMember, phone: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notes</Label>
+                <Textarea
+                  id="notes"
+                  name="notes"
+                  value={newMember.notes}
+                  onChange={(e) => setNewMember({...newMember, notes: e.target.value})}
+                />
+              </div>
+            </form>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateMemberOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateMember}>
+              Create and {selectedEvent?.attendance_type === 'check-in' ? 'Check In' : 'RSVP'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Event Dialog */}
+      <Dialog open={isEditEventOpen} onOpenChange={setIsEditEventOpen}>
+        <DialogContent className="w-full max-w-full h-full md:h-auto md:max-w-3xl p-0">
+          <DialogHeader className="p-3 md:p-6 border-b">
+            <DialogTitle className="text-2xl md:text-3xl">Edit Event</DialogTitle>
+          </DialogHeader>
+
+          <div className="p-3 md:p-6">
+            <EventForm
+              initialData={editingEvent}
+              onSave={handleEditEvent}
+              onCancel={() => setIsEditEventOpen(false)}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Potluck RSVP Dialog */}
+      <PotluckRSVPDialog
+        isOpen={isPotluckRSVPDialogOpen}
+        onClose={() => setIsPotluckRSVPDialogOpen(false)}
+        event={selectedEvent}
+        onRSVP={handlePotluckRSVP}
+      />
+
+      {/* Volunteer Management Dialog */}
+      <Dialog open={isVolunteerDialogOpen} onOpenChange={setIsVolunteerDialogOpen}>
+        <DialogContent className="w-full max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Manage Volunteers for {selectedEvent?.title}</DialogTitle>
+            <DialogDescription>
+              Assign and manage volunteers for this event.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h4 className="font-semibold mb-2">Available Volunteers</h4>
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {availableVolunteers.map((volunteer) => (
+                    <div key={volunteer.id} className="flex items-center justify-between p-2 border rounded">
+                      <span>{volunteer.firstname} {volunteer.lastname}</span>
+                      <Button
+                        size="sm"
+                        onClick={() => assignVolunteer(volunteer.id)}
+                      >
+                        Assign
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-2">Assigned Volunteers</h4>
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {assignedVolunteers.map((volunteer) => (
+                    <div key={volunteer.id} className="flex items-center justify-between p-2 border rounded bg-green-50">
+                      <span>{volunteer.firstname} {volunteer.lastname}</span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => removeVolunteer(volunteer.id)}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsVolunteerDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Anonymous Check-in Dialog for Regular Mode */}
+      <Dialog open={isAnonymousCheckinOpen} onOpenChange={setIsAnonymousCheckinOpen}>
+        <DialogContent className="w-full max-w-md">
+          <DialogHeader>
+            <DialogTitle>Anonymous Check-in</DialogTitle>
+            <DialogDescription>
+              Check in an anonymous attendee to {selectedEvent?.title}. This will update the event attendance count but won't create a member record.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="text-center space-y-4">
+            <div className="flex items-center justify-center w-16 h-16 mx-auto bg-orange-100 rounded-full">
+              <UserPlus className="h-8 w-8 text-orange-600" />
+            </div>
+            <p className="text-sm text-gray-600">
+              This will add +1 to the event attendance count.
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAnonymousCheckinOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAnonymousCheckin} className="bg-orange-600 hover:bg-orange-700">
+              <UserPlus className="mr-2 h-4 w-4" />
+              Add Anonymous Attendee
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Actions Dialog */}
+      <Dialog open={isBulkActionsOpen} onOpenChange={setIsBulkActionsOpen}>
+        <DialogContent className="w-full max-w-md">
+          <DialogHeader>
+            <DialogTitle>Bulk Actions</DialogTitle>
+            <DialogDescription>
+              Perform actions on selected events.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="text-sm text-gray-600">
+              {selectedEvents.length} event(s) selected
+            </div>
+            
+            <div className="space-y-2">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => {
+                  toast({
+                    title: "Coming Soon",
+                    description: "Bulk delete functionality will be available soon!",
+                  });
+                  setIsBulkActionsOpen(false);
+                }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Selected Events
+              </Button>
+              
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => {
+                  toast({
+                    title: "Coming Soon",
+                    description: "Bulk export functionality will be available soon!",
+                  });
+                  setIsBulkActionsOpen(false);
+                }}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Export Selected Events
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsBulkActionsOpen(false)}
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Event Details Dialog */}
+      <Dialog open={isEventDetailsOpen} onOpenChange={setIsEventDetailsOpen}>
+        <DialogContent className="w-full max-w-full h-full md:h-auto md:max-w-4xl p-0">
+          <DialogHeader className="p-3 md:p-6 border-b">
+            <DialogTitle className="text-2xl md:text-3xl">
+              Event Details - {selectedEventForDetails?.title}
+            </DialogTitle>
+            <DialogDescription className="text-lg mt-2">
+              View detailed information about this event
+            </DialogDescription>
+          </DialogHeader>
+          {selectedEventForDetails && (
+            <div className="p-3 md:p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Event Information</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Title</label>
+                      <p className="text-base">{selectedEventForDetails.title}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Description</label>
+                      <p className="text-base">{selectedEventForDetails.description || 'No description'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Location</label>
+                      <p className="text-base">{selectedEventForDetails.location || 'No location specified'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Date & Time</label>
+                      <p className="text-base">
+                        {format(new Date(selectedEventForDetails.start_date), 'EEEE, MMMM d, yyyy')}
+                        <br />
+                        {format(new Date(selectedEventForDetails.start_date), 'h:mm a')} - {format(new Date(selectedEventForDetails.end_date), 'h:mm a')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Attendance & Settings</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Attendance Type</label>
+                      <p className="text-base capitalize">{selectedEventForDetails.attendance_type}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Current Attendance</label>
+                      <p className="text-base">{selectedEventForDetails.attendance || 0} people</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">RSVP Allowed</label>
+                      <p className="text-base">{selectedEventForDetails.allow_rsvp ? 'Yes' : 'No'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Needs Volunteers</label>
+                      <p className="text-base">{selectedEventForDetails.needs_volunteers ? 'Yes' : 'No'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="p-3 md:p-6 border-t">
+            <Button
+              variant="outline"
+              onClick={() => setIsEventDetailsOpen(false)}
+              className="w-full md:w-auto"
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </PermissionGuard>
   );
