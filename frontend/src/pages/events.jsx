@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { format, parse, isAfter, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths } from 'date-fns';
 import Papa from 'papaparse';
@@ -2431,6 +2432,13 @@ export default function Events() {
       console.log('[Events] Fetched events count:', data.length);
       console.log('[Events] Time filter used:', timeWindowFilter);
       console.log('[Events] View mode:', viewMode);
+      console.log('[Events] Raw events data:', data.map(e => ({
+        id: e.id,
+        title: e.title,
+        start_date: e.start_date,
+        recurrence_pattern: e.recurrence_pattern,
+        organization_id: e.organization_id
+      })));
 
       // Process events based on view mode and add attendance count
       let processedEvents;
@@ -2580,6 +2588,29 @@ export default function Events() {
       // Debug: Show some sample events
       if (processedEvents.length > 0) {
         console.log('[Events] Sample processed events:', processedEvents.slice(0, 3).map(e => ({
+          title: e.title,
+          date: e.start_date,
+          recurring: !!e.recurrence_pattern,
+          is_instance: e.is_instance
+        })));
+      }
+      
+      // Debug: Check for today's events specifically
+      const todayDate = new Date();
+      todayDate.setHours(0, 0, 0, 0);
+      const tomorrowDate = new Date(todayDate);
+      tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+      
+      const todaysEvents = processedEvents.filter(event => {
+        const eventDate = new Date(event.start_date);
+        eventDate.setHours(0, 0, 0, 0);
+        return eventDate.getTime() === todayDate.getTime();
+      });
+      
+      console.log('[Events] Today\'s date:', format(todayDate, 'yyyy-MM-dd'));
+      console.log('[Events] Events for today:', todaysEvents.length);
+      if (todaysEvents.length > 0) {
+        console.log('[Events] Today\'s events:', todaysEvents.map(e => ({
           title: e.title,
           date: e.start_date,
           recurring: !!e.recurrence_pattern,
@@ -3476,7 +3507,15 @@ export default function Events() {
     try {
       // Use the original event ID for adding new attendance records
       // This is the ID that was passed to handleOpenDialog (could be a generated instance ID)
-      const actualEventId = selectedEventOriginalId || selectedEvent.id;
+      let actualEventId = selectedEventOriginalId || selectedEvent.id;
+      
+      // For recurring events, we need to use the base event ID (without timestamp)
+      if (selectedEvent.is_instance && selectedEvent.id.includes('_')) {
+        // Extract the base event ID from the instance ID
+        const baseEventId = selectedEvent.id.split('_')[0];
+        console.log('🔍 Using base event ID for adding attendance:', baseEventId);
+        actualEventId = baseEventId;
+      }
       
       // Add Person to event attendance using the actual event ID
       const { data: attendanceData, error } = await supabase
@@ -4735,6 +4774,15 @@ export default function Events() {
       console.log('🔍 Using actualEventId for database query:', actualEventId);
       console.log('🔍 Original event.id:', event.id);
       
+      // For recurring events, we need to use the base event ID (without timestamp)
+      let eventIdForQuery = actualEventId;
+      if (event.is_instance && event.id.includes('_')) {
+        // Extract the base event ID from the instance ID
+        const baseEventId = event.id.split('_')[0];
+        console.log('🔍 Using base event ID for query:', baseEventId);
+        eventIdForQuery = baseEventId;
+      }
+      
       // Fetch already RSVP'd/Checked In People (including anonymous attendees)
       const { data: attendanceData, error: attendanceError } = await supabase
         .from('event_attendance')
@@ -4750,7 +4798,7 @@ export default function Events() {
             image_url
           )
         `)
-        .eq('event_id', actualEventId);
+        .eq('event_id', eventIdForQuery);
 
       if (attendanceError) throw attendanceError;
       
@@ -5070,7 +5118,13 @@ export default function Events() {
       const maxInstances = 12; // Limit to prevent infinite loops
 
       while (currentDate <= endDate && instanceCount < maxInstances) {
-        if (currentDate >= now) {
+        // Compare dates at day level, not exact time
+        const currentDateDay = new Date(currentDate);
+        currentDateDay.setHours(0, 0, 0, 0);
+        const nowDay = new Date(now);
+        nowDay.setHours(0, 0, 0, 0);
+        
+        if (currentDateDay >= nowDay) {
           // Create a unique key for this event instance
           const normalizedTitle = normalizeTitle(event.title);
           const eventKey = `${normalizedTitle}_${format(currentDate, 'yyyy-MM-dd')}`;
@@ -5521,9 +5575,19 @@ export default function Events() {
                    onClick={handleCloseDialog}
                  />
                )}
-               <Dialog open={isMemberDialogOpen} onOpenChange={setIsMemberDialogOpen}>
+               <Dialog 
+                 open={isMemberDialogOpen} 
+                 onOpenChange={(open) => {
+                   // Don't allow closing if modals are open
+                   if (!open && (isCreateMemberOpen || isAnonymousCheckinOpen)) {
+                     console.log('🔍 Preventing main dialog close because modals are open');
+                     return;
+                   }
+                   setIsMemberDialogOpen(open);
+                 }}
+               >
                  <DialogContent 
-                   className="!fixed !inset-0 !w-screen !h-screen !max-w-none !p-0 !z-50 bg-white flex flex-col overflow-hidden !translate-x-0 !translate-y-0 !left-0 !top-0"
+                   className={`!fixed !inset-0 !w-screen !h-screen !max-w-none !p-0 bg-white flex flex-col overflow-hidden !translate-x-0 !translate-y-0 !left-0 !top-0 ${(isCreateMemberOpen || isAnonymousCheckinOpen) ? '!z-10' : '!z-50'}`}
                    style={{
                      position: 'fixed',
                      top: 0,
@@ -5535,7 +5599,8 @@ export default function Events() {
                      transform: 'none',
                      margin: 0,
                      maxWidth: 'none',
-                     maxHeight: 'none'
+                     maxHeight: 'none',
+                     zIndex: (isCreateMemberOpen || isAnonymousCheckinOpen) ? 10 : 50
                    }}
                  >
 
@@ -5549,119 +5614,179 @@ export default function Events() {
                  </DialogHeader>
 
                  <div className="flex-1 overflow-y-auto p-4 min-h-0 pb-4">
-                   {/* Search Bar */}
-                   <div className="mb-4">
-                     <Input
-                       placeholder="Search by name..."
-                       value={memberSearchQuery}
-                       onChange={(e) => setMemberSearchQuery(e.target.value)}
-                       className="w-full h-12 text-base"
-                     />
-                   </div>
+                   {/* Tabs */}
+                   <Tabs defaultValue="available" className="w-full">
+                     <TabsList className="grid w-full grid-cols-2 mb-4">
+                       <TabsTrigger value="available" className="text-base font-bold">
+                         Available People
+                       </TabsTrigger>
+                       <TabsTrigger value="checked-in" className="text-base font-bold">
+                         Checked In ({alreadyRSVPMembers.length})
+                       </TabsTrigger>
+                     </TabsList>
 
-                   {/* Action Buttons */}
-                   <div className="flex gap-2 mb-4">
-                     <Button
-                       onClick={() => setIsCreateMemberOpen(true)}
-                       className="flex-1 h-12 text-base bg-blue-600 hover:bg-blue-700 px-3"
-                     >
-                       <Plus className="mr-2 h-5 w-5" />
-                       Add New
-                     </Button>
-                     {selectedEvent?.attendance_type === 'check-in' && (
-                       <Button
-                         onClick={() => setIsAnonymousCheckinOpen(true)}
-                         className="flex-1 h-12 text-base bg-orange-600 hover:bg-orange-700 px-3"
-                       >
-                         <UserPlus className="mr-2 h-5 w-5" />
-                         Anonymous
-                       </Button>
-                     )}
-                   </div>
+                     <TabsContent value="available" className="space-y-4">
+                       {/* Search Bar */}
+                       <div>
+                         <Input
+                           placeholder="Search by name..."
+                           value={memberSearchQuery}
+                           onChange={(e) => setMemberSearchQuery(e.target.value)}
+                           className="w-full h-12 text-base"
+                         />
+                       </div>
 
-                                     {/* Suggested Members */}
-                   {suggestedMembers.length > 0 && (
-                     <div className="mb-6">
-                       <h3 className="text-lg font-bold text-green-700 mb-3 flex items-center justify-center gap-2">
-                         <Star className="h-5 w-5" />
-                         Frequent Attendees
-                       </h3>
-                       <div className="grid grid-cols-1 gap-3">
-                         {suggestedMembers
-                           .filter(member => 
-                             member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
-                             member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase())
-                           )
-                           .map((member) => (
-                                                    <Button
-                           key={member.id}
-                           variant="outline"
-                           onClick={() => handleMemberClick(member)}
-                           className="w-full h-16 text-left p-3 border-2 border-green-200 bg-green-50 hover:bg-green-100"
+                       {/* Action Buttons */}
+                       <div className="flex gap-2">
+                         <Button
+                           onClick={() => setIsCreateMemberOpen(true)}
+                           className="flex-1 h-12 text-base bg-blue-600 hover:bg-blue-700 px-3"
                          >
-                             <div className="flex items-center space-x-3 w-full">
-                                                            <Avatar className="h-10 w-10 flex-shrink-0">
-                               <AvatarImage src={member.image_url} />
-                               <AvatarFallback className="text-base">
-                                 {getInitials(member.firstname, member.lastname)}
-                               </AvatarFallback>
-                             </Avatar>
-                               <div className="flex-1 text-left">
-                                 <p className="text-base font-bold">
+                           <Plus className="mr-2 h-5 w-5" />
+                           Add New
+                         </Button>
+                         {selectedEvent?.attendance_type === 'check-in' && (
+                           <Button
+                             onClick={() => setIsAnonymousCheckinOpen(true)}
+                             className="flex-1 h-12 text-base bg-orange-600 hover:bg-orange-700 px-3"
+                           >
+                             <UserPlus className="mr-2 h-5 w-5" />
+                             Anonymous
+                           </Button>
+                         )}
+                       </div>
+
+                       {/* Suggested Members */}
+                       {suggestedMembers.length > 0 && (
+                         <div>
+                           <h3 className="text-lg font-bold text-green-700 mb-3 flex items-center justify-center gap-2">
+                             <Star className="h-5 w-5" />
+                             Frequent Attendees
+                           </h3>
+                           <div className="grid grid-cols-1 gap-3">
+                             {suggestedMembers
+                               .filter(member => 
+                                 member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                                 member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase())
+                               )
+                               .map((member) => (
+                                 <Button
+                                   key={member.id}
+                                   variant="outline"
+                                   onClick={() => handleMemberClick(member)}
+                                   className="w-full h-16 text-left p-3 border-2 border-green-200 bg-green-50 hover:bg-green-100"
+                                 >
+                                   <div className="flex items-center space-x-3 w-full">
+                                     <Avatar className="h-10 w-10 flex-shrink-0">
+                                       <AvatarImage src={member.image_url} />
+                                       <AvatarFallback className="text-base">
+                                         {getInitials(member.firstname, member.lastname)}
+                                       </AvatarFallback>
+                                     </Avatar>
+                                     <div className="flex-1 text-left">
+                                       <p className="text-base font-bold">
+                                         {member.firstname} {member.lastname}
+                                       </p>
+                                       <p className="text-sm text-green-600">
+                                         {memberAttendanceCount[member.id] || 0} previous attendances
+                                       </p>
+                                     </div>
+                                     <Star className="h-4 w-4 text-green-600 flex-shrink-0" />
+                                   </div>
+                                 </Button>
+                               ))}
+                           </div>
+                         </div>
+                       )}
+
+                       {/* All Members */}
+                       <div>
+                         <h3 className="text-lg font-bold mb-3 text-center">All People</h3>
+                         <div className="grid grid-cols-1 gap-3">
+                           {members
+                             .filter(member => 
+                               !suggestedMembers.find(s => s.id === member.id) &&
+                               (member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                                member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase()))
+                             )
+                             .map((member) => (
+                               <Button
+                                 key={member.id}
+                                 variant="outline"
+                                 onClick={() => handleMemberClick(member)}
+                                 className="w-full h-16 text-left p-3"
+                               >
+                                 <div className="flex items-center space-x-3 w-full">
+                                   <Avatar className="h-10 w-10 flex-shrink-0">
+                                     <AvatarImage src={member.image_url} />
+                                     <AvatarFallback className="text-base">
+                                       {getInitials(member.firstname, member.lastname)}
+                                     </AvatarFallback>
+                                   </Avatar>
+                                   <div className="flex-1 text-left">
+                                     <p className="text-base font-bold">
+                                       {member.firstname} {member.lastname}
+                                     </p>
+                                     {memberAttendanceCount[member.id] && (
+                                       <p className="text-sm text-gray-600">
+                                         {memberAttendanceCount[member.id]} previous attendances
+                                       </p>
+                                     )}
+                                   </div>
+                                 </div>
+                               </Button>
+                             ))}
+                         </div>
+                       </div>
+                     </TabsContent>
+
+                     <TabsContent value="checked-in" className="space-y-4">
+                       {/* Checked In Members */}
+                       <div className="grid grid-cols-1 gap-3">
+                         {alreadyRSVPMembers.filter(member => member && member.id).map((member) => (
+                           <div
+                             key={member.id}
+                             className="flex items-center justify-between p-4 rounded-lg border-2 bg-green-50 border-green-200"
+                           >
+                             <div className="flex items-center space-x-3">
+                               <Avatar className="h-12 w-12">
+                                 <AvatarImage src={member.image_url} />
+                                 <AvatarFallback className="text-lg">
+                                   {member.isAnonymous ? member.firstname.charAt(0) : getInitials(member.firstname, member.lastname)}
+                                 </AvatarFallback>
+                               </Avatar>
+                               <div>
+                                 <p className="text-lg font-bold">
                                    {member.firstname} {member.lastname}
                                  </p>
-                                 <p className="text-sm text-green-600">
-                                   {memberAttendanceCount[member.id] || 0} previous attendances
-                                 </p>
+                                 {member.isAnonymous && (
+                                   <Badge variant="outline" className="text-sm px-2 py-1 text-orange-600 border-orange-600">
+                                     Anonymous Attendee
+                                   </Badge>
+                                 )}
                                </div>
-                               <Star className="h-4 w-4 text-green-600 flex-shrink-0" />
                              </div>
-                           </Button>
-                         ))}
-                       </div>
-                     </div>
-                   )}
-
-                                     {/* All Members */}
-                   <div>
-                     <h3 className="text-lg font-bold mb-3 text-center">All People</h3>
-                     <div className="grid grid-cols-1 gap-3">
-                       {members
-                         .filter(member => 
-                           !suggestedMembers.find(s => s.id === member.id) &&
-                           (member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
-                            member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase()))
-                         )
-                         .map((member) => (
-                         <Button
-                           key={member.id}
-                           variant="outline"
-                           onClick={() => handleMemberClick(member)}
-                           className="w-full h-16 text-left p-3"
-                         >
-                           <div className="flex items-center space-x-3 w-full">
-                             <Avatar className="h-10 w-10 flex-shrink-0">
-                               <AvatarImage src={member.image_url} />
-                               <AvatarFallback className="text-base">
-                                 {getInitials(member.firstname, member.lastname)}
-                               </AvatarFallback>
-                             </Avatar>
-                             <div className="flex-1 text-left">
-                               <p className="text-base font-bold">
-                                 {member.firstname} {member.lastname}
-                               </p>
-                               {memberAttendanceCount[member.id] && (
-                                 <p className="text-sm text-gray-600">
-                                   {memberAttendanceCount[member.id]} previous attendances
-                                 </p>
-                               )}
-                             </div>
+                             <Button
+                               variant="ghost"
+                               size="sm"
+                               onClick={() => handleRemoveMember(member.id)}
+                               className="h-8 w-8 p-0"
+                             >
+                               <X className="h-4 w-4" />
+                             </Button>
                            </div>
-                         </Button>
-                       ))}
-                     </div>
-                   </div>
-                </div>
+                         ))}
+                         {alreadyRSVPMembers.length === 0 && (
+                           <p className="text-lg text-gray-500 italic p-8 text-center">
+                             {selectedEvent?.attendance_type === 'check-in'
+                               ? 'No members have checked in yet'
+                               : 'No members have RSVP\'d yet'}
+                           </p>
+                         )}
+                       </div>
+                     </TabsContent>
+                   </Tabs>
+                 </div>
 
                                  <DialogFooter className="p-3 border-t bg-gray-50 flex-shrink-0">
                    <div className="flex gap-3 w-full">
@@ -5685,6 +5810,163 @@ export default function Events() {
              </Dialog>
              </>
            )}
+
+          {/* Kiosk Mode - Create New Member Modal */}
+          {isKioskMode && isCreateMemberOpen && (
+            <div 
+              className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[999999] flex items-center justify-center p-4"
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                width: '100vw',
+                height: '100vh',
+                zIndex: 999999,
+                backgroundColor: 'rgba(0, 0, 0, 0.8)'
+              }}
+            >
+              {console.log('🔍 Kiosk Create New Member Modal rendering')}
+              <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+                <div className="p-4 border-b bg-blue-50 flex-shrink-0">
+                  <h2 className="text-xl font-bold">Create New Person</h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Add a new person and automatically {selectedEvent?.attendance_type === 'check-in' ? 'check them in' : 'RSVP them'} to this event.
+                  </p>
+                </div>
+                
+                <div className="p-4 flex-1 overflow-y-auto">
+                  <form onSubmit={handleCreateMember} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="firstname" className="text-sm">First Name</Label>
+                        <Input
+                          id="firstname"
+                          name="firstname"
+                          value={newMember.firstname}
+                          onChange={(e) => setNewMember({...newMember, firstname: e.target.value})}
+                          className="h-12 text-base"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="lastname" className="text-sm">Last Name</Label>
+                        <Input
+                          id="lastname"
+                          name="lastname"
+                          value={newMember.lastname}
+                          onChange={(e) => setNewMember({...newMember, lastname: e.target.value})}
+                          className="h-12 text-base"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-sm">Email</Label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        value={newMember.email}
+                        onChange={(e) => setNewMember({...newMember, email: e.target.value})}
+                        className="h-12 text-base"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone" className="text-sm">Phone</Label>
+                      <Input
+                        id="phone"
+                        name="phone"
+                        value={newMember.phone}
+                        onChange={(e) => setNewMember({...newMember, phone: e.target.value})}
+                        className="h-12 text-base"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="notes" className="text-sm">Notes</Label>
+                      <Textarea
+                        id="notes"
+                        name="notes"
+                        value={newMember.notes}
+                        onChange={(e) => setNewMember({...newMember, notes: e.target.value})}
+                        className="h-24 text-base"
+                      />
+                    </div>
+                  </form>
+                </div>
+
+                <div className="p-4 border-t flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsCreateMemberOpen(false)}
+                    className="flex-1 h-12 text-base"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    onClick={handleCreateMember}
+                    className="flex-1 h-12 text-base"
+                  >
+                    Create and {selectedEvent?.attendance_type === 'check-in' ? 'Check In' : 'RSVP'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Kiosk Mode - Anonymous Check-in Modal */}
+          {isKioskMode && isAnonymousCheckinOpen && (
+            <div 
+              className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[999999] flex items-center justify-center p-4"
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                width: '100vw',
+                height: '100vh',
+                zIndex: 999999,
+                backgroundColor: 'rgba(0, 0, 0, 0.8)'
+              }}
+            >
+              {console.log('🔍 Kiosk Anonymous Check-in Modal rendering')}
+              <div className="bg-white rounded-lg w-full max-w-md p-6">
+                <div className="text-center space-y-4">
+                  <div className="flex items-center justify-center w-16 h-16 mx-auto bg-orange-100 rounded-full">
+                    <UserPlus className="h-8 w-8 text-orange-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">
+                      Anonymous Check-in
+                    </h3>
+                    <p className="text-base text-gray-600 mb-6">
+                      Check in an anonymous attendee to {selectedEvent?.title}. This will update the event attendance count but won't create a member record.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsAnonymousCheckinOpen(false)}
+                    className="flex-1 h-12 text-base"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleAnonymousCheckin}
+                    className="flex-1 h-12 text-base bg-orange-600 hover:bg-orange-700"
+                  >
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Add Anonymous Attendee
+                  </Button>
+                </div>
+              </div>
+            </div>
+                     )}
 
           {/* Desktop Member Selection Dialog */}
           {!isKioskMode && (
@@ -7208,7 +7490,8 @@ export default function Events() {
 
       {/* Create New Member Dialog */}
       <Dialog open={isCreateMemberOpen} onOpenChange={setIsCreateMemberOpen}>
-        <DialogContent className="w-[95vw] max-w-full h-[90vh] md:h-auto md:max-w-3xl p-0">
+        <DialogContent className="w-[95vw] max-w-full h-[90vh] md:h-auto md:max-w-3xl p-0" style={{ zIndex: 999999 }}>
+          {console.log('🔍 Create New Member Dialog rendering, isCreateMemberOpen:', isCreateMemberOpen)}
           <DialogHeader className="p-3 md:p-6 border-b">
             <DialogTitle className="text-lg md:text-2xl lg:text-3xl">Create New Person</DialogTitle>
             <DialogDescription className="text-sm md:text-lg mt-2">
@@ -7418,7 +7701,8 @@ export default function Events() {
 
       {/* Anonymous Check-in Dialog */}
       <Dialog open={isAnonymousCheckinOpen} onOpenChange={setIsAnonymousCheckinOpen}>
-        <DialogContent className="w-[95vw] max-w-full h-[90vh] md:h-auto md:max-w-2xl p-0">
+        <DialogContent className="w-[95vw] max-w-full h-[90vh] md:h-auto md:max-w-2xl p-0" style={{ zIndex: 999999 }}>
+          {console.log('🔍 Anonymous Check-in Dialog rendering, isAnonymousCheckinOpen:', isAnonymousCheckinOpen)}
           <DialogHeader className="p-3 md:p-6 border-b">
             <DialogTitle className="text-lg md:text-2xl lg:text-3xl">Anonymous Check-in</DialogTitle>
             <DialogDescription className="text-sm md:text-lg mt-2">
@@ -7604,6 +7888,9 @@ export default function Events() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+
+
         </motion.div>
       )}
     </PermissionGuard>
