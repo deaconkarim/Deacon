@@ -8425,42 +8425,39 @@ export default function Events() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="text-sm text-gray-600">
-              {selectedEvents.length} event(s) selected
-            </div>
-            
-            <div className="space-y-2">
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => {
-                  toast({
-                    title: "Coming Soon",
-                    description: "Bulk delete functionality will be available soon!",
-                  });
-                  setIsBulkActionsOpen(false);
-                }}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Selected Events
-              </Button>
-              
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => {
-                  toast({
-                    title: "Coming Soon",
-                    description: "Bulk export functionality will be available soon!",
-                  });
-                  setIsBulkActionsOpen(false);
-                }}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Export Selected Events
-            </Button>
+          <div className="text-sm text-gray-600">
+            {selectedEvents.length} event(s) selected
           </div>
+          
+          <Button
+            variant="outline"
+            className="w-full justify-start"
+            onClick={() => {
+              toast({
+                title: "Coming Soon",
+                description: "Bulk delete functionality will be available soon!",
+              });
+              setIsBulkActionsOpen(false);
+            }}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete Selected Events
+          </Button>
+          
+          <Button
+            variant="outline"
+            className="w-full justify-start"
+            onClick={() => {
+              toast({
+                title: "Coming Soon",
+                description: "Bulk export functionality will be available soon!",
+              });
+              setIsBulkActionsOpen(false);
+            }}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Export Selected Events
+          </Button>
           <DialogFooter>
             <Button
               variant="outline"
