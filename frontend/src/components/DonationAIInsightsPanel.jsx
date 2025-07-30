@@ -114,6 +114,114 @@ const DonationInsightCard = ({ title, summary, actions, icon: Icon, color, count
               </div>
             </div>
           </motion.div>
+
+          {/* Current Week & Month Section */}
+          {data?.insights?.currentWeek && (
+            <motion.div className="group/card relative">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+              <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Current Week */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                        <Calendar className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="text-base font-semibold text-slate-900 dark:text-white">This Week</h4>
+                        <p className="text-xs text-slate-600 dark:text-slate-400">
+                          {data.insights.currentWeek.donations} donations
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-blue-600">
+                        ${data.insights.currentWeek.amount.toLocaleString()}
+                      </div>
+                      <div className="flex items-center gap-1 text-xs">
+                        {data.insights.currentWeek.trend === 'up' && <span className="text-green-600">↗</span>}
+                        {data.insights.currentWeek.trend === 'down' && <span className="text-red-600">↘</span>}
+                        {data.insights.currentWeek.trend === 'stable' && <span className="text-slate-600">→</span>}
+                        <span className="text-slate-500">{data.insights.currentWeek.trend}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Current Month */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center">
+                        <BarChart3 className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="text-base font-semibold text-slate-900 dark:text-white">This Month</h4>
+                        <p className="text-xs text-slate-600 dark:text-slate-400">
+                          {data.insights.currentMonth.donations} donations
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-purple-600">
+                        ${data.insights.currentMonth.amount.toLocaleString()}
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        Proj: ${data.insights.currentMonth.projected.toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Predictions Section */}
+          {data?.insights?.predictions && (
+            <motion.div className="group/card relative">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-orange-500/20 to-orange-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+              <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center">
+                      <TrendingUp className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h4 className="text-base font-semibold text-slate-900 dark:text-white">Predictions</h4>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">
+                        AI-powered forecasting
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <Badge 
+                      variant={data.insights.predictions.confidence === 'high' ? 'default' : 
+                              data.insights.predictions.confidence === 'medium' ? 'secondary' : 'outline'} 
+                      className={`text-xs ${
+                        data.insights.predictions.confidence === 'high' ? 'bg-green-100 text-green-800' :
+                        data.insights.predictions.confidence === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      {data.insights.predictions.confidence} confidence
+                    </Badge>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <div className="text-lg font-semibold text-slate-900 dark:text-white">Next Week</div>
+                    <div className="text-2xl font-bold text-orange-600">
+                      ${data.insights.predictions.nextWeek.toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-semibold text-slate-900 dark:text-white">Next Month</div>
+                    <div className="text-2xl font-bold text-orange-600">
+                      ${data.insights.predictions.nextMonth.toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
           
           {/* Top Donors Section */}
           {data?.insights?.topDonors && data.insights.topDonors.length > 0 && (
