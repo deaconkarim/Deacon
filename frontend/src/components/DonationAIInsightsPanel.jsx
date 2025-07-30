@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { 
   DollarSign, 
@@ -323,12 +323,40 @@ const DonationInsightCard = ({ title, summary, actions, icon: Icon, color, count
   );
 };
 
-export function DonationAIInsightsPanel({ organizationId }) {
+export default function DonationAIInsightsPanel({ organizationId }) {
   const [insights, setInsights] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Changed from true to false
+  const [isVisible, setIsVisible] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const panelRef = useRef(null);
   const { toast } = useToast();
 
-  const loadInsights = async (forceRefresh = false) => {
+  // Intersection Observer for lazy loading
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !hasLoaded) {
+          setIsVisible(true);
+        }
+      },
+      { 
+        threshold: 0.1,
+        rootMargin: '100px' // Start loading when panel is 100px away from viewport
+      }
+    );
+
+    if (panelRef.current) {
+      observer.observe(panelRef.current);
+    }
+
+    return () => {
+      if (panelRef.current) {
+        observer.unobserve(panelRef.current);
+      }
+    };
+  }, [hasLoaded]);
+
+  const loadDonationInsights = async (forceRefresh = false) => {
     try {
       setLoading(true);
       if (forceRefresh) {
@@ -337,6 +365,7 @@ export function DonationAIInsightsPanel({ organizationId }) {
       
       const result = await AIInsightsService.getDashboardInsights(organizationId, forceRefresh);
       setInsights(result);
+      setHasLoaded(true);
     } catch (error) {
       console.error('Error loading donation insights:', error);
       toast({
@@ -349,65 +378,85 @@ export function DonationAIInsightsPanel({ organizationId }) {
     }
   };
 
+  // Only load when panel becomes visible and organizationId is available
   useEffect(() => {
-    if (organizationId) {
-      loadInsights();
+    if (organizationId && isVisible && !hasLoaded) {
+      loadDonationInsights();
     }
-  }, [organizationId]);
-
-  // Donation Insights card
-  const donationInsights = {
-    key: 'donationInsights',
-    title: 'Giving Insights',
-    icon: DollarSign,
-    color: 'border-green-500',
-    count: insights?.insights?.donationInsights?.data?.insights?.totalDonations || 0,
-    summary: insights?.insights?.donationInsights?.summary,
-    actions: insights?.insights?.donationInsights?.actions,
-    data: insights?.insights?.donationInsights?.data
-  };
+  }, [organizationId, isVisible, hasLoaded]);
 
   return (
-    <div className="space-y-8">
+    <div ref={panelRef} className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-3 rounded-full bg-green-100">
-            <DollarSign className="h-6 w-6 text-green-600" />
+          <div className="p-3 rounded-full bg-emerald-100">
+            <DollarSign className="h-6 w-6 text-emerald-600" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-800">Giving AI Insights</h2>
-            <p className="text-sm text-gray-600 mt-1">Powered by intelligent analysis of your giving data</p>
+            <h2 className="text-2xl font-bold text-gray-800">Donation AI Insights</h2>
+            <p className="text-sm text-gray-600 mt-1">AI-powered giving analytics and stewardship insights</p>
           </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => loadInsights(true)}
-          disabled={loading}
-          className="flex items-center gap-2"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          {!hasLoaded && !loading && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => loadDonationInsights(false)}
+              className="flex items-center gap-2"
+            >
+              <DollarSign className="h-4 w-4" />
+              Load Insights
+            </Button>
+          )}
+          {hasLoaded && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => loadDonationInsights(true)}
+              disabled={loading}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Donation Insights Card */}
-      <div className="grid grid-cols-1 gap-6">
-        <DonationInsightCard
-          key={donationInsights.key}
-          title={donationInsights.title}
-          icon={donationInsights.icon}
-          color={donationInsights.color}
-          count={donationInsights.count}
-          summary={donationInsights.summary}
-          actions={donationInsights.actions}
-          loading={loading}
-          data={donationInsights.data}
-        />
-      </div>
+      {/* Show loading state or insights */}
+      {!hasLoaded && !loading ? (
+        <div className="grid grid-cols-1 gap-6">
+          <motion.div className="group relative" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+            <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-3xl blur opacity-25"></div>
+            <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 shadow-xl text-center">
+              <DollarSign className="h-16 w-16 text-emerald-500 mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Donation Insights Ready</h3>
+              <p className="text-slate-600 dark:text-slate-400 mb-4">
+                Click "Load Insights" to analyze giving patterns and generate stewardship recommendations.
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-500">
+                This may take a few seconds to process your donation data.
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-6">
+          {/* Donation Insights Card */}
+          <DonationInsightCard
+            title="Donation Insights"
+            icon={DollarSign}
+            color="border-emerald-500"
+            count={insights?.insights?.donationInsights?.data?.insights?.totalDonations || 0}
+            summary={insights?.insights?.donationInsights?.summary}
+            actions={insights?.insights?.donationInsights?.actions}
+            loading={loading}
+            data={insights?.insights?.donationInsights?.data}
+          />
+        </div>
+      )}
     </div>
   );
 }
-
-export default DonationAIInsightsPanel;
