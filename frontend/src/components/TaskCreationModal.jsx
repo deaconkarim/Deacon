@@ -112,10 +112,12 @@ export function TaskCreationModal({
 
   useEffect(() => {
     if (isOpen) {
+      console.log('TaskCreationModal: Opening modal, fetching users...');
       fetchMembers();
       fetchUsers();
       // Pre-populate with suggestion data if provided
       if (suggestion) {
+        console.log('TaskCreationModal: Pre-populating with suggestion:', suggestion);
         setNewTask({
           title: suggestion.title || suggestion.content || 'Task from Suggestion',
           description: suggestion.description || suggestion.content || '',
@@ -149,37 +151,61 @@ export function TaskCreationModal({
   // Fetch users for task assignment
   const fetchUsers = async () => {
     try {
+      console.log('TaskCreationModal: Starting fetchUsers...');
+      // Get the current user's organization ID (including impersonation)
       const organizationId = await getCurrentUserOrganizationId();
+      console.log('TaskCreationModal: Organization ID:', organizationId);
       if (!organizationId) throw new Error('User not associated with any organization');
 
-      const { data, error } = await supabase
-        .from('organization_users')
-        .select(`
-          id,
-          user_id,
-          role,
-          users (
-            id,
-            firstname,
-            lastname,
-            email
-          )
-        `)
-        .eq('organization_id', organizationId);
+      // Get organization users with member data
+      const [orgUsersResult, membersResult] = await Promise.all([
+        supabase
+          .from('organization_users')
+          .select('user_id, role, approval_status')
+          .eq('organization_id', organizationId)
+          .eq('status', 'active')
+          .eq('approval_status', 'approved')
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('members')
+          .select('id, firstname, lastname, email, user_id')
+          .eq('organization_id', organizationId)
+          .order('firstname', { ascending: true })
+      ]);
 
-      if (error) throw error;
+      if (orgUsersResult.error) throw orgUsersResult.error;
+      if (membersResult.error) throw membersResult.error;
 
-      const userList = data.map(item => ({
-        id: item.user_id, // Use user_id for task assignment
-        name: `${item.users.firstname} ${item.users.lastname}`,
-        role: item.role,
-        email: item.users.email
-      }));
+      console.log('TaskCreationModal: Organization users:', orgUsersResult.data);
+      console.log('TaskCreationModal: Members:', membersResult.data);
 
+      // Create a map of user_id to member data
+      const membersMap = new Map();
+      membersResult.data?.forEach(member => {
+        if (member.user_id) {
+          membersMap.set(member.user_id, member);
+        }
+      });
+
+      // Transform to user list for assignment
+      const userList = [];
+      orgUsersResult.data?.forEach(orgUser => {
+        const member = membersMap.get(orgUser.user_id);
+        if (member) {
+          userList.push({
+            id: member.id, // Use member.id for task assignment
+            user_id: member.user_id,
+            name: `${member.firstname} ${member.lastname}`,
+            email: member.email,
+            role: orgUser.role
+          });
+        }
+      });
+
+      console.log('TaskCreationModal: Users loaded for tasks:', userList);
       setUsers(userList);
-      console.log('Users loaded for tasks:', userList);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('TaskCreationModal: Error loading users:', error);
       toast({
         title: "Error",
         description: "Failed to load users for task assignment",
@@ -200,15 +226,17 @@ export function TaskCreationModal({
 
     try {
       setIsLoading(true);
+      // Get the current user's organization ID (including impersonation)
       const organizationId = await getCurrentUserOrganizationId();
       if (!organizationId) throw new Error('User not associated with any organization');
 
       const { data, error } = await supabase
         .from('tasks')
-        .insert({
+        .insert([{
           ...newTask,
-          organization_id: organizationId
-        })
+          organization_id: organizationId,
+          created_at: new Date().toISOString()
+        }])
         .select()
         .single();
 
