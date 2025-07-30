@@ -154,9 +154,19 @@ export const dashboardService = {
     // Calculate various donation metrics
     const totalDonations = Math.round(donations.reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0) * 100) / 100;
     
-    const monthlyDonations = Math.round(donations
-      .filter(d => d.date.startsWith(`${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}`))
+    // Calculate current month donations using proper date comparison
+    const startOfMonth = new Date(currentYear, currentMonth, 1);
+    const endOfMonth = new Date(currentYear, currentMonth + 1, 0);
+    
+    const currentMonthDonations = donations.filter(d => {
+      const donationDate = new Date(d.date);
+      return donationDate >= startOfMonth && donationDate <= endOfMonth;
+    });
+    
+    const monthlyDonations = Math.round(currentMonthDonations
       .reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0) * 100) / 100;
+    
+
 
     // Last month calculations
     const lastMonth = new Date(currentYear, currentMonth - 1, 1);

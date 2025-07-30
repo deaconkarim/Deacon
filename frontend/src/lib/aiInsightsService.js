@@ -230,10 +230,10 @@ export class SmartInsightsQueries {
    */
   static async getDonationInsights(organizationId) {
     try {
-      // Get donation data for the last 12 months for historical analysis
-      const twelveMonthsAgo = new Date();
-      twelveMonthsAgo.setDate(twelveMonthsAgo.getDate() - 365);
-
+      // Use the dashboard service to get consistent donation data
+      const { dashboardService } = await import('./dashboardService');
+      const dashboardData = await dashboardService.getDonationsData(organizationId);
+      
       // Get current week and month data for immediate insights
       const now = new Date();
       const sevenDaysAgo = new Date(now);
@@ -243,26 +243,8 @@ export class SmartInsightsQueries {
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
-      const { data: donations, error } = await supabase
-        .from('donations')
-        .select(`
-          id,
-          amount,
-          date,
-          payment_method,
-          fund_designation,
-          is_recurring,
-          donor_id,
-          donor:members(id, firstname, lastname, email)
-        `)
-        .eq('organization_id', organizationId)
-        .gte('date', twelveMonthsAgo.toISOString())
-        .order('date', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching donations:', error);
-        return null;
-      }
+      // Use the same donation data as the dashboard for consistency
+      const donations = dashboardData.all || [];
 
       // Calculate comprehensive donation insights including current periods and predictions
       const insights = this.calculateDonationInsights(donations, sevenDaysAgo, startOfMonth, endOfMonth, now);
@@ -424,11 +406,15 @@ export class SmartInsightsQueries {
       return donationDate >= startOfMonth && donationDate <= endOfMonth;
     });
 
+    const currentMonthAmount = currentMonthDonations.reduce((sum, d) => sum + (d.amount || 0), 0);
+    
+
+
     insights.currentMonth = {
-      amount: currentMonthDonations.reduce((sum, d) => sum + (d.amount || 0), 0),
+      amount: currentMonthAmount,
       donations: currentMonthDonations.length,
       average: currentMonthDonations.length > 0 ? 
-        currentMonthDonations.reduce((sum, d) => sum + (d.amount || 0), 0) / currentMonthDonations.length : 0,
+        currentMonthAmount / currentMonthDonations.length : 0,
       trend: this.calculateTrend(currentMonthDonations, donations, 'month'),
       projected: this.calculateMonthlyProjection(currentMonthDonations, endOfMonth, now)
     };
