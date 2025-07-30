@@ -226,6 +226,405 @@ export class SmartInsightsQueries {
   }
 
   /**
+   * Get donation insights and trends
+   */
+  static async getDonationInsights(organizationId) {
+    try {
+      // Get donation data for the last 12 months for historical analysis
+      const twelveMonthsAgo = new Date();
+      twelveMonthsAgo.setDate(twelveMonthsAgo.getDate() - 365);
+
+      // Get current week and month data for immediate insights
+      const now = new Date();
+      const sevenDaysAgo = new Date(now);
+      sevenDaysAgo.setDate(now.getDate() - 7); // Last 7 days (rolling window)
+      sevenDaysAgo.setHours(0, 0, 0, 0);
+
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+      const { data: donations, error } = await supabase
+        .from('donations')
+        .select(`
+          id,
+          amount,
+          date,
+          payment_method,
+          fund_designation,
+          is_recurring,
+          donor_id,
+          donor:members(id, firstname, lastname, email)
+        `)
+        .eq('organization_id', organizationId)
+        .gte('date', twelveMonthsAgo.toISOString())
+        .order('date', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching donations:', error);
+        return null;
+      }
+
+      // Calculate comprehensive donation insights including current periods and predictions
+      const insights = this.calculateDonationInsights(donations, sevenDaysAgo, startOfMonth, endOfMonth, now);
+
+      return {
+        donations,
+        insights
+      };
+    } catch (error) {
+      console.error('Error generating donation insights:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Calculate donation insights from donation data
+   */
+  static calculateDonationInsights(donations, sevenDaysAgo, startOfMonth, endOfMonth, now) {
+    if (!donations || donations.length === 0) {
+      return {
+        totalAmount: 0,
+        totalDonations: 0,
+        averageDonation: 0,
+        recurringDonations: 0,
+        topDonors: [],
+        monthlyTrends: {},
+        paymentMethodBreakdown: {},
+        fundDesignationBreakdown: {},
+        givingPatterns: {},
+        currentWeek: {
+          amount: 0,
+          donations: 0,
+          average: 0,
+          trend: 'no-data'
+        },
+        currentMonth: {
+          amount: 0,
+          donations: 0,
+          average: 0,
+          trend: 'no-data',
+          projected: 0
+        },
+        predictions: {
+          nextWeek: 0,
+          nextMonth: 0,
+          confidence: 'low'
+        },
+        recommendations: []
+      };
+    }
+
+    const insights = {
+      totalAmount: 0,
+      totalDonations: donations.length,
+      recurringDonations: 0,
+      topDonors: [],
+      monthlyTrends: {},
+      paymentMethodBreakdown: {},
+      fundDesignationBreakdown: {},
+      givingPatterns: {},
+      currentWeek: {
+        amount: 0,
+        donations: 0,
+        average: 0,
+        trend: 'no-data'
+      },
+      currentMonth: {
+        amount: 0,
+        donations: 0,
+        average: 0,
+        trend: 'no-data',
+        projected: 0
+      },
+      predictions: {
+        nextWeek: 0,
+        nextMonth: 0,
+        confidence: 'low'
+      },
+      recommendations: []
+    };
+
+    // Calculate totals and breakdowns
+    donations.forEach(donation => {
+      insights.totalAmount += donation.amount || 0;
+      if (donation.is_recurring) {
+        insights.recurringDonations++;
+      }
+
+      // Monthly trends
+      const month = new Date(donation.date).toISOString().slice(0, 7); // YYYY-MM
+      insights.monthlyTrends[month] = (insights.monthlyTrends[month] || 0) + (donation.amount || 0);
+
+      // Payment method breakdown
+      const method = donation.payment_method || 'unknown';
+      insights.paymentMethodBreakdown[method] = (insights.paymentMethodBreakdown[method] || 0) + (donation.amount || 0);
+
+      // Fund designation breakdown
+      const designation = donation.fund_designation || 'general';
+      insights.fundDesignationBreakdown[designation] = (insights.fundDesignationBreakdown[designation] || 0) + (donation.amount || 0);
+    });
+
+    // Calculate average donation
+    insights.averageDonation = insights.totalAmount / insights.totalDonations;
+
+    // Find top donors (by total amount)
+    const donorTotals = {};
+    donations.forEach(donation => {
+      if (donation.donor_id && donation.donor) {
+        const donorKey = donation.donor_id;
+        donorTotals[donorKey] = (donorTotals[donorKey] || 0) + (donation.amount || 0);
+      }
+    });
+
+    insights.topDonors = Object.entries(donorTotals)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 5)
+      .map(([donorId, total]) => {
+        const donor = donations.find(d => d.donor_id === donorId)?.donor;
+        return {
+          donor_id: donorId,
+          total,
+          name: donor ? `${donor.firstname} ${donor.lastname}` : 'Unknown',
+          email: donor?.email || ''
+        };
+      });
+
+    // Analyze giving patterns
+    const recentDonations = donations.filter(d => {
+      const donationDate = new Date(d.date);
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      return donationDate >= thirtyDaysAgo;
+    });
+
+    insights.givingPatterns = {
+      recentDonations: recentDonations.length,
+      recentAmount: recentDonations.reduce((sum, d) => sum + (d.amount || 0), 0),
+      averageRecentDonation: recentDonations.length > 0 ? 
+        recentDonations.reduce((sum, d) => sum + (d.amount || 0), 0) / recentDonations.length : 0
+    };
+
+    // Calculate current week insights (last 7 days)
+    const currentWeekDonations = donations.filter(d => {
+      const donationDate = new Date(d.date);
+      return donationDate >= sevenDaysAgo && donationDate <= now;
+    });
+
+    insights.currentWeek = {
+      amount: currentWeekDonations.reduce((sum, d) => sum + (d.amount || 0), 0),
+      donations: currentWeekDonations.length,
+      average: currentWeekDonations.length > 0 ? 
+        currentWeekDonations.reduce((sum, d) => sum + (d.amount || 0), 0) / currentWeekDonations.length : 0,
+      trend: this.calculateTrend(currentWeekDonations, donations, 'week')
+    };
+
+    // Calculate current month insights
+    const currentMonthDonations = donations.filter(d => {
+      const donationDate = new Date(d.date);
+      return donationDate >= startOfMonth && donationDate <= endOfMonth;
+    });
+
+    insights.currentMonth = {
+      amount: currentMonthDonations.reduce((sum, d) => sum + (d.amount || 0), 0),
+      donations: currentMonthDonations.length,
+      average: currentMonthDonations.length > 0 ? 
+        currentMonthDonations.reduce((sum, d) => sum + (d.amount || 0), 0) / currentMonthDonations.length : 0,
+      trend: this.calculateTrend(currentMonthDonations, donations, 'month'),
+      projected: this.calculateMonthlyProjection(currentMonthDonations, endOfMonth, now)
+    };
+
+    // Generate predictions
+    insights.predictions = this.generateDonationPredictions(donations, insights);
+
+    // Generate recommendations
+    insights.recommendations = this.generateDonationRecommendations(insights);
+
+    return insights;
+  }
+
+  /**
+   * Calculate trend for current period vs previous period
+   */
+  static calculateTrend(currentPeriodDonations, allDonations, period) {
+    if (currentPeriodDonations.length === 0) return 'no-data';
+
+    const now = new Date();
+    let previousPeriodStart, previousPeriodEnd;
+
+    if (period === 'week') {
+      // Previous 7 days (days 8-14 ago)
+      previousPeriodStart = new Date(now);
+      previousPeriodStart.setDate(now.getDate() - 14);
+      previousPeriodEnd = new Date(now);
+      previousPeriodEnd.setDate(now.getDate() - 8);
+    } else {
+      // Previous month
+      previousPeriodStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      previousPeriodEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+    }
+
+    const previousPeriodDonations = allDonations.filter(d => {
+      const donationDate = new Date(d.date);
+      return donationDate >= previousPeriodStart && donationDate <= previousPeriodEnd;
+    });
+
+    const currentAmount = currentPeriodDonations.reduce((sum, d) => sum + (d.amount || 0), 0);
+    const previousAmount = previousPeriodDonations.reduce((sum, d) => sum + (d.amount || 0), 0);
+
+    if (previousAmount === 0) return 'no-comparison';
+    if (currentAmount > previousAmount * 1.1) return 'up';
+    if (currentAmount < previousAmount * 0.9) return 'down';
+    return 'stable';
+  }
+
+  /**
+   * Calculate monthly projection based on current progress
+   */
+  static calculateMonthlyProjection(currentMonthDonations, endOfMonth, now) {
+    if (currentMonthDonations.length === 0) return 0;
+
+    const currentAmount = currentMonthDonations.reduce((sum, d) => sum + (d.amount || 0), 0);
+    const daysInMonth = endOfMonth.getDate();
+    const daysElapsed = now.getDate();
+    const daysRemaining = daysInMonth - daysElapsed;
+
+    if (daysElapsed === 0) return currentAmount;
+
+    const dailyAverage = currentAmount / daysElapsed;
+    const projectedAmount = currentAmount + (dailyAverage * daysRemaining);
+
+    return Math.round(projectedAmount);
+  }
+
+  /**
+   * Generate donation predictions for next week and month
+   */
+  static generateDonationPredictions(donations, insights) {
+    const predictions = {
+      nextWeek: 0,
+      nextMonth: 0,
+      confidence: 'low'
+    };
+
+    // Calculate next week prediction based on current week and historical patterns
+    if (insights.currentWeek.amount > 0) {
+      const weeklyAverage = insights.currentWeek.amount;
+      const trendMultiplier = insights.currentWeek.trend === 'up' ? 1.1 : 
+                             insights.currentWeek.trend === 'down' ? 0.9 : 1.0;
+      predictions.nextWeek = Math.round(weeklyAverage * trendMultiplier);
+    } else {
+      // Fallback to historical average
+      const recentWeeks = donations.filter(d => {
+        const donationDate = new Date(d.date);
+        const fourWeeksAgo = new Date();
+        fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+        return donationDate >= fourWeeksAgo;
+      });
+      
+      if (recentWeeks.length > 0) {
+        const weeklyGroups = {};
+        recentWeeks.forEach(donation => {
+          const weekKey = this.getWeekKey(new Date(donation.date));
+          weeklyGroups[weekKey] = (weeklyGroups[weekKey] || 0) + (donation.amount || 0);
+        });
+        
+        const weeklyAverages = Object.values(weeklyGroups);
+        const averageWeekly = weeklyAverages.reduce((sum, amount) => sum + amount, 0) / weeklyAverages.length;
+        predictions.nextWeek = Math.round(averageWeekly);
+      }
+    }
+
+    // Calculate next month prediction
+    if (insights.currentMonth.projected > 0) {
+      predictions.nextMonth = insights.currentMonth.projected;
+    } else {
+      // Fallback to historical monthly average
+      const monthlyGroups = {};
+      donations.forEach(donation => {
+        const monthKey = this.getMonthKey(new Date(donation.date));
+        monthlyGroups[monthKey] = (monthlyGroups[monthKey] || 0) + (donation.amount || 0);
+      });
+      
+      const monthlyAverages = Object.values(monthlyGroups);
+      if (monthlyAverages.length > 0) {
+        const averageMonthly = monthlyAverages.reduce((sum, amount) => sum + amount, 0) / monthlyAverages.length;
+        predictions.nextMonth = Math.round(averageMonthly);
+      }
+    }
+
+    // Calculate confidence based on data availability and consistency
+    const hasRecentData = insights.currentWeek.donations > 0 || insights.currentMonth.donations > 0;
+    const hasHistoricalData = donations.length > 10;
+    const hasConsistentPatterns = insights.currentWeek.trend !== 'no-data' && insights.currentMonth.trend !== 'no-data';
+
+    if (hasRecentData && hasHistoricalData && hasConsistentPatterns) {
+      predictions.confidence = 'high';
+    } else if (hasRecentData || hasHistoricalData) {
+      predictions.confidence = 'medium';
+    } else {
+      predictions.confidence = 'low';
+    }
+
+    return predictions;
+  }
+
+  /**
+   * Generate donation recommendations based on insights
+   */
+  static generateDonationRecommendations(insights) {
+    const recommendations = [];
+
+    // Analyze current week performance
+    if (insights.currentWeek.trend === 'down') {
+      recommendations.push('Last 7 days giving is below average. Consider a mid-week giving reminder');
+    } else if (insights.currentWeek.trend === 'up') {
+      recommendations.push('Great giving momentum in the last 7 days! Consider thanking donors for their generosity');
+    }
+
+    // Analyze current month performance
+    if (insights.currentMonth.trend === 'down') {
+      recommendations.push('Monthly giving is declining. Consider stewardship messaging this week');
+    } else if (insights.currentMonth.projected > insights.currentMonth.amount * 1.2) {
+      recommendations.push('Strong monthly projection. Consider highlighting ministry impact');
+    }
+
+    // Analyze predictions
+    if (insights.predictions.confidence === 'high' && insights.predictions.nextWeek < insights.currentWeek.amount * 0.8) {
+      recommendations.push('Predicted decline next week. Consider proactive giving encouragement');
+    }
+
+    // Analyze recurring donations
+    const recurringPercentage = (insights.recurringDonations / insights.totalDonations) * 100;
+    if (recurringPercentage < 20) {
+      recommendations.push('Consider promoting recurring donations to increase giving consistency');
+    }
+
+    // Analyze average donation
+    if (insights.averageDonation < 50) {
+      recommendations.push('Average donation is below typical church giving. Consider stewardship education');
+    }
+
+    // Analyze recent giving
+    if (insights.givingPatterns.recentDonations < 10) {
+      recommendations.push('Recent giving activity is low. Consider outreach to encourage giving');
+    }
+
+    // Analyze fund designation diversity
+    const fundCount = Object.keys(insights.fundDesignationBreakdown).length;
+    if (fundCount < 3) {
+      recommendations.push('Limited fund designations. Consider adding specific ministry funds');
+    }
+
+    // Analyze payment method diversity
+    const methodCount = Object.keys(insights.paymentMethodBreakdown).length;
+    if (methodCount < 2) {
+      recommendations.push('Limited payment methods. Consider adding online giving options');
+    }
+
+    return recommendations;
+  }
+
+  /**
    * Calculate detailed attendance patterns from historical data
    */
   static calculateDetailedAttendancePatterns(historicalAttendance) {
@@ -789,6 +1188,19 @@ export class AIInsightsGenerator {
     switch (insightType) {
       case 'at-risk-members':
         return `${data.length} members haven't been active recently. Consider reaching out to them.`;
+      case 'donation-insights':
+        if (!data || !data.insights) {
+          return 'No donation data available for analysis.';
+        }
+        const insights = data.insights;
+        const currentWeekText = insights.currentWeek.amount > 0 ? 
+          `Last 7 days: $${insights.currentWeek.amount.toLocaleString()} (${insights.currentWeek.trend === 'up' ? '↗' : insights.currentWeek.trend === 'down' ? '↘' : '→'})` : 
+          'No giving in last 7 days';
+        const currentMonthText = insights.currentMonth.amount > 0 ? 
+          `This month: $${insights.currentMonth.amount.toLocaleString()} (projected: $${insights.currentMonth.projected.toLocaleString()})` : 
+          'No giving this month';
+        
+        return `${currentWeekText}. ${currentMonthText}. Total: $${insights.totalAmount.toLocaleString()} from ${insights.totalDonations} donations.`;
       default:
         return 'Data analysis complete. Review the details for insights.';
     }
@@ -798,6 +1210,15 @@ export class AIInsightsGenerator {
     switch (insightType) {
       case 'at-risk-members':
         return '1. Send personalized outreach messages\n2. Schedule follow-up calls\n3. Invite to upcoming events';
+      case 'donation-insights':
+        if (!data || !data.insights) {
+          return '1. Review donation data\n2. Set up giving campaigns\n3. Promote recurring donations';
+        }
+        const recommendations = data.insights.recommendations;
+        if (recommendations && recommendations.length > 0) {
+          return recommendations.slice(0, 3).join('\n');
+        }
+        return '1. Promote recurring donations\n2. Set up stewardship education\n3. Add online giving options';
       default:
         return '1. Review the data\n2. Identify key areas\n3. Develop action plan';
     }
@@ -814,14 +1235,17 @@ export class AIInsightsService {
    */
   static async getDashboardInsights(organizationId, forceRefresh = false) {
     try {
-      const [atRisk, predictiveAttendance] = await Promise.all([
+      const [atRisk, predictiveAttendance, donationInsights] = await Promise.all([
         SmartInsightsQueries.getAtRiskMembers(organizationId),
-        SmartInsightsQueries.getPredictiveAttendance(organizationId)
+        SmartInsightsQueries.getPredictiveAttendance(organizationId),
+        SmartInsightsQueries.getDonationInsights(organizationId)
       ]);
 
       // Use simple SQL-based summaries instead of AI
       const atRiskSummary = AIInsightsGenerator.generateFallbackSummary(atRisk, 'at-risk-members');
       const atRiskActions = AIInsightsGenerator.generateFallbackAction(atRisk, 'at-risk-members');
+      const donationSummary = AIInsightsGenerator.generateFallbackSummary(donationInsights, 'donation-insights');
+      const donationActions = AIInsightsGenerator.generateFallbackAction(donationInsights, 'donation-insights');
 
       // Enhance predictions with AI if available
       let enhancedPredictions = predictiveAttendance?.predictions || [];
@@ -845,6 +1269,11 @@ export class AIInsightsService {
               ...predictiveAttendance,
               predictions: enhancedPredictions
             }
+          },
+          donationInsights: {
+            data: donationInsights,
+            summary: donationSummary,
+            actions: donationActions
           }
         },
         timestamp: new Date().toISOString()
@@ -873,6 +1302,9 @@ export class AIInsightsService {
         atRiskSummary: insights.insights?.atRisk?.summary || '',
         atRiskActions: insights.insights?.atRisk?.actions || '',
         attendancePredictions: insights.insights?.predictiveAttendance?.data?.predictions || [],
+        donationInsights: insights.insights?.donationInsights?.data || null,
+        donationSummary: insights.insights?.donationInsights?.summary || '',
+        donationActions: insights.insights?.donationInsights?.actions || '',
         timestamp: insights.timestamp
       };
 
@@ -917,6 +1349,28 @@ ${digestData.attendancePredictions.map(prediction => `
 
 TOTAL UPCOMING EVENTS: ${digestData.attendancePredictions.length}
 
+DONATION INSIGHTS:
+${digestData.donationInsights ? `
+Last 7 Days: $${digestData.donationInsights.insights?.currentWeek?.amount?.toLocaleString() || '0'} (${digestData.donationInsights.insights?.currentWeek?.trend || 'no-data'} trend)
+Current Month: $${digestData.donationInsights.insights?.currentMonth?.amount?.toLocaleString() || '0'} (projected: $${digestData.donationInsights.insights?.currentMonth?.projected?.toLocaleString() || '0'})
+
+Predictions:
+- Next Week: $${digestData.donationInsights.insights?.predictions?.nextWeek?.toLocaleString() || '0'} (${digestData.donationInsights.insights?.predictions?.confidence || 'low'} confidence)
+- Next Month: $${digestData.donationInsights.insights?.predictions?.nextMonth?.toLocaleString() || '0'}
+
+Total Giving: $${digestData.donationInsights.insights?.totalAmount?.toLocaleString() || '0'}
+Total Donations: ${digestData.donationInsights.insights?.totalDonations || '0'}
+Average Donation: $${digestData.donationInsights.insights?.averageDonation?.toFixed(2) || '0.00'}
+Recurring Donations: ${digestData.donationInsights.insights?.recurringDonations || '0'}
+
+Top Donors:
+${digestData.donationInsights.insights?.topDonors?.map(donor => `
+- ${donor.name}: $${donor.total.toLocaleString()}`).join('\n') || 'No donor data available'}
+
+Recommendations:
+${digestData.donationInsights.insights?.recommendations?.join('\n') || 'No specific recommendations available'}
+` : 'No donation data available'}
+
 Please provide a compelling weekly digest that includes:
 
 Weekly Church Digest
@@ -924,7 +1378,7 @@ Weekly Church Digest
 Dear Church Leadership Team,
 
 Summary of Current State:
-[Provide a warm, encouraging summary based on the ACTUAL data above. Include both at-risk members and attendance predictions]
+[Provide a warm, encouraging summary based on the ACTUAL data above. Include at-risk members, attendance predictions, and giving insights]
 
 Areas Needing Attention:
 [Detail specific concerns using the ACTUAL member names and data provided above. Be specific about each at-risk member's situation]
@@ -932,10 +1386,14 @@ Areas Needing Attention:
 Attendance Outlook:
 [Provide insights about upcoming events and attendance predictions. Highlight any concerning trends or positive indicators]
 
+Giving Insights:
+[Provide insights about donation patterns, top donors, and recommendations for improving giving]
+
 Recommended Actions:
 • [Specific action for each at-risk member by name]
 • [Timeline and responsible parties for each action]
 • [Actions to improve attendance if needed]
+• [Actions to improve giving based on donation insights]
 • [Additional actions as needed]
 
 Positive Insights:

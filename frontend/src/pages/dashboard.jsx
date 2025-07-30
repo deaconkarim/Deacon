@@ -92,6 +92,7 @@ import LeadershipVerse from '@/components/LeadershipVerse';
 import { PermissionFeature } from '@/components/PermissionGuard';
 import { PERMISSIONS } from '@/lib/permissions';
 import AIInsightsPanel from '@/components/AIInsightsPanel';
+import DonationAIInsightsPanel from '@/components/DonationAIInsightsPanel';
 
 // Function to check if user has access to any dashboard sections
 const getUserAccessiblePages = (userPermissions) => {
@@ -1575,6 +1576,13 @@ export function Dashboard() {
         <PermissionFeature permission={PERMISSIONS.MEMBERS_VIEW}>
           <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
             <AIInsightsPanel organizationId={organizationId} />
+          </motion.div>
+        </PermissionFeature>
+
+        {/* Donation AI Insights Panel */}
+        <PermissionFeature permission={PERMISSIONS.DONATIONS_VIEW}>
+          <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
+            <DonationAIInsightsPanel organizationId={organizationId} />
           </motion.div>
         </PermissionFeature>
 
