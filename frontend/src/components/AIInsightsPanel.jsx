@@ -118,9 +118,6 @@ const InsightCard = ({ title, summary, actions, icon: Icon, color, count, loadin
                     </div>
                     <div>
                       <h4 className="text-base font-semibold text-slate-900 dark:text-white">At-Risk Members</h4>
-                      <p className="text-xs text-slate-600 dark:text-slate-400">
-                        {memberData.length} members • No recent activity
-                      </p>
                     </div>
                   </div>
                   <div className="text-right">
@@ -229,7 +226,6 @@ const WeeklyDigestCard = ({ content, loading, onRefresh }) => {
             </div>
             <div>
               <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Weekly Digest</h3>
-              <p className="text-slate-600 dark:text-slate-400">AI-generated church insights</p>
             </div>
           </div>
           {onRefresh && (
@@ -391,7 +387,7 @@ export function AIInsightsPanel({ organizationId }) {
             <Brain className="h-6 w-6 text-purple-600" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-800">AI Ministry Insights</h2>
+            <h2 className="text-2xl font-bold text-gray-800">Ministry Insights</h2>
             <p className="text-sm text-gray-600 mt-1">Powered by intelligent analysis of your data</p>
           </div>
         </div>
@@ -488,7 +484,6 @@ export function AIInsightsPanel({ organizationId }) {
                 </div>
                 <div>
                   <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Predictive Attendance</h3>
-                  <p className="text-slate-600 dark:text-slate-400">AI-powered attendance forecasting</p>
                 </div>
               </div>
               
