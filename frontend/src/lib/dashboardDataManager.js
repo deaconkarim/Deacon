@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { dashboardService } from './dashboardService';
-import { useAttendanceStats } from './data/attendanceStats';
+import { optimizedDashboardService } from './optimizedDashboardService';
 import { useToast } from '@/components/ui/use-toast';
 
-// Custom hook for managing all dashboard data in a centralized way
+// Custom hook for managing all dashboard data with MINIMAL requests
 export const useDashboardData = () => {
   const [data, setData] = useState({
     // Core data
@@ -16,15 +15,21 @@ export const useDashboardData = () => {
     
     // Calculated stats
     stats: {
-      members: { total: 0, active: 0, inactive: 0, visitors: 0 },
-      donations: { total: 0, monthly: 0, weekly: 0, trend: 0 },
-      events: { total: 0, upcoming: 0, thisWeek: 0, thisMonth: 0 },
-      tasks: { total: 0, pending: 0, completed: 0, overdue: 0 },
-      celebrations: { birthdays: 0, anniversaries: 0, memberships: 0 },
-      sms: { totalMessages: 0, conversations: 0, recent: 0 },
-      attendance: { sundayServiceRate: 0, averageAttendance: 0 },
-      family: { totalFamilies: 0, membersInFamilies: 0, adults: 0, children: 0 }
+      members: { total: 0, active: 0, inactive: 0, visitors: 0, recent: 0, engagementRate: 0 },
+      donations: { total: 0, monthly: 0, weekly: 0, trend: 0, thisWeek: 0, lastWeek: 0, growth: 0 },
+      events: { total: 0, upcoming: 0, thisWeek: 0, thisMonth: 0, needingVolunteers: 0, mostCommonType: 'None' },
+      tasks: { total: 0, pending: 0, completed: 0, overdue: 0, completionRate: 0 },
+      celebrations: { birthdays: 0, anniversaries: 0, memberships: 0, totalUpcoming: 0 },
+      sms: { totalMessages: 0, conversations: 0, recent: 0, active: 0 },
+      attendance: { sundayServiceRate: 0, sundayServiceAttendance: 0, sundayServiceEvents: 0, bibleStudyAttendance: 0, bibleStudyEvents: 0, fellowshipAttendance: 0, fellowshipEvents: 0 },
+      family: { totalFamilies: 0, membersInFamilies: 0, membersWithoutFamilies: 0, adults: 0, children: 0 }
     },
+    
+    // Additional data
+    upcomingEvents: [],
+    recentPeople: [],
+    weeklyDonations: [],
+    donationTrendAnalysis: {},
     
     // UI state
     isLoading: true,
@@ -34,136 +39,63 @@ export const useDashboardData = () => {
 
   const { toast } = useToast();
 
-  // Attendance stats hook with date range
-  const attendanceDateRange = {
-    startDate: new Date(Date.now() - (30 * 24 * 60 * 60 * 1000)),
-    endDate: new Date()
+  // Fake attendance stats for compatibility (we calculate this in the optimized service)
+  const attendanceStats = {
+    isLoading: false,
+    serviceBreakdown: [
+      { name: 'Sunday Service', value: Math.round(data.stats.attendance.sundayServiceAttendance / Math.max(data.stats.attendance.sundayServiceEvents, 1)) },
+      { name: 'Bible Study', value: Math.round(data.stats.attendance.bibleStudyAttendance / Math.max(data.stats.attendance.bibleStudyEvents, 1)) },
+      { name: 'Fellowship', value: Math.round(data.stats.attendance.fellowshipAttendance / Math.max(data.stats.attendance.fellowshipEvents, 1)) }
+    ].filter(s => s.value > 0),
+    memberStats: [],
+    dailyData: [],
+    eventDetails: [],
+    error: null
   };
 
-  const { 
-    isLoading: attendanceLoading, 
-    serviceBreakdown, 
-    memberStats, 
-    dailyData, 
-    eventDetails, 
-    error: attendanceError,
-    clearCache: clearAttendanceCache 
-  } = useAttendanceStats(attendanceDateRange.startDate, attendanceDateRange.endDate);
-
-  // Centralized data calculator
-  const calculateDerivedData = useCallback((rawData) => {
-    const { members, donations, events, tasks, sms, celebrations, attendance, family } = rawData;
-    
-    // Member calculations
-    const memberStats = {
-      total: members.all?.length || 0,
-      active: members.counts?.active || 0,
-      inactive: members.counts?.inactive || 0,
-      visitors: members.counts?.visitors || 0,
-      recent: calculateRecentVisitors(members.all || []),
-      engagementRate: members.counts?.total > 0 ? 
-        Math.round((members.counts.active / members.counts.total) * 100) : 0
-    };
-
-    // Donation calculations  
-    const donationStats = {
-      total: donations.stats?.total || 0,
-      monthly: donations.stats?.monthly || 0,
-      weekly: donations.stats?.weeklyAverage || 0,
-      trend: donations.trendAnalysis?.primaryTrend || 0,
-      growth: donations.stats?.growthRate || 0,
-      lastWeek: donations.stats?.lastWeek || 0,
-      thisWeek: donations.stats?.thisWeek || 0
-    };
-
-    // Event calculations
-    const eventStats = {
-      total: events.stats?.total || 0,
-      upcoming: events.stats?.upcoming || 0,
-      thisWeek: events.stats?.thisWeek || 0,
-      thisMonth: events.stats?.thisMonth || 0,
-      needingVolunteers: events.stats?.needingVolunteers || 0,
-      mostCommonType: events.stats?.mostCommonType || 'None'
-    };
-
-    // Task calculations
-    const taskStats = {
-      total: tasks.stats?.total || 0,
-      pending: tasks.stats?.pending || 0,
-      completed: tasks.stats?.completed || 0,
-      overdue: tasks.stats?.overdue || 0,
-      completionRate: tasks.stats?.total > 0 ? 
-        Math.round((tasks.stats.completed / tasks.stats.total) * 100) : 0
-    };
-
-    // SMS calculations
-    const smsStats = {
-      totalMessages: sms.totalMessages || 0,
-      conversations: sms.totalConversations || 0,
-      recent: sms.recentMessages || 0,
-      active: sms.activeConversations || 0
-    };
-
-    return {
-      members: memberStats,
-      donations: donationStats,
-      events: eventStats,
-      tasks: taskStats,
-      celebrations: celebrations || {},
-      sms: smsStats,
-      attendance: attendance || {},
-      family: family || {}
-    };
-  }, []);
-
-  // Helper function to calculate recent visitors
-  const calculateRecentVisitors = useCallback((members) => {
-    const thirtyDaysAgo = new Date(Date.now() - (30 * 24 * 60 * 60 * 1000));
-    return members.filter(member => 
-      member.status === 'visitor' && 
-      new Date(member.createdAt || member.created_at) >= thirtyDaysAgo
-    ).length;
-  }, []);
-
-  // Load dashboard data
+  // Load dashboard data with MINIMAL requests
   const loadData = useCallback(async () => {
     try {
       setData(prev => ({ ...prev, isLoading: true }));
       
-      const rawData = await dashboardService.getDashboardData();
-      const calculatedStats = calculateDerivedData(rawData);
+      console.log('🚀 [DashboardDataManager] Loading data with MINIMAL requests...');
       
-      // Load personal tasks
+      // MAIN DATA: Only 6 requests total!
+      const dashboardData = await optimizedDashboardService.getAllDashboardData();
+      
+      // PERSONAL TASKS: Optional 7th request only if needed
       let personalTasks = [];
       try {
-        personalTasks = await dashboardService.getPersonalTasks(rawData.organizationId);
+        personalTasks = await optimizedDashboardService.getPersonalTasks(dashboardData.organizationId);
       } catch (error) {
         console.warn('Could not load personal tasks:', error);
       }
 
       setData({
-        // Core data
-        members: rawData.members.all || [],
-        donations: rawData.donations.all || [],
-        events: rawData.events.all || [],
-        tasks: rawData.tasks.all || [],
-        smsConversations: rawData.sms.recentConversations || [],
+        // Core data from optimized service
+        members: dashboardData.members,
+        donations: dashboardData.donations,
+        events: dashboardData.events,
+        tasks: dashboardData.tasks,
+        smsConversations: dashboardData.smsConversations,
         personalTasks,
         
-        // Calculated stats
-        stats: calculatedStats,
+        // Pre-calculated stats
+        stats: dashboardData.stats,
         
         // Additional data
-        upcomingEvents: rawData.events.upcoming || [],
-        recentPeople: rawData.members.recent || [],
-        weeklyDonations: rawData.donations.recent || [],
-        donationTrendAnalysis: rawData.donations.trendAnalysis || {},
+        upcomingEvents: dashboardData.upcomingEvents,
+        recentPeople: dashboardData.recentPeople,
+        weeklyDonations: dashboardData.donations.slice(0, 7), // Last 7 donations as weekly
+        donationTrendAnalysis: dashboardData.donationTrendAnalysis,
         
         // UI state
         isLoading: false,
-        organizationId: rawData.organizationId,
-        lastUpdated: new Date()
+        organizationId: dashboardData.organizationId,
+        lastUpdated: dashboardData.lastUpdated
       });
+
+      console.log('🚀 [DashboardDataManager] Data loaded successfully with only 6-7 requests total!');
 
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -174,33 +106,22 @@ export const useDashboardData = () => {
       });
       setData(prev => ({ ...prev, isLoading: false }));
     }
-  }, [calculateDerivedData, toast]);
+  }, [toast]);
 
   // Refresh function that clears caches
   const refresh = useCallback(async () => {
-    dashboardService.clearCache();
-    clearAttendanceCache?.();
+    optimizedDashboardService.clearCache();
     await loadData();
     toast({
       title: "Success",
-      description: "Dashboard data refreshed",
+      description: "Dashboard data refreshed with minimal requests",
     });
-  }, [loadData, clearAttendanceCache, toast]);
+  }, [loadData, toast]);
 
   // Load data on mount
   useEffect(() => {
     loadData();
   }, [loadData]);
-
-  // Expose attendance stats
-  const attendanceStats = {
-    isLoading: attendanceLoading,
-    serviceBreakdown,
-    memberStats,
-    dailyData,
-    eventDetails,
-    error: attendanceError
-  };
 
   return {
     ...data,
