@@ -707,7 +707,6 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVol
       </motion.div>
     );
   }
-
   // Kiosk mode (original spacious layout)
   if (viewMode === 'kiosk') {
     return (
@@ -1278,7 +1277,6 @@ const CalendarView = ({ events, onEventClick, currentMonth, onMonthChange }) => 
     </div>
   );
 };
-
 // Event Analytics Component
 const EventAnalytics = ({ events, pastEvents }) => {
   const [membersData, setMembersData] = useState({});
@@ -1753,7 +1751,6 @@ const EventAnalytics = ({ events, pastEvents }) => {
   console.log(`🎯 Total attendance records found: ${totalAttendanceRecords}`);
   console.log(`📊 Events with attendance data: ${Object.keys(attendanceData.attendanceByEvent).length}`);
   console.log(`📊 Past events with attendance: ${analytics.totalEvents}`);
-
   return (
     <div className="space-y-6">
       {/* Main Stats */}
@@ -2098,7 +2095,6 @@ const EventAnalytics = ({ events, pastEvents }) => {
     </div>
   );
 };
-
 export default function Events() {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -2238,7 +2234,16 @@ export default function Events() {
     const handleKeyDown = (event) => {
       // Force close all modals on Escape key
       if (event.key === 'Escape') {
-        handleCloseDialog();
+        if (isAnonymousCheckinOpen) {
+          setIsAnonymousCheckinOpen(false);
+          return;
+        } else if (isCreateMemberOpen) {
+          setIsCreateMemberOpen(false);
+          return;
+        } else if (isMemberDialogOpen) {
+          handleCloseDialog();
+          return;
+        }
       }
     };
 
@@ -3502,7 +3507,6 @@ export default function Events() {
       });
     }
   };
-
   const handleMemberClick = async (member) => {
     try {
       // Use the original event ID for adding new attendance records
@@ -4254,7 +4258,6 @@ export default function Events() {
       });
     }
   };
-
   const fetchEventAttendance = async (eventId) => {
     try {
       // Get the actual event ID for database operations
@@ -5467,7 +5470,6 @@ export default function Events() {
 
     return processedEvents;
   };
-
   return (
     <PermissionGuard permission={PERMISSIONS.EVENTS_VIEW}>
              {/* Full Kiosk Mode - Mobile Optimized */}
@@ -5571,7 +5573,7 @@ export default function Events() {
                {/* Custom overlay for kiosk mode */}
                {isMemberDialogOpen && (
                  <div 
-                   className="fixed inset-0 bg-black/90 z-40"
+                   className="fixed inset-0 bg-black z-40"
                    onClick={handleCloseDialog}
                  />
                )}
@@ -5814,7 +5816,7 @@ export default function Events() {
           {/* Kiosk Mode - Create New Member Modal */}
           {isKioskMode && isCreateMemberOpen && (
             <div 
-              className="fixed inset-0 bg-black/90 z-[999999] flex items-center justify-center p-4"
+              className="fixed inset-0 bg-black z-[999999] flex items-center justify-center p-4"
               style={{
                 position: 'fixed',
                 top: 0,
@@ -5824,90 +5826,91 @@ export default function Events() {
                 width: '100vw',
                 height: '100vh',
                 zIndex: 999999,
-                backgroundColor: 'rgba(0, 0, 0, 0.9)'
+                backgroundColor: 'rgba(0, 0, 0, 1)'
               }}
+              onClick={() => setIsCreateMemberOpen(false)}
             >
-              {console.log('🔍 Kiosk Create New Member Modal rendering')}
-              <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border-2 border-gray-200">
-                <div className="p-6 border-b bg-blue-50 flex-shrink-0">
-                  <h2 className="text-2xl font-bold text-gray-900">Create New Person</h2>
-                  <p className="text-lg text-gray-700 mt-2">
-                    Add a new person and automatically {selectedEvent?.attendance_type === 'check-in' ? 'check them in' : 'RSVP them'} to this event.
+              <div 
+                className="bg-white rounded-lg w-full max-w-md p-6 border-4 border-blue-300"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="text-center mb-6">
+                  <h2 className="text-xl font-bold text-gray-900 mb-2">Create New Person</h2>
+                  <p className="text-sm text-gray-600">
+                    Add a new person and {selectedEvent?.attendance_type === 'check-in' ? 'check them in' : 'RSVP them'} to this event.
                   </p>
                 </div>
                 
-                <div className="p-6 flex-1 overflow-y-auto">
-                  <form onSubmit={handleCreateMember} className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-3">
-                        <Label htmlFor="firstname" className="text-lg font-semibold">First Name</Label>
-                        <Input
-                          id="firstname"
-                          name="firstname"
-                          value={newMember.firstname}
-                          onChange={(e) => setNewMember({...newMember, firstname: e.target.value})}
-                          className="h-14 text-lg border-2"
-                          required
-                        />
-                      </div>
-                      <div className="space-y-3">
-                        <Label htmlFor="lastname" className="text-lg font-semibold">Last Name</Label>
-                        <Input
-                          id="lastname"
-                          name="lastname"
-                          value={newMember.lastname}
-                          onChange={(e) => setNewMember({...newMember, lastname: e.target.value})}
-                          className="h-14 text-lg border-2"
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <Label htmlFor="email" className="text-lg font-semibold">Email</Label>
+                <form onSubmit={handleCreateMember} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="firstname" className="text-sm font-medium">First Name</Label>
                       <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        value={newMember.email}
-                        onChange={(e) => setNewMember({...newMember, email: e.target.value})}
-                        className="h-14 text-lg border-2"
+                        id="firstname"
+                        name="firstname"
+                        value={newMember.firstname}
+                        onChange={(e) => setNewMember({...newMember, firstname: e.target.value})}
+                        className="h-10 text-base"
+                        required
                       />
                     </div>
-                    <div className="space-y-3">
-                      <Label htmlFor="phone" className="text-lg font-semibold">Phone</Label>
+                    <div>
+                      <Label htmlFor="lastname" className="text-sm font-medium">Last Name</Label>
                       <Input
-                        id="phone"
-                        name="phone"
-                        value={newMember.phone}
-                        onChange={(e) => setNewMember({...newMember, phone: e.target.value})}
-                        className="h-14 text-lg border-2"
+                        id="lastname"
+                        name="lastname"
+                        value={newMember.lastname}
+                        onChange={(e) => setNewMember({...newMember, lastname: e.target.value})}
+                        className="h-10 text-base"
+                        required
                       />
                     </div>
-                    <div className="space-y-3">
-                      <Label htmlFor="notes" className="text-lg font-semibold">Notes</Label>
-                      <Textarea
-                        id="notes"
-                        name="notes"
-                        value={newMember.notes}
-                        onChange={(e) => setNewMember({...newMember, notes: e.target.value})}
-                        className="h-32 text-lg border-2"
-                      />
-                    </div>
-                  </form>
-                </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      value={newMember.email}
+                      onChange={(e) => setNewMember({...newMember, email: e.target.value})}
+                      className="h-10 text-base"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="phone" className="text-sm font-medium">Phone</Label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      value={newMember.phone}
+                      onChange={(e) => setNewMember({...newMember, phone: e.target.value})}
+                      className="h-10 text-base"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="notes" className="text-sm font-medium">Notes</Label>
+                    <Textarea
+                      id="notes"
+                      name="notes"
+                      value={newMember.notes}
+                      onChange={(e) => setNewMember({...newMember, notes: e.target.value})}
+                      className="h-20 text-base"
+                    />
+                  </div>
+                </form>
 
-                <div className="p-6 border-t flex gap-4">
+                <div className="flex gap-3 mt-6">
                   <Button
                     variant="outline"
                     onClick={() => setIsCreateMemberOpen(false)}
-                    className="flex-1 h-14 text-lg font-semibold border-2"
+                    className="flex-1 h-10 text-base"
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
                     onClick={handleCreateMember}
-                    className="flex-1 h-14 text-lg font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
+                    className="flex-1 h-10 text-base bg-blue-600 hover:bg-blue-700"
                   >
                     Create and {selectedEvent?.attendance_type === 'check-in' ? 'Check In' : 'RSVP'}
                   </Button>
@@ -5919,7 +5922,7 @@ export default function Events() {
           {/* Kiosk Mode - Anonymous Check-in Modal */}
           {isKioskMode && isAnonymousCheckinOpen && (
             <div 
-              className="fixed inset-0 bg-black/90 z-[999999] flex items-center justify-center p-4"
+              className="fixed inset-0 bg-black z-[999999] flex items-center justify-center p-4"
               style={{
                 position: 'fixed',
                 top: 0,
@@ -5929,55 +5932,47 @@ export default function Events() {
                 width: '100vw',
                 height: '100vh',
                 zIndex: 999999,
-                backgroundColor: 'rgba(0, 0, 0, 0.9)'
+                backgroundColor: 'rgba(0, 0, 0, 1)'
               }}
+              onClick={() => setIsAnonymousCheckinOpen(false)}
             >
-              {console.log('🔍 Kiosk Anonymous Check-in Modal rendering')}
-              <div className="bg-white rounded-xl w-full max-w-md p-8 shadow-2xl border-2 border-gray-200 relative">
-                {/* Force close button for stuck modals */}
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setIsAnonymousCheckinOpen(false)}
-                  className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white z-10"
-                >
-                  ✕
-                </Button>
-                
-                <div className="text-center space-y-6">
-                  <div className="flex items-center justify-center w-20 h-20 mx-auto bg-orange-100 rounded-full border-4 border-orange-200">
-                    <UserPlus className="h-10 w-10 text-orange-600" />
+              <div 
+                className="bg-white rounded-lg w-full max-w-sm p-6 border-4 border-orange-300"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="text-center space-y-4">
+                  <div className="flex items-center justify-center w-16 h-16 mx-auto bg-orange-100 rounded-full border-2 border-orange-300">
+                    <UserPlus className="h-8 w-8 text-orange-600" />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">
                       Anonymous Check-in
                     </h3>
-                    <p className="text-lg text-gray-700 mb-8 leading-relaxed">
-                      Check in an anonymous attendee to <strong>{selectedEvent?.title}</strong>. This will update the event attendance count but won't create a member record.
+                    <p className="text-sm text-gray-600 mb-4">
+                      Check in an anonymous attendee to {selectedEvent?.title}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex gap-4">
+                <div className="flex gap-3">
                   <Button
                     variant="outline"
                     onClick={() => setIsAnonymousCheckinOpen(false)}
-                    className="flex-1 h-14 text-lg font-semibold border-2"
+                    className="flex-1 h-12 text-base"
                   >
                     Cancel
                   </Button>
                   <Button
                     onClick={handleAnonymousCheckin}
-                    className="flex-1 h-14 text-lg font-semibold bg-orange-600 hover:bg-orange-700 text-white shadow-lg"
+                    className="flex-1 h-12 text-base bg-orange-600 hover:bg-orange-700"
                   >
-                    <UserPlus className="mr-3 h-5 w-5" />
-                    Add Anonymous Attendee
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Check In
                   </Button>
                 </div>
               </div>
             </div>
-                     )}
-
+          )}
           {/* Desktop Member Selection Dialog */}
           {!isKioskMode && (
             <Dialog open={isMemberDialogOpen} onOpenChange={setIsMemberDialogOpen}>
@@ -7123,50 +7118,23 @@ export default function Events() {
                 </Card>
               ))}
             </div>
-          ) : filteredEvents.length > 0 ? (
-            <div className="space-y-4">
-        {filteredEvents.map((event) => (
-          <EventCard
-            key={event.id}
-            event={event}
-                      viewMode={viewMode}
-            onRSVP={handleOpenDialog}
-            onPotluckRSVP={handlePotluckRSVP}
-            onEdit={handleEditClick}
-            onDelete={handleDeleteEvent}
-            onManageVolunteers={handleManageVolunteers}
-                      onViewDetails={(event) => {
-                        setSelectedEventForDetails(event);
-                        setIsEventDetailsOpen(true);
-                      }}
-                      onBulkSelect={(eventId, checked) => {
-                        if (checked) {
-                          setBulkSelectedEvents(prev => [...prev, eventId]);
-                        } else {
-                          setBulkSelectedEvents(prev => prev.filter(id => id !== eventId));
-                        }
-                      }}
-                      isBulkSelected={bulkSelectedEvents.includes(event.id)}
-          />
-        ))}
-      </div>
-            ) : (
-              <div className="text-center py-12">
-                <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No upcoming events</h3>
-                <p className="text-gray-500 mb-4">
-                                    {searchQuery || attendanceFilter !== 'all' || eventTypeFilter !== 'all' || timeWindowFilter !== 'month'
-                    ? 'No events match your current filters.' 
-                    : 'Get started by creating your first event.'}
-                </p>
-                  {!searchQuery && attendanceFilter === 'all' && eventTypeFilter === 'all' && timeWindowFilter === 'month' && (
-                  <Button onClick={() => setIsCreateEventOpen(true)}>
-                      <Plus className="mr-2 h-4 w-4" />
-                    Create Event
-                  </Button>
-                )}
-              </div>
-            )}
+          ) : (
+            <div className="text-center py-12">
+              <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No upcoming events</h3>
+              <p className="text-gray-500 mb-4">
+                                  {searchQuery || attendanceFilter !== 'all' || eventTypeFilter !== 'all' || timeWindowFilter !== 'month'
+                ? 'No events match your current filters.' 
+                : 'Get started by creating your first event.'}
+              </p>
+                {!searchQuery && attendanceFilter === 'all' && eventTypeFilter === 'all' && timeWindowFilter === 'month' && (
+                <Button onClick={() => setIsCreateEventOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                  Create Event
+                </Button>
+              )}
+            </div>
+          )}
         </TabsContent>
 
         {/* Past Events Tab */}
