@@ -118,7 +118,7 @@ export class WeeklyDigestService {
       </head>
       <body>
         <div class="header">
-          <h1>🤖 AI Ministry Insights</h1>
+          <h1>🤖 Ministry Insights</h1>
           <p>Weekly Digest - Powered by Intelligent Analysis</p>
         </div>
         
