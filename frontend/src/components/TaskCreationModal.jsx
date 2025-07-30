@@ -276,11 +276,23 @@ export function TaskCreationModal({
       console.log('TaskCreationModal: Organization ID:', organizationId);
       if (!organizationId) throw new Error('User not associated with any organization');
 
+      // Filter out undefined values and ensure required fields are present
       const taskData = {
-        ...newTask,
+        title: newTask.title,
+        description: newTask.description,
+        priority: newTask.priority,
+        status: newTask.status,
+        assignee_id: newTask.assignee_id,
+        requestor_id: newTask.requestor_id,
+        due_date: newTask.due_date,
         organization_id: organizationId,
         created_at: new Date().toISOString()
       };
+      
+      // Add optional fields only if they have values
+      if (newTask.category) taskData.category = newTask.category;
+      if (newTask.estimated_hours) taskData.estimated_hours = newTask.estimated_hours;
+      if (newTask.tags && newTask.tags.length > 0) taskData.tags = newTask.tags;
       
       console.log('TaskCreationModal: Task data to insert:', taskData);
 

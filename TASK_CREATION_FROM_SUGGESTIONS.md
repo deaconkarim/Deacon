@@ -59,6 +59,17 @@ This feature allows users to create tasks directly from AI-generated suggestions
 - Creates tasks in the existing `tasks` table
 - Links to organization and user relationships
 - Maintains referential integrity with existing task system
+- Requires database schema update to add missing columns (see `add_task_columns.sql`)
+
+### Database Schema Requirements
+
+The tasks table needs the following columns that may be missing:
+- `category` (TEXT) - Task category
+- `estimated_hours` (DECIMAL(5,2)) - Estimated time to complete
+- `tags` (TEXT[]) - Array of tags
+- `organization_id` (UUID) - Reference to organization
+
+Run the `add_task_columns.sql` script to add these missing columns if they don't exist.
 
 ## Future Enhancements
 
