@@ -1280,13 +1280,15 @@ export function Dashboard() {
         </PermissionFeature>
       </div>
 
-      {/* Personal Tasks Section - Only show if user has assigned tasks */}
-      {personalTasks && personalTasks.length > 0 && (
-        <PermissionFeature permission={PERMISSIONS.TASKS_VIEW}>
-          <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
-            <div className="group relative">
-              <div className="absolute -inset-1 bg-gradient-to-r from-purple-500 to-violet-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-              <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+      {/* Personal Tasks and Recent Communication Section */}
+      <div className="grid gap-6 sm:gap-8 grid-cols-1 lg:grid-cols-2 mb-6 sm:mb-12">
+        {/* Personal Tasks Section - Only show if user has assigned tasks */}
+        {personalTasks && personalTasks.length > 0 && (
+          <PermissionFeature permission={PERMISSIONS.TASKS_VIEW}>
+            <motion.div variants={itemVariants}>
+              <div className="group relative">
+                <div className="absolute -inset-1 bg-gradient-to-r from-purple-500 to-violet-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+                <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-violet-500 rounded-2xl flex items-center justify-center shadow-lg">
@@ -1394,9 +1396,112 @@ export function Dashboard() {
           </div>
         </motion.div>
         </PermissionFeature>
-      )}
+        )}
 
- {/* Church Intelligence - Deep Insights */}
+        {/* Recent Communication Section */}
+        <motion.div variants={itemVariants}>
+          <div className="group relative">
+            <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+            <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg">
+                    <MessageSquare className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Recent Communication</h3>
+                    <p className="text-slate-600 dark:text-slate-400">Smart conversation tracking and engagement</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-indigo-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Live Feed</span>
+                </div>
+              </div>
+              
+              <div className="space-y-4 w-full">
+                {recentSMSConversations && recentSMSConversations.length > 0 ? (
+                  recentSMSConversations.slice(0, 3).map((conversation, index) => (
+                    <motion.div 
+                      key={conversation.id}
+                      className="group/card relative"
+                      variants={itemVariants}
+                    >
+                      <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                      <div 
+                        className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer group/item w-full overflow-hidden"
+                        onClick={() => handleSMSConversationClick(conversation)}
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 ${
+                            conversation.conversation_type === 'prayer_request' ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white' :
+                            conversation.conversation_type === 'emergency' ? 'bg-gradient-to-br from-red-500 to-red-600 text-white' :
+                            conversation.conversation_type === 'event_reminder' ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white' :
+                            'bg-gradient-to-br from-slate-500 to-slate-600 text-white'
+                          }`}>
+                            <MessageSquare className="h-5 w-5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-slate-900 dark:text-white truncate text-base">
+                              {conversation.title || 'SMS Conversation'}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className={`text-xs font-medium px-2 py-1 rounded-full flex-shrink-0 ${
+                                conversation.conversation_type === 'prayer_request' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300' :
+                                conversation.conversation_type === 'emergency' ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' :
+                                conversation.conversation_type === 'event_reminder' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :
+                                'bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300'
+                              }`}>
+                                {(() => {
+                                  const type = conversation.conversation_type === 'prayer_request' ? 'Prayer' :
+                                             conversation.conversation_type === 'emergency' ? 'Emergency' :
+                                             conversation.conversation_type === 'event_reminder' ? 'Event' :
+                                             conversation.conversation_type === 'pastoral_care' ? 'Pastoral' :
+                                             'General';
+                                  return type;
+                                })()}
+                              </span>
+                              {conversation.updated_at && (
+                                <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                                  {format(new Date(conversation.updated_at), 'MMM d')}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-slate-400 flex-shrink-0 ml-2 group-hover/item:text-slate-600 dark:group-hover/item:text-slate-300 transition-colors" />
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <MessageSquare className="h-8 w-8 text-slate-300 dark:text-slate-600" />
+                    </div>
+                    <p className="text-slate-500 dark:text-slate-400 text-lg font-medium">No recent conversations</p>
+                    <p className="text-slate-400 dark:text-slate-500 text-sm mt-1">SMS activity will appear here</p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+                <Button 
+                  variant="outline" 
+                  className="w-full bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/30 border-indigo-200 dark:border-indigo-800 hover:from-indigo-100 hover:to-purple-100 dark:hover:from-indigo-900/30 dark:hover:to-purple-900/40 transition-all duration-300 h-12 text-base font-medium" 
+                  asChild
+                >
+                  <a href="/sms" className="flex items-center justify-center space-x-2">
+                    <span>View All Conversations</span>
+                    <ArrowUpRight className="h-5 w-5" />
+                  </a>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Church Intelligence - Deep Insights */}
       <PermissionFeature permission={PERMISSIONS.REPORTS_VIEW}>
         <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
           <div className="group relative">
@@ -1585,230 +1690,8 @@ export function Dashboard() {
           </motion.div>
         </PermissionFeature>
 
-      {/* Recent Activity Feed & Attendance by Event Type */}
-      <PermissionFeature permission={PERMISSIONS.SETTINGS_VIEW}>
-        <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
-          <div className="grid gap-3 sm:gap-6 grid-cols-1 lg:grid-cols-2">
-            {/* Recent Activity Feed */}
-            <div className="group relative">
-            <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-            <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden">
-              <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg">
-                    <MessageSquare className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Recent Communication</h3>
-                    <p className="text-slate-600 dark:text-slate-400">Smart conversation tracking and engagement</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-indigo-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Live Feed</span>
-                </div>
-              </div>
-              
-                             <div className="space-y-4 w-full">
-                 {recentSMSConversations && recentSMSConversations.length > 0 ? (
-                   recentSMSConversations.slice(0, 3).map((conversation, index) => (
-                    <motion.div 
-                      key={conversation.id}
-                      className="group/card relative"
-                      variants={itemVariants}
-                    >
-                      <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                      <div 
-                        className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer group/item w-full overflow-hidden"
-                        onClick={() => handleSMSConversationClick(conversation)}
-                      >
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 ${
-                            conversation.conversation_type === 'prayer_request' ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white' :
-                            conversation.conversation_type === 'emergency' ? 'bg-gradient-to-br from-red-500 to-red-600 text-white' :
-                            conversation.conversation_type === 'event_reminder' ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white' :
-                            'bg-gradient-to-br from-slate-500 to-slate-600 text-white'
-                          }`}>
-                            <MessageSquare className="h-5 w-5" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-slate-900 dark:text-white truncate text-base">
-                              {conversation.title || 'SMS Conversation'}
-                            </p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className={`text-xs font-medium px-2 py-1 rounded-full flex-shrink-0 ${
-                                conversation.conversation_type === 'prayer_request' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300' :
-                                conversation.conversation_type === 'emergency' ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' :
-                                conversation.conversation_type === 'event_reminder' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :
-                                'bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300'
-                              }`}>
-                                {(() => {
-                                  const type = conversation.conversation_type === 'prayer_request' ? 'Prayer' :
-                                             conversation.conversation_type === 'emergency' ? 'Emergency' :
-                                             conversation.conversation_type === 'event_reminder' ? 'Event' :
-                                             conversation.conversation_type === 'pastoral_care' ? 'Pastoral' :
-                                             'General';
-                                  return type;
-                                })()}
-                              </span>
-                              {conversation.updated_at && (
-                                <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                                  {format(new Date(conversation.updated_at), 'MMM d')}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <ChevronRight className="h-4 w-4 text-slate-400 flex-shrink-0 ml-2 group-hover/item:text-slate-600 dark:group-hover/item:text-slate-300 transition-colors" />
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="w-16 h-16 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                      <MessageSquare className="h-8 w-8 text-slate-300 dark:text-slate-600" />
-                    </div>
-                    <p className="text-slate-500 dark:text-slate-400 text-lg font-medium">No recent conversations</p>
-                    <p className="text-slate-400 dark:text-slate-500 text-sm mt-1">SMS activity will appear here</p>
-                  </div>
-                )}
-              </div>
-              
-              <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
-                <Button 
-                  variant="outline" 
-                  className="w-full bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/30 border-indigo-200 dark:border-indigo-800 hover:from-indigo-100 hover:to-purple-100 dark:hover:from-indigo-900/30 dark:hover:to-purple-900/40 transition-all duration-300 h-12 text-base font-medium" 
-                  asChild
-                >
-                  <a href="/sms" className="flex items-center justify-center space-x-2">
-                    <span>View All Conversations</span>
-                    <ArrowUpRight className="h-5 w-5" />
-                  </a>
-                </Button>
-              </div>
-            </div>
-          </div>
 
-          {/* Attendance by Event Type */}
-          <div className="group relative">
-            <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-            <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <BarChart3 className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Attendance by Event Type</h3>
-                  <p className="text-slate-600 dark:text-slate-400">Average attendance per event (last 6 months)</p>
-                </div>
-              </div>
-              
-              <div className="grid gap-4 grid-cols-1">
-                {/* Sunday Service */}
-                <motion.div 
-                  className="group/card relative"
-                  variants={itemVariants}
-                >
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                  <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
-                          <BookOpen className="h-5 w-5 text-white" />
-                        </div>
-                        <div>
-                          <h4 className="text-base font-semibold text-slate-900 dark:text-white">Sunday Service</h4>
-                          <p className="text-xs text-slate-600 dark:text-slate-400">
-                            {isLoading ? '...' : `${stats.sundayServiceEvents || 0} events • ${stats.sundayServiceAttendance || 0} total`}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-blue-600">
-                          {isLoading ? '...' : Math.round((stats.sundayServiceAttendance || 0) / Math.max(stats.sundayServiceEvents || 1, 1))}
-                        </div>
-                        <p className="text-xs text-slate-500 dark:text-slate-500">avg attendance</p>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
 
-                {/* Bible Study */}
-                <motion.div 
-                  className="group/card relative"
-                  variants={itemVariants}
-                >
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                  <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center">
-                          <Book className="h-5 w-5 text-white" />
-                        </div>
-                        <div>
-                          <h4 className="text-base font-semibold text-slate-900 dark:text-white">Bible Study</h4>
-                          <p className="text-xs text-slate-600 dark:text-slate-400">
-                            {isLoading ? '...' : `${stats.bibleStudyEvents || 0} events • ${stats.bibleStudyAttendance || 0} total`}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-emerald-600">
-                          {isLoading ? '...' : Math.round((stats.bibleStudyAttendance || 0) / Math.max(stats.bibleStudyEvents || 1, 1))}
-                        </div>
-                        <p className="text-xs text-slate-500 dark:text-slate-500">avg attendance</p>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-
-                {/* Fellowship */}
-                <motion.div 
-                  className="group/card relative"
-                  variants={itemVariants}
-                >
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-500/20 to-amber-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                  <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl flex items-center justify-center">
-                          <Users className="h-5 w-5 text-white" />
-                        </div>
-                        <div>
-                          <h4 className="text-base font-semibold text-slate-900 dark:text-white">Fellowship</h4>
-                          <p className="text-xs text-slate-600 dark:text-slate-400">
-                            {isLoading ? '...' : `${stats.fellowshipEvents || 0} events • ${stats.fellowshipAttendance || 0} total`}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-amber-600">
-                          {isLoading ? '...' : Math.round((stats.fellowshipAttendance || 0) / Math.max(stats.fellowshipEvents || 1, 1))}
-                        </div>
-                        <p className="text-xs text-slate-500 dark:text-slate-500">avg attendance</p>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              </div>
-              
-              <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
-                <Button 
-                  variant="outline" 
-                  className="w-full bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800 hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30 transition-all duration-300 h-12 text-base font-medium" 
-                  asChild
-                >
-                  <a href="/events" className="flex items-center justify-center space-x-2">
-                    <span>View All Events</span>
-                    <ArrowUpRight className="h-5 w-5" />
-                  </a>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-        </PermissionFeature>
               
       {/* Advanced Analytics Section */}
       <PermissionFeature permission={PERMISSIONS.REPORTS_VIEW}>

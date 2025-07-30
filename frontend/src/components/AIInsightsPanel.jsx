@@ -193,8 +193,6 @@ const InsightCard = ({ title, summary, actions, icon: Icon, color, count, loadin
 };
 
 const WeeklyDigestCard = ({ content, loading, onRefresh }) => {
-  console.log('WeeklyDigestCard received content:', content);
-  console.log('Content type:', typeof content);
   if (loading) {
     return (
       <motion.div className="group/card relative" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
@@ -346,7 +344,6 @@ export function AIInsightsPanel({ organizationId }) {
     try {
       setDigestLoading(true);
       const result = await AIInsightsService.getWeeklyDigest(organizationId, forceRefresh);
-      console.log('Weekly digest result:', result);
       setWeeklyDigest(result);
     } catch (error) {
       console.error('Error loading weekly digest:', error);
