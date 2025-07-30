@@ -9,7 +9,8 @@ import {
   Mail,
   Calendar,
   CheckSquare,
-  X
+  X,
+  Plus
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,8 +19,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
 import AIInsightsService from '@/lib/aiInsightsService';
+import { TaskCreationModal } from './TaskCreationModal';
 
-const InsightCard = ({ title, summary, actions, icon: Icon, color, count, loading, memberData = null }) => {
+const InsightCard = ({ title, summary, actions, icon: Icon, color, count, loading, memberData = null, onCreateTask = null }) => {
   const navigate = useNavigate();
 
   // Helper function to format AI text into readable sections
@@ -176,10 +178,28 @@ const InsightCard = ({ title, summary, actions, icon: Icon, color, count, loadin
                     <p className="text-xs text-slate-500 dark:text-slate-500">actions</p>
                   </div>
                 </div>
-                <div className="mt-3 space-y-1">
+                <div className="mt-3 space-y-2">
                   {formattedActions.map((action, index) => (
-                    <div key={index} className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                      {action.content}
+                    <div key={index} className="flex items-center justify-between">
+                      <div className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed flex-1">
+                        {action.content}
+                      </div>
+                      {onCreateTask && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onCreateTask({
+                            title: action.content,
+                            description: action.content,
+                            priority: 'medium',
+                            category: 'Administration'
+                          })}
+                          className="ml-2 flex-shrink-0"
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Create Task
+                        </Button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -290,6 +310,8 @@ export function AIInsightsPanel({ organizationId }) {
   const [factorsPopoverOpen, setFactorsPopoverOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [taskModalOpen, setTaskModalOpen] = useState(false);
+  const [selectedSuggestion, setSelectedSuggestion] = useState(null);
   const panelRef = useRef(null);
   const { toast } = useToast();
 
@@ -365,6 +387,19 @@ export function AIInsightsPanel({ organizationId }) {
       // loadWeeklyDigest();
     }
   }, [organizationId, isVisible, hasLoaded]);
+
+  // Task creation handler
+  const handleCreateTask = (suggestion) => {
+    setSelectedSuggestion(suggestion);
+    setTaskModalOpen(true);
+  };
+
+  const handleTaskCreated = (task) => {
+    toast({
+      title: "Success",
+      description: "Task created successfully from suggestion.",
+    });
+  };
 
   // Only show At-Risk Members card
   const atRisk = {
@@ -472,6 +507,7 @@ export function AIInsightsPanel({ organizationId }) {
           <InsightCard
             {...atRisk}
             loading={loading}
+            onCreateTask={handleCreateTask}
           />
 
           {/* Predictive Attendance Card */}
@@ -648,6 +684,17 @@ export function AIInsightsPanel({ organizationId }) {
           </motion.div>
         </div>
       )}
+
+      {/* Task Creation Modal */}
+      <TaskCreationModal
+        isOpen={taskModalOpen}
+        onClose={() => {
+          setTaskModalOpen(false);
+          setSelectedSuggestion(null);
+        }}
+        suggestion={selectedSuggestion}
+        onTaskCreated={handleTaskCreated}
+      />
     </div>
   );
 }
