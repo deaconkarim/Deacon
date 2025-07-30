@@ -7,12 +7,12 @@ import { calculateDonationTrend, getWeeklyDonationBreakdown } from './donationTr
 // Cache for dashboard data to prevent redundant requests
 let dashboardCache = null;
 let cacheTimestamp = null;
-const CACHE_DURATION = 1 * 60 * 1000; // 1 minute (reduced for debugging)
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes (increased from 1 minute)
 
 // Cache for donation trend analysis
 let donationTrendCache = null;
 let donationTrendCacheTimestamp = null;
-const DONATION_TREND_CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+const DONATION_TREND_CACHE_DURATION = 15 * 60 * 1000; // 15 minutes (increased from 10)
 
 // Clear all caches function
 export const clearAllCaches = () => {
@@ -33,17 +33,23 @@ export const dashboardService = {
   // Consolidated dashboard data fetch - reduces multiple API calls to just a few
   async getDashboardData() {
     try {
-      // Force clear cache for debugging
-      console.log('📊 [DashboardService] Force clearing cache and fetching fresh data');
-      dashboardCache = null;
-      cacheTimestamp = null;
-
       const organizationId = await getCurrentUserOrganizationId();
       console.log('🔍 [DashboardService] Organization ID:', organizationId);
       
       if (!organizationId) {
         throw new Error('User not associated with any organization');
       }
+
+      // Check cache first (removed forced clearing)
+      const currentTime = Date.now();
+      if (dashboardCache && cacheTimestamp && 
+          (currentTime - cacheTimestamp) < CACHE_DURATION &&
+          dashboardCache.organizationId === organizationId) {
+        console.log('📊 [DashboardService] Using cached dashboard data');
+        return dashboardCache;
+      }
+
+      console.log('📊 [DashboardService] Cache miss, fetching fresh data');
 
       // Fetch all data in parallel with optimized queries
       const [membersData, donationsData, eventsData, tasksData, smsData, celebrationsData, attendanceData, familyData] = await Promise.all([
@@ -69,8 +75,11 @@ export const dashboardService = {
         family: familyData
       };
 
-      // Don't cache for debugging
-      console.log('📊 [DashboardService] Data loaded (no caching for debugging):', {
+      // Cache the result
+      dashboardCache = result;
+      cacheTimestamp = currentTime;
+
+      console.log('📊 [DashboardService] Data cached for:', {
         members: membersData.counts?.total || 0,
         donations: donationsData.all?.length || 0,
         events: eventsData.all?.length || 0,
@@ -92,15 +101,17 @@ export const dashboardService = {
     console.log('📊 [DashboardService] Cache cleared');
   },
 
-  // Members data - single optimized API call
+  // Members data - single optimized API call with pagination support
   async getMembersData(organizationId) {
     console.log('🔍 [DashboardService] Fetching members for organization:', organizationId);
     
+    // For dashboard, we only need basic member info, not full details
     const { data: members, error } = await supabase
       .from('members')
-      .select('*')
+      .select('id, firstname, lastname, status, created_at, updated_at, join_date')
       .eq('organization_id', organizationId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(1000); // Limit to prevent excessive data transfer
 
     if (error) throw error;
 
@@ -317,15 +328,17 @@ export const dashboardService = {
     };
   },
 
-  // Events data - single API call
+  // Events data - optimized with pagination
   async getEventsData(organizationId) {
     console.log('🔍 [DashboardService] Fetching events for organization:', organizationId);
     
+    // For dashboard, limit events and only get essential fields
     const { data: events, error } = await supabase
       .from('events')
-      .select('*')
+      .select('id, title, start_date, event_type, needs_volunteers')
       .eq('organization_id', organizationId)
-      .order('start_date', { ascending: true });
+      .order('start_date', { ascending: true })
+      .limit(500); // Limit to prevent excessive data transfer
 
     if (error) throw error;
 
@@ -359,7 +372,7 @@ export const dashboardService = {
       monthFromNow: monthFromNow.toISOString()
     });
 
-    // Calculate average events per month
+    // Calculate average events per month using available data
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
     
@@ -497,41 +510,58 @@ export const dashboardService = {
     }
   },
 
-  // SMS data - single API call
+  // SMS data - consolidated queries to reduce API calls
   async getSMSData(organizationId) {
-    const { data: messages, error: messagesError } = await supabase
-      .from('sms_messages')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .order('created_at', { ascending: false });
+    // Batch both queries in parallel instead of sequential calls
+    const [messagesResult, conversationsResult] = await Promise.all([
+      supabase
+        .from('sms_messages')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('sms_conversations')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .order('updated_at', { ascending: false })
+    ]);
 
-    if (messagesError) throw messagesError;
+    if (messagesResult.error) throw messagesResult.error;
+    if (conversationsResult.error) throw conversationsResult.error;
 
-    const { data: conversations, error: conversationsError } = await supabase
-      .from('sms_conversations')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .order('updated_at', { ascending: false });
-
-    if (conversationsError) throw conversationsError;
+    const messages = messagesResult.data || [];
+    const conversations = conversationsResult.data || [];
 
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
     const thirtyDaysAgoStr = thirtyDaysAgo.toISOString();
 
-    const recentMessages = messages.filter(m => m.created_at >= thirtyDaysAgoStr);
+    // Calculate all stats in one pass to avoid multiple iterations
+    let recentMessagesCount = 0;
+    let outboundMessagesCount = 0;
+    let inboundMessagesCount = 0;
+    
+    messages.forEach(message => {
+      if (message.created_at >= thirtyDaysAgoStr) {
+        recentMessagesCount++;
+      }
+      if (message.direction === 'outbound') {
+        outboundMessagesCount++;
+      } else if (message.direction === 'inbound') {
+        inboundMessagesCount++;
+      }
+    });
+
     const activeConversations = conversations.filter(c => c.status === 'active');
-    const outboundMessages = messages.filter(m => m.direction === 'outbound');
-    const inboundMessages = messages.filter(m => m.direction === 'inbound');
     const recentConversations = conversations.slice(0, 5);
 
     return {
       totalMessages: messages.length,
-      recentMessages: recentMessages.length,
+      recentMessages: recentMessagesCount,
       totalConversations: conversations.length,
       activeConversations: activeConversations.length,
-      outboundMessages: outboundMessages.length,
-      inboundMessages: inboundMessages.length,
+      outboundMessages: outboundMessagesCount,
+      inboundMessages: inboundMessagesCount,
       recentConversations
     };
   },
@@ -778,66 +808,74 @@ export const dashboardService = {
     };
   },
 
-  // Family data - optimized single query
+  // Family data - optimized with fewer queries
   async getFamilyData(organizationId) {
-    // Get active adult members only
-    const { data: activeAdults, error: activeAdultsError } = await supabase
-      .from('members')
-      .select('id, birth_date, status, member_type')
-      .eq('organization_id', organizationId)
-      .eq('status', 'active')
-      .in('member_type', ['adult', null]); // null defaults to adult
+    // Batch all member and family queries in parallel
+    const [membersResult, familyRelationshipsResult, familiesResult] = await Promise.all([
+      // Get all members at once instead of separate queries for adults and children
+      supabase
+        .from('members')
+        .select('id, birth_date, status, member_type')
+        .eq('organization_id', organizationId),
+      
+      // Get all family relationships
+      supabase
+        .from('family_relationships')
+        .select('family_id, member_id'),
+      
+      // Get all families (we'll filter later)
+      supabase
+        .from('families')
+        .select('id, family_name')
+    ]);
 
-    if (activeAdultsError) throw activeAdultsError;
+    if (membersResult.error) throw membersResult.error;
+    if (familyRelationshipsResult.error) throw familyRelationshipsResult.error;
+    if (familiesResult.error) throw familiesResult.error;
 
-    // Get all children (regardless of status)
-    const { data: allChildren, error: childrenError } = await supabase
-      .from('members')
-      .select('id, birth_date, status, member_type')
-      .eq('organization_id', organizationId)
-      .eq('member_type', 'child');
+    const allMembers = membersResult.data || [];
+    const allFamilyRelationships = familyRelationshipsResult.data || [];
+    const allFamilies = familiesResult.data || [];
 
-    if (childrenError) throw childrenError;
+    // Process members in a single pass
+    let activeAdults = 0;
+    let totalChildren = 0;
+    const activeAdultIds = [];
 
-    // Get all family relationships for active adults
-    const activeAdultIds = activeAdults.map(m => m.id);
-    const { data: familyRelationships, error: relationshipsError } = await supabase
-      .from('family_relationships')
-      .select('family_id, member_id')
-      .in('member_id', activeAdultIds);
+    allMembers.forEach(member => {
+      const memberType = member.member_type || 'adult'; // null defaults to adult
+      
+      if (memberType === 'child') {
+        totalChildren++;
+      } else if (member.status === 'active') {
+        activeAdults++;
+        activeAdultIds.push(member.id);
+      }
+    });
 
-    if (relationshipsError) throw relationshipsError;
-
-    // Get family details for families that have active adult members
-    const familyIds = [...new Set(familyRelationships.map(fr => fr.family_id))];
-    const { data: families, error: familiesError } = await supabase
-      .from('families')
-      .select('id, family_name')
-      .in('id', familyIds);
-
-    if (familiesError) throw familiesError;
+    // Filter family relationships to only include active adults
+    const activeAdultSet = new Set(activeAdultIds);
+    const relevantFamilyRelationships = allFamilyRelationships.filter(fr => 
+      activeAdultSet.has(fr.member_id)
+    );
 
     // Count unique families that have active adult members
-    const familyIdsWithActiveMembers = new Set(familyRelationships.map(fr => fr.family_id));
+    const familyIdsWithActiveMembers = new Set(relevantFamilyRelationships.map(fr => fr.family_id));
     const totalFamilies = familyIdsWithActiveMembers.size;
 
     // Count active adults in families vs individual active adults
-    const memberIdsInFamilies = new Set(familyRelationships.map(fr => fr.member_id));
+    const memberIdsInFamilies = new Set(relevantFamilyRelationships.map(fr => fr.member_id));
     const membersInFamilies = memberIdsInFamilies.size;
-    const unassignedMembers = activeAdults.length - membersInFamilies;
-
-    // Count adults vs children
-    const adults = activeAdults.length;
-    const children = allChildren.length;
+    const unassignedMembers = activeAdults - membersInFamilies;
 
     return {
       totalFamilies,
       membersInFamilies,
       membersWithoutFamilies: unassignedMembers,
       unassignedMembers,
-      adults,
-      children,
-      totalActiveMembers: adults // Only count adults as active members
+      adults: activeAdults,
+      children: totalChildren,
+      totalActiveMembers: activeAdults // Only count adults as active members
     };
   },
 

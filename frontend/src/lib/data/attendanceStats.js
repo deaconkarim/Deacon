@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { format, parseISO } from 'date-fns';
 import { supabase } from '../supabaseClient';
 
-// Cache for attendance data
+// Cache for attendance data with longer duration
 let attendanceCache = null;
 let attendanceCacheTimestamp = null;
-const ATTENDANCE_CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+const ATTENDANCE_CACHE_DURATION = 15 * 60 * 1000; // 15 minutes (increased from 10)
 
 export function useAttendanceStats(startDate, endDate) {
   const [isLoading, setIsLoading] = useState(false);
@@ -23,7 +23,7 @@ export function useAttendanceStats(startDate, endDate) {
       return;
     }
 
-    // Check cache first
+    // Check cache first with improved key generation
     const now = Date.now();
     const cacheKey = `${startDate.toISOString()}-${endDate.toISOString()}`;
     
@@ -36,6 +36,7 @@ export function useAttendanceStats(startDate, endDate) {
       setDailyData(attendanceCache.dailyData);
       setEventDetails(attendanceCache.eventDetails);
       setError(null);
+      setIsLoading(false);
       return;
     }
 
@@ -58,16 +59,30 @@ export function useAttendanceStats(startDate, endDate) {
       const today = new Date();
       const todayStr = format(today, 'yyyy-MM-dd');
       
-      // Fetch events for the given range - ONLY PAST EVENTS
-      const { data: events, error: eventsError } = await supabase
-        .from('events')
-        .select('*')
-        .gte('start_date', startDateStr)
-        .lte('start_date', endDateStr <= todayStr ? endDateStr : todayStr) // Only include events up to today
-        .order('start_date', { ascending: false });
+      // Batch queries with single consolidated query instead of multiple
+      const [eventsResult, attendanceResult] = await Promise.all([
+        // Fetch events with better filtering
+        supabase
+          .from('events')
+          .select('id, title, start_date, event_type')
+          .gte('start_date', startDateStr)
+          .lte('start_date', endDateStr <= todayStr ? endDateStr : todayStr)
+          .order('start_date', { ascending: false }),
+        
+        // Pre-fetch all attendance for potential events to avoid N+1 queries
+        supabase
+          .from('event_attendance')
+          .select('event_id, status, member_id, members!inner(id, firstname, lastname, image_url)')
+          .gte('created_at', startDateStr) // Use created_at for better performance
+      ]);
       
-      if (eventsError) throw eventsError;
-      if (!events || events.length === 0) {
+      if (eventsResult.error) throw eventsResult.error;
+      if (attendanceResult.error) throw attendanceResult.error;
+
+      const events = eventsResult.data || [];
+      const allAttendance = attendanceResult.data || [];
+
+      if (events.length === 0) {
         console.log('No past events found for date range');
         const emptyData = { serviceBreakdown: [], memberStats: [], dailyData: [], eventDetails: [] };
         
@@ -83,16 +98,13 @@ export function useAttendanceStats(startDate, endDate) {
         return;
       }
       
-      // Fetch attendance records for these events
-      const { data: attendance, error: attendanceError } = await supabase
-        .from('event_attendance')
-        .select(`*, members (id, firstname, lastname, image_url)`)
-        .in('event_id', events.map(e => e.id));
+      // Filter attendance to only include events in our date range
+      const eventIds = new Set(events.map(e => e.id));
+      const attendance = allAttendance.filter(a => eventIds.has(a.event_id));
       
-      if (attendanceError) throw attendanceError;
-      
-      // Process attendance data
+      // Process attendance data efficiently
       const sortedEvents = events;
+      
       // Daily attendance
       const dailyData = sortedEvents.map(event => {
         const eventAttendance = attendance.filter(a => a.event_id === event.id);
@@ -118,17 +130,28 @@ export function useAttendanceStats(startDate, endDate) {
         .filter(item => item.value > 0)
         .sort((a, b) => b.value - a.value);
       
-      // Use unified attendance service for consistent member stats
-      // Since we're already filtering by date range in this function, don't use useLast30Days
-      const { unifiedAttendanceService } = await import('../unifiedAttendanceService');
-      const topAttendees = await unifiedAttendanceService.getTopAttendees({
-        limit: 10,
-        dateRange: { startDate: startDateStr, endDate: endDateStr }, // Use the same date range as this function
-        includeFutureEvents: false,
-        includeDeclined: false
-      });
-      
-      const memberStats = topAttendees;
+      // Optimized member stats calculation using attendance data we already have
+      const memberAttendanceMap = new Map();
+      attendance
+        .filter(a => a.status === 'checked-in' || a.status === 'attending')
+        .forEach(a => {
+          if (a.members) {
+            const memberId = a.member_id;
+            if (!memberAttendanceMap.has(memberId)) {
+              memberAttendanceMap.set(memberId, {
+                id: memberId,
+                name: `${a.members.firstname} ${a.members.lastname}`,
+                image_url: a.members.image_url,
+                attendanceCount: 0
+              });
+            }
+            memberAttendanceMap.get(memberId).attendanceCount++;
+          }
+        });
+
+      const memberStats = Array.from(memberAttendanceMap.values())
+        .sort((a, b) => b.attendanceCount - a.attendanceCount)
+        .slice(0, 10); // Top 10 attendees
       
       // Event details
       const eventDetails = sortedEvents.map(event => {

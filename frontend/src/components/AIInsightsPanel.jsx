@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Brain, 
@@ -288,11 +288,39 @@ const WeeklyDigestCard = ({ content, loading, onRefresh }) => {
 export function AIInsightsPanel({ organizationId }) {
   const [insights, setInsights] = useState(null);
   const [weeklyDigest, setWeeklyDigest] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Changed from true to false
   const [digestLoading, setDigestLoading] = useState(false);
   const [selectedFactors, setSelectedFactors] = useState(null);
   const [factorsPopoverOpen, setFactorsPopoverOpen] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const panelRef = useRef(null);
   const { toast } = useToast();
+
+  // Intersection Observer for lazy loading
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !hasLoaded) {
+          setIsVisible(true);
+        }
+      },
+      { 
+        threshold: 0.1,
+        rootMargin: '100px' // Start loading when panel is 100px away from viewport
+      }
+    );
+
+    if (panelRef.current) {
+      observer.observe(panelRef.current);
+    }
+
+    return () => {
+      if (panelRef.current) {
+        observer.unobserve(panelRef.current);
+      }
+    };
+  }, [hasLoaded]);
 
   const loadInsights = async (forceRefresh = false) => {
     try {
@@ -303,6 +331,7 @@ export function AIInsightsPanel({ organizationId }) {
       
       const result = await AIInsightsService.getDashboardInsights(organizationId, forceRefresh);
       setInsights(result);
+      setHasLoaded(true);
     } catch (error) {
       console.error('Error loading insights:', error);
       toast({
@@ -332,12 +361,14 @@ export function AIInsightsPanel({ organizationId }) {
     }
   };
 
+  // Only load when panel becomes visible and organizationId is available
   useEffect(() => {
-    if (organizationId) {
+    if (organizationId && isVisible && !hasLoaded) {
       loadInsights();
-      loadWeeklyDigest();
+      // Load weekly digest only if user explicitly requests it (remove auto-load)
+      // loadWeeklyDigest();
     }
-  }, [organizationId]);
+  }, [organizationId, isVisible, hasLoaded]);
 
   // Only show At-Risk Members card
   const atRisk = {
@@ -352,7 +383,7 @@ export function AIInsightsPanel({ organizationId }) {
   };
 
   return (
-    <div className="space-y-8">
+    <div ref={panelRef} className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -364,166 +395,215 @@ export function AIInsightsPanel({ organizationId }) {
             <p className="text-sm text-gray-600 mt-1">Powered by intelligent analysis of your data</p>
           </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => loadInsights(true)}
-          disabled={loading}
-          className="flex items-center gap-2"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          {!hasLoaded && !loading && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => loadInsights(false)}
+              className="flex items-center gap-2"
+            >
+              <Brain className="h-4 w-4" />
+              Load Insights
+            </Button>
+          )}
+          {hasLoaded && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => loadInsights(true)}
+              disabled={loading}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Weekly Digest Card */}
-      <div className="grid grid-cols-1 gap-6">
-        <WeeklyDigestCard
-          content={weeklyDigest?.content}
-          loading={digestLoading}
-          onRefresh={loadWeeklyDigest}
-        />
-      </div>
-
-      {/* At-Risk Members and Predictive Attendance Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <InsightCard
-          key={atRisk.key}
-          title={atRisk.title}
-          icon={atRisk.icon}
-          color={atRisk.color}
-          count={atRisk.count}
-          summary={atRisk.summary}
-          actions={atRisk.actions}
-          loading={loading}
-          memberData={atRisk.memberData}
-        />
-        
-        {/* Predictive Attendance Card */}
-        <motion.div className="group relative" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-          <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-blue-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                <Brain className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Predictive Attendance</h3>
-                <p className="text-slate-600 dark:text-slate-400">AI-powered attendance forecasting</p>
-              </div>
+      {/* Show loading state or insights */}
+      {!hasLoaded && !loading ? (
+        <div className="grid grid-cols-1 gap-6">
+          <motion.div className="group relative" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+            <div className="absolute -inset-1 bg-gradient-to-r from-purple-500 to-purple-600 rounded-3xl blur opacity-25"></div>
+            <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 shadow-xl text-center">
+              <Brain className="h-16 w-16 text-purple-500 mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">AI Insights Ready</h3>
+              <p className="text-slate-600 dark:text-slate-400 mb-4">
+                Click "Load Insights" to analyze your church data and get AI-powered recommendations.
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-500">
+                This may take a few seconds to process your data.
+              </p>
             </div>
-            
-            <div className="grid gap-4 grid-cols-1">
-              {loading ? (
-                <motion.div className="group/card relative">
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                  <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
-                    <div className="space-y-3">
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-4 w-1/2" />
-                    </div>
-                  </div>
-                </motion.div>
-                              ) : insights?.insights?.predictiveAttendance?.data?.predictions ? (
-                insights.insights.predictiveAttendance.data.predictions.slice(0, 4).map((prediction, index) => (
-                  <motion.div 
-                    key={index}
-                    className="group/card relative"
-                  >
+          </motion.div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-6">
+          {/* Weekly Digest Card - Load on demand */}
+          {weeklyDigest && (
+            <WeeklyDigestCard 
+              content={weeklyDigest} 
+              loading={digestLoading}
+              onRefresh={loadWeeklyDigest}
+            />
+          )}
+          
+          {!weeklyDigest && !digestLoading && hasLoaded && (
+            <motion.div className="group relative" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+              <div className="absolute -inset-1 bg-gradient-to-r from-purple-500 to-purple-600 rounded-3xl blur opacity-25"></div>
+              <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-6 shadow-xl text-center">
+                <Mail className="h-12 w-12 text-purple-500 mx-auto mb-4" />
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Weekly Digest Available</h3>
+                <p className="text-slate-600 dark:text-slate-400 mb-4 text-sm">
+                  Generate a comprehensive weekly digest with AI-powered insights and recommendations.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => loadWeeklyDigest(false)}
+                  className="flex items-center gap-2 mx-auto"
+                >
+                  <Mail className="h-4 w-4" />
+                  Generate Digest
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* At-Risk Members Card */}
+          <InsightCard
+            {...atRisk}
+            loading={loading}
+          />
+
+          {/* Predictive Attendance Card */}
+          <motion.div className="group relative" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+            <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-blue-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+            <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                  <Brain className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Predictive Attendance</h3>
+                  <p className="text-slate-600 dark:text-slate-400">AI-powered attendance forecasting</p>
+                </div>
+              </div>
+              
+              <div className="grid gap-4 grid-cols-1">
+                {loading ? (
+                  <motion.div className="group/card relative">
                     <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                    <div 
-                      className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
-                      onClick={() => {
-                        if (prediction.factors?.comprehensiveFactors?.length > 0) {
-                          setSelectedFactors({
-                            eventTitle: prediction.eventTitle,
-                            factors: prediction.factors.comprehensiveFactors
-                          });
-                          setFactorsPopoverOpen(true);
-                        }
-                      }}
-                      title={prediction.factors?.comprehensiveFactors?.length > 0 ? `Click to see factors considered` : ''}>
+                    <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
+                      <div className="space-y-3">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-4 w-1/2" />
+                      </div>
+                    </div>
+                  </motion.div>
+                                ) : insights?.insights?.predictiveAttendance?.data?.predictions ? (
+                  insights.insights.predictiveAttendance.data.predictions.slice(0, 4).map((prediction, index) => (
+                    <motion.div 
+                      key={index}
+                      className="group/card relative"
+                    >
+                      <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                      <div 
+                        className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
+                        onClick={() => {
+                          if (prediction.factors?.comprehensiveFactors?.length > 0) {
+                            setSelectedFactors({
+                              eventTitle: prediction.eventTitle,
+                              factors: prediction.factors.comprehensiveFactors
+                            });
+                            setFactorsPopoverOpen(true);
+                          }
+                        }}
+                        title={prediction.factors?.comprehensiveFactors?.length > 0 ? `Click to see factors considered` : ''}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                              <Calendar className="h-5 w-5 text-white" />
+                            </div>
+                            <div>
+                              <h4 className="text-base font-semibold text-slate-900 dark:text-white">{prediction.eventTitle}</h4>
+                              <p className="text-xs text-slate-600 dark:text-slate-400">
+                                {new Date(prediction.eventDate).toLocaleDateString()} • {prediction.eventType}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-2xl font-bold text-blue-600">
+                              {prediction.predictedAttendance}
+                            </div>
+                            <p className="text-xs text-slate-500 dark:text-slate-500">predicted</p>
+                          </div>
+                        </div>
+                        <div className="mt-3 flex justify-between items-center">
+                          <Badge 
+                            variant={prediction.confidence === 'High' ? 'default' : prediction.confidence === 'Medium' ? 'secondary' : 'outline'} 
+                            className={`text-xs ${
+                              prediction.confidence === 'High' ? 'bg-green-100 text-green-800' :
+                              prediction.confidence === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-slate-100 text-slate-600'
+                            }`}
+                          >
+                            {prediction.confidence} confidence
+                          </Badge>
+                          {prediction.factors?.comprehensiveFactors?.length > 0 && (
+                            <div className="text-xs text-blue-600 dark:text-blue-400">
+                              ℹ️ Click to see factors
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))
+                ) : (
+                  <motion.div className="group/card relative">
+                    <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                    <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
                             <Calendar className="h-5 w-5 text-white" />
                           </div>
                           <div>
-                            <h4 className="text-base font-semibold text-slate-900 dark:text-white">{prediction.eventTitle}</h4>
+                            <h4 className="text-base font-semibold text-slate-900 dark:text-white">No Predictions</h4>
                             <p className="text-xs text-slate-600 dark:text-slate-400">
-                              {new Date(prediction.eventDate).toLocaleDateString()} • {prediction.eventType}
+                              Create events to see predictions
                             </p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="text-2xl font-bold text-blue-600">
-                            {prediction.predictedAttendance}
+                          <div className="text-2xl font-bold text-slate-400">
+                            0
                           </div>
-                          <p className="text-xs text-slate-500 dark:text-slate-500">predicted</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-500">events</p>
                         </div>
                       </div>
-                      <div className="mt-3 flex justify-between items-center">
-                        <Badge 
-                          variant={prediction.confidence === 'High' ? 'default' : prediction.confidence === 'Medium' ? 'secondary' : 'outline'} 
-                          className={`text-xs ${
-                            prediction.confidence === 'High' ? 'bg-green-100 text-green-800' :
-                            prediction.confidence === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-slate-100 text-slate-600'
-                          }`}
-                        >
-                          {prediction.confidence} confidence
-                        </Badge>
-                        {prediction.factors?.comprehensiveFactors?.length > 0 && (
-                          <div className="text-xs text-blue-600 dark:text-blue-400">
-                            ℹ️ Click to see factors
-                          </div>
-                        )}
+                      <div className="mt-3 text-sm text-slate-600 dark:text-slate-400">
+                        <p>No upcoming events found. Create events to see attendance predictions based on historical data.</p>
+                        <p className="text-xs text-slate-500 mt-2">
+                          Predictions are based on historical attendance patterns, event types, and seasonal trends.
+                        </p>
                       </div>
                     </div>
                   </motion.div>
-                ))
-              ) : (
-                <motion.div className="group/card relative">
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                  <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
-                          <Calendar className="h-5 w-5 text-white" />
-                        </div>
-                        <div>
-                          <h4 className="text-base font-semibold text-slate-900 dark:text-white">No Predictions</h4>
-                          <p className="text-xs text-slate-600 dark:text-slate-400">
-                            Create events to see predictions
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-slate-400">
-                          0
-                        </div>
-                        <p className="text-xs text-slate-500 dark:text-slate-500">events</p>
-                      </div>
-                    </div>
-                    <div className="mt-3 text-sm text-slate-600 dark:text-slate-400">
-                      <p>No upcoming events found. Create events to see attendance predictions based on historical data.</p>
-                      <p className="text-xs text-slate-500 mt-2">
-                        Predictions are based on historical attendance patterns, event types, and seasonal trends.
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-              {insights?.insights?.predictiveAttendance?.data?.predictions?.length > 4 && (
-                <p className="text-xs text-slate-500 text-center">
-                  +{insights.insights.predictiveAttendance.data.predictions.length - 4} more events
-                </p>
-              )}
+                )}
+                {insights?.insights?.predictiveAttendance?.data?.predictions?.length > 4 && (
+                  <p className="text-xs text-slate-500 text-center">
+                    +{insights.insights.predictiveAttendance.data.predictions.length - 4} more events
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
-        </motion.div>
-      </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Factors Popover */}
       {factorsPopoverOpen && selectedFactors && (
