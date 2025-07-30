@@ -4,6 +4,8 @@ import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from "@vercel/speed-insights/react"
 import { Layout } from './components/layout';
 import { Dashboard } from './pages/dashboard';
+import { Dashboard as OptimizedDashboard } from './pages/dashboard-optimized';
+import { Dashboard as TestDashboard } from './pages/dashboard-test';
 import { People } from './pages/members';
 import MemberProfile from './pages/member-profile';
 import Events from './pages/events';
@@ -62,6 +64,8 @@ function App() {
         {/* Protected routes */}
         <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard-optimized" element={<TestDashboard />} />
+          <Route path="/dashboard-test" element={<OptimizedDashboard />} />
           <Route path="/members" element={<People />} />
           <Route path="/members/:id" element={<MemberProfile />} />
           <Route path="/events" element={<Events />} />
