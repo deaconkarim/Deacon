@@ -16,7 +16,7 @@ This feature allows users to create tasks directly from AI-generated suggestions
 
 - **Pre-populated Forms**: When creating a task from a suggestion, the modal is pre-populated with:
   - Title: The suggestion content
-  - Description: Detailed explanation including AI reasoning and context for why the task was suggested
+  - Description: Detailed explanation including AI reasoning, context, and related member/donor information
   - Priority: Medium (default)
   - Category: Based on the suggestion type (Administration for general suggestions, Finance for donation suggestions)
   - Requestor: Current user (automatically set)
@@ -51,6 +51,8 @@ This feature allows users to create tasks directly from AI-generated suggestions
 - Integrates with the current user authentication system
 - Maintains consistency with existing task management features
 - Supports all existing task properties (priority, due date, category, etc.)
+- Enhanced error logging for debugging task creation issues
+- Includes detailed member/donor information in task descriptions
 
 ### Database Integration
 
@@ -64,3 +66,5 @@ This feature allows users to create tasks directly from AI-generated suggestions
 - Include estimated time suggestions based on AI analysis
 - Add bulk task creation from multiple suggestions
 - Integrate with calendar for automatic due date suggestions
+- Add direct links to member profiles in task descriptions
+- Include more detailed analytics context in task descriptions

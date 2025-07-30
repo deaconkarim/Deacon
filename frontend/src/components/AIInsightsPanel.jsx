@@ -190,9 +190,10 @@ const InsightCard = ({ title, summary, actions, icon: Icon, color, count, loadin
                           size="sm"
                           onClick={() => onCreateTask({
                             title: action.content,
-                            description: `AI Suggestion: ${action.content}\n\nThis task was suggested based on analysis of your church data. The AI identified this as an important action to improve ministry effectiveness.\n\nContext: This recommendation is part of the At-Risk Members analysis, focusing on member engagement and retention strategies.`,
+                            description: `AI Suggestion: ${action.content}\n\nThis task was suggested based on analysis of your church data. The AI identified this as an important action to improve ministry effectiveness.\n\nContext: This recommendation is part of the At-Risk Members analysis, focusing on member engagement and retention strategies.\n\nRelated Members: ${memberData?.length > 0 ? memberData.map(m => `${m.firstname} ${m.lastname}`).join(', ') : 'No specific members identified'}`,
                             priority: 'medium',
-                            category: 'Administration'
+                            category: 'Administration',
+                            relatedMembers: memberData || []
                           })}
                           className="ml-2 flex-shrink-0"
                         >

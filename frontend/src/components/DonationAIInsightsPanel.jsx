@@ -316,9 +316,10 @@ const DonationInsightCard = ({ title, summary, actions, icon: Icon, color, count
                           size="sm"
                           onClick={() => onCreateTask({
                             title: recommendation,
-                            description: `AI Suggestion: ${recommendation}\n\nThis task was suggested based on analysis of your donation patterns and giving trends. The AI identified this as an important action to improve stewardship and financial health.\n\nContext: This recommendation is part of the Donation Insights analysis, focusing on stewardship strategies and financial planning.`,
+                            description: `AI Suggestion: ${recommendation}\n\nThis task was suggested based on analysis of your donation patterns and giving trends. The AI identified this as an important action to improve stewardship and financial health.\n\nContext: This recommendation is part of the Donation Insights analysis, focusing on stewardship strategies and financial planning.\n\nRelated Donors: ${data?.insights?.topDonors?.length > 0 ? data.insights.topDonors.slice(0, 3).map(d => d.name).join(', ') : 'No specific donors identified'}`,
                             priority: 'medium',
-                            category: 'Finance'
+                            category: 'Finance',
+                            relatedDonors: data?.insights?.topDonors || []
                           })}
                           className="ml-2 flex-shrink-0"
                         >

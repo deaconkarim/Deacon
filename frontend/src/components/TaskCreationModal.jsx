@@ -118,9 +118,38 @@ export function TaskCreationModal({
       // Pre-populate with suggestion data if provided
       if (suggestion) {
         console.log('TaskCreationModal: Pre-populating with suggestion:', suggestion);
+        
+        // Build enhanced description with member information
+        let enhancedDescription = suggestion.description || suggestion.content || '';
+        
+        if (suggestion.relatedMembers && suggestion.relatedMembers.length > 0) {
+          const memberNames = suggestion.relatedMembers.map(m => `${m.firstname} ${m.lastname}`).join(', ');
+          const memberEmails = suggestion.relatedMembers.map(m => m.email).filter(email => email).join(', ');
+          
+          enhancedDescription += `\n\nRelated Members:\n- Names: ${memberNames}`;
+          if (memberEmails) {
+            enhancedDescription += `\n- Emails: ${memberEmails}`;
+          }
+          
+          // Add member details if available
+          suggestion.relatedMembers.forEach((member, index) => {
+            if (member.phone) {
+              enhancedDescription += `\n- ${member.firstname} ${member.lastname} Phone: ${member.phone}`;
+            }
+          });
+        }
+        
+        if (suggestion.relatedDonors && suggestion.relatedDonors.length > 0) {
+          const donorNames = suggestion.relatedDonors.map(d => d.name).join(', ');
+          const donorTotals = suggestion.relatedDonors.map(d => `${d.name}: $${d.total?.toLocaleString() || 'N/A'}`).join(', ');
+          
+          enhancedDescription += `\n\nRelated Donors:\n- Names: ${donorNames}`;
+          enhancedDescription += `\n- Donation Totals: ${donorTotals}`;
+        }
+        
         setNewTask({
           title: suggestion.title || suggestion.content || 'Task from Suggestion',
-          description: suggestion.description || suggestion.content || '',
+          description: enhancedDescription,
           priority: suggestion.priority || 'medium',
           status: 'pending',
           assignee_id: null,
@@ -240,21 +269,33 @@ export function TaskCreationModal({
 
     try {
       setIsLoading(true);
+      console.log('TaskCreationModal: Starting task creation with data:', newTask);
+      
       // Get the current user's organization ID (including impersonation)
       const organizationId = await getCurrentUserOrganizationId();
+      console.log('TaskCreationModal: Organization ID:', organizationId);
       if (!organizationId) throw new Error('User not associated with any organization');
+
+      const taskData = {
+        ...newTask,
+        organization_id: organizationId,
+        created_at: new Date().toISOString()
+      };
+      
+      console.log('TaskCreationModal: Task data to insert:', taskData);
 
       const { data, error } = await supabase
         .from('tasks')
-        .insert([{
-          ...newTask,
-          organization_id: organizationId,
-          created_at: new Date().toISOString()
-        }])
+        .insert([taskData])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('TaskCreationModal: Supabase error:', error);
+        throw error;
+      }
+
+      console.log('TaskCreationModal: Task created successfully:', data);
 
       toast({
         title: "Success",
@@ -283,10 +324,10 @@ export function TaskCreationModal({
       // Close modal
       onClose();
     } catch (error) {
-      console.error('Error creating task:', error);
+      console.error('TaskCreationModal: Error creating task:', error);
       toast({
         title: "Error",
-        description: "Failed to create task. Please try again.",
+        description: `Failed to create task: ${error.message}`,
         variant: "destructive",
       });
     } finally {
