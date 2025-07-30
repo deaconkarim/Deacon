@@ -38,10 +38,15 @@ class OptimizedDashboardService {
 
   // SINGLE MEGA QUERY - Get ALL dashboard data in one optimized request
   async getAllDashboardData() {
-    const organizationId = await userCacheService.getCurrentUserOrganizationId();
-    if (!organizationId) {
-      throw new Error('No organization found');
-    }
+    console.log('🚀 [OptimizedDashboard] Starting getAllDashboardData...');
+    
+    try {
+      const organizationId = await userCacheService.getCurrentUserOrganizationId();
+      console.log('🚀 [OptimizedDashboard] Organization ID:', organizationId);
+      
+      if (!organizationId) {
+        throw new Error('No organization found');
+      }
 
     const cacheKey = `dashboard-${organizationId}`;
     
@@ -180,6 +185,10 @@ class OptimizedDashboardService {
 
     } catch (error) {
       console.error('🚀 [OptimizedDashboard] Error:', error);
+      throw error;
+    }
+    } catch (error) {
+      console.error('🚀 [OptimizedDashboard] Outer Error:', error);
       throw error;
     }
   }

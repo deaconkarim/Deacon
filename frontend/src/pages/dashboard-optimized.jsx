@@ -36,8 +36,13 @@ const itemVariants = {
 };
 
 export function Dashboard() {
+  console.log('🚀 Optimized Dashboard: Component mounted');
+  
   const navigate = useNavigate();
   const { user } = useAuth();
+  
+  console.log('🚀 Optimized Dashboard: User:', user?.email);
+  
   const {
     stats,
     isLoading,
@@ -46,6 +51,8 @@ export function Dashboard() {
     personalTasks,
     refresh
   } = useDashboardData();
+  
+  console.log('🚀 Optimized Dashboard: Data loaded', { stats, isLoading, organizationId });
 
   // Check user permissions
   const userPermissions = user?.user_metadata?.permissions || [];
