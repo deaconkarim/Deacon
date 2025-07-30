@@ -16,7 +16,7 @@ This feature allows users to create tasks directly from AI-generated suggestions
 
 - **Pre-populated Forms**: When creating a task from a suggestion, the modal is pre-populated with:
   - Title: The suggestion content
-  - Description: The suggestion content
+  - Description: Detailed explanation including AI reasoning and context for why the task was suggested
   - Priority: Medium (default)
   - Category: Based on the suggestion type (Administration for general suggestions, Finance for donation suggestions)
   - Requestor: Current user (automatically set)
@@ -40,9 +40,10 @@ This feature allows users to create tasks directly from AI-generated suggestions
    - At-Risk Members recommendations
    - Donation recommendations
 4. Click "Create Task" to open the modal
-5. Modify task details as needed
-6. Select an assignee and requestor
-7. Click "Create Task" to save
+5. Review the pre-populated description that explains why the AI suggested this task
+6. Modify task details as needed
+7. Select an assignee and requestor
+8. Click "Create Task" to save
 
 ### Technical Implementation
 

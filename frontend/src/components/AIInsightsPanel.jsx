@@ -190,7 +190,7 @@ const InsightCard = ({ title, summary, actions, icon: Icon, color, count, loadin
                           size="sm"
                           onClick={() => onCreateTask({
                             title: action.content,
-                            description: action.content,
+                            description: `AI Suggestion: ${action.content}\n\nThis task was suggested based on analysis of your church data. The AI identified this as an important action to improve ministry effectiveness.\n\nContext: This recommendation is part of the At-Risk Members analysis, focusing on member engagement and retention strategies.`,
                             priority: 'medium',
                             category: 'Administration'
                           })}

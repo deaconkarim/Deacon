@@ -130,6 +130,20 @@ export function TaskCreationModal({
           estimated_hours: suggestion.estimatedHours || null,
           tags: suggestion.tags || []
         });
+      } else {
+        // Reset form when opening without suggestion
+        setNewTask({
+          title: '',
+          description: '',
+          priority: 'medium',
+          status: 'pending',
+          assignee_id: null,
+          requestor_id: user?.id || null,
+          due_date: null,
+          category: '',
+          estimated_hours: null,
+          tags: []
+        });
       }
     }
   }, [isOpen, suggestion, user]);
@@ -298,11 +312,11 @@ export function TaskCreationModal({
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>
-            {suggestion ? 'Create Task from Suggestion' : 'Create New Task'}
+            {suggestion ? 'Create Task from AI Suggestion' : 'Create New Task'}
           </DialogTitle>
           <DialogDescription>
             {suggestion 
-              ? 'Create a task based on this AI suggestion. You can modify the details as needed.'
+              ? 'Create a task based on this AI-generated suggestion. The description includes reasoning and context for why this task was recommended.'
               : 'Add a new task and assign it to a staff member.'
             }
           </DialogDescription>
@@ -347,7 +361,14 @@ export function TaskCreationModal({
               id="description"
               value={newTask.description}
               onChange={(e) => setNewTask({...newTask, description: e.target.value})}
+              className="min-h-[120px]"
+              placeholder="Enter task description..."
             />
+            {suggestion && (
+              <p className="text-xs text-muted-foreground">
+                This description includes AI reasoning and context for the suggested task.
+              </p>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">

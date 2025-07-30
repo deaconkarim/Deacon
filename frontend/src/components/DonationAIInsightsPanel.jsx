@@ -316,7 +316,7 @@ const DonationInsightCard = ({ title, summary, actions, icon: Icon, color, count
                           size="sm"
                           onClick={() => onCreateTask({
                             title: recommendation,
-                            description: recommendation,
+                            description: `AI Suggestion: ${recommendation}\n\nThis task was suggested based on analysis of your donation patterns and giving trends. The AI identified this as an important action to improve stewardship and financial health.\n\nContext: This recommendation is part of the Donation Insights analysis, focusing on stewardship strategies and financial planning.`,
                             priority: 'medium',
                             category: 'Finance'
                           })}
