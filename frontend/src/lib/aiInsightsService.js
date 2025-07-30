@@ -226,6 +226,183 @@ export class SmartInsightsQueries {
   }
 
   /**
+   * Get donation insights and trends
+   */
+  static async getDonationInsights(organizationId) {
+    try {
+      // Get donation data for the last 12 months
+      const twelveMonthsAgo = new Date();
+      twelveMonthsAgo.setDate(twelveMonthsAgo.getDate() - 365);
+
+      const { data: donations, error } = await supabase
+        .from('donations')
+        .select(`
+          id,
+          amount,
+          date,
+          payment_method,
+          fund_designation,
+          is_recurring,
+          donor_id,
+          donor:members(id, firstname, lastname, email)
+        `)
+        .eq('organization_id', organizationId)
+        .gte('date', twelveMonthsAgo.toISOString())
+        .order('date', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching donations:', error);
+        return null;
+      }
+
+      // Calculate donation insights
+      const insights = this.calculateDonationInsights(donations);
+
+      return {
+        donations,
+        insights
+      };
+    } catch (error) {
+      console.error('Error generating donation insights:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Calculate donation insights from donation data
+   */
+  static calculateDonationInsights(donations) {
+    if (!donations || donations.length === 0) {
+      return {
+        totalAmount: 0,
+        totalDonations: 0,
+        averageDonation: 0,
+        recurringDonations: 0,
+        topDonors: [],
+        monthlyTrends: {},
+        paymentMethodBreakdown: {},
+        fundDesignationBreakdown: {},
+        givingPatterns: {},
+        recommendations: []
+      };
+    }
+
+    const insights = {
+      totalAmount: 0,
+      totalDonations: donations.length,
+      recurringDonations: 0,
+      topDonors: [],
+      monthlyTrends: {},
+      paymentMethodBreakdown: {},
+      fundDesignationBreakdown: {},
+      givingPatterns: {},
+      recommendations: []
+    };
+
+    // Calculate totals and breakdowns
+    donations.forEach(donation => {
+      insights.totalAmount += donation.amount || 0;
+      if (donation.is_recurring) {
+        insights.recurringDonations++;
+      }
+
+      // Monthly trends
+      const month = new Date(donation.date).toISOString().slice(0, 7); // YYYY-MM
+      insights.monthlyTrends[month] = (insights.monthlyTrends[month] || 0) + (donation.amount || 0);
+
+      // Payment method breakdown
+      const method = donation.payment_method || 'unknown';
+      insights.paymentMethodBreakdown[method] = (insights.paymentMethodBreakdown[method] || 0) + (donation.amount || 0);
+
+      // Fund designation breakdown
+      const designation = donation.fund_designation || 'general';
+      insights.fundDesignationBreakdown[designation] = (insights.fundDesignationBreakdown[designation] || 0) + (donation.amount || 0);
+    });
+
+    // Calculate average donation
+    insights.averageDonation = insights.totalAmount / insights.totalDonations;
+
+    // Find top donors (by total amount)
+    const donorTotals = {};
+    donations.forEach(donation => {
+      if (donation.donor_id && donation.donor) {
+        const donorKey = donation.donor_id;
+        donorTotals[donorKey] = (donorTotals[donorKey] || 0) + (donation.amount || 0);
+      }
+    });
+
+    insights.topDonors = Object.entries(donorTotals)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 5)
+      .map(([donorId, total]) => {
+        const donor = donations.find(d => d.donor_id === donorId)?.donor;
+        return {
+          donor_id: donorId,
+          total,
+          name: donor ? `${donor.firstname} ${donor.lastname}` : 'Unknown',
+          email: donor?.email || ''
+        };
+      });
+
+    // Analyze giving patterns
+    const recentDonations = donations.filter(d => {
+      const donationDate = new Date(d.date);
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      return donationDate >= thirtyDaysAgo;
+    });
+
+    insights.givingPatterns = {
+      recentDonations: recentDonations.length,
+      recentAmount: recentDonations.reduce((sum, d) => sum + (d.amount || 0), 0),
+      averageRecentDonation: recentDonations.length > 0 ? 
+        recentDonations.reduce((sum, d) => sum + (d.amount || 0), 0) / recentDonations.length : 0
+    };
+
+    // Generate recommendations
+    insights.recommendations = this.generateDonationRecommendations(insights);
+
+    return insights;
+  }
+
+  /**
+   * Generate donation recommendations based on insights
+   */
+  static generateDonationRecommendations(insights) {
+    const recommendations = [];
+
+    // Analyze recurring donations
+    const recurringPercentage = (insights.recurringDonations / insights.totalDonations) * 100;
+    if (recurringPercentage < 20) {
+      recommendations.push('Consider promoting recurring donations to increase giving consistency');
+    }
+
+    // Analyze average donation
+    if (insights.averageDonation < 50) {
+      recommendations.push('Average donation is below typical church giving. Consider stewardship education');
+    }
+
+    // Analyze recent giving
+    if (insights.givingPatterns.recentDonations < 10) {
+      recommendations.push('Recent giving activity is low. Consider outreach to encourage giving');
+    }
+
+    // Analyze fund designation diversity
+    const fundCount = Object.keys(insights.fundDesignationBreakdown).length;
+    if (fundCount < 3) {
+      recommendations.push('Limited fund designations. Consider adding specific ministry funds');
+    }
+
+    // Analyze payment method diversity
+    const methodCount = Object.keys(insights.paymentMethodBreakdown).length;
+    if (methodCount < 2) {
+      recommendations.push('Limited payment methods. Consider adding online giving options');
+    }
+
+    return recommendations;
+  }
+
+  /**
    * Calculate detailed attendance patterns from historical data
    */
   static calculateDetailedAttendancePatterns(historicalAttendance) {
@@ -789,6 +966,12 @@ export class AIInsightsGenerator {
     switch (insightType) {
       case 'at-risk-members':
         return `${data.length} members haven't been active recently. Consider reaching out to them.`;
+      case 'donation-insights':
+        if (!data || !data.insights) {
+          return 'No donation data available for analysis.';
+        }
+        const insights = data.insights;
+        return `Total giving: $${insights.totalAmount.toLocaleString()}. ${insights.totalDonations} donations with $${insights.averageDonation.toFixed(2)} average. ${insights.recurringDonations} recurring donors.`;
       default:
         return 'Data analysis complete. Review the details for insights.';
     }
@@ -798,6 +981,15 @@ export class AIInsightsGenerator {
     switch (insightType) {
       case 'at-risk-members':
         return '1. Send personalized outreach messages\n2. Schedule follow-up calls\n3. Invite to upcoming events';
+      case 'donation-insights':
+        if (!data || !data.insights) {
+          return '1. Review donation data\n2. Set up giving campaigns\n3. Promote recurring donations';
+        }
+        const recommendations = data.insights.recommendations;
+        if (recommendations && recommendations.length > 0) {
+          return recommendations.slice(0, 3).join('\n');
+        }
+        return '1. Promote recurring donations\n2. Set up stewardship education\n3. Add online giving options';
       default:
         return '1. Review the data\n2. Identify key areas\n3. Develop action plan';
     }
@@ -814,14 +1006,17 @@ export class AIInsightsService {
    */
   static async getDashboardInsights(organizationId, forceRefresh = false) {
     try {
-      const [atRisk, predictiveAttendance] = await Promise.all([
+      const [atRisk, predictiveAttendance, donationInsights] = await Promise.all([
         SmartInsightsQueries.getAtRiskMembers(organizationId),
-        SmartInsightsQueries.getPredictiveAttendance(organizationId)
+        SmartInsightsQueries.getPredictiveAttendance(organizationId),
+        SmartInsightsQueries.getDonationInsights(organizationId)
       ]);
 
       // Use simple SQL-based summaries instead of AI
       const atRiskSummary = AIInsightsGenerator.generateFallbackSummary(atRisk, 'at-risk-members');
       const atRiskActions = AIInsightsGenerator.generateFallbackAction(atRisk, 'at-risk-members');
+      const donationSummary = AIInsightsGenerator.generateFallbackSummary(donationInsights, 'donation-insights');
+      const donationActions = AIInsightsGenerator.generateFallbackAction(donationInsights, 'donation-insights');
 
       // Enhance predictions with AI if available
       let enhancedPredictions = predictiveAttendance?.predictions || [];
@@ -845,6 +1040,11 @@ export class AIInsightsService {
               ...predictiveAttendance,
               predictions: enhancedPredictions
             }
+          },
+          donationInsights: {
+            data: donationInsights,
+            summary: donationSummary,
+            actions: donationActions
           }
         },
         timestamp: new Date().toISOString()
@@ -873,6 +1073,9 @@ export class AIInsightsService {
         atRiskSummary: insights.insights?.atRisk?.summary || '',
         atRiskActions: insights.insights?.atRisk?.actions || '',
         attendancePredictions: insights.insights?.predictiveAttendance?.data?.predictions || [],
+        donationInsights: insights.insights?.donationInsights?.data || null,
+        donationSummary: insights.insights?.donationInsights?.summary || '',
+        donationActions: insights.insights?.donationInsights?.actions || '',
         timestamp: insights.timestamp
       };
 
@@ -917,6 +1120,23 @@ ${digestData.attendancePredictions.map(prediction => `
 
 TOTAL UPCOMING EVENTS: ${digestData.attendancePredictions.length}
 
+DONATION INSIGHTS:
+${digestData.donationInsights ? `
+Total Giving: $${digestData.donationInsights.insights?.totalAmount?.toLocaleString() || '0'}
+Total Donations: ${digestData.donationInsights.insights?.totalDonations || '0'}
+Average Donation: $${digestData.donationInsights.insights?.averageDonation?.toFixed(2) || '0.00'}
+Recurring Donations: ${digestData.donationInsights.insights?.recurringDonations || '0'}
+Recent Donations (30 days): ${digestData.donationInsights.insights?.givingPatterns?.recentDonations || '0'}
+Recent Amount: $${digestData.donationInsights.insights?.givingPatterns?.recentAmount?.toLocaleString() || '0'}
+
+Top Donors:
+${digestData.donationInsights.insights?.topDonors?.map(donor => `
+- ${donor.name}: $${donor.total.toLocaleString()}`).join('\n') || 'No donor data available'}
+
+Recommendations:
+${digestData.donationInsights.insights?.recommendations?.join('\n') || 'No specific recommendations available'}
+` : 'No donation data available'}
+
 Please provide a compelling weekly digest that includes:
 
 Weekly Church Digest
@@ -924,7 +1144,7 @@ Weekly Church Digest
 Dear Church Leadership Team,
 
 Summary of Current State:
-[Provide a warm, encouraging summary based on the ACTUAL data above. Include both at-risk members and attendance predictions]
+[Provide a warm, encouraging summary based on the ACTUAL data above. Include at-risk members, attendance predictions, and giving insights]
 
 Areas Needing Attention:
 [Detail specific concerns using the ACTUAL member names and data provided above. Be specific about each at-risk member's situation]
@@ -932,10 +1152,14 @@ Areas Needing Attention:
 Attendance Outlook:
 [Provide insights about upcoming events and attendance predictions. Highlight any concerning trends or positive indicators]
 
+Giving Insights:
+[Provide insights about donation patterns, top donors, and recommendations for improving giving]
+
 Recommended Actions:
 • [Specific action for each at-risk member by name]
 • [Timeline and responsible parties for each action]
 • [Actions to improve attendance if needed]
+• [Actions to improve giving based on donation insights]
 • [Additional actions as needed]
 
 Positive Insights:
