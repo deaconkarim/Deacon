@@ -128,7 +128,7 @@ const DonationInsightCard = ({ title, summary, actions, icon: Icon, color, count
                         <Calendar className="h-5 w-5 text-white" />
                       </div>
                       <div>
-                        <h4 className="text-base font-semibold text-slate-900 dark:text-white">This Week</h4>
+                        <h4 className="text-base font-semibold text-slate-900 dark:text-white">Last 7 Days</h4>
                         <p className="text-xs text-slate-600 dark:text-slate-400">
                           {data.insights.currentWeek.donations} donations
                         </p>
