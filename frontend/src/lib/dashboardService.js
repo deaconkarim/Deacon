@@ -101,6 +101,17 @@ export const dashboardService = {
     console.log('📊 [DashboardService] Cache cleared');
   },
 
+  // Force clear all caches
+  forceClearCache() {
+    dashboardCache = null;
+    cacheTimestamp = null;
+    // Also clear AI insights cache
+    if (typeof window !== 'undefined' && window.aiInsightsCache) {
+      window.aiInsightsCache = {};
+    }
+    console.log('📊 [DashboardService] All caches force cleared');
+  },
+
   // Members data - single optimized API call with pagination support
   async getMembersData(organizationId) {
     console.log('🔍 [DashboardService] Fetching members for organization:', organizationId);
@@ -158,9 +169,12 @@ export const dashboardService = {
     const startOfMonth = new Date(currentYear, currentMonth, 1);
     const endOfMonth = new Date(currentYear, currentMonth + 1, 0);
     
+    // Convert to date strings for consistent comparison
+    const startOfMonthStr = startOfMonth.toISOString().split('T')[0];
+    const endOfMonthStr = endOfMonth.toISOString().split('T')[0];
+    
     const currentMonthDonations = donations.filter(d => {
-      const donationDate = new Date(d.date);
-      return donationDate >= startOfMonth && donationDate <= endOfMonth;
+      return d.date >= startOfMonthStr && d.date <= endOfMonthStr;
     });
     
     const monthlyDonations = Math.round(currentMonthDonations

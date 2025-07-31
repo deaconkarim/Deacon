@@ -1161,9 +1161,14 @@ export function Donations() {
                     <p className="text-sm text-slate-600 dark:text-slate-400">
                       {(() => {
                         const currentMonthDonations = donations.filter(d => {
-                          const donationDate = new Date(d.date);
                           const now = new Date();
-                          return donationDate.getMonth() === now.getMonth() && donationDate.getFullYear() === now.getFullYear();
+                          const currentYear = now.getFullYear();
+                          const currentMonth = now.getMonth();
+                          const startOfMonth = new Date(currentYear, currentMonth, 1);
+                          const endOfMonth = new Date(currentYear, currentMonth + 1, 0);
+                          const startOfMonthStr = startOfMonth.toISOString().split('T')[0];
+                          const endOfMonthStr = endOfMonth.toISOString().split('T')[0];
+                          return d.date >= startOfMonthStr && d.date <= endOfMonthStr;
                         });
                         return `${currentMonthDonations.length} donations this month`;
                       })()}
@@ -1172,10 +1177,12 @@ export function Donations() {
                       {(() => {
                         const monthlyAverage = donationSummary.totalAmount / Math.max(1, Math.ceil((new Date() - new Date(filters.startDate)) / (1000 * 60 * 60 * 24 * 30)));
                         const lastMonthTotal = donations.filter(d => {
-                          const donationDate = new Date(d.date);
-                          const lastMonth = new Date();
-                          lastMonth.setMonth(lastMonth.getMonth() - 1);
-                          return donationDate.getMonth() === lastMonth.getMonth() && donationDate.getFullYear() === lastMonth.getFullYear();
+                          const now = new Date();
+                          const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                          const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+                          const lastMonthStr = lastMonth.toISOString().split('T')[0];
+                          const lastMonthEndStr = lastMonthEnd.toISOString().split('T')[0];
+                          return d.date >= lastMonthStr && d.date <= lastMonthEndStr;
                         }).reduce((sum, d) => sum + parseFloat(d.amount), 0);
                         
                         if (lastMonthTotal > monthlyAverage * 1.1) return 'Keep up this positive momentum';

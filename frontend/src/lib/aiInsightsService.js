@@ -402,8 +402,9 @@ export class SmartInsightsQueries {
 
     // Calculate current month insights
     const currentMonthDonations = donations.filter(d => {
-      const donationDate = new Date(d.date);
-      return donationDate >= startOfMonth && donationDate <= endOfMonth;
+      const startOfMonthStr = startOfMonth.toISOString().split('T')[0];
+      const endOfMonthStr = endOfMonth.toISOString().split('T')[0];
+      return d.date >= startOfMonthStr && d.date <= endOfMonthStr;
     });
 
     const currentMonthAmount = currentMonthDonations.reduce((sum, d) => sum + (d.amount || 0), 0);
@@ -450,8 +451,9 @@ export class SmartInsightsQueries {
     }
 
     const previousPeriodDonations = allDonations.filter(d => {
-      const donationDate = new Date(d.date);
-      return donationDate >= previousPeriodStart && donationDate <= previousPeriodEnd;
+      const previousPeriodStartStr = previousPeriodStart.toISOString().split('T')[0];
+      const previousPeriodEndStr = previousPeriodEnd.toISOString().split('T')[0];
+      return d.date >= previousPeriodStartStr && d.date <= previousPeriodEndStr;
     });
 
     const currentAmount = currentPeriodDonations.reduce((sum, d) => sum + (d.amount || 0), 0);
