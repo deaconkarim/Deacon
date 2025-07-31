@@ -116,10 +116,10 @@ export const dashboardService = {
   async getMembersData(organizationId) {
     console.log('🔍 [DashboardService] Fetching members for organization:', organizationId);
     
-    // For dashboard, we only need basic member info, not full details
+    // For dashboard, we need member info including contact details for task creation
     const { data: members, error } = await supabase
       .from('members')
-      .select('id, firstname, lastname, status, created_at, updated_at, join_date')
+      .select('id, firstname, lastname, email, phone, status, created_at, updated_at, join_date')
       .eq('organization_id', organizationId)
       .order('created_at', { ascending: false })
       .limit(1000); // Limit to prevent excessive data transfer
@@ -455,11 +455,28 @@ export const dashboardService = {
       const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
       const startOfMonthOnly = new Date(startOfMonth.getFullYear(), startOfMonth.getMonth(), startOfMonth.getDate());
       const endOfMonthOnly = new Date(endOfMonth.getFullYear(), endOfMonth.getMonth(), endOfMonth.getDate());
+      const nowOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       
-      return eventDateOnly >= startOfMonthOnly && eventDateOnly <= endOfMonthOnly && e.needs_volunteers === true;
-    }).length;
+      // Only count events that:
+      // 1. Are in the current month
+      // 2. Have needs_volunteers === true
+      // 3. Haven't passed yet (future events only)
+      return eventDateOnly >= startOfMonthOnly && 
+             eventDateOnly <= endOfMonthOnly && 
+             eventDateOnly >= nowOnly && 
+             e.needs_volunteers === true;
+    });
 
-    console.log('📊 [DashboardService] Events needing volunteers:', eventsNeedingVolunteers);
+    console.log('📊 [DashboardService] Events needing volunteers count:', eventsNeedingVolunteers.length);
+    console.log('📊 [DashboardService] Events needing volunteers details:', eventsNeedingVolunteers.map(e => ({
+      id: e.id,
+      title: e.title,
+      start_date: e.start_date,
+      needs_volunteers: e.needs_volunteers,
+      event_type: e.event_type
+    })));
+
+    const eventsNeedingVolunteersCount = eventsNeedingVolunteers.length;
 
     const result = {
       all: events,
@@ -471,7 +488,7 @@ export const dashboardService = {
         thisMonth: eventsThisMonth,
         averagePerMonth: averageEventsPerMonth,
         mostCommonType: mostCommonEventType,
-        needingVolunteers: eventsNeedingVolunteers
+        needingVolunteers: eventsNeedingVolunteersCount
       }
     };
 
@@ -624,7 +641,7 @@ export const dashboardService = {
   async getCelebrationsData(organizationId) {
     const { data: members, error } = await supabase
       .from('members')
-      .select('birth_date, join_date, anniversary_date')
+      .select('id, firstname, lastname, email, phone, birth_date, join_date, anniversary_date')
       .eq('organization_id', organizationId);
 
     if (error) throw error;
@@ -635,6 +652,9 @@ export const dashboardService = {
     let upcomingBirthdays = 0;
     let upcomingAnniversaries = 0;
     let upcomingMemberships = 0;
+    let upcomingBirthdayMembers = [];
+    let upcomingAnniversaryMembers = [];
+    let upcomingMembershipMembers = [];
 
     members.forEach(member => {
       // Check birthdays
@@ -646,6 +666,11 @@ export const dashboardService = {
         }
         if (nextBirthday <= thirtyDaysFromNow) {
           upcomingBirthdays++;
+          upcomingBirthdayMembers.push({
+            ...member,
+            celebrationType: 'birthday',
+            celebrationDate: nextBirthday
+          });
         }
       }
 
@@ -658,6 +683,11 @@ export const dashboardService = {
         }
         if (nextAnniversary <= thirtyDaysFromNow) {
           upcomingAnniversaries++;
+          upcomingAnniversaryMembers.push({
+            ...member,
+            celebrationType: 'anniversary',
+            celebrationDate: nextAnniversary
+          });
         }
       }
 
@@ -670,15 +700,28 @@ export const dashboardService = {
         }
         if (nextMembership <= thirtyDaysFromNow) {
           upcomingMemberships++;
+          upcomingMembershipMembers.push({
+            ...member,
+            celebrationType: 'membership',
+            celebrationDate: nextMembership
+          });
         }
       }
     });
+
+    // Combine all upcoming celebrations
+    const allUpcomingMembers = [
+      ...upcomingBirthdayMembers,
+      ...upcomingAnniversaryMembers,
+      ...upcomingMembershipMembers
+    ];
 
     return {
       upcomingBirthdays,
       upcomingAnniversaries,
       upcomingMemberships,
-      totalUpcoming: upcomingBirthdays + upcomingAnniversaries + upcomingMemberships
+      totalUpcoming: upcomingBirthdays + upcomingAnniversaries + upcomingMemberships,
+      upcomingMembers: allUpcomingMembers
     };
   },
 

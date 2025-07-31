@@ -117,19 +117,45 @@ export function TaskCreationModal({
         let enhancedDescription = suggestion.description || suggestion.content || '';
         
         if (suggestion.relatedMembers && suggestion.relatedMembers.length > 0) {
-          const memberNames = suggestion.relatedMembers.map(m => `${m.firstname} ${m.lastname}`).join(', ');
-          const memberEmails = suggestion.relatedMembers.map(m => m.email).filter(email => email).join(', ');
+          enhancedDescription += `\n\nRelated Members (${suggestion.relatedMembers.length}):`;
           
-          enhancedDescription += `\n\nRelated Members:\n- Names: ${memberNames}`;
-          if (memberEmails) {
-            enhancedDescription += `\n- Emails: ${memberEmails}`;
-          }
-          
-          // Add member details if available
+          // Add detailed member information
           suggestion.relatedMembers.forEach((member, index) => {
-            if (member.phone) {
-              enhancedDescription += `\n- ${member.firstname} ${member.lastname} Phone: ${member.phone}`;
+            // Handle different possible field names for names
+            const firstName = member.firstname || member.firstName || member.name?.split(' ')[0] || 'Unknown';
+            const lastName = member.lastname || member.lastName || member.name?.split(' ').slice(1).join(' ') || '';
+            const fullName = `${firstName} ${lastName}`.trim();
+            
+            enhancedDescription += `\n${index + 1}. ${fullName}`;
+            
+            // Contact information
+            if (member.email) {
+              enhancedDescription += ` - Email: ${member.email}`;
             }
+            if (member.phone) {
+              enhancedDescription += ` - Phone: ${member.phone}`;
+            }
+            if (member.mobile) {
+              enhancedDescription += ` - Mobile: ${member.mobile}`;
+            }
+            if (member.address) {
+              enhancedDescription += ` - Address: ${member.address}`;
+            }
+            if (member.status) {
+              enhancedDescription += ` - Status: ${member.status}`;
+            }
+            if (member.join_date) {
+              enhancedDescription += ` - Joined: ${member.join_date}`;
+            }
+            
+                       // Add special context based on task type
+           if (suggestion.title && suggestion.title.includes('at-risk')) {
+             enhancedDescription += ` - At-Risk Member`;
+           } else if (suggestion.title && suggestion.title.includes('visitor')) {
+             enhancedDescription += ` - Recent Visitor`;
+           } else if (suggestion.title && suggestion.title.includes('inactive')) {
+             enhancedDescription += ` - Inactive Member`;
+           }
           });
         }
         
@@ -152,6 +178,15 @@ export function TaskCreationModal({
           category: suggestion.category || '',
           estimated_hours: suggestion.estimatedHours || null,
           tags: suggestion.tags || []
+        });
+        
+        // Log the enhanced task details for debugging
+        console.log('TaskCreationModal: Enhanced task details:', {
+          title: suggestion.title || suggestion.content,
+          description: enhancedDescription,
+          priority: suggestion.priority || 'medium',
+          category: suggestion.category || '',
+          memberCount: suggestion.relatedMembers?.length || 0
         });
       } else {
         // Reset form when opening without suggestion

@@ -93,6 +93,7 @@ import { formatName, getInitials } from '@/lib/utils/formatters';
 import LeadershipVerse from '@/components/LeadershipVerse';
 import { PermissionFeature } from '@/components/PermissionGuard';
 import { PERMISSIONS } from '@/lib/permissions';
+import { TaskCreationModal } from '@/components/TaskCreationModal';
 // import AIInsightsPanel from '@/components/AIInsightsPanel';
 // import DonationAIInsightsPanel from '@/components/DonationAIInsightsPanel';
 
@@ -233,12 +234,21 @@ export function Dashboard() {
   const [selectedSMSConversation, setSelectedSMSConversation] = useState(null);
   const [replyMessage, setReplyMessage] = useState('');
   const [isSendingReply, setIsSendingReply] = useState(false);
-
+  
   // Advanced Analytics Card Dialog state
   const [selectedCardType, setSelectedCardType] = useState(null);
   const [isCardDialogOpen, setIsCardDialogOpen] = useState(false);
   const [atRiskMembers, setAtRiskMembers] = useState([]);
   const [isLoadingAtRiskMembers, setIsLoadingAtRiskMembers] = useState(false);
+  
+  // Task Creation Modal state
+  const [isTaskCreationModalOpen, setIsTaskCreationModalOpen] = useState(false);
+  const [currentTaskSuggestion, setCurrentTaskSuggestion] = useState(null);
+  
+  // Member data for task creation
+  const [inactiveMembers, setInactiveMembers] = useState([]);
+  const [activeMembers, setActiveMembers] = useState([]);
+  const [recentVisitors, setRecentVisitors] = useState([]);
   
   // Function to get card status and colors based on metrics
   const getCardStatus = (cardType) => {
@@ -440,6 +450,7 @@ export function Dashboard() {
         upcomingAnniversaries: celebrations.upcomingAnniversaries,
         upcomingMemberships: celebrations.upcomingMemberships,
         totalUpcoming: celebrations.totalUpcoming,
+        upcomingMembers: celebrations.upcomingMembers || [],
 
         // SMS Statistics
         totalSMSMessages: sms.totalMessages,
@@ -462,6 +473,18 @@ export function Dashboard() {
       setRecentSMSConversations(sms.recentConversations || []);
       setDonationTrendAnalysis(donationTrendAnalysis || {});
       setWeeklyDonationBreakdown(weeklyDonationBreakdown || []);
+      
+      // Set member data for task creation
+      setInactiveMembers(inactiveMembers);
+      setActiveMembers(activeMembers);
+      
+      // Calculate recent visitors (last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const recentVisitorsData = visitors.filter(person => 
+        new Date(person.createdAt) >= thirtyDaysAgo
+      );
+      setRecentVisitors(recentVisitorsData);
 
       // Load at-risk members after main data is loaded
       if (dashboardData.organizationId) {
@@ -777,6 +800,28 @@ export function Dashboard() {
     }
   };
 
+  // Task Creation Handler
+  const handleCreateTask = (suggestion = null) => {
+    // If suggestion is a string, convert it to a proper suggestion object
+    let suggestionObject = suggestion;
+    if (typeof suggestion === 'string') {
+      suggestionObject = {
+        title: suggestion,
+        description: suggestion,
+        content: suggestion
+      };
+    }
+    setCurrentTaskSuggestion(suggestionObject);
+    setIsTaskCreationModalOpen(true);
+  };
+
+  const handleTaskCreated = () => {
+    setIsTaskCreationModalOpen(false);
+    setCurrentTaskSuggestion(null);
+    // Refresh dashboard data to show updated task counts
+    refreshDashboard();
+  };
+
   // Refresh function that clears cache and reloads data
   const refreshDashboard = useCallback(async () => {
     try {
@@ -989,9 +1034,9 @@ export function Dashboard() {
                     </a>
                   </Button>
                 </div>
-                              </div>
               </div>
-            </motion.div>
+            </div>
+          </motion.div>
           </PermissionFeature>
 
           {/* Financial Analytics */}
@@ -1046,10 +1091,10 @@ export function Dashboard() {
                     </a>
                   </Button>
                 </div>
-                          </div>
-          </div>
-        </motion.div>
-      </PermissionFeature>
+              </div>
+            </div>
+          </motion.div>
+          </PermissionFeature>
 
         {/* Events & Activities */}
         <PermissionFeature permission={PERMISSIONS.EVENTS_VIEW}>
@@ -1117,7 +1162,7 @@ export function Dashboard() {
             </div>
           </div>
         </motion.div>
-      </PermissionFeature>
+        </PermissionFeature>
 
         {/* Celebrations */}
         <PermissionFeature permission={PERMISSIONS.REPORTS_VIEW}>
@@ -1184,7 +1229,7 @@ export function Dashboard() {
             </div>
           </div>
         </motion.div>
-      </PermissionFeature>
+        </PermissionFeature>
 
         {/* Tasks & Productivity */}
         <PermissionFeature permission={PERMISSIONS.TASKS_VIEW}>
@@ -1248,7 +1293,7 @@ export function Dashboard() {
             </div>
           </div>
         </motion.div>
-      </PermissionFeature>
+        </PermissionFeature>
 
         {/* Communications */}
         <PermissionFeature permission={PERMISSIONS.SETTINGS_VIEW}>
@@ -1312,7 +1357,7 @@ export function Dashboard() {
             </div>
           </div>
         </motion.div>
-      </PermissionFeature>
+        </PermissionFeature>
       </div>
 
       {/* Personal Tasks and Recent Communication Section */}
@@ -1565,9 +1610,9 @@ export function Dashboard() {
                   <h3 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">Advanced Analytics</h3>
                   <p className="text-slate-600 dark:text-slate-400 text-lg">Intelligent insights and performance metrics</p>
                 </div>
-              </div>
-            </div>
-            
+                          </div>
+          </div>
+          
             <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                {/* Sunday Service Attendance Rate */}
                <motion.div 
@@ -1580,24 +1625,24 @@ export function Dashboard() {
                    <div className="flex items-center gap-3 mb-4">
                      <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center shadow-md">
                        <BookOpen className="h-5 w-5 text-white" />
-                     </div>
+                    </div>
                      <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Sunday Service Rate</h4>
-                   </div>
+                  </div>
                    <div className="space-y-3">
                      <div className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
                        {isLoading ? '...' : `${stats.sundayServiceRate.toFixed(0)}%`}
-                     </div>
-                     <p className="text-sm text-slate-600 dark:text-slate-400">
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
                        Active members who attend Sunday service
-                     </p>
+                    </p>
                      <div className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
                        {stats.sundayServiceRate >= 70 ? 'Excellent engagement' : 
                         stats.sundayServiceRate >= 50 ? 'Good participation' : 'Focus on outreach'}
-                     </div>
-                   </div>
-                 </div>
-               </motion.div>
-                
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
               {/* Donation Growth */}
               <motion.div 
                 className="group/card relative cursor-pointer" 
@@ -1625,7 +1670,7 @@ export function Dashboard() {
                   </div>
                 </div>
               </motion.div>
-              
+
               {/* Event Activity */}
               <motion.div 
                 className="group/card relative cursor-pointer" 
@@ -1653,7 +1698,7 @@ export function Dashboard() {
                   </div>
                 </div>
               </motion.div>
-              
+
               {/* Task Management */}
               <motion.div 
                 className="group/card relative cursor-pointer" 
@@ -1709,7 +1754,7 @@ export function Dashboard() {
                   </div>
                 </div>
               </motion.div>
-              
+
               {/* Recent Visitors */}
               <motion.div 
                 className="group/card relative cursor-pointer" 
@@ -1764,23 +1809,23 @@ export function Dashboard() {
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center shadow-md">
                       <Heart className="h-5 w-5 text-white" />
-                    </div>
+                </div>
                     <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Community Health</h4>
-                  </div>
+                </div>
                   <div className="space-y-3">
                     <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                       {isLoading ? '...' : stats.inactiveMembers === 0 ? 'Excellent' : stats.inactiveMembers < 5 ? 'Good' : 'Needs Attention'}
-                    </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                     </div>
+                     <p className="text-sm text-slate-600 dark:text-slate-400">
                       {stats.inactiveMembers === 0 ? 'All members engaged' : `${stats.inactiveMembers} members need pastoral care`}
-                    </p>
+                     </p>
                     <div className="text-xs text-blue-600 dark:text-blue-400 font-medium">
                       {stats.inactiveMembers > 0 ? 'Schedule follow-up visits' : 'Maintain current connection level'}
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-
+                     </div>
+                   </div>
+                 </div>
+               </motion.div>
+                
               {/* Family Engagement */}
               <motion.div 
                 className="group/card relative cursor-pointer" 
@@ -1808,7 +1853,7 @@ export function Dashboard() {
                   </div>
                 </div>
               </motion.div>
-
+              
               {/* Communication Effectiveness */}
               <motion.div 
                 className="group/card relative cursor-pointer" 
@@ -1836,7 +1881,7 @@ export function Dashboard() {
                   </div>
                 </div>
               </motion.div>
-
+              
               {/* Celebration Engagement */}
               <motion.div 
                 className="group/card relative cursor-pointer" 
@@ -1898,7 +1943,7 @@ export function Dashboard() {
                   </div>
                 </div>
               </motion.div>
-
+              
               {/* At Risk Members */}
               <motion.div 
                 className="group/card relative cursor-pointer" 
@@ -1939,7 +1984,7 @@ export function Dashboard() {
                       <Trophy className="h-5 w-5 text-white" />
                     </div>
                     <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Top Performing Area</h4>
-                  </div>
+              </div>
                 {isLoading ? (
                   <Skeleton className="h-4 w-48 mb-2" />
                 ) : (
@@ -2170,9 +2215,9 @@ export function Dashboard() {
                         return topMetric.recommendation;
                       })()}
                     </p>
-                  </div>
+            </div>
                 )}
-              </div>
+          </div>
             </motion.div>
 
               {/* Growth Opportunity */}
@@ -2184,28 +2229,28 @@ export function Dashboard() {
                       <Activity className="h-5 w-5 text-white" />
                     </div>
                     <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Growth Opportunity</h4>
-                  </div>
-                  {isLoading ? (
-                    <Skeleton className="h-4 w-48 mb-2" />
-                  ) : (
+      </div>
+                {isLoading ? (
+                  <Skeleton className="h-4 w-48 mb-2" />
+                ) : (
                     <div className="space-y-3">
                       <p className="text-lg font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-                        {(() => {
-                          // Priority 1: Immediate needs
-                          if (stats.eventsStillNeedingVolunteers > 0) return 'Volunteer Recruitment';
-                      
-                          // Priority 2: Donation trends
-                          if (donationTrend < 0) return 'Donation Growth';
+                      {(() => {
+                        // Priority 1: Immediate needs
+                        if (stats.eventsStillNeedingVolunteers > 0) return 'Volunteer Recruitment';
+                    
+                        // Priority 2: Donation trends
+                        if (donationTrend < 0) return 'Donation Growth';
 
                           // Priority 3: Community health
                           if (stats.inactiveMembers >= 5) return 'Community Health';
 
-                          // Priority 4: Sunday service attendance
-                          if (stats.sundayServiceRate < 50) return 'Sunday Service Attendance';
-                          
+                        // Priority 4: Sunday service attendance
+                        if (stats.sundayServiceRate < 50) return 'Sunday Service Attendance';
+                        
                           // Priority 5: Event activity
-                          if (stats.eventsThisMonth < stats.averageEventsPerMonth) return 'Event Planning';
-                          
+                        if (stats.eventsThisMonth < stats.averageEventsPerMonth) return 'Event Planning';                        
+                        
                           // Priority 6: Family engagement
                           if (stats.membersWithoutFamilies > 0) return 'Family Engagement';
                           
@@ -2220,39 +2265,39 @@ export function Dashboard() {
                           if (eventTypes.length < 2) return 'Program Diversity';
                           
                           // Priority 10: Visitor follow-up
-                          const thirtyDaysAgo = new Date();
-                          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                          const recentVisitors = people.filter(person => 
-                            person.status === 'visitor' && 
-                            new Date(person.createdAt) >= thirtyDaysAgo
-                          ).length;
-                        
-                          if (recentVisitors > 0) return 'Visitor Follow-up';
+                        const thirtyDaysAgo = new Date();
+                        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                        const recentVisitors = people.filter(person => 
+                          person.status === 'visitor' && 
+                          new Date(person.createdAt) >= thirtyDaysAgo
+                        ).length;
+                      
+                        if (recentVisitors > 0) return 'Visitor Follow-up';
                           
                           // Priority 11: Member engagement issues
-                          if (stats.totalPeople > 0 && (stats.activeMembers / stats.totalPeople) < 0.7) return 'Member Engagement';
-                              
-                          // Default: Member retention
-                          return 'Member Retention';
-                        })()}
-                      </p>
-                      <p className="text-sm text-amber-600 dark:text-amber-400 break-words">
-                        {(() => {
-                          // Priority 1: Immediate needs
-                          if (stats.eventsStillNeedingVolunteers > 0) return 'Reach out for volunteer sign-ups.';
-                     
-                          // Priority 2: Donation trends
-                          if (donationTrend < 0) return 'Share impact stories to encourage giving.';
+                        if (stats.totalPeople > 0 && (stats.activeMembers / stats.totalPeople) < 0.7) return 'Member Engagement';
+                            
+                        // Default: Member retention
+                        return 'Member Retention';
+                      })()}
+                    </p>
+                    <p className="text-sm text-amber-600 dark:text-amber-400 break-words">
+                      {(() => {
+                        // Priority 1: Immediate needs
+                        if (stats.eventsStillNeedingVolunteers > 0) return 'Reach out for volunteer sign-ups.';
+                   
+                        // Priority 2: Donation trends
+                        if (donationTrend < 0) return 'Share impact stories to encourage giving.';
 
                           // Priority 3: Community health
                           if (stats.inactiveMembers >= 5) return 'Schedule pastoral care visits.';
-                          
-                          // Priority 4: Sunday service attendance
-                          if (stats.sundayServiceRate < 50) return 'Address attendance barriers.';
-                          
-                          // Priority 5: Event activity
-                          if (stats.eventsThisMonth < stats.averageEventsPerMonth) return 'Plan more events for engagement.';
-                          
+                        
+                        // Priority 4: Sunday service attendance
+                        if (stats.sundayServiceRate < 50) return 'Address attendance barriers.';
+                        
+                        // Priority 5: Event activity
+                        if (stats.eventsThisMonth < stats.averageEventsPerMonth) return 'Plan more events for engagement.';
+                        
                           // Priority 6: Family engagement
                           if (stats.membersWithoutFamilies > 0) return 'Assign members to families.';
                           
@@ -2267,25 +2312,25 @@ export function Dashboard() {
                           if (eventTypes.length < 2) return 'Expand program offerings.';
                           
                           // Priority 10: Visitor follow-up
-                          const thirtyDaysAgo = new Date();
-                          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                          const recentVisitors = people.filter(person => 
-                            person.status === 'visitor' && 
-                            new Date(person.createdAt) >= thirtyDaysAgo
-                          ).length;
-                          
-                          if (recentVisitors > 0) return 'Follow up with recent visitors.';
+                        const thirtyDaysAgo = new Date();
+                        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                        const recentVisitors = people.filter(person => 
+                          person.status === 'visitor' && 
+                          new Date(person.createdAt) >= thirtyDaysAgo
+                        ).length;
+                        
+                        if (recentVisitors > 0) return 'Follow up with recent visitors.';
                           
                           // Priority 11: Member engagement issues
                           if (stats.totalPeople > 0 && (stats.activeMembers / stats.totalPeople) < 0.7) return 'Focus on engaging inactive members.';
-                          
-                          // Default: Member retention
-                          return 'Focus on member relationships.';
-                        })()}
-                      </p>
-                    </div>
-                  )}
-                </div>
+                        
+                        // Default: Member retention
+                        return 'Focus on member relationships.';
+                      })()}
+                    </p>
+                  </div>
+                )}
+              </div>
               </motion.div>
             </div>
           </div>
@@ -3348,7 +3393,19 @@ export function Dashboard() {
                                <span className="text-blue-600 font-bold">1.</span>
                                <span>Schedule pastoral care visits for {atRiskMembers.length} at-risk members</span>
                              </div>
-                             <Button size="sm" variant="outline" className="text-xs">
+                             <Button 
+                               size="sm" 
+                               variant="outline" 
+                               className="text-xs"
+                               onClick={() => handleCreateTask({
+                                 title: `Schedule pastoral care visits for ${atRiskMembers.length} at-risk members`,
+                                 description: `Schedule pastoral care visits for ${atRiskMembers.length} at-risk members. This involves reaching out to members who may need additional support and care.`,
+                                 content: `Schedule pastoral care visits for ${atRiskMembers.length} at-risk members`,
+                                 relatedMembers: atRiskMembers,
+                                 priority: 'high',
+                                 category: 'Pastoral Care'
+                               })}
+                             >
                                Create Task
                              </Button>
                            </div>
@@ -3357,7 +3414,19 @@ export function Dashboard() {
                                <span className="text-blue-600 font-bold">2.</span>
                                <span>Send personalized outreach messages to {atRiskMembers.length} at-risk members</span>
                              </div>
-                             <Button size="sm" variant="outline" className="text-xs">
+                             <Button 
+                               size="sm" 
+                               variant="outline" 
+                               className="text-xs"
+                               onClick={() => handleCreateTask({
+                                 title: `Send personalized outreach messages to ${atRiskMembers.length} at-risk members`,
+                                 description: `Send personalized outreach messages to ${atRiskMembers.length} at-risk members. Create meaningful, personalized communication to re-engage these members.`,
+                                 content: `Send personalized outreach messages to ${atRiskMembers.length} at-risk members`,
+                                 relatedMembers: atRiskMembers,
+                                 priority: 'medium',
+                                 category: 'Outreach'
+                               })}
+                             >
                                Create Task
                              </Button>
                            </div>
@@ -3366,7 +3435,19 @@ export function Dashboard() {
                                <span className="text-blue-600 font-bold">3.</span>
                                <span>Invite {atRiskMembers.length} at-risk members to upcoming events</span>
                              </div>
-                             <Button size="sm" variant="outline" className="text-xs">
+                             <Button 
+                               size="sm" 
+                               variant="outline" 
+                               className="text-xs"
+                               onClick={() => handleCreateTask({
+                                 title: `Invite ${atRiskMembers.length} at-risk members to upcoming events`,
+                                 description: `Invite ${atRiskMembers.length} at-risk members to upcoming events. Personal invitations can help re-engage these members in church activities.`,
+                                 content: `Invite ${atRiskMembers.length} at-risk members to upcoming events`,
+                                 relatedMembers: atRiskMembers,
+                                 priority: 'medium',
+                                 category: 'Events'
+                               })}
+                             >
                                Create Task
                              </Button>
                            </div>
@@ -3378,7 +3459,18 @@ export function Dashboard() {
                                <span className="text-blue-600 font-bold">1.</span>
                                <span>Continue maintaining strong community connections</span>
                              </div>
-                             <Button size="sm" variant="outline" className="text-xs">
+                             <Button 
+                               size="sm" 
+                               variant="outline" 
+                               className="text-xs"
+                               onClick={() => handleCreateTask({
+                                 title: 'Continue maintaining strong community connections',
+                                 description: 'Continue maintaining strong community connections. Focus on building and sustaining meaningful relationships within the church community.',
+                                 content: 'Continue maintaining strong community connections',
+                                 priority: 'medium',
+                                 category: 'Pastoral Care'
+                               })}
+                             >
                                Create Task
                              </Button>
                            </div>
@@ -3387,7 +3479,18 @@ export function Dashboard() {
                                <span className="text-blue-600 font-bold">2.</span>
                                <span>Monitor engagement patterns regularly</span>
                              </div>
-                             <Button size="sm" variant="outline" className="text-xs">
+                             <Button 
+                               size="sm" 
+                               variant="outline" 
+                               className="text-xs"
+                               onClick={() => handleCreateTask({
+                                 title: 'Monitor engagement patterns regularly',
+                                 description: 'Monitor engagement patterns regularly. Track member participation and identify early signs of disengagement to maintain strong community health.',
+                                 content: 'Monitor engagement patterns regularly',
+                                 priority: 'low',
+                                 category: 'Administration'
+                               })}
+                             >
                                Create Task
                              </Button>
                            </div>
@@ -3396,7 +3499,18 @@ export function Dashboard() {
                                <span className="text-blue-600 font-bold">3.</span>
                                <span>Celebrate member involvement and milestones</span>
                              </div>
-                             <Button size="sm" variant="outline" className="text-xs">
+                             <Button 
+                               size="sm" 
+                               variant="outline" 
+                               className="text-xs"
+                               onClick={() => handleCreateTask({
+                                 title: 'Celebrate member involvement and milestones',
+                                 description: 'Celebrate member involvement and milestones. Recognize and appreciate member contributions and important life events to strengthen community bonds.',
+                                 content: 'Celebrate member involvement and milestones',
+                                 priority: 'medium',
+                                 category: 'Pastoral Care'
+                               })}
+                             >
                                Create Task
                              </Button>
                            </div>
@@ -3456,6 +3570,206 @@ export function Dashboard() {
                       }
                     </p>
                   </div>
+
+                  <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                    <h4 className="font-semibold text-green-800 dark:text-green-200 mb-3">
+                      Action Items
+                    </h4>
+                    <div className="text-sm text-green-700 dark:text-green-300 space-y-3">
+                      {stats.sundayServiceRate >= 70 ? (
+                        <>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-green-600 font-bold">1.</span>
+                              <span>Maintain engagement with {Math.round((stats.sundayServiceRate / 100) * stats.totalPeople)} active attendees</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: `Maintain engagement with ${Math.round((stats.sundayServiceRate / 100) * stats.totalPeople)} active attendees`,
+                                description: `Maintain engagement with ${Math.round((stats.sundayServiceRate / 100) * stats.totalPeople)} active attendees. Continue building strong relationships and providing meaningful experiences.`,
+                                content: `Maintain engagement with ${Math.round((stats.sundayServiceRate / 100) * stats.totalPeople)} active attendees`,
+                                priority: 'medium',
+                                category: 'Pastoral Care'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-green-600 font-bold">2.</span>
+                              <span>Develop new ministry opportunities</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Develop new ministry opportunities',
+                                description: 'Develop new ministry opportunities. Create additional ways for members to get involved and stay engaged.',
+                                content: 'Develop new ministry opportunities',
+                                priority: 'medium',
+                                category: 'Ministry'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-green-600 font-bold">3.</span>
+                              <span>Plan special events and celebrations</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Plan special events and celebrations',
+                                description: 'Plan special events and celebrations. Create memorable experiences to strengthen community bonds.',
+                                content: 'Plan special events and celebrations',
+                                priority: 'medium',
+                                category: 'Events'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                        </>
+                      ) : stats.sundayServiceRate >= 50 ? (
+                        <>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-green-600 font-bold">1.</span>
+                              <span>Reach out to {stats.totalPeople - Math.round((stats.sundayServiceRate / 100) * stats.totalPeople)} inactive members</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: `Reach out to ${stats.totalPeople - Math.round((stats.sundayServiceRate / 100) * stats.totalPeople)} inactive members`,
+                                description: `Reach out to ${stats.totalPeople - Math.round((stats.sundayServiceRate / 100) * stats.totalPeople)} inactive members. Personal outreach to reconnect with disengaged members.`,
+                                content: `Reach out to ${stats.totalPeople - Math.round((stats.sundayServiceRate / 100) * stats.totalPeople)} inactive members`,
+                                relatedMembers: inactiveMembers,
+                                priority: 'high',
+                                category: 'Pastoral Care'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-green-600 font-bold">2.</span>
+                              <span>Improve service experiences</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Improve service experiences',
+                                description: 'Improve service experiences. Enhance worship services and programs to better engage members.',
+                                content: 'Improve service experiences',
+                                priority: 'medium',
+                                category: 'Ministry'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-green-600 font-bold">3.</span>
+                              <span>Create welcoming initiatives</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Create welcoming initiatives',
+                                description: 'Create welcoming initiatives. Develop programs to make services more accessible and inviting.',
+                                content: 'Create welcoming initiatives',
+                                priority: 'medium',
+                                category: 'Outreach'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-green-600 font-bold">1.</span>
+                              <span>Urgent outreach to {stats.totalPeople - Math.round((stats.sundayServiceRate / 100) * stats.totalPeople)} inactive members</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: `Urgent outreach to ${stats.totalPeople - Math.round((stats.sundayServiceRate / 100) * stats.totalPeople)} inactive members`,
+                                description: `Urgent outreach to ${stats.totalPeople - Math.round((stats.sundayServiceRate / 100) * stats.totalPeople)} inactive members. Immediate personal contact to understand barriers and re-engage.`,
+                                content: `Urgent outreach to ${stats.totalPeople - Math.round((stats.sundayServiceRate / 100) * stats.totalPeople)} inactive members`,
+                                relatedMembers: inactiveMembers,
+                                priority: 'high',
+                                category: 'Pastoral Care'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-green-600 font-bold">2.</span>
+                              <span>Revamp service programming</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Revamp service programming',
+                                description: 'Revamp service programming. Completely review and improve worship services and programs.',
+                                content: 'Revamp service programming',
+                                priority: 'high',
+                                category: 'Ministry'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-green-600 font-bold">3.</span>
+                              <span>Develop comprehensive engagement strategy</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Develop comprehensive engagement strategy',
+                                description: 'Develop comprehensive engagement strategy. Create a strategic plan to improve member engagement and attendance.',
+                                content: 'Develop comprehensive engagement strategy',
+                                priority: 'high',
+                                category: 'Administration'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -3497,6 +3811,204 @@ export function Dashboard() {
                         : 'Stable giving pattern. Continue building trust and transparency in financial stewardship.'
                       }
                     </p>
+                  </div>
+
+                  <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg">
+                    <h4 className="font-semibold text-indigo-800 dark:text-indigo-200 mb-3">
+                      Action Items
+                    </h4>
+                    <div className="text-sm text-indigo-700 dark:text-indigo-300 space-y-3">
+                      {donationTrend > 0 ? (
+                        <>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-indigo-600 font-bold">1.</span>
+                              <span>Share ministry impact stories with congregation</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Share ministry impact stories with congregation',
+                                description: 'Share ministry impact stories with congregation. Highlight how donations are making a difference in the community.',
+                                content: 'Share ministry impact stories with congregation',
+                                priority: 'medium',
+                                category: 'Communication'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-indigo-600 font-bold">2.</span>
+                              <span>Develop stewardship education programs</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Develop stewardship education programs',
+                                description: 'Develop stewardship education programs. Create programs to teach biblical principles of giving and stewardship.',
+                                content: 'Develop stewardship education programs',
+                                priority: 'medium',
+                                category: 'Ministry'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-indigo-600 font-bold">3.</span>
+                              <span>Plan giving campaigns and initiatives</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Plan giving campaigns and initiatives',
+                                description: 'Plan giving campaigns and initiatives. Develop strategic campaigns to maintain positive giving momentum.',
+                                content: 'Plan giving campaigns and initiatives',
+                                priority: 'medium',
+                                category: 'Fundraising'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                        </>
+                      ) : donationTrend < 0 ? (
+                        <>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-indigo-600 font-bold">1.</span>
+                              <span>Urgent financial transparency communication</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Urgent financial transparency communication',
+                                description: 'Urgent financial transparency communication. Immediately share detailed financial reports and ministry impact.',
+                                content: 'Urgent financial transparency communication',
+                                priority: 'high',
+                                category: 'Communication'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-indigo-600 font-bold">2.</span>
+                              <span>Develop crisis stewardship plan</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Develop crisis stewardship plan',
+                                description: 'Develop crisis stewardship plan. Create immediate strategies to address declining giving patterns.',
+                                content: 'Develop crisis stewardship plan',
+                                priority: 'high',
+                                category: 'Administration'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-indigo-600 font-bold">3.</span>
+                              <span>Personal outreach to major donors</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Personal outreach to major donors',
+                                description: 'Personal outreach to major donors. Direct contact to understand concerns and maintain relationships.',
+                                content: 'Personal outreach to major donors',
+                                priority: 'high',
+                                category: 'Fundraising'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-indigo-600 font-bold">1.</span>
+                              <span>Enhance financial reporting transparency</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Enhance financial reporting transparency',
+                                description: 'Enhance financial reporting transparency. Improve communication about how funds are used.',
+                                content: 'Enhance financial reporting transparency',
+                                priority: 'medium',
+                                category: 'Communication'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-indigo-600 font-bold">2.</span>
+                              <span>Develop stewardship education</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Develop stewardship education',
+                                description: 'Develop stewardship education. Create programs to teach biblical giving principles.',
+                                content: 'Develop stewardship education',
+                                priority: 'medium',
+                                category: 'Ministry'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-indigo-600 font-bold">3.</span>
+                              <span>Plan giving encouragement campaigns</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Plan giving encouragement campaigns',
+                                description: 'Plan giving encouragement campaigns. Develop initiatives to encourage consistent giving.',
+                                content: 'Plan giving encouragement campaigns',
+                                priority: 'medium',
+                                category: 'Fundraising'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -3547,6 +4059,141 @@ export function Dashboard() {
                         : 'Event activity is below average. Consider planning more events to engage your congregation.'
                       }
                     </p>
+                  </div>
+
+                  <div className="bg-pink-50 dark:bg-pink-900/20 p-4 rounded-lg">
+                    <h4 className="font-semibold text-pink-800 dark:text-pink-200 mb-3">
+                      Action Items
+                    </h4>
+                    <div className="text-sm text-pink-700 dark:text-pink-300 space-y-3">
+                      {stats.eventsThisMonth >= stats.averageEventsPerMonth ? (
+                        <>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-pink-600 font-bold">1.</span>
+                              <span>Maintain and enhance {stats.eventsThisMonth} current events</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: `Maintain and enhance ${stats.eventsThisMonth} current events`,
+                                description: `Maintain and enhance ${stats.eventsThisMonth} current events. Continue improving existing events and programs.`,
+                                content: `Maintain and enhance ${stats.eventsThisMonth} current events`,
+                                priority: 'medium',
+                                category: 'Events'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-pink-600 font-bold">2.</span>
+                              <span>Plan additional special events</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Plan additional special events',
+                                description: 'Plan additional special events. Develop new events to further engage the congregation.',
+                                content: 'Plan additional special events',
+                                priority: 'medium',
+                                category: 'Events'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-pink-600 font-bold">3.</span>
+                              <span>Recruit volunteers for {stats.eventsNeedingVolunteers} events needing help</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: `Recruit volunteers for ${stats.eventsNeedingVolunteers} events needing help`,
+                                description: `Recruit volunteers for ${stats.eventsNeedingVolunteers} events needing help. Find and train volunteers for upcoming events.`,
+                                content: `Recruit volunteers for ${stats.eventsNeedingVolunteers} events needing help`,
+                                priority: 'medium',
+                                category: 'Volunteer Management'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-pink-600 font-bold">1.</span>
+                              <span>Urgent event planning for engagement</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Urgent event planning for engagement',
+                                description: 'Urgent event planning for engagement. Immediately plan new events to increase member engagement.',
+                                content: 'Urgent event planning for engagement',
+                                priority: 'high',
+                                category: 'Events'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-pink-600 font-bold">2.</span>
+                              <span>Develop comprehensive event calendar</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Develop comprehensive event calendar',
+                                description: 'Develop comprehensive event calendar. Create a strategic plan for regular events throughout the year.',
+                                content: 'Develop comprehensive event calendar',
+                                priority: 'high',
+                                category: 'Events'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-pink-600 font-bold">3.</span>
+                              <span>Recruit and train event volunteers</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Recruit and train event volunteers',
+                                description: 'Recruit and train event volunteers. Build a team of volunteers to support upcoming events.',
+                                content: 'Recruit and train event volunteers',
+                                priority: 'high',
+                                category: 'Volunteer Management'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -3607,6 +4254,141 @@ export function Dashboard() {
                         : `There are ${stats.overdueTasks} overdue tasks that need immediate attention.`
                       }
                     </p>
+                  </div>
+
+                  <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg">
+                    <h4 className="font-semibold text-orange-800 dark:text-orange-200 mb-3">
+                      Action Items
+                    </h4>
+                    <div className="text-sm text-orange-700 dark:text-orange-300 space-y-3">
+                      {stats.overdueTasks === 0 ? (
+                        <>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-orange-600 font-bold">1.</span>
+                              <span>Maintain task management systems for {stats.totalTasks} total tasks</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: `Maintain task management systems for ${stats.totalTasks} total tasks`,
+                                description: `Maintain task management systems for ${stats.totalTasks} total tasks. Continue effective task tracking and completion processes.`,
+                                content: `Maintain task management systems for ${stats.totalTasks} total tasks`,
+                                priority: 'medium',
+                                category: 'Administration'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-orange-600 font-bold">2.</span>
+                              <span>Develop task automation processes</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Develop task automation processes',
+                                description: 'Develop task automation processes. Create systems to streamline task management and reduce manual work.',
+                                content: 'Develop task automation processes',
+                                priority: 'medium',
+                                category: 'Administration'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-orange-600 font-bold">3.</span>
+                              <span>Plan task management training</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Plan task management training',
+                                description: 'Plan task management training. Develop training programs for effective task management.',
+                                content: 'Plan task management training',
+                                priority: 'medium',
+                                category: 'Training'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-orange-600 font-bold">1.</span>
+                              <span>Urgent attention to {stats.overdueTasks} overdue tasks</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: `Urgent attention to ${stats.overdueTasks} overdue tasks`,
+                                description: `Urgent attention to ${stats.overdueTasks} overdue tasks. Immediately address and resolve all overdue tasks.`,
+                                content: `Urgent attention to ${stats.overdueTasks} overdue tasks`,
+                                priority: 'high',
+                                category: 'Administration'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-orange-600 font-bold">2.</span>
+                              <span>Implement task prioritization system</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Implement task prioritization system',
+                                description: 'Implement task prioritization system. Create systems to prevent future overdue tasks.',
+                                content: 'Implement task prioritization system',
+                                priority: 'high',
+                                category: 'Administration'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-orange-600 font-bold">3.</span>
+                              <span>Develop task follow-up procedures</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Develop task follow-up procedures',
+                                description: 'Develop task follow-up procedures. Create processes to ensure timely task completion.',
+                                content: 'Develop task follow-up procedures',
+                                priority: 'high',
+                                category: 'Administration'
+                              })}
+                            >
+                              Create Task
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -3671,7 +4453,18 @@ export function Dashboard() {
                               <span className="text-blue-600 font-bold">1.</span>
                               <span>Send targeted recruitment messages to {stats.activeMembers} active members</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: `Send targeted recruitment messages to ${stats.activeMembers} active members`,
+                                description: `Send targeted recruitment messages to ${stats.activeMembers} active members. Identify potential volunteers and send personalized invitations to serve in various ministry areas.`,
+                                content: `Send targeted recruitment messages to ${stats.activeMembers} active members`,
+                                priority: 'medium',
+                                category: 'Outreach'
+                              })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -3680,7 +4473,18 @@ export function Dashboard() {
                               <span className="text-blue-600 font-bold">2.</span>
                               <span>Create volunteer appreciation program for current volunteers</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Create volunteer appreciation program for current volunteers',
+                                description: 'Create volunteer appreciation program for current volunteers. Develop a comprehensive program to recognize and reward the dedication of existing volunteers.',
+                                content: 'Create volunteer appreciation program for current volunteers',
+                                priority: 'medium',
+                                category: 'Pastoral Care'
+                              })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -3689,7 +4493,18 @@ export function Dashboard() {
                               <span className="text-blue-600 font-bold">3.</span>
                               <span>Develop volunteer training program</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Develop volunteer training program',
+                                description: 'Develop volunteer training program. Create comprehensive training materials and programs to equip volunteers with necessary skills and knowledge.',
+                                content: 'Develop volunteer training program',
+                                priority: 'medium',
+                                category: 'Education'
+                              })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -3701,7 +4516,18 @@ export function Dashboard() {
                               <span className="text-blue-600 font-bold">1.</span>
                               <span>Expand volunteer opportunities for {stats.activeMembers} members</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: `Expand volunteer opportunities for ${stats.activeMembers} members`,
+                                description: `Expand volunteer opportunities for ${stats.activeMembers} members. Create diverse ministry opportunities to engage more members in service.`,
+                                content: `Expand volunteer opportunities for ${stats.activeMembers} members`,
+                                priority: 'medium',
+                                category: 'Outreach'
+                              })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -3710,7 +4536,18 @@ export function Dashboard() {
                               <span className="text-blue-600 font-bold">2.</span>
                               <span>Create leadership development programs</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Create leadership development programs',
+                                description: 'Create leadership development programs. Develop programs to identify and train potential leaders within the congregation.',
+                                content: 'Create leadership development programs',
+                                priority: 'medium',
+                                category: 'Education'
+                              })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -3719,7 +4556,18 @@ export function Dashboard() {
                               <span className="text-blue-600 font-bold">3.</span>
                               <span>Implement volunteer recognition events</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Implement volunteer recognition events',
+                                description: 'Implement volunteer recognition events. Plan and execute events to celebrate and honor volunteer contributions.',
+                                content: 'Implement volunteer recognition events',
+                                priority: 'medium',
+                                category: 'Events'
+                              })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -3811,14 +4659,6 @@ export function Dashboard() {
                     </h4>
                     <div className="text-sm text-blue-700 dark:text-blue-300 space-y-3">
                       {(() => {
-                        const thirtyDaysAgo = new Date();
-                        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                        const recentVisitors = people.filter(person => 
-                          person.status === 'visitor' && 
-                          new Date(person.createdAt) >= thirtyDaysAgo
-                        );
-                        const activeMembers = people.filter(person => person.status === 'active');
-                        
                         if (recentVisitors.length >= 3) {
                           return (
                             <>
@@ -3827,7 +4667,19 @@ export function Dashboard() {
                                   <span className="text-blue-600 font-bold">1.</span>
                                   <span>Follow up with {recentVisitors.length} recent visitors</span>
                                 </div>
-                                <Button size="sm" variant="outline" className="text-xs">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-xs"
+                                  onClick={() => handleCreateTask({
+                                    title: `Follow up with ${recentVisitors.length} recent visitors`,
+                                    description: `Follow up with ${recentVisitors.length} recent visitors. Personal follow-up calls or messages to encourage continued engagement and church involvement.`,
+                                    content: `Follow up with ${recentVisitors.length} recent visitors`,
+                                    relatedMembers: recentVisitors,
+                                    priority: 'high',
+                                    category: 'Outreach'
+                                  })}
+                                >
                                   Create Task
                                 </Button>
                               </div>
@@ -3836,7 +4688,18 @@ export function Dashboard() {
                                   <span className="text-blue-600 font-bold">2.</span>
                                   <span>Create visitor integration strategies</span>
                                 </div>
-                                <Button size="sm" variant="outline" className="text-xs">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-xs"
+                                  onClick={() => handleCreateTask({
+                                    title: 'Create visitor integration strategies',
+                                    description: 'Create visitor integration strategies. Develop comprehensive plans to help new visitors feel welcome and become active members.',
+                                    content: 'Create visitor integration strategies',
+                                    priority: 'medium',
+                                    category: 'Outreach'
+                                  })}
+                                >
                                   Create Task
                                 </Button>
                               </div>
@@ -3845,7 +4708,18 @@ export function Dashboard() {
                                   <span className="text-blue-600 font-bold">3.</span>
                                   <span>Track conversion rates</span>
                                 </div>
-                                <Button size="sm" variant="outline" className="text-xs">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-xs"
+                                  onClick={() => handleCreateTask({
+                                    title: 'Track conversion rates',
+                                    description: 'Track conversion rates. Monitor and analyze visitor-to-member conversion rates to improve outreach effectiveness.',
+                                    content: 'Track conversion rates',
+                                    priority: 'low',
+                                    category: 'Administration'
+                                  })}
+                                >
                                   Create Task
                                 </Button>
                               </div>
@@ -3859,7 +4733,19 @@ export function Dashboard() {
                                   <span className="text-blue-600 font-bold">1.</span>
                                   <span>Encourage {activeMembers.length} active members to invite friends</span>
                                 </div>
-                                <Button size="sm" variant="outline" className="text-xs">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-xs"
+                                  onClick={() => handleCreateTask({
+                                    title: `Encourage ${activeMembers.length} active members to invite friends`,
+                                    description: `Encourage ${activeMembers.length} active members to invite friends. Mobilize the congregation to extend personal invitations to their networks.`,
+                                    content: `Encourage ${activeMembers.length} active members to invite friends`,
+                                    relatedMembers: activeMembers,
+                                    priority: 'medium',
+                                    category: 'Outreach'
+                                  })}
+                                >
                                   Create Task
                                 </Button>
                               </div>
@@ -3868,7 +4754,18 @@ export function Dashboard() {
                                   <span className="text-blue-600 font-bold">2.</span>
                                   <span>Create compelling invitation materials</span>
                                 </div>
-                                <Button size="sm" variant="outline" className="text-xs">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-xs"
+                                  onClick={() => handleCreateTask({
+                                    title: 'Create compelling invitation materials',
+                                    description: 'Create compelling invitation materials. Develop attractive and informative materials to help members invite others effectively.',
+                                    content: 'Create compelling invitation materials',
+                                    priority: 'medium',
+                                    category: 'Outreach'
+                                  })}
+                                >
                                   Create Task
                                 </Button>
                               </div>
@@ -3877,7 +4774,18 @@ export function Dashboard() {
                                   <span className="text-blue-600 font-bold">3.</span>
                                   <span>Develop community outreach programs</span>
                                 </div>
-                                <Button size="sm" variant="outline" className="text-xs">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-xs"
+                                  onClick={() => handleCreateTask({
+                                    title: 'Develop community outreach programs',
+                                    description: 'Develop community outreach programs. Create programs that serve the community and attract new visitors.',
+                                    content: 'Develop community outreach programs',
+                                    priority: 'medium',
+                                    category: 'Outreach'
+                                  })}
+                                >
                                   Create Task
                                 </Button>
                               </div>
@@ -3891,7 +4799,19 @@ export function Dashboard() {
                                   <span className="text-blue-600 font-bold">1.</span>
                                   <span>Launch invitation campaign with {activeMembers.length} active members</span>
                                 </div>
-                                <Button size="sm" variant="outline" className="text-xs">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-xs"
+                                  onClick={() => handleCreateTask({
+                                    title: `Launch invitation campaign with ${activeMembers.length} active members`,
+                                    description: `Launch invitation campaign with ${activeMembers.length} active members. Create a coordinated campaign to encourage personal invitations.`,
+                                    content: `Launch invitation campaign with ${activeMembers.length} active members`,
+                                    relatedMembers: activeMembers,
+                                    priority: 'high',
+                                    category: 'Outreach'
+                                  })}
+                                >
                                   Create Task
                                 </Button>
                               </div>
@@ -3900,7 +4820,18 @@ export function Dashboard() {
                                   <span className="text-blue-600 font-bold">2.</span>
                                   <span>Create visitor-friendly experiences</span>
                                 </div>
-                                <Button size="sm" variant="outline" className="text-xs">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-xs"
+                                  onClick={() => handleCreateTask({
+                                    title: 'Create visitor-friendly experiences',
+                                    description: 'Create visitor-friendly experiences. Ensure all aspects of church life are welcoming and accessible to newcomers.',
+                                    content: 'Create visitor-friendly experiences',
+                                    priority: 'medium',
+                                    category: 'Outreach'
+                                  })}
+                                >
                                   Create Task
                                 </Button>
                               </div>
@@ -3909,7 +4840,18 @@ export function Dashboard() {
                                   <span className="text-blue-600 font-bold">3.</span>
                                   <span>Develop community partnerships</span>
                                 </div>
-                                <Button size="sm" variant="outline" className="text-xs">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-xs"
+                                  onClick={() => handleCreateTask({
+                                    title: 'Develop community partnerships',
+                                    description: 'Develop community partnerships. Build relationships with local organizations to increase church visibility and outreach.',
+                                    content: 'Develop community partnerships',
+                                    priority: 'medium',
+                                    category: 'Outreach'
+                                  })}
+                                >
                                   Create Task
                                 </Button>
                               </div>
@@ -3985,7 +4927,18 @@ export function Dashboard() {
                               <span className="text-green-600 font-bold">1.</span>
                               <span>Maintain strong pastoral care relationships with {stats.activeMembers} active members</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: `Maintain strong pastoral care relationships with ${stats.activeMembers} active members`,
+                                description: `Maintain strong pastoral care relationships with ${stats.activeMembers} active members. Continue nurturing existing relationships to prevent disengagement.`,
+                                content: `Maintain strong pastoral care relationships with ${stats.activeMembers} active members`,
+                                priority: 'medium',
+                                category: 'Pastoral Care'
+                              })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -3994,7 +4947,18 @@ export function Dashboard() {
                               <span className="text-green-600 font-bold">2.</span>
                               <span>Develop preventive care programs</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Develop preventive care programs',
+                                description: 'Develop preventive care programs. Create programs that proactively support member well-being and prevent disengagement.',
+                                content: 'Develop preventive care programs',
+                                priority: 'medium',
+                                category: 'Pastoral Care'
+                              })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -4003,7 +4967,18 @@ export function Dashboard() {
                               <span className="text-green-600 font-bold">3.</span>
                               <span>Create milestone celebration programs</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Create milestone celebration programs',
+                                description: 'Create milestone celebration programs. Develop programs to recognize and celebrate important life events and achievements.',
+                                content: 'Create milestone celebration programs',
+                                priority: 'medium',
+                                category: 'Pastoral Care'
+                              })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -4015,7 +4990,19 @@ export function Dashboard() {
                               <span className="text-green-600 font-bold">1.</span>
                               <span>Schedule personal visits with {stats.inactiveMembers} inactive members</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                                                              onClick={() => handleCreateTask({
+                                  title: `Schedule personal visits with ${stats.inactiveMembers} inactive members`,
+                                  description: `Schedule personal visits with ${stats.inactiveMembers} inactive members. Personal outreach to reconnect with disengaged members.`,
+                                  content: `Schedule personal visits with ${stats.inactiveMembers} inactive members`,
+                                  relatedMembers: inactiveMembers,
+                                  priority: 'high',
+                                  category: 'Pastoral Care'
+                                })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -4024,7 +5011,19 @@ export function Dashboard() {
                               <span className="text-green-600 font-bold">2.</span>
                               <span>Send personalized outreach messages to {stats.inactiveMembers} inactive members</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                                                              onClick={() => handleCreateTask({
+                                  title: `Send personalized outreach messages to ${stats.inactiveMembers} inactive members`,
+                                  description: `Send personalized outreach messages to ${stats.inactiveMembers} inactive members. Targeted communication to re-engage disengaged members.`,
+                                  content: `Send personalized outreach messages to ${stats.inactiveMembers} inactive members`,
+                                  relatedMembers: inactiveMembers,
+                                  priority: 'medium',
+                                  category: 'Outreach'
+                                })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -4033,7 +5032,19 @@ export function Dashboard() {
                               <span className="text-green-600 font-bold">3.</span>
                               <span>Invite {stats.inactiveMembers} inactive members to upcoming events</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                                                              onClick={() => handleCreateTask({
+                                  title: `Invite ${stats.inactiveMembers} inactive members to upcoming events`,
+                                  description: `Invite ${stats.inactiveMembers} inactive members to upcoming events. Extend personal invitations to re-engage members through events.`,
+                                  content: `Invite ${stats.inactiveMembers} inactive members to upcoming events`,
+                                  relatedMembers: inactiveMembers,
+                                  priority: 'medium',
+                                  category: 'Events'
+                                })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -4045,7 +5056,19 @@ export function Dashboard() {
                               <span className="text-green-600 font-bold">1.</span>
                               <span>Implement comprehensive pastoral care outreach for {stats.inactiveMembers} inactive members</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                                                              onClick={() => handleCreateTask({
+                                  title: `Implement comprehensive pastoral care outreach for ${stats.inactiveMembers} inactive members`,
+                                  description: `Implement comprehensive pastoral care outreach for ${stats.inactiveMembers} inactive members. Develop a systematic approach to reconnect with all disengaged members.`,
+                                  content: `Implement comprehensive pastoral care outreach for ${stats.inactiveMembers} inactive members`,
+                                  relatedMembers: inactiveMembers,
+                                  priority: 'high',
+                                  category: 'Pastoral Care'
+                                })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -4054,7 +5077,19 @@ export function Dashboard() {
                               <span className="text-green-600 font-bold">2.</span>
                               <span>Develop personalized re-engagement strategies for {stats.inactiveMembers} members</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                                                              onClick={() => handleCreateTask({
+                                  title: `Develop personalized re-engagement strategies for ${stats.inactiveMembers} members`,
+                                  description: `Develop personalized re-engagement strategies for ${stats.inactiveMembers} members. Create tailored approaches to reconnect with each disengaged member.`,
+                                  content: `Develop personalized re-engagement strategies for ${stats.inactiveMembers} members`,
+                                  relatedMembers: inactiveMembers,
+                                  priority: 'high',
+                                  category: 'Pastoral Care'
+                                })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -4063,7 +5098,19 @@ export function Dashboard() {
                               <span className="text-green-600 font-bold">3.</span>
                               <span>Create support groups for {stats.inactiveMembers} struggling members</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                                                              onClick={() => handleCreateTask({
+                                  title: `Create support groups for ${stats.inactiveMembers} struggling members`,
+                                  description: `Create support groups for ${stats.inactiveMembers} struggling members. Develop supportive community structures to help members through difficult times.`,
+                                  content: `Create support groups for ${stats.inactiveMembers} struggling members`,
+                                  relatedMembers: inactiveMembers,
+                                  priority: 'high',
+                                  category: 'Pastoral Care'
+                                })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -4145,7 +5192,18 @@ export function Dashboard() {
                               <span className="text-blue-600 font-bold">1.</span>
                               <span>Assign {stats.membersWithoutFamilies} unassigned members to family groups</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: `Assign ${stats.membersWithoutFamilies} unassigned members to family groups`,
+                                description: `Assign ${stats.membersWithoutFamilies} unassigned members to family groups. Connect individual members with appropriate family units for better community integration.`,
+                                content: `Assign ${stats.membersWithoutFamilies} unassigned members to family groups`,
+                                priority: 'medium',
+                                category: 'Administration'
+                              })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -4154,7 +5212,18 @@ export function Dashboard() {
                               <span className="text-blue-600 font-bold">2.</span>
                               <span>Create family-based ministry programs for {stats.totalFamilies} families</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: `Create family-based ministry programs for ${stats.totalFamilies} families`,
+                                description: `Create family-based ministry programs for ${stats.totalFamilies} families. Develop programs that engage entire families in ministry activities.`,
+                                content: `Create family-based ministry programs for ${stats.totalFamilies} families`,
+                                priority: 'medium',
+                                category: 'Ministry'
+                              })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -4163,7 +5232,18 @@ export function Dashboard() {
                               <span className="text-blue-600 font-bold">3.</span>
                               <span>Develop family support systems</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Develop family support systems',
+                                description: 'Develop family support systems. Create structures to support families through various life challenges and transitions.',
+                                content: 'Develop family support systems',
+                                priority: 'medium',
+                                category: 'Pastoral Care'
+                              })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -4175,7 +5255,18 @@ export function Dashboard() {
                               <span className="text-blue-600 font-bold">1.</span>
                               <span>Strengthen existing family connections for {stats.totalFamilies} families</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: `Strengthen existing family connections for ${stats.totalFamilies} families`,
+                                description: `Strengthen existing family connections for ${stats.totalFamilies} families. Deepen relationships and support within existing family units.`,
+                                content: `Strengthen existing family connections for ${stats.totalFamilies} families`,
+                                priority: 'medium',
+                                category: 'Pastoral Care'
+                              })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -4184,7 +5275,18 @@ export function Dashboard() {
                               <span className="text-blue-600 font-bold">2.</span>
                               <span>Create family-based ministry opportunities</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Create family-based ministry opportunities',
+                                description: 'Create family-based ministry opportunities. Develop programs that allow families to serve together in ministry.',
+                                content: 'Create family-based ministry opportunities',
+                                priority: 'medium',
+                                category: 'Ministry'
+                              })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -4193,7 +5295,18 @@ export function Dashboard() {
                               <span className="text-blue-600 font-bold">3.</span>
                               <span>Implement family celebration programs</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Implement family celebration programs',
+                                description: 'Implement family celebration programs. Create events and programs that celebrate family milestones and achievements.',
+                                content: 'Implement family celebration programs',
+                                priority: 'medium',
+                                category: 'Events'
+                              })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -4265,7 +5378,18 @@ export function Dashboard() {
                               <span className="text-purple-600 font-bold">1.</span>
                               <span>Maintain responsive pastoral protocols for {stats.totalSMSConversations} active conversations</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: `Maintain responsive pastoral protocols for ${stats.totalSMSConversations} active conversations`,
+                                description: `Maintain responsive pastoral protocols for ${stats.totalSMSConversations} active conversations. Ensure timely responses and follow-up for ongoing pastoral care conversations.`,
+                                content: `Maintain responsive pastoral protocols for ${stats.totalSMSConversations} active conversations`,
+                                priority: 'high',
+                                category: 'Pastoral Care'
+                              })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -4274,7 +5398,18 @@ export function Dashboard() {
                               <span className="text-purple-600 font-bold">2.</span>
                               <span>Develop communication templates</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Develop communication templates',
+                                description: 'Develop communication templates. Create standardized templates for common pastoral care and outreach communications.',
+                                content: 'Develop communication templates',
+                                priority: 'medium',
+                                category: 'Administration'
+                              })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -4283,7 +5418,18 @@ export function Dashboard() {
                               <span className="text-purple-600 font-bold">3.</span>
                               <span>Create automated follow-up systems</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Create automated follow-up systems',
+                                description: 'Create automated follow-up systems. Implement systems to ensure consistent follow-up for pastoral care and outreach efforts.',
+                                content: 'Create automated follow-up systems',
+                                priority: 'medium',
+                                category: 'Technology'
+                              })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -4295,7 +5441,19 @@ export function Dashboard() {
                               <span className="text-purple-600 font-bold">1.</span>
                               <span>Encourage two-way communication with {stats.activeMembers} active members</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: `Encourage two-way communication with ${stats.activeMembers} active members`,
+                                description: `Encourage two-way communication with ${stats.activeMembers} active members. Foster open communication channels for pastoral care and support.`,
+                                content: `Encourage two-way communication with ${stats.activeMembers} active members`,
+                                relatedMembers: activeMembers,
+                                priority: 'medium',
+                                category: 'Pastoral Care'
+                              })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -4304,7 +5462,18 @@ export function Dashboard() {
                               <span className="text-purple-600 font-bold">2.</span>
                               <span>Create pastoral care protocols</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Create pastoral care protocols',
+                                description: 'Create pastoral care protocols. Develop standardized procedures for pastoral care and support communications.',
+                                content: 'Create pastoral care protocols',
+                                priority: 'medium',
+                                category: 'Pastoral Care'
+                              })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -4313,7 +5482,18 @@ export function Dashboard() {
                               <span className="text-purple-600 font-bold">3.</span>
                               <span>Develop communication templates</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Develop communication templates',
+                                description: 'Develop communication templates. Create standardized templates for common pastoral care and outreach communications.',
+                                content: 'Develop communication templates',
+                                priority: 'medium',
+                                category: 'Administration'
+                              })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -4385,7 +5565,28 @@ export function Dashboard() {
                               <span className="text-amber-600 font-bold">1.</span>
                               <span>Plan personalized celebration outreach for {stats.totalUpcoming} upcoming celebrations</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => {
+                                const memberDetails = stats.upcomingMembers?.map(member => {
+                                  const celebrationType = member.celebrationType === 'birthday' ? 'Birthday' : 
+                                                       member.celebrationType === 'anniversary' ? 'Anniversary' : 'Membership';
+                                  const celebrationDate = new Date(member.celebrationDate).toLocaleDateString();
+                                  return `${member.firstname} ${member.lastname} (${celebrationType} on ${celebrationDate})`;
+                                }).join(', ') || 'No upcoming celebrations';
+                                
+                                handleCreateTask({
+                                  title: `Plan personalized celebration outreach for ${stats.totalUpcoming} upcoming celebrations`,
+                                  description: `Plan personalized celebration outreach for ${stats.totalUpcoming} upcoming celebrations. Create personalized plans to celebrate member milestones and achievements.\n\nUpcoming celebrations: ${memberDetails}`,
+                                  content: `Plan personalized celebration outreach for ${stats.totalUpcoming} upcoming celebrations`,
+                                  relatedMembers: stats.upcomingMembers || [],
+                                  priority: 'medium',
+                                  category: 'Pastoral Care'
+                                });
+                              }}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -4394,7 +5595,18 @@ export function Dashboard() {
                               <span className="text-amber-600 font-bold">2.</span>
                               <span>Create celebration cards and gifts</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Create celebration cards and gifts',
+                                description: 'Create celebration cards and gifts. Develop personalized cards and gifts for member celebrations and milestones.',
+                                content: 'Create celebration cards and gifts',
+                                priority: 'medium',
+                                category: 'Pastoral Care'
+                              })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -4403,7 +5615,18 @@ export function Dashboard() {
                               <span className="text-amber-600 font-bold">3.</span>
                               <span>Implement celebration announcements</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Implement celebration announcements',
+                                description: 'Implement celebration announcements. Create systems to announce and celebrate member milestones and achievements.',
+                                content: 'Implement celebration announcements',
+                                priority: 'medium',
+                                category: 'Pastoral Care'
+                              })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -4415,7 +5638,19 @@ export function Dashboard() {
                               <span className="text-amber-600 font-bold">1.</span>
                               <span>Implement milestone tracking system for {stats.activeMembers} active members</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: `Implement milestone tracking system for ${stats.activeMembers} active members`,
+                                description: `Implement milestone tracking system for ${stats.activeMembers} active members. Create systems to track and celebrate member milestones and achievements.`,
+                                content: `Implement milestone tracking system for ${stats.activeMembers} active members`,
+                                relatedMembers: activeMembers,
+                                priority: 'medium',
+                                category: 'Administration'
+                              })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -4424,7 +5659,18 @@ export function Dashboard() {
                               <span className="text-amber-600 font-bold">2.</span>
                               <span>Create celebration outreach programs</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Create celebration outreach programs',
+                                description: 'Create celebration outreach programs. Develop programs to celebrate member milestones and achievements.',
+                                content: 'Create celebration outreach programs',
+                                priority: 'medium',
+                                category: 'Pastoral Care'
+                              })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -4433,7 +5679,18 @@ export function Dashboard() {
                               <span className="text-amber-600 font-bold">3.</span>
                               <span>Develop celebration ministries</span>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs"
+                              onClick={() => handleCreateTask({
+                                title: 'Develop celebration ministries',
+                                description: 'Develop celebration ministries. Create dedicated ministries focused on celebrating member milestones and achievements.',
+                                content: 'Develop celebration ministries',
+                                priority: 'medium',
+                                category: 'Ministry'
+                              })}
+                            >
                               Create Task
                             </Button>
                           </div>
@@ -4517,7 +5774,18 @@ export function Dashboard() {
                                   <span className="text-teal-600 font-bold">1.</span>
                                   <span>Maintain and strengthen {totalEvents} existing programs</span>
                                 </div>
-                                <Button size="sm" variant="outline" className="text-xs">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-xs"
+                                  onClick={() => handleCreateTask({
+                                    title: `Maintain and strengthen ${totalEvents} existing programs`,
+                                    description: `Maintain and strengthen ${totalEvents} existing programs. Focus on sustaining and improving current ministry offerings across multiple categories.`,
+                                    content: `Maintain and strengthen ${totalEvents} existing programs`,
+                                    priority: 'medium',
+                                    category: 'Ministry'
+                                  })}
+                                >
                                   Create Task
                                 </Button>
                               </div>
@@ -4526,7 +5794,18 @@ export function Dashboard() {
                                   <span className="text-teal-600 font-bold">2.</span>
                                   <span>Develop specialized age group ministries</span>
                                 </div>
-                                <Button size="sm" variant="outline" className="text-xs">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-xs"
+                                  onClick={() => handleCreateTask({
+                                    title: 'Develop specialized age group ministries',
+                                    description: 'Develop specialized age group ministries. Create targeted programs for different age groups and demographics.',
+                                    content: 'Develop specialized age group ministries',
+                                    priority: 'medium',
+                                    category: 'Ministry'
+                                  })}
+                                >
                                   Create Task
                                 </Button>
                               </div>
@@ -4535,7 +5814,18 @@ export function Dashboard() {
                                   <span className="text-teal-600 font-bold">3.</span>
                                   <span>Create seasonal and special events</span>
                                 </div>
-                                <Button size="sm" variant="outline" className="text-xs">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-xs"
+                                  onClick={() => handleCreateTask({
+                                    title: 'Create seasonal and special events',
+                                    description: 'Create seasonal and special events. Develop events and programs for different seasons and special occasions.',
+                                    content: 'Create seasonal and special events',
+                                    priority: 'medium',
+                                    category: 'Events'
+                                  })}
+                                >
                                   Create Task
                                 </Button>
                               </div>
@@ -4549,7 +5839,18 @@ export function Dashboard() {
                                   <span className="text-teal-600 font-bold">1.</span>
                                   <span>Expand to include missing categories</span>
                                 </div>
-                                <Button size="sm" variant="outline" className="text-xs">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-xs"
+                                  onClick={() => handleCreateTask({
+                                    title: 'Expand to include missing categories',
+                                    description: 'Expand to include missing categories. Develop programs in areas that are currently underrepresented in ministry offerings.',
+                                    content: 'Expand to include missing categories',
+                                    priority: 'medium',
+                                    category: 'Ministry'
+                                  })}
+                                >
                                   Create Task
                                 </Button>
                               </div>
@@ -4558,7 +5859,18 @@ export function Dashboard() {
                                   <span className="text-teal-600 font-bold">2.</span>
                                   <span>Develop specialized programs</span>
                                 </div>
-                                <Button size="sm" variant="outline" className="text-xs">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-xs"
+                                  onClick={() => handleCreateTask({
+                                    title: 'Develop specialized programs',
+                                    description: 'Develop specialized programs. Create targeted programs for specific needs and demographics.',
+                                    content: 'Develop specialized programs',
+                                    priority: 'medium',
+                                    category: 'Ministry'
+                                  })}
+                                >
                                   Create Task
                                 </Button>
                               </div>
@@ -4567,7 +5879,18 @@ export function Dashboard() {
                                   <span className="text-teal-600 font-bold">3.</span>
                                   <span>Create seasonal opportunities</span>
                                 </div>
-                                <Button size="sm" variant="outline" className="text-xs">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-xs"
+                                  onClick={() => handleCreateTask({
+                                    title: 'Create seasonal opportunities',
+                                    description: 'Create seasonal opportunities. Develop events and programs for different seasons and special occasions.',
+                                    content: 'Create seasonal opportunities',
+                                    priority: 'medium',
+                                    category: 'Events'
+                                  })}
+                                >
                                   Create Task
                                 </Button>
                               </div>
@@ -4581,7 +5904,18 @@ export function Dashboard() {
                                   <span className="text-teal-600 font-bold">1.</span>
                                   <span>Develop comprehensive ministry planning</span>
                                 </div>
-                                <Button size="sm" variant="outline" className="text-xs">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-xs"
+                                  onClick={() => handleCreateTask({
+                                    title: 'Develop comprehensive ministry planning',
+                                    description: 'Develop comprehensive ministry planning. Create a strategic plan to expand ministry offerings across multiple categories.',
+                                    content: 'Develop comprehensive ministry planning',
+                                    priority: 'high',
+                                    category: 'Ministry'
+                                  })}
+                                >
                                   Create Task
                                 </Button>
                               </div>
@@ -4590,7 +5924,18 @@ export function Dashboard() {
                                   <span className="text-teal-600 font-bold">2.</span>
                                   <span>Create diverse ministry opportunities</span>
                                 </div>
-                                <Button size="sm" variant="outline" className="text-xs">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-xs"
+                                  onClick={() => handleCreateTask({
+                                    title: 'Create diverse ministry opportunities',
+                                    description: 'Create diverse ministry opportunities. Develop programs that serve different needs and demographics.',
+                                    content: 'Create diverse ministry opportunities',
+                                    priority: 'high',
+                                    category: 'Ministry'
+                                  })}
+                                >
                                   Create Task
                                 </Button>
                               </div>
@@ -4599,7 +5944,18 @@ export function Dashboard() {
                                   <span className="text-teal-600 font-bold">3.</span>
                                   <span>Implement specialized programs</span>
                                 </div>
-                                <Button size="sm" variant="outline" className="text-xs">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-xs"
+                                  onClick={() => handleCreateTask({
+                                    title: 'Implement specialized programs',
+                                    description: 'Implement specialized programs. Create targeted programs for specific needs and demographics.',
+                                    content: 'Implement specialized programs',
+                                    priority: 'high',
+                                    category: 'Ministry'
+                                  })}
+                                >
                                   Create Task
                                 </Button>
                               </div>
@@ -4615,9 +5971,17 @@ export function Dashboard() {
               {/* Add more card type analyses as needed */}
             </div>
           </DialogContent>
-                  </Dialog>
-        </motion.div>
-      </div>
-    </motion.div>
+        </Dialog>
+      </motion.div>
+
+      {/* Task Creation Modal */}
+      <TaskCreationModal
+        isOpen={isTaskCreationModalOpen}
+        onClose={() => setIsTaskCreationModalOpen(false)}
+        suggestion={currentTaskSuggestion}
+        onTaskCreated={handleTaskCreated}
+      />
+    </div>
+  </motion.div>
   );
 }
