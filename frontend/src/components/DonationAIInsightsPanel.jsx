@@ -18,7 +18,8 @@ import {
   ChevronRight,
   Users,
   CreditCard,
-  Banknote
+  Banknote,
+  Plus
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,8 +28,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
 import AIInsightsService from '@/lib/aiInsightsService';
+import { TaskCreationModal } from './TaskCreationModal';
 
-const DonationInsightCard = ({ title, summary, actions, icon: Icon, color, count, loading, data = null }) => {
+const DonationInsightCard = ({ title, summary, actions, icon: Icon, color, count, loading, data = null, onCreateTask = null }) => {
   const navigate = useNavigate();
 
   // Helper function to format AI text into readable sections
@@ -303,9 +305,28 @@ const DonationInsightCard = ({ title, summary, actions, icon: Icon, color, count
                 </div>
                 <div className="mt-3 space-y-2">
                   {data.insights.recommendations.slice(0, 3).map((recommendation, index) => (
-                    <div key={index} className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                      <p className="text-sm text-slate-600 dark:text-slate-400">{recommendation}</p>
+                    <div key={index} className="flex items-start justify-between">
+                      <div className="flex items-start gap-2 flex-1">
+                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">{recommendation}</p>
+                      </div>
+                      {onCreateTask && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onCreateTask({
+                            title: recommendation,
+                            description: `AI Suggestion: ${recommendation}\n\nThis task was suggested based on analysis of your donation patterns and giving trends. The AI identified this as an important action to improve stewardship and financial health.\n\nContext: This recommendation is part of the Donation Insights analysis, focusing on stewardship strategies and financial planning.\n\nRelated Donors: ${data?.insights?.topDonors?.length > 0 ? data.insights.topDonors.slice(0, 3).map(d => d.name).join(', ') : 'No specific donors identified'}`,
+                            priority: 'medium',
+                            category: 'Finance',
+                            relatedDonors: data?.insights?.topDonors || []
+                          })}
+                          className="ml-2 flex-shrink-0"
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Create Task
+                        </Button>
+                      )}
                     </div>
                   ))}
                   {data.insights.recommendations.length > 3 && (
@@ -328,6 +349,8 @@ export default function DonationAIInsightsPanel({ organizationId }) {
   const [loading, setLoading] = useState(false); // Changed from true to false
   const [isVisible, setIsVisible] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [taskModalOpen, setTaskModalOpen] = useState(false);
+  const [selectedSuggestion, setSelectedSuggestion] = useState(null);
   const panelRef = useRef(null);
   const { toast } = useToast();
 
@@ -384,6 +407,19 @@ export default function DonationAIInsightsPanel({ organizationId }) {
       loadDonationInsights();
     }
   }, [organizationId, isVisible, hasLoaded]);
+
+  // Task creation handler
+  const handleCreateTask = (suggestion) => {
+    setSelectedSuggestion(suggestion);
+    setTaskModalOpen(true);
+  };
+
+  const handleTaskCreated = (task) => {
+    toast({
+      title: "Success",
+      description: "Task created successfully from suggestion.",
+    });
+  };
 
   return (
     <div ref={panelRef} className="space-y-8">
@@ -454,9 +490,21 @@ export default function DonationAIInsightsPanel({ organizationId }) {
             actions={insights?.insights?.donationInsights?.actions}
             loading={loading}
             data={insights?.insights?.donationInsights?.data}
+            onCreateTask={handleCreateTask}
           />
         </div>
       )}
+
+      {/* Task Creation Modal */}
+      <TaskCreationModal
+        isOpen={taskModalOpen}
+        onClose={() => {
+          setTaskModalOpen(false);
+          setSelectedSuggestion(null);
+        }}
+        suggestion={selectedSuggestion}
+        onTaskCreated={handleTaskCreated}
+      />
     </div>
   );
 }
