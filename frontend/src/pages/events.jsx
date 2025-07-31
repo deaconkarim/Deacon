@@ -2588,6 +2588,12 @@ export default function Events() {
             // For today, use the same day
             filterEndDate = new Date(today);
             filterEndDate.setHours(23, 59, 59, 999);
+          } else if (timeWindowFilter === 'next30days') {
+            // For next 30 days filter, get events for the next 30 days
+            filterEndDate = new Date(today);
+            filterEndDate.setDate(today.getDate() + 30);
+            filterEndDate.setHours(23, 59, 59, 999);
+            console.log('[Events] Next 30 days filter - Today:', today.toISOString(), 'End date:', filterEndDate.toISOString());
           } else {
             // For 'all', use 3 months as default
             filterEndDate = new Date();
