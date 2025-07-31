@@ -16,10 +16,43 @@ CREATE INDEX IF NOT EXISTS idx_tasks_status ON public.tasks(status);
 CREATE INDEX IF NOT EXISTS idx_tasks_priority ON public.tasks(priority);
 
 -- Update RLS policies to include organization_id
-DROP POLICY IF EXISTS "Tasks are viewable by everyone" ON public.tasks;
-DROP POLICY IF EXISTS "Tasks can be created by anyone" ON public.tasks;
-DROP POLICY IF EXISTS "Tasks can be updated by anyone" ON public.tasks;
-DROP POLICY IF EXISTS "Tasks can be deleted by anyone" ON public.tasks;
+-- First, drop existing policies if they exist
+DO $$
+BEGIN
+    -- Drop old policies if they exist
+    IF EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'tasks' AND policyname = 'Tasks are viewable by everyone') THEN
+        DROP POLICY "Tasks are viewable by everyone" ON public.tasks;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'tasks' AND policyname = 'Tasks can be created by anyone') THEN
+        DROP POLICY "Tasks can be created by anyone" ON public.tasks;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'tasks' AND policyname = 'Tasks can be updated by anyone') THEN
+        DROP POLICY "Tasks can be updated by anyone" ON public.tasks;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'tasks' AND policyname = 'Tasks can be deleted by anyone') THEN
+        DROP POLICY "Tasks can be deleted by anyone" ON public.tasks;
+    END IF;
+    
+    -- Drop new policies if they exist (in case of re-run)
+    IF EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'tasks' AND policyname = 'Tasks are viewable by organization members') THEN
+        DROP POLICY "Tasks are viewable by organization members" ON public.tasks;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'tasks' AND policyname = 'Tasks can be created by organization members') THEN
+        DROP POLICY "Tasks can be created by organization members" ON public.tasks;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'tasks' AND policyname = 'Tasks can be updated by organization members') THEN
+        DROP POLICY "Tasks can be updated by organization members" ON public.tasks;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'tasks' AND policyname = 'Tasks can be deleted by organization members') THEN
+        DROP POLICY "Tasks can be deleted by organization members" ON public.tasks;
+    END IF;
+END $$;
 
 -- Create new policies that respect organization_id
 CREATE POLICY "Tasks are viewable by organization members" ON public.tasks

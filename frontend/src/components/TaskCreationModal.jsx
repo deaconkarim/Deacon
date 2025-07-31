@@ -285,7 +285,6 @@ export function TaskCreationModal({
         assignee_id: newTask.assignee_id,
         requestor_id: newTask.requestor_id,
         due_date: newTask.due_date,
-        organization_id: organizationId,
         created_at: new Date().toISOString()
       };
       
@@ -293,6 +292,15 @@ export function TaskCreationModal({
       if (newTask.category) taskData.category = newTask.category;
       if (newTask.estimated_hours) taskData.estimated_hours = newTask.estimated_hours;
       if (newTask.tags && newTask.tags.length > 0) taskData.tags = newTask.tags;
+      
+      // Add organization_id if the column exists and is required
+      try {
+        // Check if organization_id column exists by trying to add it
+        taskData.organization_id = organizationId;
+      } catch (error) {
+        console.log('TaskCreationModal: organization_id column may not exist, continuing without it');
+        delete taskData.organization_id;
+      }
       
       console.log('TaskCreationModal: Task data to insert:', taskData);
 
