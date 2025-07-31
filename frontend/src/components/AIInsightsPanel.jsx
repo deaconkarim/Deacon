@@ -380,14 +380,14 @@ export function AIInsightsPanel({ organizationId }) {
     }
   };
 
-  // Only load when panel becomes visible and organizationId is available
+  // Load insights immediately when organizationId is available
   useEffect(() => {
-    if (organizationId && isVisible && !hasLoaded) {
+    if (organizationId && !hasLoaded) {
       loadInsights();
       // Load weekly digest only if user explicitly requests it (remove auto-load)
       // loadWeeklyDigest();
     }
-  }, [organizationId, isVisible, hasLoaded]);
+  }, [organizationId, hasLoaded]);
 
   // Task creation handler
   const handleCreateTask = (suggestion) => {
@@ -504,15 +504,17 @@ export function AIInsightsPanel({ organizationId }) {
             </motion.div>
           )}
 
-          {/* At-Risk Members Card */}
-          <InsightCard
-            {...atRisk}
-            loading={loading}
-            onCreateTask={handleCreateTask}
-          />
+          {/* At-Risk Members and Predictive Attendance Cards - Same Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* At-Risk Members Card */}
+            <InsightCard
+              {...atRisk}
+              loading={loading}
+              onCreateTask={handleCreateTask}
+            />
 
-          {/* Predictive Attendance Card */}
-          <motion.div className="group relative" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+            {/* Predictive Attendance Card */}
+            <motion.div className="group relative" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
             <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-blue-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
             <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
               <div className="flex items-center gap-3 mb-6">
@@ -635,6 +637,7 @@ export function AIInsightsPanel({ organizationId }) {
             </div>
           </motion.div>
         </div>
+      </div>
       )}
 
       {/* Factors Popover */}

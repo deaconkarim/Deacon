@@ -87,13 +87,7 @@ export function TaskCreationModal({
   const [members, setMembers] = useState([]);
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [taskTemplates] = useState([
-    { id: 'worship', name: 'Worship Service Setup', description: 'Prepare for Sunday worship service', priority: 'high', estimatedHours: 2 },
-    { id: 'youth', name: 'Youth Ministry Event', description: 'Organize youth group activity', priority: 'medium', estimatedHours: 4 },
-    { id: 'outreach', name: 'Community Outreach', description: 'Plan community service project', priority: 'medium', estimatedHours: 6 },
-    { id: 'maintenance', name: 'Facility Maintenance', description: 'Church building maintenance tasks', priority: 'low', estimatedHours: 3 },
-    { id: 'admin', name: 'Administrative Task', description: 'General administrative duties', priority: 'medium', estimatedHours: 1 }
-  ]);
+
   const [taskCategories] = useState([
     'Worship', 'Youth Ministry', 'Outreach', 'Maintenance', 'Administration', 'Finance', 'Technology', 'Events', 'Pastoral Care', 'Education'
   ]);
@@ -355,18 +349,7 @@ export function TaskCreationModal({
     }
   };
 
-  const applyTaskTemplate = (templateId) => {
-    const template = taskTemplates.find(t => t.id === templateId);
-    if (template) {
-      setNewTask({
-        ...newTask,
-        title: template.name,
-        description: template.description,
-        priority: template.priority,
-        estimated_hours: template.estimatedHours
-      });
-    }
-  };
+
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -383,30 +366,6 @@ export function TaskCreationModal({
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
-          {/* Task Templates */}
-          <div className="space-y-2">
-            <Label>Quick Templates</Label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {taskTemplates.map((template) => (
-                <Button
-                  key={template.id}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => applyTaskTemplate(template.id)}
-                  className="justify-start text-left h-auto p-3"
-                >
-                  <div>
-                    <div className="font-medium">{template.name}</div>
-                    <div className="text-xs text-muted-foreground">{template.description}</div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Priority: {template.priority} • Est. {template.estimatedHours}h
-                    </div>
-                  </div>
-                </Button>
-              ))}
-            </div>
-          </div>
-          
           <div className="space-y-2">
             <Label htmlFor="title">Title *</Label>
             <Input
