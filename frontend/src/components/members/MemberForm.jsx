@@ -33,38 +33,46 @@ function centerAspectCrop(mediaWidth, mediaHeight, aspect) {
   );
 }
 
-export default function MemberForm({ member, onSubmit, onCancel }) {
-  // Add default values and null checks
-  const [formData, setFormData] = useState({
-    firstname: member?.firstname || '',
-    lastname: member?.lastname || '',
-    email: member?.email || '',
-    phone: member?.phone || '',
-    status: member?.status || 'active',
-    member_type: member?.member_type || 'adult',
-    gender: member?.gender || '',
-    birth_date: member?.birth_date || '',
-    join_date: member?.join_date || '',
-    occupation: member?.occupation || '',
-    address: member?.address || {
+const MemberForm = ({ initialData, onSave, onCancel }) => {
+  const [memberData, setMemberData] = useState({
+    ...initialData,
+    firstname: initialData.firstname || '',
+    lastname: initialData.lastname || '',
+    email: initialData.email || '',
+    phone: initialData.phone || '',
+    status: initialData.status || 'active',
+    image_url: initialData.image_url || '',
+    member_type: initialData.member_type || 'adult',
+    birth_date: initialData.birth_date || '',
+    gender: initialData.gender || 'male',
+    join_date: initialData.join_date || '',
+    anniversary_date: initialData.anniversary_date || '',
+    spouse_name: initialData.spouse_name || '',
+    has_children: initialData.has_children || false,
+    marital_status: initialData.marital_status || 'single',
+    occupation: initialData.occupation || '',
+    address: initialData.address || {
       street: '',
       city: '',
       state: '',
-      zip: ''
+      zip: '',
+      country: ''
     },
-    emergency_contact: member?.emergency_contact || {
+    emergency_contact: initialData.emergency_contact || {
       name: '',
       phone: '',
       relationship: ''
     },
-    notes: member?.notes || '',
-    communication_preferences: member?.communication_preferences || {
-      sms: false,
-      email: false,
+    notes: initialData.notes || '',
+    last_attendance_date: initialData.last_attendance_date || '',
+    attendance_frequency: initialData.attendance_frequency || 'regular',
+    ministry_involvement: initialData.ministry_involvement || [],
+    communication_preferences: initialData.communication_preferences || {
+      sms: true,
+      email: true,
       mail: false
     },
-    ministry_involvement: member?.ministry_involvement || [],
-    tags: member?.tags || []
+    tags: initialData.tags || []
   });
   
   const [isUploading, setIsUploading] = useState(false);
@@ -82,52 +90,52 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
   // Update memberData when initialData changes (for edit mode)
   useEffect(() => {
     const updatedMemberData = {
-      ...member, // Use member data directly
-      firstname: member?.firstname || '',
-      lastname: member?.lastname || '',
-      email: member?.email || '',
-      phone: member?.phone || '',
-      status: member?.status || 'active',
-      image_url: member?.image_url || '',
-      member_type: member?.member_type || 'adult',
-      birth_date: member?.birth_date || '',
-      gender: member?.gender || 'male',
-      join_date: member?.join_date || '',
-      anniversary_date: member?.anniversary_date || '',
-      spouse_name: member?.spouse_name || '',
-      has_children: member?.has_children || false,
-      marital_status: member?.marital_status || 'single',
-      occupation: member?.occupation || '',
-      address: member?.address || {
+      ...initialData,
+      firstname: initialData.firstname || '',
+      lastname: initialData.lastname || '',
+      email: initialData.email || '',
+      phone: initialData.phone || '',
+      status: initialData.status || 'active',
+      image_url: initialData.image_url || '',
+      member_type: initialData.member_type || 'adult',
+      birth_date: initialData.birth_date || '',
+      gender: initialData.gender || 'male',
+      join_date: initialData.join_date || '',
+      anniversary_date: initialData.anniversary_date || '',
+      spouse_name: initialData.spouse_name || '',
+      has_children: initialData.has_children || false,
+      marital_status: initialData.marital_status || 'single',
+      occupation: initialData.occupation || '',
+      address: initialData.address || {
         street: '',
         city: '',
         state: '',
         zip: '',
         country: ''
       },
-      emergency_contact: member?.emergency_contact || {
+      emergency_contact: initialData.emergency_contact || {
         name: '',
         phone: '',
         relationship: ''
       },
-      notes: member?.notes || '',
-      last_attendance_date: member?.last_attendance_date || '',
-      attendance_frequency: member?.attendance_frequency || 'regular',
-      ministry_involvement: member?.ministry_involvement || [],
-      communication_preferences: member?.communication_preferences || {
+      notes: initialData.notes || '',
+      last_attendance_date: initialData.last_attendance_date || '',
+      attendance_frequency: initialData.attendance_frequency || 'regular',
+      ministry_involvement: initialData.ministry_involvement || [],
+      communication_preferences: initialData.communication_preferences || {
         sms: true,
         email: true,
         mail: false
       },
-      tags: member?.tags || []
+      tags: initialData.tags || []
     };
-    setFormData(updatedMemberData);
-  }, [member]);
+    setMemberData(updatedMemberData);
+  }, [initialData]);
 
   // Load family addresses when member type changes to child or when member has family_id
   useEffect(() => {
     const loadFamilyAddresses = async () => {
-      if (formData.member_type === 'child' || member?.family_id) {
+      if (memberData.member_type === 'child' || initialData.family_id) {
         setIsLoadingFamilyAddresses(true);
         try {
           const families = await familyService.getFamilies();
@@ -157,12 +165,12 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
     };
 
     loadFamilyAddresses();
-  }, [formData.member_type, member?.family_id]);
+  }, [memberData.member_type, initialData.family_id]);
 
   // Load guardians when member is a child
   useEffect(() => {
     const loadGuardians = async () => {
-      if (formData.member_type === 'child') {
+      if (memberData.member_type === 'child') {
         try {
           // Load potential guardians (adult members)
           const { data: guardiansData, error: guardiansError } = await supabase
@@ -175,11 +183,11 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
           setGuardians(guardiansData);
 
           // If editing an existing child, load their guardian relationships
-          if (member?.id) {
+          if (initialData.id) {
             const { data: relationshipsData, error: relationshipsError } = await supabase
               .from('child_guardians')
               .select('guardian_id, relationship')
-              .eq('child_id', member.id);
+              .eq('child_id', initialData.id);
 
             if (relationshipsError) {
               console.error('Error loading guardian relationships:', relationshipsError);
@@ -202,18 +210,18 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
     };
 
     loadGuardians();
-  }, [formData.member_type, member?.id]);
+  }, [memberData.member_type, initialData.id]);
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setMemberData(prev => ({
       ...prev,
       [name]: value
     }));
   };
 
   const handleAddressChange = (field, value) => {
-    setFormData(prev => ({
+    setMemberData(prev => ({
       ...prev,
       address: {
         ...prev.address,
@@ -223,7 +231,7 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
   };
 
   const handleEmergencyContactChange = (field, value) => {
-    setFormData(prev => ({
+    setMemberData(prev => ({
       ...prev,
       emergency_contact: {
         ...prev.emergency_contact,
@@ -233,7 +241,7 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
   };
 
   const handleCommunicationPreferenceChange = (preference, value) => {
-    setFormData(prev => ({
+    setMemberData(prev => ({
       ...prev,
       communication_preferences: {
         ...prev.communication_preferences,
@@ -273,7 +281,7 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
   };
 
   const useFamilyAddress = (address) => {
-    setFormData(prev => ({
+    setMemberData(prev => ({
       ...prev,
       address: { ...address }
     }));
@@ -393,7 +401,7 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
       console.log('Got public URL:', urlData);
 
       // Update member data with new image URL
-      setFormData(prev => ({
+      setMemberData(prev => ({
         ...prev,
         image_url: urlData.publicUrl
       }));
@@ -418,7 +426,7 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.firstname || !formData.lastname) {
+    if (!memberData.firstname || !memberData.lastname) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields.",
@@ -429,13 +437,13 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
 
     // Convert empty strings to null for optional fields
     const dataToSave = {
-      ...formData,
-      email: formData.email?.trim() || null,
-      phone: formData.phone?.trim() || null,
-      birth_date: formData.birth_date || null,
-      anniversary_date: formData.anniversary_date || null,
-      last_attendance_date: formData.last_attendance_date || null,
-      join_date: formData.join_date || null
+      ...memberData,
+      email: memberData.email?.trim() || null,
+      phone: memberData.phone?.trim() || null,
+      birth_date: memberData.birth_date || null,
+      anniversary_date: memberData.anniversary_date || null,
+      last_attendance_date: memberData.last_attendance_date || null,
+      join_date: memberData.join_date || null
     };
 
     // Remove guardian data from member data (we'll handle it separately)
@@ -444,11 +452,11 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
 
     try {
       // Save the member data first
-      const savedMember = await onSubmit(dataToSave);
+      const savedMember = await onSave(dataToSave);
 
       // Handle guardian relationships for children
-      if (formData.member_type === 'child' && savedMember) {
-        const childId = savedMember.id || member?.id;
+      if (isChild && savedMember) {
+        const childId = savedMember.id || initialData.id;
         
         if (childId) {
           // Delete existing guardian relationships
@@ -462,8 +470,7 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
             const guardianRelationshipsToInsert = guardianIds.map(guardianId => ({
               child_id: childId,
               guardian_id: guardianId,
-              relationship: guardianRelationships[guardianId] || 'Parent',
-              organization_id: savedMember.organization_id
+              relationship: guardianRelationships[guardianId] || 'Parent'
             }));
 
             const { error: guardianError } = await supabase
@@ -492,7 +499,7 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
   };
 
   // Check if member is a child
-  const isChild = formData.member_type === 'child';
+  const isChild = memberData.member_type === 'child';
 
   return (
     <>
@@ -507,9 +514,9 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-4">
             <Avatar className="h-32 w-32 border-4 border-white dark:border-gray-800 shadow-xl">
-              <AvatarImage src={formData.image_url} />
+              <AvatarImage src={memberData.image_url} />
               <AvatarFallback className="text-2xl font-semibold bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
-                {formData.firstname?.charAt(0)}{formData.lastname?.charAt(0)}
+                {memberData.firstname?.charAt(0)}{memberData.lastname?.charAt(0)}
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col items-center gap-2">
@@ -571,7 +578,7 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
                 <Input
                   id="firstname"
                   name="firstname"
-                  value={formData.firstname}
+                  value={memberData.firstname}
                   onChange={handleFormChange}
                   required
                   className="border-gray-300 dark:border-gray-600 focus:border-blue-500"
@@ -582,7 +589,7 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
                 <Input
                   id="lastname"
                   name="lastname"
-                  value={formData.lastname}
+                  value={memberData.lastname}
                   onChange={handleFormChange}
                   required
                   className="border-gray-300 dark:border-gray-600 focus:border-blue-500"
@@ -594,8 +601,8 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
               <div className="space-y-2">
                 <Label htmlFor="member_type" className="text-sm font-medium">Member Type</Label>
                 <Select
-                  value={formData.member_type}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, member_type: value }))}
+                  value={memberData.member_type}
+                  onValueChange={(value) => setMemberData(prev => ({ ...prev, member_type: value }))}
                 >
                   <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:border-blue-500">
                     <SelectValue placeholder="Select type" />
@@ -615,8 +622,8 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
               <div className="space-y-2">
                 <Label htmlFor="gender" className="text-sm font-medium">Gender</Label>
                 <Select
-                  value={formData.gender}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}
+                  value={memberData.gender}
+                  onValueChange={(value) => setMemberData(prev => ({ ...prev, gender: value }))}
                 >
                   <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:border-blue-500">
                     <SelectValue placeholder="Select gender" />
@@ -632,8 +639,8 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
               <div className="space-y-2">
                 <Label htmlFor="status" className="text-sm font-medium">Status</Label>
                 <Select
-                  value={formData.status}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
+                  value={memberData.status}
+                  onValueChange={(value) => setMemberData(prev => ({ ...prev, status: value }))}
                 >
                   <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:border-blue-500">
                     <SelectValue placeholder="Select status" />
@@ -656,7 +663,7 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
                     id="email"
                     name="email"
                     type="email"
-                    value={formData.email}
+                    value={memberData.email}
                     onChange={handleFormChange}
                     className="border-gray-300 dark:border-gray-600 focus:border-blue-500"
                     placeholder="member@example.com"
@@ -668,7 +675,7 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
                     id="phone"
                     name="phone"
                     type="tel"
-                    value={formData.phone}
+                    value={memberData.phone}
                     onChange={handleFormChange}
                     className="border-gray-300 dark:border-gray-600 focus:border-blue-500"
                     placeholder="(555) 123-4567"
@@ -684,39 +691,13 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
                 <Input
                   id="occupation"
                   name="occupation"
-                  value={formData.occupation}
+                  value={memberData.occupation}
                   onChange={handleFormChange}
                   placeholder="e.g., Teacher, Engineer, Student"
                   className="border-gray-300 dark:border-gray-600 focus:border-blue-500"
                 />
               </div>
             )}
-
-            {/* Personal Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="birth_date" className="text-sm font-medium">Birth Date</Label>
-                <Input
-                  id="birth_date"
-                  name="birth_date"
-                  type="date"
-                  value={formData.birth_date}
-                  onChange={handleFormChange}
-                  className="border-gray-300 dark:border-gray-600 focus:border-blue-500"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="join_date" className="text-sm font-medium">Join Date</Label>
-                <Input
-                  id="join_date"
-                  name="join_date"
-                  type="date"
-                  value={formData.join_date}
-                  onChange={handleFormChange}
-                  className="border-gray-300 dark:border-gray-600 focus:border-blue-500"
-                />
-              </div>
-            </div>
           </CardContent>
         </Card>
           </TabsContent>
@@ -740,7 +721,7 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
                         id="email"
                         name="email"
                         type="email"
-                        value={formData.email}
+                        value={memberData.email}
                         onChange={handleFormChange}
                         className="border-gray-300 dark:border-gray-600 focus:border-green-500"
                         placeholder="member@example.com"
@@ -752,7 +733,7 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
                         id="phone"
                         name="phone"
                         type="tel"
-                        value={formData.phone}
+                        value={memberData.phone}
                         onChange={handleFormChange}
                         className="border-gray-300 dark:border-gray-600 focus:border-green-500"
                         placeholder="(555) 123-4567"
@@ -763,7 +744,7 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
               </Card>
             )}
 
-        {/* Address Information */}
+            {/* Address Information */}
             <Card className="border-l-4 border-l-indigo-500 shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-indigo-900 dark:text-indigo-100">
@@ -809,7 +790,7 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
               <Label htmlFor="address_street" className="text-sm font-medium">Street Address</Label>
               <Input
                 id="address_street"
-                value={formData.address.street}
+                value={memberData.address.street}
                 onChange={(e) => handleAddressChange('street', e.target.value)}
                 placeholder="123 Main Street"
                 className="border-gray-300 dark:border-gray-600 focus:border-indigo-500"
@@ -820,7 +801,7 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
                 <Label htmlFor="address_city" className="text-sm font-medium">City</Label>
                 <Input
                   id="address_city"
-                  value={formData.address.city}
+                  value={memberData.address.city}
                   onChange={(e) => handleAddressChange('city', e.target.value)}
                   placeholder="City"
                   className="border-gray-300 dark:border-gray-600 focus:border-indigo-500"
@@ -830,7 +811,7 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
                 <Label htmlFor="address_state" className="text-sm font-medium">State</Label>
                 <Input
                   id="address_state"
-                  value={formData.address.state}
+                  value={memberData.address.state}
                   onChange={(e) => handleAddressChange('state', e.target.value)}
                   placeholder="State"
                   className="border-gray-300 dark:border-gray-600 focus:border-indigo-500"
@@ -840,7 +821,7 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
                 <Label htmlFor="address_zip" className="text-sm font-medium">ZIP Code</Label>
                 <Input
                   id="address_zip"
-                  value={formData.address.zip}
+                  value={memberData.address.zip}
                   onChange={(e) => handleAddressChange('zip', e.target.value)}
                   placeholder="12345"
                   className="border-gray-300 dark:border-gray-600 focus:border-indigo-500"
@@ -851,7 +832,7 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
               <Label htmlFor="address_country" className="text-sm font-medium">Country</Label>
               <Input
                 id="address_country"
-                value={formData.address.country}
+                value={memberData.address.country}
                 onChange={(e) => handleAddressChange('country', e.target.value)}
                 placeholder="Country"
                 className="border-gray-300 dark:border-gray-600 focus:border-indigo-500"
@@ -863,247 +844,283 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
 
           {/* Family Information Tab */}
           <TabsContent value="family" className="flex-1 space-y-6 overflow-y-auto pr-2">
-        {/* Guardian Information - Only for Children */}
-        {isChild && (
-              <Card className="border-l-4 border-l-orange-500 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-orange-900 dark:text-orange-100">
-                <Shield className="h-5 w-5" />
-                Guardian Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label className="block text-sm font-medium text-gray-700 mb-1">
-                  Select Guardians (Hold Ctrl/Cmd to select multiple)
-                </Label>
-                <select
-                  multiple
-                  value={guardianIds}
-                  onChange={handleGuardianChange}
-                  className="w-full p-2 border rounded border-gray-300 dark:border-gray-600 focus:border-orange-500"
-                  size="5"
-                >
-                  {guardians.map(guardian => (
-                    <option key={guardian.id} value={guardian.id}>
-                      {guardian.firstname} {guardian.lastname}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Guardian Relationships */}
-              {guardianIds.length > 0 && (
-                <div className="mt-4">
-                  <h3 className="text-sm font-medium text-gray-700 mb-2">Guardian Relationships</h3>
-                  <div className="space-y-2">
-                    {guardianIds.map(guardianId => {
-                      const guardian = guardians.find(g => g.id === guardianId);
-                      return (
-                        <div key={guardianId} className="flex items-center gap-4">
-                          <span className="text-sm text-gray-600 min-w-[150px]">
-                            {guardian.firstname} {guardian.lastname}:
-                          </span>
-                          <select
-                            value={guardianRelationships[guardianId] || ''}
-                            onChange={(e) => handleRelationshipChange(guardianId, e.target.value)}
-                            className="flex-1 p-2 border rounded border-gray-300 dark:border-gray-600 focus:border-orange-500"
-                          >
-                            <option value="">Select relationship</option>
-                            <option value="Parent">Parent</option>
-                            <option value="Grandparent">Grandparent</option>
-                            <option value="Legal Guardian">Legal Guardian</option>
-                            <option value="Other">Other</option>
-                          </select>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Family Information - Only for Adults */}
-        {!isChild && (
-              <Card className="border-l-4 border-l-pink-500 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-pink-900 dark:text-pink-100">
-                <Heart className="h-5 w-5" />
-                Family Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="marital_status" className="text-sm font-medium">Marital Status</Label>
-                    <Select
-                      value={formData.marital_status}
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, marital_status: value }))}
-                    >
-                      <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:border-pink-500">
-                        <SelectValue placeholder="Select marital status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="single">Single</SelectItem>
-                        <SelectItem value="married">Married</SelectItem>
-                        <SelectItem value="divorced">Divorced</SelectItem>
-                        <SelectItem value="widowed">Widowed</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="spouse_name" className="text-sm font-medium">Spouse Name</Label>
-                    <Input
-                      id="spouse_name"
-                      name="spouse_name"
-                      value={formData.spouse_name}
-                      onChange={handleFormChange}
-                      placeholder="Spouse's full name"
-                      className="border-gray-300 dark:border-gray-600 focus:border-pink-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="anniversary_date" className="text-sm font-medium">Wedding Anniversary</Label>
-                    <Input
-                      id="anniversary_date"
-                      name="anniversary_date"
-                      type="date"
-                      value={formData.anniversary_date}
-                      onChange={handleFormChange}
-                      className="border-gray-300 dark:border-gray-600 focus:border-pink-500"
-                    />
-                  </div>
-                  <div className="flex items-center space-x-2 p-3 bg-pink-50 dark:bg-pink-950/20 rounded-lg border border-pink-200 dark:border-pink-800">
-                    <Checkbox
-                      id="has_children"
-                      checked={formData.has_children}
-                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, has_children: checked }))}
-                      className="border-pink-300 data-[state=checked]:bg-pink-500"
-                    />
-                    <Label htmlFor="has_children" className="text-sm font-medium text-pink-900 dark:text-pink-100">Has Children</Label>
-                  </div>
-                </div>
-          </CardContent>
-        </Card>
-        )}
-          </TabsContent>
-
-          {/* Additional Information Tab */}
-          <TabsContent value="additional" className="flex-1 space-y-6 overflow-y-auto pr-2">
-        {/* Emergency Contact */}
-            <Card className="border-l-4 border-l-red-500 shadow-lg">
+            {/* Personal Information */}
+            <Card className="border-l-4 border-l-green-500 shadow-lg">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-900 dark:text-red-100">
-              <Shield className="h-5 w-5" />
-              Emergency Contact
+            <CardTitle className="flex items-center gap-2 text-green-900 dark:text-green-100">
+              <User className="h-5 w-5" />
+              Personal Information
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="emergency_name" className="text-sm font-medium">Emergency Contact Name</Label>
+                <Label htmlFor="birth_date" className="text-sm font-medium">Birth Date</Label>
                 <Input
-                  id="emergency_name"
-                  value={formData.emergency_contact.name}
-                  onChange={(e) => handleEmergencyContactChange('name', e.target.value)}
-                  placeholder="Emergency contact name"
-                  className="border-gray-300 dark:border-gray-600 focus:border-red-500"
+                  id="birth_date"
+                  name="birth_date"
+                  type="date"
+                  value={memberData.birth_date}
+                  onChange={handleFormChange}
+                  className="border-gray-300 dark:border-gray-600 focus:border-green-500"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="emergency_phone" className="text-sm font-medium">Emergency Contact Phone</Label>
+                <Label htmlFor="join_date" className="text-sm font-medium">Join Date</Label>
                 <Input
-                  id="emergency_phone"
-                  value={formData.emergency_contact.phone}
-                  onChange={(e) => handleEmergencyContactChange('phone', e.target.value)}
-                  placeholder="Emergency contact phone"
-                  className="border-gray-300 dark:border-gray-600 focus:border-red-500"
+                  id="join_date"
+                  name="join_date"
+                  type="date"
+                  value={memberData.join_date}
+                  onChange={handleFormChange}
+                  className="border-gray-300 dark:border-gray-600 focus:border-green-500"
                 />
               </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="emergency_relationship" className="text-sm font-medium">Relationship</Label>
-              <Input
-                id="emergency_relationship"
-                value={formData.emergency_contact.relationship}
-                onChange={(e) => handleEmergencyContactChange('relationship', e.target.value)}
-                placeholder="e.g., Spouse, Parent, Friend"
-                className="border-gray-300 dark:border-gray-600 focus:border-red-500"
-              />
             </div>
           </CardContent>
         </Card>
 
-        {/* Communication Preferences - Only for Adults */}
-        {!isChild && (
+            {/* Guardian Information - Only for Children */}
+            {isChild && (
+              <Card className="border-l-4 border-l-orange-500 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-orange-900 dark:text-orange-100">
+                    <Shield className="h-5 w-5" />
+                    Guardian Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label className="block text-sm font-medium text-gray-700 mb-1">
+                      Select Guardians (Hold Ctrl/Cmd to select multiple)
+                    </Label>
+                    <select
+                      multiple
+                      value={guardianIds}
+                      onChange={handleGuardianChange}
+                      className="w-full p-2 border rounded border-gray-300 dark:border-gray-600 focus:border-orange-500"
+                      size="5"
+                    >
+                      {guardians.map(guardian => (
+                        <option key={guardian.id} value={guardian.id}>
+                          {guardian.firstname} {guardian.lastname}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Guardian Relationships */}
+                  {guardianIds.length > 0 && (
+                    <div className="mt-4">
+                      <h3 className="text-sm font-medium text-gray-700 mb-2">Guardian Relationships</h3>
+                      <div className="space-y-2">
+                        {guardianIds.map(guardianId => {
+                          const guardian = guardians.find(g => g.id === guardianId);
+                          return (
+                            <div key={guardianId} className="flex items-center gap-4">
+                              <span className="text-sm text-gray-600 min-w-[150px]">
+                                {guardian.firstname} {guardian.lastname}:
+                              </span>
+                              <select
+                                value={guardianRelationships[guardianId] || ''}
+                                onChange={(e) => handleRelationshipChange(guardianId, e.target.value)}
+                                className="flex-1 p-2 border rounded border-gray-300 dark:border-gray-600 focus:border-orange-500"
+                              >
+                                <option value="">Select relationship</option>
+                                <option value="Parent">Parent</option>
+                                <option value="Grandparent">Grandparent</option>
+                                <option value="Legal Guardian">Legal Guardian</option>
+                                <option value="Other">Other</option>
+                              </select>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Family Information - Only for Adults */}
+            {!isChild && (
+              <Card className="border-l-4 border-l-pink-500 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-pink-900 dark:text-pink-100">
+                    <Heart className="h-5 w-5" />
+                    Family Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="marital_status" className="text-sm font-medium">Marital Status</Label>
+                      <Select
+                        value={memberData.marital_status}
+                        onValueChange={(value) => setMemberData(prev => ({ ...prev, marital_status: value }))}
+                      >
+                        <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:border-pink-500">
+                          <SelectValue placeholder="Select marital status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="single">Single</SelectItem>
+                          <SelectItem value="married">Married</SelectItem>
+                          <SelectItem value="divorced">Divorced</SelectItem>
+                          <SelectItem value="widowed">Widowed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="spouse_name" className="text-sm font-medium">Spouse Name</Label>
+                      <Input
+                        id="spouse_name"
+                        name="spouse_name"
+                        value={memberData.spouse_name}
+                        onChange={handleFormChange}
+                        placeholder="Spouse's full name"
+                        className="border-gray-300 dark:border-gray-600 focus:border-pink-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="anniversary_date" className="text-sm font-medium">Wedding Anniversary</Label>
+                      <Input
+                        id="anniversary_date"
+                        name="anniversary_date"
+                        type="date"
+                        value={memberData.anniversary_date}
+                        onChange={handleFormChange}
+                        className="border-gray-300 dark:border-gray-600 focus:border-pink-500"
+                      />
+                    </div>
+                    <div className="flex items-center space-x-2 p-3 bg-pink-50 dark:bg-pink-950/20 rounded-lg border border-pink-200 dark:border-pink-800">
+                      <Checkbox
+                        id="has_children"
+                        checked={memberData.has_children}
+                        onCheckedChange={(checked) => setMemberData(prev => ({ ...prev, has_children: checked }))}
+                        className="border-pink-300 data-[state=checked]:bg-pink-500"
+                      />
+                      <Label htmlFor="has_children" className="text-sm font-medium text-pink-900 dark:text-pink-100">Has Children</Label>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* Additional Information Tab */}
+          <TabsContent value="additional" className="flex-1 space-y-6 overflow-y-auto pr-2">
+            {/* Emergency Contact */}
+            <Card className="border-l-4 border-l-red-500 shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-red-900 dark:text-red-100">
+                  <Shield className="h-5 w-5" />
+                  Emergency Contact
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="emergency_name" className="text-sm font-medium">Emergency Contact Name</Label>
+                    <Input
+                      id="emergency_name"
+                      value={memberData.emergency_contact.name}
+                      onChange={(e) => handleEmergencyContactChange('name', e.target.value)}
+                      placeholder="Emergency contact name"
+                      className="border-gray-300 dark:border-gray-600 focus:border-red-500"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="emergency_phone" className="text-sm font-medium">Emergency Contact Phone</Label>
+                    <Input
+                      id="emergency_phone"
+                      value={memberData.emergency_contact.phone}
+                      onChange={(e) => handleEmergencyContactChange('phone', e.target.value)}
+                      placeholder="Emergency contact phone"
+                      className="border-gray-300 dark:border-gray-600 focus:border-red-500"
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="emergency_relationship" className="text-sm font-medium">Relationship</Label>
+                  <Input
+                    id="emergency_relationship"
+                    value={memberData.emergency_contact.relationship}
+                    onChange={(e) => handleEmergencyContactChange('relationship', e.target.value)}
+                    placeholder="e.g., Spouse, Parent, Friend"
+                    className="border-gray-300 dark:border-gray-600 focus:border-red-500"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Communication Preferences - Only for Adults */}
+            {!isChild && (
               <Card className="border-l-4 border-l-purple-500 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-purple-900 dark:text-purple-100">
-                <Mail className="h-5 w-5" />
-                Communication Preferences
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center space-x-3 p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
-                <Checkbox
-                  id="sms_preference"
-                  checked={formData.communication_preferences.sms}
-                  onCheckedChange={(checked) => handleCommunicationPreferenceChange('sms', checked)}
-                  className="border-purple-300 data-[state=checked]:bg-purple-500"
-                />
-                <Label htmlFor="sms_preference" className="text-sm font-medium text-purple-900 dark:text-purple-100">Receive SMS notifications</Label>
-              </div>
-              <div className="flex items-center space-x-3 p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
-                <Checkbox
-                  id="email_preference"
-                  checked={formData.communication_preferences.email}
-                  onCheckedChange={(checked) => handleCommunicationPreferenceChange('email', checked)}
-                  className="border-purple-300 data-[state=checked]:bg-purple-500"
-                />
-                <Label htmlFor="email_preference" className="text-sm font-medium text-purple-900 dark:text-purple-100">Receive email notifications</Label>
-              </div>
-              <div className="flex items-center space-x-3 p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
-                <Checkbox
-                  id="mail_preference"
-                  checked={formData.communication_preferences.mail}
-                  onCheckedChange={(checked) => handleCommunicationPreferenceChange('mail', checked)}
-                  className="border-purple-300 data-[state=checked]:bg-purple-500"
-                />
-                <Label htmlFor="mail_preference" className="text-sm font-medium text-purple-900 dark:text-purple-100">Receive mail notifications</Label>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-purple-900 dark:text-purple-100">
+                    <Mail className="h-5 w-5" />
+                    Communication Preferences
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center space-x-3 p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                    <Checkbox
+                      id="sms_preference"
+                      checked={memberData.communication_preferences.sms}
+                      onCheckedChange={(checked) => handleCommunicationPreferenceChange('sms', checked)}
+                      className="border-purple-300 data-[state=checked]:bg-purple-500"
+                    />
+                    <Label htmlFor="sms_preference" className="text-sm font-medium text-purple-900 dark:text-purple-100">Receive SMS notifications</Label>
+                  </div>
+                  <div className="flex items-center space-x-3 p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                    <Checkbox
+                      id="email_preference"
+                      checked={memberData.communication_preferences.email}
+                      onCheckedChange={(checked) => handleCommunicationPreferenceChange('email', checked)}
+                      className="border-purple-300 data-[state=checked]:bg-purple-500"
+                    />
+                    <Label htmlFor="email_preference" className="text-sm font-medium text-purple-900 dark:text-purple-100">Receive email notifications</Label>
+                  </div>
+                  <div className="flex items-center space-x-3 p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                    <Checkbox
+                      id="mail_preference"
+                      checked={memberData.communication_preferences.mail}
+                      onCheckedChange={(checked) => handleCommunicationPreferenceChange('mail', checked)}
+                      className="border-purple-300 data-[state=checked]:bg-purple-500"
+                    />
+                    <Label htmlFor="mail_preference" className="text-sm font-medium text-purple-900 dark:text-purple-100">Receive mail notifications</Label>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-        {/* Notes */}
+            {/* Notes */}
             <Card className="border-l-4 border-l-gray-500 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-              <FileText className="h-5 w-5" />
-              Additional Notes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <Label htmlFor="notes" className="text-sm font-medium">Notes</Label>
-              <Textarea
-                id="notes"
-                name="notes"
-                value={formData.notes}
-                onChange={handleFormChange}
-                placeholder="Any additional notes about this member..."
-                rows={4}
-                className="border-gray-300 dark:border-gray-600 focus:border-gray-500 resize-none"
-              />
-            </div>
-          </CardContent>
-        </Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+                  <FileText className="h-5 w-5" />
+                  Additional Notes
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Label htmlFor="notes" className="text-sm font-medium">Notes</Label>
+                  <Textarea
+                    id="notes"
+                    name="notes"
+                    value={memberData.notes}
+                    onChange={handleFormChange}
+                    placeholder="Any additional notes about this member..."
+                    rows={4}
+                    className="border-gray-300 dark:border-gray-600 focus:border-gray-500 resize-none"
+                  />
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
 
@@ -1121,15 +1138,15 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
                   onClick={onCancel} 
                   className="px-6 shadow-sm hover:shadow-md transition-all duration-200"
                 >
-            Cancel
-          </Button>
+                  Cancel
+                </Button>
                 <Button 
                   type="submit" 
                   className="px-6 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg hover:shadow-xl transition-all duration-200"
                 >
                   Save Changes
-          </Button>
-        </div>
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -1171,4 +1188,6 @@ export default function MemberForm({ member, onSubmit, onCancel }) {
       </Dialog>
     </>
   );
-}; 
+};
+
+export default MemberForm; 

@@ -98,16 +98,28 @@ export const calculateDonationTrend = async () => {
     console.log('📊 [DonationTrend] Fetched', donations?.length || 0, 'donations for analysis');
 
     // Process all data in memory
-    const currentWeekDonations = getDonationsForWeekFromData(
+    let currentWeekDonations = getDonationsForWeekFromData(
       donations, 
       currentYear, 
       currentMonth, 
       currentWeekOfMonth
     );
 
+    // If no donations this week, try the previous week
+    let weekToAnalyze = currentWeekOfMonth;
+    if (currentWeekDonations === 0 && currentWeekOfMonth > 1) {
+      weekToAnalyze = currentWeekOfMonth - 1;
+      currentWeekDonations = getDonationsForWeekFromData(
+        donations, 
+        currentYear, 
+        currentMonth, 
+        weekToAnalyze
+      );
+    }
+
     const averageWeekDonations = getAverageDonationsForWeekFromData(
       donations, 
-      currentWeekOfMonth
+      weekToAnalyze
     );
 
     const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
@@ -116,7 +128,7 @@ export const calculateDonationTrend = async () => {
       donations,
       lastMonthYear,
       lastMonth,
-      currentWeekOfMonth
+      weekToAnalyze
     );
 
     // Calculate trend percentages
@@ -142,11 +154,13 @@ export const calculateDonationTrend = async () => {
     if (trendVsLastMonth !== null) {
       primaryTrend = trendVsLastMonth;
       trendType = 'lastMonth';
-      trendDescription = `Week ${currentWeekOfMonth}: $${currentWeekDonations.toLocaleString()} vs Last Month: $${lastMonthWeekDonations.toLocaleString()}`;
+      const weekLabel = weekToAnalyze === currentWeekOfMonth ? `Week ${currentWeekOfMonth}` : `Week ${weekToAnalyze} (previous week)`;
+      trendDescription = `${weekLabel}: $${currentWeekDonations.toLocaleString()} vs Last Month: $${lastMonthWeekDonations.toLocaleString()}`;
     } else if (trendVsAverage !== null) {
       primaryTrend = trendVsAverage;
       trendType = 'average';
-      trendDescription = `Week ${currentWeekOfMonth}: $${currentWeekDonations.toLocaleString()} vs 3-Month Avg: $${averageWeekDonations.toLocaleString()}`;
+      const weekLabel = weekToAnalyze === currentWeekOfMonth ? `Week ${currentWeekOfMonth}` : `Week ${weekToAnalyze} (previous week)`;
+      trendDescription = `${weekLabel}: $${currentWeekDonations.toLocaleString()} vs 3-Month Avg: $${averageWeekDonations.toLocaleString()}`;
     }
 
     // Additional context for the trend
@@ -168,6 +182,7 @@ export const calculateDonationTrend = async () => {
       averageWeekDonations,
       lastMonthWeekDonations,
       currentWeekOfMonth,
+      weekAnalyzed: weekToAnalyze,
       trendVsAverage,
       trendVsLastMonth,
       primaryTrend,

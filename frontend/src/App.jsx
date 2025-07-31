@@ -5,6 +5,7 @@ import { SpeedInsights } from "@vercel/speed-insights/react"
 import { Layout } from './components/layout';
 import { Dashboard } from './pages/dashboard';
 import { People } from './pages/members';
+
 import MemberProfile from './pages/member-profile';
 import Events from './pages/events';
 import { Donations } from './pages/donations';
@@ -64,6 +65,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/members" element={<People />} />
           <Route path="/members/:id" element={<MemberProfile />} />
+
           <Route path="/events" element={<Events />} />
           <Route path="/donations" element={<Donations />} />
           <Route path="/groups" element={<Groups />} />

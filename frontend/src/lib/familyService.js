@@ -135,6 +135,7 @@ export const familyService = {
       .update(updates)
       .eq('id', familyId)
       .select()
+      .order('id', { ascending: true })
       .limit(1);
 
     if (error) throw error;
@@ -243,12 +244,11 @@ export const familyService = {
 
     if (relationshipsError) throw relationshipsError;
 
-    // Filter out members who are in other families (but keep members in the current family)
+    // Filter out members who are already in any family (including the current family)
     const availableMembers = allMembers.filter(member => {
       const memberRelationships = familyRelationships.filter(fr => fr.member_id === member.id);
-      // Member is available if they're not in any family, or if they're only in the current family
-      return memberRelationships.length === 0 || 
-             (memberRelationships.length === 1 && memberRelationships[0].family_id === familyId);
+      // Member is available if they're not in any family at all
+      return memberRelationships.length === 0;
     });
 
     return availableMembers;
@@ -323,4 +323,4 @@ export const familyService = {
 
     return stats;
   }
-}; 
+};

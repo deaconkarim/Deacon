@@ -2109,6 +2109,7 @@ export default function Events() {
   const [pastEvents, setPastEvents] = useState([]);
   const [filteredEvents, setFilteredEvents] = useState([]);
   const [filteredPastEvents, setFilteredPastEvents] = useState([]);
+  const [rawEvents, setRawEvents] = useState([]); // Raw events from database for filter cards
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingPast, setIsLoadingPast] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -2192,7 +2193,7 @@ export default function Events() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [eventTypeFilter, setEventTypeFilter] = useState('all');
   const [dateRangeFilter, setDateRangeFilter] = useState('all');
-  const [timeWindowFilter, setTimeWindowFilter] = useState('month'); // 'all', 'today', 'week', 'month', 'quarter', 'year'
+  const [timeWindowFilter, setTimeWindowFilter] = useState('month'); // 'all', 'today', 'week', 'month', 'next30days', 'quarter', 'year'
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [selectedEventForDetails, setSelectedEventForDetails] = useState(null);
   const [isEventDetailsOpen, setIsEventDetailsOpen] = useState(false);
@@ -2206,6 +2207,7 @@ export default function Events() {
   const [isEditingPastEvent, setIsEditingPastEvent] = useState(false);
   const [isAnonymousCheckinOpen, setIsAnonymousCheckinOpen] = useState(false);
   const [anonymousName, setAnonymousName] = useState('');
+  const [isAutoSwitchingFilter, setIsAutoSwitchingFilter] = useState(false);
 
   // Kiosk mode detection
   const isKioskMode = location.pathname === '/events' && location.search.includes('kiosk=true');
@@ -2361,6 +2363,14 @@ export default function Events() {
         startDate = new Date(today.getFullYear(), quarter * 3, 1);
         endDate = new Date(today.getFullYear(), (quarter + 1) * 3, 0, 23, 59, 59, 999);
         console.log('[Events] Quarter filter - Date range:', startDate.toISOString(), 'to', endDate.toISOString());
+      } else if (timeWindowFilter === 'next30days') {
+        // For next 30 days filter, get events for the next 30 days
+        startDate = new Date(today);
+        endDate = new Date(today);
+        endDate.setDate(today.getDate() + 30);
+        endDate.setHours(23, 59, 59, 999);
+        console.log('[Events] Next 30 days filter - Date range:', startDate.toISOString(), 'to', endDate.toISOString());
+        console.log('[Events] Next 30 days filter - Today is:', today.toISOString(), 'Adding 30 days to:', endDate.toISOString());
       } else if (timeWindowFilter === 'year') {
         // For year filter, get events for the current year
         startDate = new Date(today.getFullYear(), 0, 1);
@@ -2440,6 +2450,9 @@ export default function Events() {
         organization_id: e.organization_id
       })));
 
+      // Store raw events for filter cards (separate from processed events)
+      setRawEvents(data);
+
       // Process events based on view mode and add attendance count
       let processedEvents;
       
@@ -2469,6 +2482,11 @@ export default function Events() {
         } else if (timeWindowFilter === 'quarter') {
           const quarter = Math.floor(today.getMonth() / 3);
           filterEndDate = new Date(today.getFullYear(), (quarter + 1) * 3, 0, 23, 59, 59, 999);
+        } else if (timeWindowFilter === 'next30days') {
+          filterEndDate = new Date(today);
+          filterEndDate.setDate(today.getDate() + 30);
+          filterEndDate.setHours(23, 59, 59, 999);
+          console.log('[Events] Next 30 days filter - Today:', today.toISOString(), 'End date:', filterEndDate.toISOString());
         } else if (timeWindowFilter === 'year') {
           filterEndDate = new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999);
         } else if (timeWindowFilter === 'today') {
@@ -2484,7 +2502,11 @@ export default function Events() {
         // Filter events within the time window
         const timeFilteredEvents = futureEvents.filter(event => {
           const eventDate = new Date(event.start_date);
-          return eventDate <= filterEndDate;
+          const isInRange = eventDate <= filterEndDate;
+          if (timeWindowFilter === 'next30days') {
+            console.log('[Events] Event:', event.title, 'Date:', event.start_date, 'Parsed:', eventDate.toISOString(), 'In range:', isInRange);
+          }
+          return isInRange;
         });
         
         // Add attendance count to all events
@@ -2620,6 +2642,16 @@ export default function Events() {
 
       setEvents(processedEvents);
       setFilteredEvents(processedEvents);
+
+      // Auto-switch to next 30 days if no events in current month and we're on month filter
+      if (timeWindowFilter === 'month' && processedEvents.length === 0 && !isAutoSwitchingFilter) {
+        console.log('[Events] No events found for current month, switching to next 30 days filter');
+        setIsAutoSwitchingFilter(true);
+        setTimeWindowFilter('next30days');
+      } else if (isAutoSwitchingFilter) {
+        // Reset the flag after auto-switching
+        setIsAutoSwitchingFilter(false);
+      }
     } catch (error) {
       console.error('Error fetching events:', error);
       toast({
@@ -4941,6 +4973,7 @@ export default function Events() {
       
       // Clear any search queries
       setMemberSearchQuery('');
+      setIsAutoSwitchingFilter(false);
       
     } catch (error) {
       console.error('Error closing dialog:', error);
@@ -5082,6 +5115,8 @@ export default function Events() {
     if (!customEndDate) {
       endDate.setMonth(endDate.getMonth() + 3); // Default: Show events for next 3 months
     }
+    
+    console.log('[processRecurringEvents] Processing with end date:', format(endDate, 'yyyy-MM-dd'));
     const seenEventKeys = new Set(); // Track seen events to avoid duplicates
 
     // Helper function to normalize event titles for better deduplication
@@ -5124,21 +5159,28 @@ export default function Events() {
         const nowDay = new Date(now);
         nowDay.setHours(0, 0, 0, 0);
         
-        if (currentDateDay >= nowDay) {
+        // Check if this instance is within our date range
+        if (currentDateDay >= nowDay && currentDate <= endDate) {
+          console.log('[processRecurringEvents] Processing instance:', {
+            title: event.title,
+            currentDate: format(currentDate, 'yyyy-MM-dd'),
+            endDate: format(endDate, 'yyyy-MM-dd'),
+            isWithinRange: currentDate <= endDate
+          });
           // Create a unique key for this event instance
           const normalizedTitle = normalizeTitle(event.title);
           const eventKey = `${normalizedTitle}_${format(currentDate, 'yyyy-MM-dd')}`;
           
           // Only add if we haven't seen this event instance before
           if (!seenEventKeys.has(eventKey)) {
-          const eventInstance = {
-            ...event,
-            id: `${event.id}_${currentDate.toISOString()}`,
-            start_date: new Date(currentDate),
-            end_date: new Date(currentDate.getTime() + duration),
-            is_instance: true
-          };
-          processedEvents.push(eventInstance);
+            const eventInstance = {
+              ...event,
+              id: `${event.id}_${currentDate.toISOString()}`,
+              start_date: new Date(currentDate),
+              end_date: new Date(currentDate.getTime() + duration),
+              is_instance: true
+            };
+            processedEvents.push(eventInstance);
             seenEventKeys.add(eventKey);
             instanceCount++;
             
@@ -5155,6 +5197,13 @@ export default function Events() {
               key: eventKey
             });
           }
+        } else if (currentDate > endDate) {
+          console.log('[processRecurringEvents] Skipping instance beyond end date:', {
+            title: event.title,
+            date: format(currentDate, 'yyyy-MM-dd'),
+            endDate: format(endDate, 'yyyy-MM-dd')
+          });
+          break; // Stop generating instances for this event
         }
 
         // Calculate next occurrence based on recurrence pattern
@@ -5210,6 +5259,26 @@ export default function Events() {
             break;
           default:
             currentDate = endDate; // Stop processing for unknown patterns
+        }
+        
+        // Check if we've exceeded the end date after calculating next occurrence
+        if (currentDate > endDate) {
+          console.log('[processRecurringEvents] Next occurrence exceeds end date, stopping:', {
+            title: event.title,
+            nextDate: format(currentDate, 'yyyy-MM-dd'),
+            endDate: format(endDate, 'yyyy-MM-dd')
+          });
+          break;
+        }
+        
+        // Additional safety check - if we've generated too many instances, stop
+        if (instanceCount >= maxInstances) {
+          console.log('[processRecurringEvents] Max instances reached, stopping:', {
+            title: event.title,
+            instanceCount,
+            maxInstances
+          });
+          break;
         }
       }
     });
@@ -6387,8 +6456,26 @@ export default function Events() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">All Future Events</p>
-                    <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{events.length}</p>
+                    <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">This month's Events</p>
+                    <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+                      {(() => {
+                        const now = new Date();
+                        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+                        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                        
+                        // Use raw events from database for accurate filtering
+                        const count = rawEvents.filter(e => {
+                          // Parse the start_date properly - it's a TIMESTAMP WITH TIME ZONE
+                          const eventDate = new Date(e.start_date);
+                          // Compare only the date part (ignore time)
+                          const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+                          return eventDateOnly >= startOfMonth && eventDateOnly <= endOfMonth;
+                        }).length;
+                        
+                        console.log('[Events] This month events count:', count, 'from', rawEvents.length, 'raw events');
+                        return count;
+                      })()}
+                    </p>
                   </div>
                   <div className="p-2 bg-blue-500 rounded-lg">
                     <Calendar className="h-5 w-5 text-white" />
@@ -6401,14 +6488,43 @@ export default function Events() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-green-600 dark:text-green-400 font-medium">Next 7 Days</p>
+                    <p className="text-sm text-green-600 dark:text-green-400 font-medium">This week's events</p>
                     <p className="text-2xl font-bold text-green-900 dark:text-green-100">
-                      {events.filter(e => {
-                        const eventDate = new Date(e.start_date);
-                        const weekFromNow = new Date();
-                        weekFromNow.setDate(weekFromNow.getDate() + 7);
-                        return eventDate <= weekFromNow && eventDate >= new Date();
-                      }).length}
+                      {(() => {
+                        const now = new Date();
+                        const startOfWeek = new Date(now);
+                        startOfWeek.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
+                        const endOfWeek = new Date(startOfWeek);
+                        endOfWeek.setDate(startOfWeek.getDate() + 6); // End of week (Saturday)
+                        
+                        // Use raw events from database for accurate filtering
+                        const count = rawEvents.filter(e => {
+                          // Parse the start_date properly - it's a TIMESTAMP WITH TIME ZONE
+                          const eventDate = new Date(e.start_date);
+                          // Compare only the date part (ignore time and timezone)
+                          const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+                          const startOfWeekOnly = new Date(startOfWeek.getFullYear(), startOfWeek.getMonth(), startOfWeek.getDate());
+                          const endOfWeekOnly = new Date(endOfWeek.getFullYear(), endOfWeek.getMonth(), endOfWeek.getDate());
+                          
+                          const isInWeek = eventDateOnly >= startOfWeekOnly && eventDateOnly <= endOfWeekOnly;
+                          
+                          if (e.title.includes('Bible Study') || e.title.includes('Worship')) {
+                            console.log('[Events] Event check:', {
+                              title: e.title,
+                              start_date: e.start_date,
+                              parsed: eventDateOnly.toISOString(),
+                              startOfWeek: startOfWeekOnly.toISOString(),
+                              endOfWeek: endOfWeekOnly.toISOString(),
+                              isInWeek
+                            });
+                          }
+                          
+                          return isInWeek;
+                        }).length;
+                        
+                        console.log('[Events] This week events count:', count, 'from', rawEvents.length, 'raw events');
+                        return count;
+                      })()}
                     </p>
                   </div>
                   <div className="p-2 bg-green-500 rounded-lg">
@@ -6422,19 +6538,24 @@ export default function Events() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">This Month's Attendance</p>
+                    <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">Last month's events</p>
                     <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
                       {(() => {
                         const now = new Date();
-                        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-                        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                        const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
                         
-                        return pastEvents
-                          .filter(e => {
-                            const eventDate = new Date(e.start_date);
-                            return eventDate >= startOfMonth && eventDate <= endOfMonth;
-                          })
-                          .reduce((sum, e) => sum + (e.attendance || 0), 0);
+                        // Use raw events from database for accurate filtering
+                        const count = rawEvents.filter(e => {
+                          // Parse the start_date properly - it's a TIMESTAMP WITH TIME ZONE
+                          const eventDate = new Date(e.start_date);
+                          // Compare only the date part (ignore time)
+                          const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+                          return eventDateOnly >= lastMonth && eventDateOnly <= endOfLastMonth;
+                        }).length;
+                        
+                        console.log('[Events] Last month events count:', count, 'from', rawEvents.length, 'raw events');
+                        return count;
                       })()}
                     </p>
                   </div>
@@ -6449,8 +6570,31 @@ export default function Events() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">All Past Events</p>
-                    <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">{pastEvents.length}</p>
+                    <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">Last week's Events</p>
+                    <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">
+                      {(() => {
+                        const now = new Date();
+                        const lastWeekStart = new Date(now);
+                        lastWeekStart.setDate(now.getDate() - now.getDay() - 7); // Start of last week (Sunday)
+                        const lastWeekEnd = new Date(lastWeekStart);
+                        lastWeekEnd.setDate(lastWeekStart.getDate() + 6); // End of last week (Saturday)
+                        
+                        // Use raw events from database for accurate filtering
+                        const count = rawEvents.filter(e => {
+                          // Parse the start_date properly - it's a TIMESTAMP WITH TIME ZONE
+                          const eventDate = new Date(e.start_date);
+                          // Compare only the date part (ignore time and timezone)
+                          const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+                          const lastWeekStartOnly = new Date(lastWeekStart.getFullYear(), lastWeekStart.getMonth(), lastWeekStart.getDate());
+                          const lastWeekEndOnly = new Date(lastWeekEnd.getFullYear(), lastWeekEnd.getMonth(), lastWeekEnd.getDate());
+                          
+                          return eventDateOnly >= lastWeekStartOnly && eventDateOnly <= lastWeekEndOnly;
+                        }).length;
+                        
+                        console.log('[Events] Last week events count:', count, 'from', rawEvents.length, 'raw events');
+                        return count;
+                      })()}
+                    </p>
                   </div>
                   <div className="p-2 bg-orange-500 rounded-lg">
                     <CheckCircle className="h-5 w-5 text-white" />
@@ -6485,9 +6629,25 @@ export default function Events() {
                   <Calendar className="h-4 w-4 text-white" />
                 </div>
                 <div className="text-lg font-bold text-blue-900 dark:text-blue-100">
-                  {events.length}
+                  {(() => {
+                    const now = new Date();
+                    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+                    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                    
+                    // Use raw events from database for accurate filtering
+                    const count = rawEvents.filter(e => {
+                      // Parse the start_date properly - it's a TIMESTAMP WITH TIME ZONE
+                      const eventDate = new Date(e.start_date);
+                      // Compare only the date part (ignore time)
+                      const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+                      return eventDateOnly >= startOfMonth && eventDateOnly <= endOfMonth;
+                    }).length;
+                    
+                    console.log('[Events] Mobile - This month events count:', count, 'from', rawEvents.length, 'raw events');
+                    return count;
+                  })()}
                 </div>
-                <p className="text-xs text-blue-600 dark:text-blue-400">Future Events</p>
+                <p className="text-xs text-blue-600 dark:text-blue-400">This month's Events</p>
               </CardContent>
             </Card>
 
@@ -6497,14 +6657,30 @@ export default function Events() {
                   <Clock className="h-4 w-4 text-white" />
                 </div>
                 <div className="text-lg font-bold text-green-900 dark:text-green-100">
-                  {events.filter(e => {
-                    const eventDate = new Date(e.start_date);
-                    const weekFromNow = new Date();
-                    weekFromNow.setDate(weekFromNow.getDate() + 7);
-                    return eventDate <= weekFromNow && eventDate >= new Date();
-                  }).length}
+                  {(() => {
+                    const now = new Date();
+                    const startOfWeek = new Date(now);
+                    startOfWeek.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
+                    const endOfWeek = new Date(startOfWeek);
+                    endOfWeek.setDate(startOfWeek.getDate() + 6); // End of week (Saturday)
+                    
+                    // Use raw events from database for accurate filtering
+                    const count = rawEvents.filter(e => {
+                      // Parse the start_date properly - it's a TIMESTAMP WITH TIME ZONE
+                      const eventDate = new Date(e.start_date);
+                      // Compare only the date part (ignore time and timezone)
+                      const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+                      const startOfWeekOnly = new Date(startOfWeek.getFullYear(), startOfWeek.getMonth(), startOfWeek.getDate());
+                      const endOfWeekOnly = new Date(endOfWeek.getFullYear(), endOfWeek.getMonth(), endOfWeek.getDate());
+                      
+                      return eventDateOnly >= startOfWeekOnly && eventDateOnly <= endOfWeekOnly;
+                    }).length;
+                    
+                    console.log('[Events] Mobile - This week events count:', count, 'from', rawEvents.length, 'raw events');
+                    return count;
+                  })()}
                 </div>
-                <p className="text-xs text-green-600 dark:text-green-400">Next 7 Days</p>
+                <p className="text-xs text-green-600 dark:text-green-400">This week's events</p>
               </CardContent>
             </Card>
 
@@ -6516,18 +6692,23 @@ export default function Events() {
                 <div className="text-lg font-bold text-purple-900 dark:text-purple-100">
                   {(() => {
                     const now = new Date();
-                    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-                    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
                     
-                    return pastEvents
-                      .filter(e => {
-                        const eventDate = new Date(e.start_date);
-                        return eventDate >= startOfMonth && eventDate <= endOfMonth;
-                      })
-                      .reduce((sum, e) => sum + (e.attendance || 0), 0);
+                    // Use raw events from database for accurate filtering
+                    const count = rawEvents.filter(e => {
+                      // Parse the start_date properly - it's a TIMESTAMP WITH TIME ZONE
+                      const eventDate = new Date(e.start_date);
+                      // Compare only the date part (ignore time)
+                      const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+                      return eventDateOnly >= lastMonth && eventDateOnly <= endOfLastMonth;
+                    }).length;
+                    
+                    console.log('[Events] Mobile - Last month events count:', count, 'from', rawEvents.length, 'raw events');
+                    return count;
                   })()}
                 </div>
-                <p className="text-xs text-purple-600 dark:text-purple-400">This Month's Attendance</p>
+                <p className="text-xs text-purple-600 dark:text-purple-400">Last month's events</p>
               </CardContent>
             </Card>
 
@@ -6537,9 +6718,30 @@ export default function Events() {
                   <CheckCircle className="h-4 w-4 text-white" />
                 </div>
                 <div className="text-lg font-bold text-orange-900 dark:text-orange-100">
-                  {pastEvents.length}
+                  {(() => {
+                    const now = new Date();
+                    const lastWeekStart = new Date(now);
+                    lastWeekStart.setDate(now.getDate() - now.getDay() - 7); // Start of last week (Sunday)
+                    const lastWeekEnd = new Date(lastWeekStart);
+                    lastWeekEnd.setDate(lastWeekStart.getDate() + 6); // End of last week (Saturday)
+                    
+                    // Use raw events from database for accurate filtering
+                    const count = rawEvents.filter(e => {
+                      // Parse the start_date properly - it's a TIMESTAMP WITH TIME ZONE
+                      const eventDate = new Date(e.start_date);
+                      // Compare only the date part (ignore time and timezone)
+                      const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+                      const lastWeekStartOnly = new Date(lastWeekStart.getFullYear(), lastWeekStart.getMonth(), lastWeekStart.getDate());
+                      const lastWeekEndOnly = new Date(lastWeekEnd.getFullYear(), lastWeekEnd.getMonth(), lastWeekEnd.getDate());
+                      
+                      return eventDateOnly >= lastWeekStartOnly && eventDateOnly <= lastWeekEndOnly;
+                    }).length;
+                    
+                    console.log('[Events] Mobile - Last week events count:', count, 'from', rawEvents.length, 'raw events');
+                    return count;
+                  })()}
                 </div>
-                <p className="text-xs text-orange-600 dark:text-orange-400">Past Events</p>
+                <p className="text-xs text-orange-600 dark:text-orange-400">Last week's Events</p>
               </CardContent>
             </Card>
           </div>
@@ -6887,35 +7089,60 @@ export default function Events() {
                     <Button
                       variant={timeWindowFilter === 'today' ? 'default' : 'outline'}
                       size="sm"
-                      onClick={() => setTimeWindowFilter('today')}
+                      onClick={() => {
+                        setIsAutoSwitchingFilter(false);
+                        setTimeWindowFilter('today');
+                      }}
                     >
                       Today
                     </Button>
                     <Button
                       variant={timeWindowFilter === 'week' ? 'default' : 'outline'}
                       size="sm"
-                      onClick={() => setTimeWindowFilter('week')}
+                      onClick={() => {
+                        setIsAutoSwitchingFilter(false);
+                        setTimeWindowFilter('week');
+                      }}
                     >
                       This Week
                     </Button>
                     <Button
                       variant={timeWindowFilter === 'month' ? 'default' : 'outline'}
                       size="sm"
-                      onClick={() => setTimeWindowFilter('month')}
+                      onClick={() => {
+                        setIsAutoSwitchingFilter(false);
+                        setTimeWindowFilter('month');
+                      }}
                     >
                       This Month
                     </Button>
                     <Button
+                      variant={timeWindowFilter === 'next30days' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        setIsAutoSwitchingFilter(false);
+                        setTimeWindowFilter('next30days');
+                      }}
+                    >
+                      Next 30 Days
+                    </Button>
+                    <Button
                       variant={timeWindowFilter === 'quarter' ? 'default' : 'outline'}
                       size="sm"
-                      onClick={() => setTimeWindowFilter('quarter')}
+                      onClick={() => {
+                        setIsAutoSwitchingFilter(false);
+                        setTimeWindowFilter('quarter');
+                      }}
                     >
                       This Quarter
                     </Button>
                     <Button
                       variant={timeWindowFilter === 'year' ? 'default' : 'outline'}
                       size="sm"
-                      onClick={() => setTimeWindowFilter('year')}
+                      onClick={() => {
+                        setIsAutoSwitchingFilter(false);
+                        setTimeWindowFilter('year');
+                      }}
                     >
                       This Year
                     </Button>

@@ -378,12 +378,30 @@ export const dashboardService = {
 
     const eventsThisWeek = events.filter(e => {
       const eventDate = new Date(e.start_date);
-      return eventDate >= now && eventDate <= weekFromNow;
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6); // End of week (Saturday)
+      
+      // Compare only the date part (ignore time and timezone)
+      const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+      const startOfWeekOnly = new Date(startOfWeek.getFullYear(), startOfWeek.getMonth(), startOfWeek.getDate());
+      const endOfWeekOnly = new Date(endOfWeek.getFullYear(), endOfWeek.getMonth(), endOfWeek.getDate());
+      
+      return eventDateOnly >= startOfWeekOnly && eventDateOnly <= endOfWeekOnly;
     }).length;
 
     const eventsThisMonth = events.filter(e => {
       const eventDate = new Date(e.start_date);
-      return eventDate >= now && eventDate <= monthFromNow;
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      
+      // Compare only the date part (ignore time and timezone)
+      const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+      const startOfMonthOnly = new Date(startOfMonth.getFullYear(), startOfMonth.getMonth(), startOfMonth.getDate());
+      const endOfMonthOnly = new Date(endOfMonth.getFullYear(), endOfMonth.getMonth(), endOfMonth.getDate());
+      
+      return eventDateOnly >= startOfMonthOnly && eventDateOnly <= endOfMonthOnly;
     }).length;
 
     console.log('📊 [DashboardService] Event calculations:', {
@@ -391,9 +409,7 @@ export const dashboardService = {
       upcoming: upcomingEvents.length,
       thisWeek: eventsThisWeek,
       thisMonth: eventsThisMonth,
-      now: now.toISOString(),
-      weekFromNow: weekFromNow.toISOString(),
-      monthFromNow: monthFromNow.toISOString()
+      now: now.toISOString()
     });
 
     // Calculate average events per month using available data
@@ -405,6 +421,7 @@ export const dashboardService = {
       return eventDate >= sixMonthsAgo && eventDate <= now;
     });
 
+    // Calculate average only for months that actually had events
     const monthsWithEvents = new Set();
     eventsLast6Months.forEach(event => {
       const eventDate = new Date(event.start_date);
@@ -429,7 +446,20 @@ export const dashboardService = {
         )
       : 'None';
 
-    const eventsNeedingVolunteers = upcomingEvents.filter(e => e.needs_volunteers === true).length;
+    const eventsNeedingVolunteers = events.filter(e => {
+      const eventDate = new Date(e.start_date);
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      
+      // Compare only the date part (ignore time and timezone)
+      const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+      const startOfMonthOnly = new Date(startOfMonth.getFullYear(), startOfMonth.getMonth(), startOfMonth.getDate());
+      const endOfMonthOnly = new Date(endOfMonth.getFullYear(), endOfMonth.getMonth(), endOfMonth.getDate());
+      
+      return eventDateOnly >= startOfMonthOnly && eventDateOnly <= endOfMonthOnly && e.needs_volunteers === true;
+    }).length;
+
+    console.log('📊 [DashboardService] Events needing volunteers:', eventsNeedingVolunteers);
 
     const result = {
       all: events,

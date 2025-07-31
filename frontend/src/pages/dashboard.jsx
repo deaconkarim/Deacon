@@ -56,7 +56,9 @@ import {
   UserPlus2,
   AlertCircle,
   Clock4,
-  Flag
+  Flag,
+  Gift,
+  AlertTriangle
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -74,6 +76,7 @@ import { getAlertStats } from '../lib/alertsService';
 import { smsService } from '../lib/smsService';
 import { dashboardService, clearAllCaches } from '../lib/dashboardService';
 import { userCacheService } from '../lib/userCache';
+import { SmartInsightsQueries } from '../lib/aiInsightsService';
 
 import { familyService } from '../lib/familyService';
 import {
@@ -87,12 +90,11 @@ import {
 import { useAuth } from '@/lib/authContext';
 import { Label } from '@/components/ui/label';
 import { formatName, getInitials } from '@/lib/utils/formatters';
-import { useAttendanceStats } from '../lib/data/attendanceStats';
 import LeadershipVerse from '@/components/LeadershipVerse';
 import { PermissionFeature } from '@/components/PermissionGuard';
 import { PERMISSIONS } from '@/lib/permissions';
-import AIInsightsPanel from '@/components/AIInsightsPanel';
-import DonationAIInsightsPanel from '@/components/DonationAIInsightsPanel';
+// import AIInsightsPanel from '@/components/AIInsightsPanel';
+// import DonationAIInsightsPanel from '@/components/DonationAIInsightsPanel';
 
 // Function to check if user has access to any dashboard sections
 const getUserAccessiblePages = (userPermissions) => {
@@ -231,36 +233,91 @@ export function Dashboard() {
   const [selectedSMSConversation, setSelectedSMSConversation] = useState(null);
   const [replyMessage, setReplyMessage] = useState('');
   const [isSendingReply, setIsSendingReply] = useState(false);
-  
 
+  // Advanced Analytics Card Dialog state
+  const [selectedCardType, setSelectedCardType] = useState(null);
+  const [isCardDialogOpen, setIsCardDialogOpen] = useState(false);
+  const [atRiskMembers, setAtRiskMembers] = useState([]);
+  const [isLoadingAtRiskMembers, setIsLoadingAtRiskMembers] = useState(false);
+  
+  // Function to get card status and colors based on metrics
+  const getCardStatus = (cardType) => {
+    if (isLoading) return { status: 'loading', colors: { bg: 'from-slate-500 to-slate-600', border: 'border-slate-200/50', text: 'text-slate-600' } };
+    
+    switch (cardType) {
+      case 'sunday-service-rate':
+        if (stats.sundayServiceRate >= 80) return { status: 'excellent', colors: { bg: 'from-emerald-500 to-green-500', border: 'border-emerald-200/50', text: 'text-emerald-600' } };
+        if (stats.sundayServiceRate >= 60) return { status: 'good', colors: { bg: 'from-blue-500 to-cyan-500', border: 'border-blue-200/50', text: 'text-blue-600' } };
+        return { status: 'needs-attention', colors: { bg: 'from-amber-500 to-orange-500', border: 'border-amber-200/50', text: 'text-amber-600' } };
+      
+      case 'weekly-trend':
+        if (donationTrendAnalysis.trend > 0) return { status: 'excellent', colors: { bg: 'from-emerald-500 to-green-500', border: 'border-emerald-200/50', text: 'text-emerald-600' } };
+        if (donationTrendAnalysis.trend === 0) return { status: 'good', colors: { bg: 'from-blue-500 to-cyan-500', border: 'border-blue-200/50', text: 'text-blue-600' } };
+        return { status: 'needs-attention', colors: { bg: 'from-red-500 to-rose-500', border: 'border-red-200/50', text: 'text-red-600' } };
+      
+      case 'event-activity':
+        if (stats.eventsThisMonth >= stats.averageEventsPerMonth) return { status: 'excellent', colors: { bg: 'from-emerald-500 to-green-500', border: 'border-emerald-200/50', text: 'text-emerald-600' } };
+        return { status: 'needs-attention', colors: { bg: 'from-amber-500 to-orange-500', border: 'border-amber-200/50', text: 'text-amber-600' } };
+      
+      case 'task-management':
+        if (stats.overdueTasks === 0) return { status: 'excellent', colors: { bg: 'from-emerald-500 to-green-500', border: 'border-emerald-200/50', text: 'text-emerald-600' } };
+        if (stats.overdueTasks <= 2) return { status: 'good', colors: { bg: 'from-blue-500 to-cyan-500', border: 'border-blue-200/50', text: 'text-blue-600' } };
+        return { status: 'needs-attention', colors: { bg: 'from-red-500 to-rose-500', border: 'border-red-200/50', text: 'text-red-600' } };
+      
+      case 'volunteer-engagement':
+        if (stats.eventsStillNeedingVolunteers === 0) return { status: 'excellent', colors: { bg: 'from-emerald-500 to-green-500', border: 'border-emerald-200/50', text: 'text-emerald-600' } };
+        if (stats.eventsStillNeedingVolunteers <= 2) return { status: 'good', colors: { bg: 'from-blue-500 to-cyan-500', border: 'border-blue-200/50', text: 'text-blue-600' } };
+        return { status: 'needs-attention', colors: { bg: 'from-red-500 to-rose-500', border: 'border-red-200/50', text: 'text-red-600' } };
+      
+      case 'recent-visitors':
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const recentVisitors = people.filter(person => 
+          person.status === 'visitor' && 
+          new Date(person.createdAt) >= thirtyDaysAgo
+        ).length;
+        if (recentVisitors >= 3) return { status: 'excellent', colors: { bg: 'from-emerald-500 to-green-500', border: 'border-emerald-200/50', text: 'text-emerald-600' } };
+        if (recentVisitors >= 1) return { status: 'good', colors: { bg: 'from-blue-500 to-cyan-500', border: 'border-blue-200/50', text: 'text-blue-600' } };
+        return { status: 'needs-attention', colors: { bg: 'from-amber-500 to-orange-500', border: 'border-amber-200/50', text: 'text-amber-600' } };
+      
+      case 'community-health':
+        if (stats.inactiveMembers === 0) return { status: 'excellent', colors: { bg: 'from-emerald-500 to-green-500', border: 'border-emerald-200/50', text: 'text-emerald-600' } };
+        if (stats.inactiveMembers <= 2) return { status: 'good', colors: { bg: 'from-blue-500 to-cyan-500', border: 'border-blue-200/50', text: 'text-blue-600' } };
+        return { status: 'needs-attention', colors: { bg: 'from-red-500 to-rose-500', border: 'border-red-200/50', text: 'text-red-600' } };
+      
+      case 'family-engagement':
+        if (stats.membersWithoutFamilies === 0) return { status: 'excellent', colors: { bg: 'from-emerald-500 to-green-500', border: 'border-emerald-200/50', text: 'text-emerald-600' } };
+        if (stats.membersWithoutFamilies <= 3) return { status: 'good', colors: { bg: 'from-blue-500 to-cyan-500', border: 'border-blue-200/50', text: 'text-blue-600' } };
+        return { status: 'needs-attention', colors: { bg: 'from-amber-500 to-orange-500', border: 'border-amber-200/50', text: 'text-amber-600' } };
+      
+      case 'communication':
+        if (stats.totalSMSConversations > 0) return { status: 'excellent', colors: { bg: 'from-emerald-500 to-green-500', border: 'border-emerald-200/50', text: 'text-emerald-600' } };
+        return { status: 'good', colors: { bg: 'from-blue-500 to-cyan-500', border: 'border-blue-200/50', text: 'text-blue-600' } };
+      
+      case 'celebrations':
+        if (stats.totalUpcoming > 0) return { status: 'excellent', colors: { bg: 'from-emerald-500 to-green-500', border: 'border-emerald-200/50', text: 'text-emerald-600' } };
+        return { status: 'needs-attention', colors: { bg: 'from-amber-500 to-orange-500', border: 'border-amber-200/50', text: 'text-amber-600' } };
+      
+      case 'attendance-diversity':
+        const eventTypes = [stats.sundayServiceEvents, stats.bibleStudyEvents, stats.fellowshipEvents].filter(count => count > 0);
+        if (eventTypes.length >= 3) return { status: 'excellent', colors: { bg: 'from-emerald-500 to-green-500', border: 'border-emerald-200/50', text: 'text-emerald-600' } };
+        if (eventTypes.length >= 2) return { status: 'good', colors: { bg: 'from-blue-500 to-cyan-500', border: 'border-blue-200/50', text: 'text-blue-600' } };
+        return { status: 'needs-attention', colors: { bg: 'from-amber-500 to-orange-500', border: 'border-amber-200/50', text: 'text-amber-600' } };
+      
+      case 'at-risk-members':
+        if (atRiskMembers.length === 0) return { status: 'excellent', colors: { bg: 'from-emerald-500 to-green-500', border: 'border-emerald-200/50', text: 'text-emerald-600' } };
+        if (atRiskMembers.length <= 2) return { status: 'good', colors: { bg: 'from-blue-500 to-cyan-500', border: 'border-blue-200/50', text: 'text-blue-600' } };
+        return { status: 'needs-attention', colors: { bg: 'from-red-500 to-rose-500', border: 'border-red-200/50', text: 'text-red-600' } };
+      
+      default:
+        return { status: 'neutral', colors: { bg: 'from-slate-500 to-slate-600', border: 'border-slate-200/50', text: 'text-slate-600' } };
+    }
+  };
 
   // Memoize the date objects to prevent infinite re-renders
-  const attendanceDateRange = useMemo(() => {
-    const now = new Date();
-    const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
-    return {
-      startDate: thirtyDaysAgo,
-      endDate: now
-    };
-  }, []); // Empty dependency array - only calculate once
 
-  // Attendance stats for last 30 days - only load if user has permission
-  const { isLoading: attendanceLoading, serviceBreakdown, memberStats, dailyData, eventDetails, error, clearCache: clearAttendanceCache } = useAttendanceStats(
-    attendanceDateRange.startDate, 
-    attendanceDateRange.endDate
-  );
 
-  // Make attendance cache clearing function available globally
-  useEffect(() => {
-    window.clearAttendanceCache = clearAttendanceCache;
-    return () => {
-      delete window.clearAttendanceCache;
-    };
-  }, [clearAttendanceCache]);
 
-  if (error) {
-    console.error('Attendance stats error:', error);
-  }
 
   const loadDashboardData = useCallback(async () => {
     try {
@@ -405,6 +462,17 @@ export function Dashboard() {
       setRecentSMSConversations(sms.recentConversations || []);
       setDonationTrendAnalysis(donationTrendAnalysis || {});
       setWeeklyDonationBreakdown(weeklyDonationBreakdown || []);
+
+      // Load at-risk members after main data is loaded
+      if (dashboardData.organizationId) {
+        try {
+          const atRiskData = await SmartInsightsQueries.getAtRiskMembers(dashboardData.organizationId);
+          setAtRiskMembers(atRiskData);
+        } catch (error) {
+          console.warn('Could not load at-risk members:', error);
+          // Don't fail the entire dashboard load for at-risk members
+        }
+      }
 
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -593,6 +661,7 @@ export function Dashboard() {
   const trendDescription = trendAnalysis.trendDescription || '';
   const trendContext = trendAnalysis.trendContext || '';
   const currentWeekOfMonth = trendAnalysis.currentWeekOfMonth || 0;
+  const weekAnalyzed = trendAnalysis.weekAnalyzed || currentWeekOfMonth;
   
   console.log('📊 [Dashboard] Sophisticated donation trend analysis:', trendAnalysis);
 
@@ -674,6 +743,37 @@ export function Dashboard() {
       });
     } finally {
       setIsSendingReply(false);
+    }
+  };
+
+  // Advanced Analytics Card Click Handler
+  const handleCardClick = async (cardType) => {
+    setSelectedCardType(cardType);
+    setIsCardDialogOpen(true);
+    
+    // Load at-risk members if needed
+    if (cardType === 'at-risk-members' && atRiskMembers.length === 0) {
+      await loadAtRiskMembers();
+    }
+  };
+
+  // Load At-Risk Members
+  const loadAtRiskMembers = async () => {
+    if (!organizationId) return;
+    
+    setIsLoadingAtRiskMembers(true);
+    try {
+      const atRiskData = await SmartInsightsQueries.getAtRiskMembers(organizationId);
+      setAtRiskMembers(atRiskData);
+    } catch (error) {
+      console.error('Error loading at-risk members:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load at-risk members data."
+      });
+    } finally {
+      setIsLoadingAtRiskMembers(false);
     }
   };
 
@@ -889,9 +989,9 @@ export function Dashboard() {
                     </a>
                   </Button>
                 </div>
+                              </div>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
           </PermissionFeature>
 
           {/* Financial Analytics */}
@@ -946,10 +1046,10 @@ export function Dashboard() {
                     </a>
                   </Button>
                 </div>
-              </div>
-            </div>
-          </motion.div>
-          </PermissionFeature>
+                          </div>
+          </div>
+        </motion.div>
+      </PermissionFeature>
 
         {/* Events & Activities */}
         <PermissionFeature permission={PERMISSIONS.EVENTS_VIEW}>
@@ -1017,7 +1117,7 @@ export function Dashboard() {
             </div>
           </div>
         </motion.div>
-        </PermissionFeature>
+      </PermissionFeature>
 
         {/* Celebrations */}
         <PermissionFeature permission={PERMISSIONS.REPORTS_VIEW}>
@@ -1084,7 +1184,7 @@ export function Dashboard() {
             </div>
           </div>
         </motion.div>
-        </PermissionFeature>
+      </PermissionFeature>
 
         {/* Tasks & Productivity */}
         <PermissionFeature permission={PERMISSIONS.TASKS_VIEW}>
@@ -1148,7 +1248,7 @@ export function Dashboard() {
             </div>
           </div>
         </motion.div>
-        </PermissionFeature>
+      </PermissionFeature>
 
         {/* Communications */}
         <PermissionFeature permission={PERMISSIONS.SETTINGS_VIEW}>
@@ -1212,7 +1312,7 @@ export function Dashboard() {
             </div>
           </div>
         </motion.div>
-        </PermissionFeature>
+      </PermissionFeature>
       </div>
 
       {/* Personal Tasks and Recent Communication Section */}
@@ -1436,530 +1536,410 @@ export function Dashboard() {
         </motion.div>
       </div>
 
-      {/* Church Intelligence - Deep Insights */}
+
+
+        {/* AI Ministry Insights Panel - TEMPORARILY DISABLED */}
+        {/* <PermissionFeature permission={PERMISSIONS.MEMBERS_VIEW}>
+          <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
+            <AIInsightsPanel organizationId={organizationId} />
+          </motion.div>
+        </PermissionFeature> */}
+
+              {/* Donation AI Insights Panel - TEMPORARILY DISABLED */}
+      {/* <PermissionFeature permission={PERMISSIONS.DONATIONS_VIEW}>
+        <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
+          <DonationAIInsightsPanel organizationId={organizationId} />
+        </motion.div>
+      {/* Advanced Analytics Section */}
       <PermissionFeature permission={PERMISSIONS.REPORTS_VIEW}>
         <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
           <div className="group relative">
-            <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-            <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center shadow-lg">
-                  <BarChart3 className="h-6 w-6 text-white" />
+            <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+            <div className="relative backdrop-blur-sm bg-white/90 dark:bg-slate-800/90 border border-white/30 dark:border-slate-700/30 rounded-3xl p-4 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center space-x-4">
+                <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg">
+                  <BarChart3 className="h-7 w-7 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Church Intelligence</h3>
+                  <h3 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">Advanced Analytics</h3>
+                  <p className="text-slate-600 dark:text-slate-400 text-lg">Intelligent insights and performance metrics</p>
                 </div>
-                          </div>
-          </div>
-          
-          {/* Deep Intelligence Grid */}
-            <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-              {/* Growth Trajectory Analysis */}
-              <motion.div className="group/card relative" variants={itemVariants}>
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-green-500/20 to-green-600/20 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
-                      <TrendingUp className="h-4 w-4 text-white" />
+              </div>
+            </div>
+            
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+               {/* Sunday Service Attendance Rate */}
+               <motion.div 
+                 className="group/card relative cursor-pointer" 
+                 variants={itemVariants}
+                 onClick={() => handleCardClick('sunday-service-rate')}
+               >
+                 <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/30 to-teal-500/30 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                 <div className="relative bg-white/95 dark:bg-slate-800/95 border border-emerald-200/50 dark:border-emerald-700/50 rounded-xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                   <div className="flex items-center gap-3 mb-4">
+                     <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center shadow-md">
+                       <BookOpen className="h-5 w-5 text-white" />
+                     </div>
+                     <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Sunday Service Rate</h4>
+                   </div>
+                   <div className="space-y-3">
+                     <div className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                       {isLoading ? '...' : `${stats.sundayServiceRate.toFixed(0)}%`}
+                     </div>
+                     <p className="text-sm text-slate-600 dark:text-slate-400">
+                       Active members who attend Sunday service
+                     </p>
+                     <div className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                       {stats.sundayServiceRate >= 70 ? 'Excellent engagement' : 
+                        stats.sundayServiceRate >= 50 ? 'Good participation' : 'Focus on outreach'}
+                     </div>
+                   </div>
+                 </div>
+               </motion.div>
+                
+              {/* Donation Growth */}
+              <motion.div 
+                className="group/card relative cursor-pointer" 
+                variants={itemVariants}
+                onClick={() => handleCardClick('weekly-trend')}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/30 to-cyan-500/30 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative bg-white/95 dark:bg-slate-800/95 border border-blue-200/50 dark:border-blue-700/50 rounded-xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-md">
+                      <TrendingUp className="h-5 w-5 text-white" />
                     </div>
-                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Growth Trend</h4>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Weekly Trend</h4>
                   </div>
-                  <div className="space-y-2">
-                    <div className="text-2xl font-bold text-green-600">
-                      {isLoading ? '...' : stats.visitors > 0 ? 'Expanding' : 'Stable'}
+                  <div className="space-y-3">
+                    <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                      {isLoading ? '...' : !canCalculateTrend ? `Week ${weekAnalyzed}` : (donationTrend > 0 ? '+' : '') + donationTrend.toFixed(1) + '%'}
                     </div>
                     <p className="text-sm text-slate-600 dark:text-slate-400">
-                      {stats.visitors > 0 ? `${stats.visitors} new visitors this month` : 'Focus on visitor outreach'}
+                      {!canCalculateTrend ? trendContext : trendDescription}
                     </p>
-                    <div className="text-xs text-slate-500 dark:text-slate-500">
-                      Recommendation: {stats.visitors > 0 ? 'Follow up with recent visitors' : 'Launch invitation campaign'}
+                    <div className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                      {donationTrend > 0 ? 'Strong stewardship' : donationTrend < 0 ? 'Focus on giving' : 'Building momentum'}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+              
+              {/* Event Activity */}
+              <motion.div 
+                className="group/card relative cursor-pointer" 
+                variants={itemVariants}
+                onClick={() => handleCardClick('event-activity')}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500/30 to-pink-500/30 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative bg-white/95 dark:bg-slate-800/95 border border-purple-200/50 dark:border-purple-700/50 rounded-xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-md">
+                      <Calendar className="h-5 w-5 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Event Activity</h4>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                      {isLoading ? '...' : stats.eventsThisMonth >= stats.averageEventsPerMonth ? 'At or Above' : 'Below'} Average
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      {stats.eventsThisMonth} events this month vs {stats.averageEventsPerMonth} average
+                    </p>
+                    <div className="text-xs text-purple-600 dark:text-purple-400 font-medium">
+                      {stats.eventsNeedingVolunteers > 0 ? `${stats.eventsNeedingVolunteers} events need volunteers` : 'Strong event planning'}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+              
+              {/* Task Management */}
+              <motion.div 
+                className="group/card relative cursor-pointer" 
+                variants={itemVariants}
+                onClick={() => handleCardClick('task-management')}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-500/30 to-orange-500/30 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative bg-white/95 dark:bg-slate-800/95 border border-amber-200/50 dark:border-amber-700/50 rounded-xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center shadow-md">
+                      <CheckSquare className="h-5 w-5 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">On-Time Completion</h4>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="text-3xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                      {isLoading ? '...' : stats.totalTasks > 0 ? `${((stats.totalTasks - stats.overdueTasks) / stats.totalTasks * 100).toFixed(0)}%` : '0%'}
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      {stats.overdueTasks} overdue tasks need attention
+                    </p>
+                    <div className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                      {stats.overdueTasks > 0 ? 'Address overdue tasks first' : 'Maintain current workflow'}
                     </div>
                   </div>
                 </div>
               </motion.div>
 
-              {/* Financial Health Score */}
-              <motion.div className="group/card relative" variants={itemVariants}>
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center">
-                      <DollarSign className="h-4 w-4 text-white" />
+              {/* Volunteer Engagement */}
+              <motion.div 
+                className="group/card relative cursor-pointer" 
+                variants={itemVariants}
+                onClick={() => handleCardClick('volunteer-engagement')}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500/30 to-fuchsia-500/30 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative bg-white/95 dark:bg-slate-800/95 border border-violet-200/50 dark:border-violet-700/50 rounded-xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-xl flex items-center justify-center shadow-md">
+                      <Users2 className="h-5 w-5 text-white" />
                     </div>
-                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Weekly Giving</h4>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Volunteer Engagement</h4>
                   </div>
-                  <div className="space-y-2">
-                    <div className="text-2xl font-bold text-emerald-600">
-                      {isLoading ? '...' : canCalculateTrend ? (donationTrend > 0 ? 'Improving' : 'Declining') : 'Week ' + currentWeekOfMonth}
+                  <div className="space-y-3">
+                    <div className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">
+                      {isLoading ? '...' : stats.eventsStillNeedingVolunteers === 0 ? 'Fully Staffed' : 'Needs Volunteers'}
                     </div>
                     <p className="text-sm text-slate-600 dark:text-slate-400">
-                      {canCalculateTrend ? `${Math.abs(donationTrend).toFixed(1)}% vs previous pattern` : trendContext}
+                      {stats.eventsStillNeedingVolunteers} events need volunteers
                     </p>
-                    <div className="text-xs text-slate-500 dark:text-slate-500">
-                      {currentWeekOfMonth === 1 ? 'First week typically highest' : 
-                       currentWeekOfMonth === 2 ? 'Second week pattern' :
-                       currentWeekOfMonth === 3 ? 'Mid-month giving' :
-                       currentWeekOfMonth === 4 ? 'Late month pattern' : 'Final week'}
+                    <div className="text-xs text-violet-600 dark:text-violet-400 font-medium">
+                      {stats.eventsStillNeedingVolunteers === 0 ? 'Excellent coverage' : 'Recruit more volunteers'}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+              
+              {/* Recent Visitors */}
+              <motion.div 
+                className="group/card relative cursor-pointer" 
+                variants={itemVariants}
+                onClick={() => handleCardClick('recent-visitors')}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-rose-500/30 to-pink-500/30 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative bg-white/95 dark:bg-slate-800/95 border border-rose-200/50 dark:border-rose-700/50 rounded-xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-rose-500 to-pink-500 rounded-xl flex items-center justify-center shadow-md">
+                      <UserPlus className="h-5 w-5 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Recent Visitors</h4>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="text-3xl font-bold bg-gradient-to-r from-rose-600 to-pink-600 bg-clip-text text-transparent">
+                      {isLoading ? '...' : (() => {
+                        const thirtyDaysAgo = new Date();
+                        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                        return people.filter(person => 
+                          person.status === 'visitor' && 
+                          new Date(person.createdAt) >= thirtyDaysAgo
+                        ).length;
+                      })()}
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      New visitors in last 30 days
+                    </p>
+                    <div className="text-xs text-rose-600 dark:text-rose-400 font-medium">
+                      {(() => {
+                        const thirtyDaysAgo = new Date();
+                        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                        const recentVisitors = people.filter(person => 
+                          person.status === 'visitor' && 
+                          new Date(person.createdAt) >= thirtyDaysAgo
+                        ).length;
+                        return recentVisitors >= 3 ? 'Strong outreach' : recentVisitors >= 1 ? 'Growing' : 'Focus on invitations';
+                      })()}
                     </div>
                   </div>
                 </div>
               </motion.div>
 
-              {/* Engagement Health */}
-              <motion.div className="group/card relative" variants={itemVariants}>
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                      <Activity className="h-4 w-4 text-white" />
+              {/* Community Health */}
+              <motion.div 
+                className="group/card relative cursor-pointer" 
+                variants={itemVariants}
+                onClick={() => handleCardClick('community-health')}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/30 to-indigo-500/30 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative bg-white/95 dark:bg-slate-800/95 border border-blue-200/50 dark:border-blue-700/50 rounded-xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center shadow-md">
+                      <Heart className="h-5 w-5 text-white" />
                     </div>
                     <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Community Health</h4>
                   </div>
-                  <div className="space-y-2">
-                    <div className="text-2xl font-bold text-blue-600">
+                  <div className="space-y-3">
+                    <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                       {isLoading ? '...' : stats.inactiveMembers === 0 ? 'Excellent' : stats.inactiveMembers < 5 ? 'Good' : 'Needs Attention'}
                     </div>
                     <p className="text-sm text-slate-600 dark:text-slate-400">
                       {stats.inactiveMembers === 0 ? 'All members engaged' : `${stats.inactiveMembers} members need pastoral care`}
                     </p>
-                    <div className="text-xs text-slate-500 dark:text-slate-500">
-                      Action: {stats.inactiveMembers > 0 ? 'Schedule follow-up visits' : 'Maintain current connection level'}
+                    <div className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                      {stats.inactiveMembers > 0 ? 'Schedule follow-up visits' : 'Maintain current connection level'}
                     </div>
                   </div>
                 </div>
               </motion.div>
 
-              {/* Event Success Prediction */}
-              <motion.div className="group/card relative" variants={itemVariants}>
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-indigo-600/20 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center">
-                      <Calendar className="h-4 w-4 text-white" />
+              {/* Family Engagement */}
+              <motion.div 
+                className="group/card relative cursor-pointer" 
+                variants={itemVariants}
+                onClick={() => handleCardClick('family-engagement')}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-green-500/30 to-emerald-500/30 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative bg-white/95 dark:bg-slate-800/95 border border-green-200/50 dark:border-green-700/50 rounded-xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center shadow-md">
+                      <Users className="h-5 w-5 text-white" />
                     </div>
-                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Event Momentum</h4>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Family Engagement</h4>
                   </div>
-                  <div className="space-y-2">
-                    <div className="text-2xl font-bold text-indigo-600">
-                      {isLoading ? '...' : stats.eventsThisMonth > stats.averageEventsPerMonth ? 'Strong' : 'Building'}
+                  <div className="space-y-3">
+                    <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                      {isLoading ? '...' : stats.totalFamilies > 0 ? `${Math.round((stats.membersInFamilies / Math.max(stats.totalPeople, 1)) * 100)}%` : '0%'}
                     </div>
                     <p className="text-sm text-slate-600 dark:text-slate-400">
-                      {stats.eventsThisMonth} events vs {stats.averageEventsPerMonth} monthly average
+                      {stats.totalFamilies} families • {stats.membersInFamilies} members connected
                     </p>
-                    <div className="text-xs text-slate-500 dark:text-slate-500">
-                      Opportunity: {stats.eventsNeedingVolunteers > 0 ? `Recruit volunteers for ${stats.eventsNeedingVolunteers} events` : 'Plan next special event'}
+                    <div className="text-xs text-green-600 dark:text-green-400 font-medium">
+                      {stats.membersWithoutFamilies > 0 ? `${stats.membersWithoutFamilies} members need family assignment` : 'Strong family connections'}
                     </div>
                   </div>
                 </div>
               </motion.div>
 
               {/* Communication Effectiveness */}
-              <motion.div className="group/card relative" variants={itemVariants}>
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500/20 to-violet-600/20 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-violet-600 rounded-lg flex items-center justify-center">
-                      <MessageSquare className="h-4 w-4 text-white" />
+              <motion.div 
+                className="group/card relative cursor-pointer" 
+                variants={itemVariants}
+                onClick={() => handleCardClick('communication')}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500/30 to-purple-500/30 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative bg-white/95 dark:bg-slate-800/95 border border-violet-200/50 dark:border-violet-700/50 rounded-xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-500 rounded-xl flex items-center justify-center shadow-md">
+                      <MessageSquare className="h-5 w-5 text-white" />
                     </div>
-                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Connection Quality</h4>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Communication</h4>
                   </div>
-                  <div className="space-y-2">
-                    <div className="text-2xl font-bold text-violet-600">
-                      {isLoading ? '...' : recentSMSConversations && recentSMSConversations.length > 0 ? 'Active' : 'Growing'}
+                  <div className="space-y-3">
+                    <div className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
+                      {isLoading ? '...' : stats.totalSMSConversations > 0 ? 'Active' : 'Growing'}
                     </div>
                     <p className="text-sm text-slate-600 dark:text-slate-400">
-                      {recentSMSConversations ? `${recentSMSConversations.filter(c => c.conversation_type === 'prayer_request').length} prayer requests` : 'Building communication channels'}
+                      {stats.totalSMSMessages || 0} messages • {stats.totalSMSConversations || 0} conversations
                     </p>
-                    <div className="text-xs text-slate-500 dark:text-slate-500">
-                      Focus: {recentSMSConversations && recentSMSConversations.length > 0 ? 'Maintain pastoral responsiveness' : 'Encourage two-way communication'}
+                    <div className="text-xs text-violet-600 dark:text-violet-400 font-medium">
+                      {stats.totalSMSConversations > 0 ? 'Maintain pastoral responsiveness' : 'Encourage two-way communication'}
                     </div>
                   </div>
                 </div>
               </motion.div>
 
-              {/* Productivity Insights */}
-              <motion.div className="group/card relative" variants={itemVariants}>
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-orange-500/20 to-orange-600/20 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
-                      <CheckSquare className="h-4 w-4 text-white" />
+              {/* Celebration Engagement */}
+              <motion.div 
+                className="group/card relative cursor-pointer" 
+                variants={itemVariants}
+                onClick={() => handleCardClick('celebrations')}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-yellow-500/30 to-amber-500/30 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative bg-white/95 dark:bg-slate-800/95 border border-yellow-200/50 dark:border-yellow-700/50 rounded-xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-yellow-500 to-amber-500 rounded-xl flex items-center justify-center shadow-md">
+                      <Gift className="h-5 w-5 text-white" />
                     </div>
-                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Ministry Efficiency</h4>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Celebrations</h4>
                   </div>
-                  <div className="space-y-2">
-                    <div className="text-2xl font-bold text-orange-600">
-                      {isLoading ? '...' : stats.overdueTasks === 0 ? 'Excellent' : stats.overdueTasks < 3 ? 'Good' : 'Needs Focus'}
+                  <div className="space-y-3">
+                    <div className="text-3xl font-bold bg-gradient-to-r from-yellow-600 to-amber-600 bg-clip-text text-transparent">
+                      {isLoading ? '...' : stats.totalUpcoming || 0}
                     </div>
                     <p className="text-sm text-slate-600 dark:text-slate-400">
-                      {stats.overdueTasks === 0 ? 'All tasks on track' : `${stats.overdueTasks} overdue items need attention`}
+                      Upcoming celebrations this month
                     </p>
-                    <div className="text-xs text-slate-500 dark:text-slate-500">
-                      Priority: {stats.overdueTasks > 0 ? 'Address overdue tasks first' : 'Maintain current workflow'}
+                    <div className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">
+                      {stats.totalUpcoming > 0 ? 'Plan celebration outreach' : 'No upcoming celebrations'}
                     </div>
                   </div>
                 </div>
               </motion.div>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-        </PermissionFeature>
 
-        {/* AI Ministry Insights Panel */}
-        <PermissionFeature permission={PERMISSIONS.MEMBERS_VIEW}>
-          <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
-            <AIInsightsPanel organizationId={organizationId} />
-          </motion.div>
-        </PermissionFeature>
-
-        {/* Donation AI Insights Panel */}
-        <PermissionFeature permission={PERMISSIONS.DONATIONS_VIEW}>
-          <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
-            <DonationAIInsightsPanel organizationId={organizationId} />
-          </motion.div>
-        </PermissionFeature>
-
-
-
-              
-      {/* Advanced Analytics Section */}
-      <PermissionFeature permission={PERMISSIONS.REPORTS_VIEW}>
-        <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
-          <div className="group relative">
-            <div className="absolute -inset-1 bg-gradient-to-r from-slate-500 to-slate-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-            <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-slate-500 to-slate-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <BarChart3 className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Advanced Analytics</h3>
-                  <p className="text-slate-600 dark:text-slate-400">Intelligent insights and performance metrics</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="grid gap-3 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-               {/* Sunday Service Attendance Rate */}
-               <div className={`p-3 sm:p-4 rounded-lg border ${
-                stats.sundayServiceRate >= 70 ? 
-                  'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800' :
-                stats.sundayServiceRate >= 50 ? 
-                  'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-yellow-200 dark:border-yellow-800' :
-                  'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800'
-              }`}>
-                <div className="flex items-center gap-2 mb-2">
-                  <BookOpen className={`h-4 w-4 sm:h-5 sm:w-5 ${
-                    stats.sundayServiceRate >= 70 ? 'text-green-600' :
-                    stats.sundayServiceRate >= 50 ? 'text-yellow-600' :
-                    'text-red-600'
-                  }`} />
-                  <h4 className={`font-semibold text-sm sm:text-base ${
-                    stats.sundayServiceRate >= 70 ? 'text-green-900 dark:text-green-100' :
-                    stats.sundayServiceRate >= 50 ? 'text-yellow-900 dark:text-yellow-100' :
-                    'text-red-900 dark:text-red-100'
-                  }`}>Sunday Service Rate</h4>
-                </div>
-                {isLoading ? (
-                  <Skeleton className="h-4 w-32 mb-2" />
-                ) : (
-                  <p className={`text-xl sm:text-2xl font-bold mb-1 ${
-                    stats.sundayServiceRate >= 70 ? 'text-green-700 dark:text-green-300' :
-                    stats.sundayServiceRate >= 50 ? 'text-yellow-700 dark:text-yellow-300' :
-                    'text-red-700 dark:text-red-300'
-                  }`}>
-                    {stats.sundayServiceRate.toFixed(0)}%
-                  </p>
-                )}
-                <p className={`text-xs sm:text-sm ${
-                  stats.sundayServiceRate >= 70 ? 'text-green-600 dark:text-green-400' :
-                  stats.sundayServiceRate >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
-                  'text-red-600 dark:text-red-400'
-                }`}>
-                  Active members who attend Sunday service (last 90 days)
-                </p>
-                </div>
-                
-              {/* Donation Growth */}
-              <div className={`p-3 sm:p-4 rounded-lg border ${
-                !canCalculateTrend ? 
-                  'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800' :
-                donationTrend > 5 ? 
-                  'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800' :
-                donationTrend > 0 ? 
-                  'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-yellow-200 dark:border-yellow-800' :
-                  'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800'
-              }`}>
-                <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className={`h-4 w-4 sm:h-5 sm:w-5 ${
-                    !canCalculateTrend ? 'text-blue-600' :
-                    donationTrend > 5 ? 'text-green-600' :
-                    donationTrend > 0 ? 'text-yellow-600' :
-                    'text-red-600'
-                  }`} />
-                  <h4 className={`font-semibold text-sm sm:text-base ${
-                    !canCalculateTrend ? 'text-blue-900 dark:text-blue-100' :
-                    donationTrend > 5 ? 'text-green-900 dark:text-green-100' :
-                    donationTrend > 0 ? 'text-yellow-900 dark:text-yellow-100' :
-                    'text-red-900 dark:text-red-100'
-                  }`}>Weekly Trend</h4>
-                </div>
-                {isLoading ? (
-                  <Skeleton className="h-4 w-32 mb-2" />
-                ) : !canCalculateTrend ? (
-                  <p className="text-xl sm:text-2xl font-bold text-blue-700 dark:text-blue-300 mb-1">
-                    Week {currentWeekOfMonth}
-                  </p>
-                ) : (
-                  <p className={`text-xl sm:text-2xl font-bold mb-1 ${
-                    donationTrend > 5 ? 'text-green-700 dark:text-green-300' :
-                    donationTrend > 0 ? 'text-yellow-700 dark:text-yellow-300' :
-                    'text-red-700 dark:text-red-300'
-                  }`}>
-                    {donationTrend > 0 ? '+' : ''}{donationTrend.toFixed(1)}%
-                    {donationTrend > 0 ? (
-                      <ArrowUpRight className="inline h-5 w-5 text-green-500 ml-1" />
-                    ) : (
-                      <ArrowUpRight className="inline h-5 w-5 text-red-500 ml-1 rotate-180" />
-                    )}
-                  </p>
-                )}
-                <p className={`text-xs sm:text-sm ${
-                  !canCalculateTrend ? 'text-blue-600 dark:text-blue-400' :
-                  donationTrend > 5 ? 'text-green-600 dark:text-green-400' :
-                  donationTrend > 0 ? 'text-yellow-600 dark:text-yellow-400' :
-                  'text-red-600 dark:text-red-400'
-                }`}>
-                  {!canCalculateTrend ? 
-                    `Week ${currentWeekOfMonth} - ${trendContext}` :
-                    trendDescription
-                  }
-                </p>
-              </div>
-              
-              {/* Event Activity */}
-              <div className={`p-3 sm:p-4 rounded-lg border ${
-                stats.eventsThisMonth > stats.averageEventsPerMonth * 1.2 ? 
-                  'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800' :
-                stats.eventsThisMonth > stats.averageEventsPerMonth ? 
-                  'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-yellow-200 dark:border-yellow-800' :
-                  'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800'
-              }`}>
-                <div className="flex items-center gap-2 mb-2">
-                  <Calendar className={`h-4 w-4 sm:h-5 sm:w-5 ${
-                    stats.eventsThisMonth > stats.averageEventsPerMonth * 1.2 ? 'text-green-600' :
-                    stats.eventsThisMonth > stats.averageEventsPerMonth ? 'text-yellow-600' :
-                    'text-red-600'
-                  }`} />
-                  <h4 className={`font-semibold text-sm sm:text-base ${
-                    stats.eventsThisMonth > stats.averageEventsPerMonth * 1.2 ? 'text-green-900 dark:text-green-100' :
-                    stats.eventsThisMonth > stats.averageEventsPerMonth ? 'text-yellow-900 dark:text-yellow-100' :
-                    'text-red-900 dark:text-red-100'
-                  }`}>Event Activity</h4>
-            </div>
-                {isLoading ? (
-                  <Skeleton className="h-4 w-32 mb-2" />
-                ) : (
-                  <p className={`text-xl sm:text-2xl font-bold mb-1 ${
-                    stats.eventsThisMonth > stats.averageEventsPerMonth * 1.2 ? 'text-green-700 dark:text-green-300' :
-                    stats.eventsThisMonth > stats.averageEventsPerMonth ? 'text-yellow-700 dark:text-yellow-300' :
-                    'text-red-700 dark:text-red-300'
-                  }`}>
-                    {stats.eventsThisMonth > stats.averageEventsPerMonth ? 'Above' : 'Below'} Average
-                  </p>
-                )}
-                <p className={`text-xs sm:text-sm ${
-                  stats.eventsThisMonth > stats.averageEventsPerMonth * 1.2 ? 'text-green-600 dark:text-green-400' :
-                  stats.eventsThisMonth > stats.averageEventsPerMonth ? 'text-yellow-600 dark:text-yellow-400' :
-                  'text-red-600 dark:text-red-400'
-                }`}>
-                  {stats.eventsThisMonth} events this month vs {stats.averageEventsPerMonth} average
-                </p>
-          </div>
-              
- {/* Task Management */}
- <div className={`p-3 sm:p-4 rounded-lg border ${
-                stats.totalTasks > 0 ? 
-                  (stats.overdueTasks / stats.totalTasks) <= 0.1 ? 
-                    'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800' :
-                  (stats.overdueTasks / stats.totalTasks) <= 0.3 ? 
-                    'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-yellow-200 dark:border-yellow-800' :
-                    'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800'
-                : 'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800'
-              }`}>
-                <div className="flex items-center gap-2 mb-2">
-                  <CheckSquare className={`h-4 w-4 sm:h-5 sm:w-5 ${
-                    stats.totalTasks > 0 ? 
-                      (stats.overdueTasks / stats.totalTasks) <= 0.1 ? 'text-green-600' :
-                      (stats.overdueTasks / stats.totalTasks) <= 0.3 ? 'text-yellow-600' :
-                      'text-red-600'
-                    : 'text-blue-600'
-                  }`} />
-                  <h4 className={`font-semibold text-sm sm:text-base ${
-                    stats.totalTasks > 0 ? 
-                      (stats.overdueTasks / stats.totalTasks) <= 0.1 ? 'text-green-900 dark:text-green-100' :
-                      (stats.overdueTasks / stats.totalTasks) <= 0.3 ? 'text-yellow-900 dark:text-yellow-100' :
-                      'text-red-900 dark:text-red-100'
-                    : 'text-blue-900 dark:text-blue-100'
-                  }`}>On-Time Completion</h4>
-                </div>
-                {isLoading ? (
-                  <Skeleton className="h-4 w-32 mb-2" />
-                ) : (
-                  <p className="text-xl sm:text-2xl font-bold text-blue-700 dark:text-blue-300 mb-1">
-                    {stats.totalTasks > 0 ? `${((stats.totalTasks - stats.overdueTasks) / stats.totalTasks * 100).toFixed(0)}%` : '0%'}
-                  </p>
-                )}
-                <p className="text-xs sm:text-sm text-blue-600 dark:text-blue-400">
-                  {stats.overdueTasks} overdue tasks need attention
-                </p>
+              {/* Attendance Diversity */}
+              <motion.div 
+                className="group/card relative cursor-pointer" 
+                variants={itemVariants}
+                onClick={() => handleCardClick('attendance-diversity')}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500/30 to-teal-500/30 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative bg-white/95 dark:bg-slate-800/95 border border-cyan-200/50 dark:border-cyan-700/50 rounded-xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-teal-500 rounded-xl flex items-center justify-center shadow-md">
+                      <Target className="h-5 w-5 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Attendance Diversity</h4>
                   </div>
+                  <div className="space-y-3">
+                    <div className="text-3xl font-bold bg-gradient-to-r from-cyan-600 to-teal-600 bg-clip-text text-transparent">
+                      {isLoading ? '...' : (() => {
+                        const eventTypes = [stats.sundayServiceEvents, stats.bibleStudyEvents, stats.fellowshipEvents].filter(count => count > 0);
+                        return eventTypes.length >= 3 ? 'Excellent' : eventTypes.length >= 2 ? 'Good' : 'Growing';
+                      })()}
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      {stats.sundayServiceEvents || 0} Sunday • {stats.bibleStudyEvents || 0} Bible Study • {stats.fellowshipEvents || 0} Fellowship
+                    </p>
+                    <div className="text-xs text-cyan-600 dark:text-cyan-400 font-medium">
+                      {(() => {
+                        const eventTypes = [stats.sundayServiceEvents, stats.bibleStudyEvents, stats.fellowshipEvents].filter(count => count > 0);
+                        return eventTypes.length >= 3 ? 'Strong program diversity' : eventTypes.length >= 2 ? 'Good variety' : 'Expand program offerings';
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
 
-              {/* Volunteer Engagement */}
-              <div className={`p-3 sm:p-4 rounded-lg border ${
-                stats.eventsStillNeedingVolunteers === 0 ? 
-                  'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800' :
-                stats.eventsStillNeedingVolunteers <= stats.eventsWithVolunteersEnabled * 0.3 ? 
-                  'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-yellow-200 dark:border-yellow-800' :
-                  'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800'
-              }`}>
-                <div className="flex items-center gap-2 mb-2">
-                  <Users2 className={`h-4 w-4 sm:h-5 sm:w-5 ${
-                    stats.eventsStillNeedingVolunteers === 0 ? 'text-green-600' :
-                    stats.eventsStillNeedingVolunteers <= stats.eventsWithVolunteersEnabled * 0.3 ? 'text-yellow-600' :
-                    'text-red-600'
-                  }`} />
-                  <h4 className={`font-semibold text-sm sm:text-base ${
-                    stats.eventsStillNeedingVolunteers === 0 ? 'text-green-900 dark:text-green-100' :
-                    stats.eventsStillNeedingVolunteers <= stats.eventsWithVolunteersEnabled * 0.3 ? 'text-yellow-900 dark:text-yellow-100' :
-                    'text-red-900 dark:text-red-100'
-                  }`}>Volunteer Engagement</h4>
+              {/* At Risk Members */}
+              <motion.div 
+                className="group/card relative cursor-pointer" 
+                variants={itemVariants}
+                onClick={() => handleCardClick('at-risk-members')}
+              >
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-red-500/30 to-rose-500/30 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative bg-white/95 dark:bg-slate-800/95 border border-red-200/50 dark:border-red-700/50 rounded-xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-rose-500 rounded-xl flex items-center justify-center shadow-md">
+                      <AlertTriangle className="h-5 w-5 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">At Risk Members</h4>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="text-3xl font-bold bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent">
+                      {isLoading ? '...' : atRiskMembers?.length || 0}
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      Members needing pastoral care
+                    </p>
+                    <div className="text-xs text-red-600 dark:text-red-400 font-medium">
+                      {atRiskMembers?.length > 0 ? 'Schedule follow-up visits' : 'All members engaged'}
+                    </div>
+                  </div>
                 </div>
-                {isLoading ? (
-                  <Skeleton className="h-4 w-32 mb-2" />
-                ) : (
-                  <p className={`text-xl sm:text-2xl font-bold mb-1 ${
-                    stats.eventsStillNeedingVolunteers === 0 ? 'text-green-700 dark:text-green-300' :
-                    stats.eventsStillNeedingVolunteers <= stats.eventsWithVolunteersEnabled * 0.3 ? 'text-yellow-700 dark:text-yellow-300' :
-                    'text-red-700 dark:text-red-300'
-                  }`}>
-                    {stats.eventsStillNeedingVolunteers === 0 ? 'Fully Staffed' :
-                     stats.eventsStillNeedingVolunteers <= stats.eventsWithVolunteersEnabled * 0.3 ? 'Good Coverage' :
-                     'Needs Volunteers'}
-                  </p>
-                )}
-                <p className={`text-xs sm:text-sm ${
-                  stats.eventsStillNeedingVolunteers === 0 ? 'text-green-600 dark:text-green-400' :
-                  stats.eventsStillNeedingVolunteers <= stats.eventsWithVolunteersEnabled * 0.3 ? 'text-yellow-600 dark:text-yellow-400' :
-                  'text-red-600 dark:text-red-400'
-                }`}>
-                  {stats.eventsStillNeedingVolunteers} events need volunteers
-                </p>
-              </div>
-              
-              {/* Recent Visitors */}
-              <div className={`p-3 sm:p-4 rounded-lg border ${
-                (() => {
-                  const thirtyDaysAgo = new Date();
-                  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                  const recentVisitors = people.filter(person => 
-                    person.status === 'visitor' && 
-                    new Date(person.createdAt) >= thirtyDaysAgo
-                  ).length;
-                  return recentVisitors >= 3 ? 
-                    'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800' :
-                  recentVisitors >= 1 ? 
-                    'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 border-yellow-200 dark:border-yellow-800' :
-                    'bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800';
-                })()
-              }`}>
-                <div className="flex items-center gap-2 mb-2">
-                  <UserPlus className={`h-4 w-4 sm:h-5 sm:w-5 ${
-                    (() => {
-                      const thirtyDaysAgo = new Date();
-                      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                      const recentVisitors = people.filter(person => 
-                        person.status === 'visitor' && 
-                        new Date(person.createdAt) >= thirtyDaysAgo
-                      ).length;
-                      return recentVisitors >= 3 ? 'text-green-600' :
-                             recentVisitors >= 1 ? 'text-yellow-600' :
-                             'text-red-600';
-                    })()
-                  }`} />
-                  <h4 className={`font-semibold text-sm sm:text-base ${
-                    (() => {
-                      const thirtyDaysAgo = new Date();
-                      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                      const recentVisitors = people.filter(person => 
-                        person.status === 'visitor' && 
-                        new Date(person.createdAt) >= thirtyDaysAgo
-                      ).length;
-                      return recentVisitors >= 3 ? 'text-green-900 dark:text-green-100' :
-                             recentVisitors >= 1 ? 'text-yellow-900 dark:text-yellow-100' :
-                             'text-red-900 dark:text-red-100';
-                    })()
-                  }`}>Recent Visitors</h4>
-                </div>
-                {isLoading ? (
-                  <Skeleton className="h-4 w-32 mb-2" />
-                ) : (
-                  <p className={`text-xl sm:text-2xl font-bold mb-1 ${
-                    (() => {
-                      const thirtyDaysAgo = new Date();
-                      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                      const recentVisitors = people.filter(person => 
-                        person.status === 'visitor' && 
-                        new Date(person.createdAt) >= thirtyDaysAgo
-                      ).length;
-                      return recentVisitors >= 3 ? 'text-green-700 dark:text-green-300' :
-                             recentVisitors >= 1 ? 'text-yellow-700 dark:text-yellow-300' :
-                             'text-red-700 dark:text-red-300';
-                    })()
-                  }`}>
-                    {(() => {
-                      const thirtyDaysAgo = new Date();
-                      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                      
-                      // Count visitors added in the last 30 days
-                      const recentVisitors = people.filter(person => 
-                        person.status === 'visitor' && 
-                        new Date(person.createdAt) >= thirtyDaysAgo
-                      ).length;
-                      
-                      return recentVisitors;
-                    })()}
-                  </p>
-                )}
-                <p className={`text-xs sm:text-sm ${
-                  (() => {
-                    const thirtyDaysAgo = new Date();
-                    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                    const recentVisitors = people.filter(person => 
-                      person.status === 'visitor' && 
-                      new Date(person.createdAt) >= thirtyDaysAgo
-                    ).length;
-                    return recentVisitors >= 3 ? 'text-green-600 dark:text-green-400' :
-                           recentVisitors >= 1 ? 'text-yellow-600 dark:text-yellow-400' :
-                           'text-red-600 dark:text-red-400';
-                  })()
-                }`}>
-                  New visitors added in the last 30 days
-                </p>
-                </div>
+              </motion.div>
                 </div>
 
             {/* Additional Insights Row */}
-            <div className="mt-6 grid gap-3 sm:gap-4 md:grid-cols-2">
+            <div className="mt-8 grid gap-4 sm:gap-6 md:grid-cols-2">
               {/* Top Performing Metric */}
-              <div className="p-3 sm:p-4 bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-950 dark:to-emerald-900 rounded-lg border border-emerald-200 dark:border-emerald-800">
-                <div className="flex items-center gap-2 mb-3">
-                  <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-600" />
-                  <h4 className="font-semibold text-emerald-900 dark:text-emerald-100">Top Performing Area</h4>
-              </div>
+              <motion.div className="group/card relative" variants={itemVariants}>
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/30 to-teal-500/30 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative bg-white/95 dark:bg-slate-800/95 border border-emerald-200/50 dark:border-emerald-700/50 rounded-xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center shadow-md">
+                      <Trophy className="h-5 w-5 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Top Performing Area</h4>
+                  </div>
                 {isLoading ? (
                   <Skeleton className="h-4 w-48 mb-2" />
                 ) : (
@@ -1981,7 +1961,7 @@ export function Dashboard() {
                           },
                           { 
                             name: 'Event Activity', 
-                            value: stats.eventsThisMonth > stats.averageEventsPerMonth ? 100 : 50,
+                            value: stats.eventsThisMonth >= stats.averageEventsPerMonth ? 100 : 50,
                             condition: stats.eventsThisMonth > 0,
                             recommendation: 'Maintain this strong event planning momentum.'
                           },
@@ -2023,6 +2003,48 @@ export function Dashboard() {
                             value: stats.totalTasks > 0 ? ((stats.totalTasks - stats.overdueTasks) / stats.totalTasks) * 100 : 0,
                             condition: stats.totalTasks > 0 && (stats.totalTasks - stats.overdueTasks) / stats.totalTasks >= 0.8,
                             recommendation: 'Excellent task management - maintain this strong organizational discipline.'
+                          },
+                          { 
+                            name: 'Community Health', 
+                            value: stats.inactiveMembers === 0 ? 100 : stats.inactiveMembers < 5 ? 80 : 40,
+                            condition: stats.inactiveMembers < 5,
+                            recommendation: 'Strong community engagement - maintain pastoral care.'
+                          },
+                          { 
+                            name: 'Family Engagement', 
+                            value: stats.totalFamilies > 0 ? Math.round((stats.membersInFamilies / Math.max(stats.totalPeople, 1)) * 100) : 0,
+                            condition: stats.totalFamilies > 0 && stats.membersWithoutFamilies === 0,
+                            recommendation: 'Excellent family connections - keep building community.'
+                          },
+                          { 
+                            name: 'Communication', 
+                            value: stats.totalSMSConversations > 0 ? 100 : 0,
+                            condition: stats.totalSMSConversations > 0,
+                            recommendation: 'Great communication channels - maintain responsiveness.'
+                          },
+                          { 
+                            name: 'Celebrations', 
+                            value: stats.totalUpcoming > 0 ? 100 : 0,
+                            condition: stats.totalUpcoming > 0,
+                            recommendation: 'Active celebration engagement - keep recognizing milestones.'
+                          },
+                          { 
+                            name: 'Attendance Diversity', 
+                            value: (() => {
+                              const eventTypes = [stats.sundayServiceEvents, stats.bibleStudyEvents, stats.fellowshipEvents].filter(count => count > 0);
+                              return eventTypes.length >= 3 ? 100 : eventTypes.length >= 2 ? 70 : 40;
+                            })(),
+                            condition: (() => {
+                              const eventTypes = [stats.sundayServiceEvents, stats.bibleStudyEvents, stats.fellowshipEvents].filter(count => count > 0);
+                              return eventTypes.length >= 2;
+                            })(),
+                            recommendation: 'Good program diversity - continue expanding offerings.'
+                          },
+                          { 
+                            name: 'At-Risk Members', 
+                            value: atRiskMembers.length === 0 ? 100 : atRiskMembers.length < 3 ? 80 : 40,
+                            condition: atRiskMembers.length < 3,
+                            recommendation: 'Strong member engagement - maintain pastoral care.'
                           }
                         ].filter(m => m.condition && !isNaN(m.value) && isFinite(m.value));
                         
@@ -2052,7 +2074,7 @@ export function Dashboard() {
                           },
                           { 
                             name: 'Event Activity', 
-                            value: stats.eventsThisMonth > stats.averageEventsPerMonth ? 100 : 50,
+                            value: stats.eventsThisMonth >= stats.averageEventsPerMonth ? 100 : 50,
                             condition: stats.eventsThisMonth > 0,
                             recommendation: 'Maintain event planning momentum.'
                           },
@@ -2094,6 +2116,48 @@ export function Dashboard() {
                             value: stats.totalTasks > 0 ? ((stats.totalTasks - stats.overdueTasks) / stats.totalTasks) * 100 : 0,
                             condition: stats.totalTasks > 0 && (stats.totalTasks - stats.overdueTasks) / stats.totalTasks >= 0.8,
                             recommendation: 'Maintain organizational discipline.'
+                          },
+                          { 
+                            name: 'Community Health', 
+                            value: stats.inactiveMembers === 0 ? 100 : stats.inactiveMembers < 5 ? 80 : 40,
+                            condition: stats.inactiveMembers < 5,
+                            recommendation: 'Strong community engagement.'
+                          },
+                          { 
+                            name: 'Family Engagement', 
+                            value: stats.totalFamilies > 0 ? Math.round((stats.membersInFamilies / Math.max(stats.totalPeople, 1)) * 100) : 0,
+                            condition: stats.totalFamilies > 0 && stats.membersWithoutFamilies === 0,
+                            recommendation: 'Excellent family connections.'
+                          },
+                          { 
+                            name: 'Communication', 
+                            value: stats.totalSMSConversations > 0 ? 100 : 0,
+                            condition: stats.totalSMSConversations > 0,
+                            recommendation: 'Great communication channels.'
+                          },
+                          { 
+                            name: 'Celebrations', 
+                            value: stats.totalUpcoming > 0 ? 100 : 0,
+                            condition: stats.totalUpcoming > 0,
+                            recommendation: 'Active celebration engagement.'
+                          },
+                          { 
+                            name: 'Attendance Diversity', 
+                            value: (() => {
+                              const eventTypes = [stats.sundayServiceEvents, stats.bibleStudyEvents, stats.fellowshipEvents].filter(count => count > 0);
+                              return eventTypes.length >= 3 ? 100 : eventTypes.length >= 2 ? 70 : 40;
+                            })(),
+                            condition: (() => {
+                              const eventTypes = [stats.sundayServiceEvents, stats.bibleStudyEvents, stats.fellowshipEvents].filter(count => count > 0);
+                              return eventTypes.length >= 2;
+                            })(),
+                            recommendation: 'Good program diversity.'
+                          },
+                          { 
+                            name: 'At-Risk Members', 
+                            value: atRiskMembers.length === 0 ? 100 : atRiskMembers.length < 3 ? 80 : 40,
+                            condition: atRiskMembers.length < 3,
+                            recommendation: 'Strong member engagement.'
                           }
                         ].filter(m => m.condition && !isNaN(m.value) && isFinite(m.value));
                         
@@ -2106,263 +2170,132 @@ export function Dashboard() {
                         return topMetric.recommendation;
                       })()}
                     </p>
-            </div>
+                  </div>
                 )}
-          </div>
+              </div>
+            </motion.div>
 
               {/* Growth Opportunity */}
-              <div className="p-3 sm:p-4 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 rounded-lg border border-amber-200 dark:border-amber-800">
-                <div className="flex items-center gap-2 mb-3">
-                  <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600" />
-                  <h4 className="font-semibold text-amber-900 dark:text-amber-100">Growth Opportunity</h4>
-      </div>
-                {isLoading ? (
-                  <Skeleton className="h-4 w-48 mb-2" />
-                ) : (
-                  <div>
-                    <p className="text-lg font-bold text-amber-700 dark:text-amber-300 mb-1">
-                      {(() => {
-                        // Priority 1: Immediate needs
-                        if (stats.eventsStillNeedingVolunteers > 0) return 'Volunteer Recruitment';
-                    
-                        // Priority 2: Donation trends
-                        if (donationTrend < 0) return 'Donation Growth';
-
-                        // Priority 4: Sunday service attendance
-                        if (stats.sundayServiceRate < 50) return 'Sunday Service Attendance';
-                        
-                        // Priority 4: Event activity
-                        if (stats.eventsThisMonth < stats.averageEventsPerMonth) return 'Event Planning';                        
-                        
-                        // Priority 7: Visitor follow-up
-                        const thirtyDaysAgo = new Date();
-                        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                        const recentVisitors = people.filter(person => 
-                          person.status === 'visitor' && 
-                          new Date(person.createdAt) >= thirtyDaysAgo
-                        ).length;
-                      
-                        if (recentVisitors > 0) return 'Visitor Follow-up';
-                        // Priority 3: Member engagement issues
-                        if (stats.totalPeople > 0 && (stats.activeMembers / stats.totalPeople) < 0.7) return 'Member Engagement';
-                            
-                        // Default: Member retention
-                        return 'Member Retention';
-                      })()}
-                    </p>
-                    <p className="text-sm text-amber-600 dark:text-amber-400 break-words">
-                      {(() => {
-                        // Priority 1: Immediate needs
-                        if (stats.eventsStillNeedingVolunteers > 0) return 'Reach out for volunteer sign-ups.';
-                   
-                        // Priority 2: Donation trends
-                        if (donationTrend < 0) return 'Share impact stories to encourage giving.';
-
-                        // Priority 3: Member engagement issues
-                        if (stats.totalPeople > 0 && (stats.activeMembers / stats.totalPeople) < 0.7) return 'Focus on engaging inactive members.';
-                        
-                        // Priority 4: Sunday service attendance
-                        if (stats.sundayServiceRate < 50) return 'Address attendance barriers.';
-                        
-                        // Priority 5: Event activity
-                        if (stats.eventsThisMonth < stats.averageEventsPerMonth) return 'Plan more events for engagement.';
-                        
-                        // Priority 6: Visitor follow-up
-                        const thirtyDaysAgo = new Date();
-                        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                        const recentVisitors = people.filter(person => 
-                          person.status === 'visitor' && 
-                          new Date(person.createdAt) >= thirtyDaysAgo
-                        ).length;
-                        
-                        if (recentVisitors > 0) return 'Follow up with recent visitors.';
-                        
-                        // Default: Member retention
-                        return 'Focus on member relationships.';
-                      })()}
-                    </p>
+              <motion.div className="group/card relative" variants={itemVariants}>
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-500/30 to-orange-500/30 rounded-xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
+                <div className="relative bg-white/95 dark:bg-slate-800/95 border border-amber-200/50 dark:border-amber-700/50 rounded-xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center shadow-md">
+                      <Activity className="h-5 w-5 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Growth Opportunity</h4>
                   </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-
-
-
-      {/* Detailed Attendance Statistics */}
-      <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
-        <div className="group relative">
-          <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
-          <div className="relative backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border border-white/20 dark:border-slate-700/20 rounded-3xl p-3 sm:p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-all duration-300">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <Users className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Attendance Statistics</h3>
-                  <p className="text-slate-600 dark:text-slate-400">Last 30 days overview</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="grid gap-3 sm:gap-6 grid-cols-1 lg:grid-cols-2">
-              {/* Service Breakdown */}
-              <motion.div 
-                className="group/card relative"
-                variants={itemVariants}
-              >
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <h4 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5 text-blue-600" />
-                    Service Breakdown
-                  </h4>
-                  <div className="space-y-3">
-                    {attendanceLoading ? (
-                      Array.from({ length: 3 }).map((_, i) => (
-                        <div key={i} className="animate-pulse">
-                          <div className="flex items-center justify-between">
-                            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-32"></div>
-                            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-8"></div>
-                          </div>
-                        </div>
-                      ))
-                    ) : serviceBreakdown && serviceBreakdown.length > 0 ? (
-                      serviceBreakdown.map((service, index) => (
-                        <div key={service.name} className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                            {service.name}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg font-bold text-blue-600">{service.value}</span>
-                            {index === 0 && <Trophy className="h-4 w-4 text-yellow-600" />}
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">
-                        No attendance data available for the last 30 days
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Event Attendance */}
-              <motion.div 
-                className="group/card relative"
-                variants={itemVariants}
-              >
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-                <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <h4 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                    <Calendar className="h-5 w-5 text-emerald-600" />
-                    Event Attendance
-                  </h4>
-                  <div className="space-y-3 max-h-48 overflow-y-auto">
-                    {attendanceLoading ? (
-                      Array.from({ length: 3 }).map((_, i) => (
-                        <div key={i} className="animate-pulse">
-                          <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-full mb-2"></div>
-                          <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-24"></div>
-                        </div>
-                      ))
-                    ) : eventDetails && eventDetails.length > 0 ? (
-                      eventDetails.slice(0, 5).map((event) => (
-                        <div key={event.id} className="space-y-1">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate pr-2">
-                              {event.title}
-                            </span>
-                            <span className="text-sm font-bold text-emerald-600 flex-shrink-0">
-                              {event.attendees} attendees
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
-                            {format(parseISO(event.date), 'M/d/yyyy')}
-                          </p>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">
-                        No events found for the last 30 days
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-
-            {/* Top Attendees */}
-            <motion.div 
-              className="group/card relative mt-6"
-              variants={itemVariants}
-            >
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-500/20 to-amber-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
-              <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300">
-                <h4 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                  <Trophy className="h-5 w-5 text-amber-600" />
-                  Top Attendees
-                </h4>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {attendanceLoading ? (
-                    Array.from({ length: 6 }).map((_, i) => (
-                      <div key={i} className="animate-pulse flex items-center gap-3">
-                        <div className="w-8 h-8 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
-                        <div className="flex-1">
-                          <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-full mb-1"></div>
-                          <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-16"></div>
-                        </div>
-                      </div>
-                    ))
-                  ) : memberStats && memberStats.length > 0 ? (
-                    memberStats.slice(0, 6).map((member, index) => (
-                      <div 
-                        key={member.name} 
-                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
-                        onClick={() => handleMemberProfileClick(member.id)}
-                      >
-                        <div className="relative">
-                          <Avatar className="w-8 h-8">
-                            <AvatarImage src={member.image} alt={member.name} />
-                            <AvatarFallback className="text-xs bg-gradient-to-br from-blue-500 to-indigo-500 text-white">
-                              {getInitials(member.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
-                            {index + 1}
-                          </div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate">
-                            {member.name}
-                          </p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
-                            {member.count} events
-                          </p>
-                        </div>
-                        <div className="flex items-center">
-                          <span className="text-sm font-bold text-amber-600">{member.count}</span>
-                        </div>
-                      </div>
-                    ))
+                  {isLoading ? (
+                    <Skeleton className="h-4 w-48 mb-2" />
                   ) : (
-                    <div className="col-span-full text-center py-4">
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
-                        No attendance data available for the last 30 days
+                    <div className="space-y-3">
+                      <p className="text-lg font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                        {(() => {
+                          // Priority 1: Immediate needs
+                          if (stats.eventsStillNeedingVolunteers > 0) return 'Volunteer Recruitment';
+                      
+                          // Priority 2: Donation trends
+                          if (donationTrend < 0) return 'Donation Growth';
+
+                          // Priority 3: Community health
+                          if (stats.inactiveMembers >= 5) return 'Community Health';
+
+                          // Priority 4: Sunday service attendance
+                          if (stats.sundayServiceRate < 50) return 'Sunday Service Attendance';
+                          
+                          // Priority 5: Event activity
+                          if (stats.eventsThisMonth < stats.averageEventsPerMonth) return 'Event Planning';
+                          
+                          // Priority 6: Family engagement
+                          if (stats.membersWithoutFamilies > 0) return 'Family Engagement';
+                          
+                          // Priority 7: Communication
+                          if (stats.totalSMSConversations === 0) return 'Communication';
+                          
+                          // Priority 8: Celebrations
+                          if (stats.totalUpcoming === 0) return 'Celebration Engagement';
+                          
+                          // Priority 9: Attendance diversity
+                          const eventTypes = [stats.sundayServiceEvents, stats.bibleStudyEvents, stats.fellowshipEvents].filter(count => count > 0);
+                          if (eventTypes.length < 2) return 'Program Diversity';
+                          
+                          // Priority 10: Visitor follow-up
+                          const thirtyDaysAgo = new Date();
+                          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                          const recentVisitors = people.filter(person => 
+                            person.status === 'visitor' && 
+                            new Date(person.createdAt) >= thirtyDaysAgo
+                          ).length;
+                        
+                          if (recentVisitors > 0) return 'Visitor Follow-up';
+                          
+                          // Priority 11: Member engagement issues
+                          if (stats.totalPeople > 0 && (stats.activeMembers / stats.totalPeople) < 0.7) return 'Member Engagement';
+                              
+                          // Default: Member retention
+                          return 'Member Retention';
+                        })()}
+                      </p>
+                      <p className="text-sm text-amber-600 dark:text-amber-400 break-words">
+                        {(() => {
+                          // Priority 1: Immediate needs
+                          if (stats.eventsStillNeedingVolunteers > 0) return 'Reach out for volunteer sign-ups.';
+                     
+                          // Priority 2: Donation trends
+                          if (donationTrend < 0) return 'Share impact stories to encourage giving.';
+
+                          // Priority 3: Community health
+                          if (stats.inactiveMembers >= 5) return 'Schedule pastoral care visits.';
+                          
+                          // Priority 4: Sunday service attendance
+                          if (stats.sundayServiceRate < 50) return 'Address attendance barriers.';
+                          
+                          // Priority 5: Event activity
+                          if (stats.eventsThisMonth < stats.averageEventsPerMonth) return 'Plan more events for engagement.';
+                          
+                          // Priority 6: Family engagement
+                          if (stats.membersWithoutFamilies > 0) return 'Assign members to families.';
+                          
+                          // Priority 7: Communication
+                          if (stats.totalSMSConversations === 0) return 'Start SMS communication.';
+                          
+                          // Priority 8: Celebrations
+                          if (stats.totalUpcoming === 0) return 'Plan celebration outreach.';
+                          
+                          // Priority 9: Attendance diversity
+                          const eventTypes = [stats.sundayServiceEvents, stats.bibleStudyEvents, stats.fellowshipEvents].filter(count => count > 0);
+                          if (eventTypes.length < 2) return 'Expand program offerings.';
+                          
+                          // Priority 10: Visitor follow-up
+                          const thirtyDaysAgo = new Date();
+                          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                          const recentVisitors = people.filter(person => 
+                            person.status === 'visitor' && 
+                            new Date(person.createdAt) >= thirtyDaysAgo
+                          ).length;
+                          
+                          if (recentVisitors > 0) return 'Follow up with recent visitors.';
+                          
+                          // Priority 11: Member engagement issues
+                          if (stats.totalPeople > 0 && (stats.activeMembers / stats.totalPeople) < 0.7) return 'Focus on engaging inactive members.';
+                          
+                          // Default: Member retention
+                          return 'Focus on member relationships.';
+                        })()}
                       </p>
                     </div>
                   )}
                 </div>
-              </div>
-            </motion.div>
+              </motion.div>
+            </div>
           </div>
         </div>
       </motion.div>
-        </PermissionFeature>
+      </PermissionFeature>
+
+
+
+
 
       {/* Financial Intelligence */}
       <PermissionFeature permission={PERMISSIONS.DONATIONS_VIEW}>
@@ -2566,7 +2499,7 @@ export function Dashboard() {
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-slate-600 dark:text-slate-400">Trend</span>
                       <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                        {isLoading ? '...' : (stats.eventsThisMonth >= stats.averageEventsPerMonth ? 'Above' : 'Below')} Average
+                        {isLoading ? '...' : (stats.eventsThisMonth >= stats.averageEventsPerMonth ? 'At or Above' : 'Below')} Average
                       </span>
                     </div>
                   </div>
@@ -3315,6 +3248,1375 @@ export function Dashboard() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Advanced Analytics Card Dialog */}
+      <motion.div>
+        <Dialog open={isCardDialogOpen} onOpenChange={setIsCardDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {selectedCardType === 'sunday-service-rate' && 'Sunday Service Rate Analysis'}
+                {selectedCardType === 'weekly-trend' && 'Weekly Donation Trend Analysis'}
+                {selectedCardType === 'event-activity' && 'Event Activity Analysis'}
+                {selectedCardType === 'task-management' && 'Task Management Analysis'}
+                {selectedCardType === 'volunteer-engagement' && 'Volunteer Engagement Analysis'}
+                {selectedCardType === 'recent-visitors' && 'Recent Visitors Analysis'}
+                {selectedCardType === 'community-health' && 'Community Health Analysis'}
+                {selectedCardType === 'family-engagement' && 'Family Engagement Analysis'}
+                {selectedCardType === 'communication' && 'Communication Analysis'}
+                {selectedCardType === 'celebrations' && 'Celebrations Analysis'}
+                {selectedCardType === 'attendance-diversity' && 'Attendance Diversity Analysis'}
+                {selectedCardType === 'at-risk-members' && 'At-Risk Members Analysis'}
+              </DialogTitle>
+              <DialogDescription>
+                Detailed analysis and recommendations for this metric.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-6">
+              {/* At-Risk Members Analysis */}
+              {selectedCardType === 'at-risk-members' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">At-Risk Members</h3>
+                    <Badge variant="destructive">
+                      {isLoadingAtRiskMembers ? 'Loading...' : atRiskMembers.length} members
+                    </Badge>
+                  </div>
+                  
+                  {isLoadingAtRiskMembers ? (
+                    <div className="space-y-3">
+                      {Array.from({ length: 3 }).map((_, i) => (
+                        <div key={i} className="animate-pulse">
+                          <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-3/4 mb-2"></div>
+                          <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-1/2"></div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : atRiskMembers.length > 0 ? (
+                    <div className="space-y-3">
+                      {atRiskMembers.map((member) => (
+                        <Card key={member.id} className="hover:shadow-md transition-shadow">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <Avatar className="h-10 w-10">
+                                  <AvatarFallback>
+                                    {getInitials(member.firstname, member.lastname)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <h4 className="font-semibold">
+                                    {member.firstname} {member.lastname}
+                                  </h4>
+                                  <p className="text-sm text-muted-foreground">
+                                    {member.email || member.phone || 'No contact info'}
+                                  </p>
+                                </div>
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleMemberProfileClick(member.id)}
+                              >
+                                View Profile
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Heart className="h-12 w-12 text-green-500 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-green-600">Excellent!</h3>
+                      <p className="text-muted-foreground">
+                        All members are actively engaged. No at-risk members found.
+                      </p>
+                    </div>
+                  )}
+                  
+                                   <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                     <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-3">
+                       Action Items
+                     </h4>
+                     <div className="text-sm text-blue-700 dark:text-blue-300 space-y-3">
+                       {atRiskMembers.length > 0 ? (
+                         <>
+                           <div className="flex items-start justify-between">
+                             <div className="flex items-start gap-2 flex-1">
+                               <span className="text-blue-600 font-bold">1.</span>
+                               <span>Schedule pastoral care visits for {atRiskMembers.length} at-risk members</span>
+                             </div>
+                             <Button size="sm" variant="outline" className="text-xs">
+                               Create Task
+                             </Button>
+                           </div>
+                           <div className="flex items-start justify-between">
+                             <div className="flex items-start gap-2 flex-1">
+                               <span className="text-blue-600 font-bold">2.</span>
+                               <span>Send personalized outreach messages to {atRiskMembers.length} at-risk members</span>
+                             </div>
+                             <Button size="sm" variant="outline" className="text-xs">
+                               Create Task
+                             </Button>
+                           </div>
+                           <div className="flex items-start justify-between">
+                             <div className="flex items-start gap-2 flex-1">
+                               <span className="text-blue-600 font-bold">3.</span>
+                               <span>Invite {atRiskMembers.length} at-risk members to upcoming events</span>
+                             </div>
+                             <Button size="sm" variant="outline" className="text-xs">
+                               Create Task
+                             </Button>
+                           </div>
+                         </>
+                       ) : (
+                         <>
+                           <div className="flex items-start justify-between">
+                             <div className="flex items-start gap-2 flex-1">
+                               <span className="text-blue-600 font-bold">1.</span>
+                               <span>Continue maintaining strong community connections</span>
+                             </div>
+                             <Button size="sm" variant="outline" className="text-xs">
+                               Create Task
+                             </Button>
+                           </div>
+                           <div className="flex items-start justify-between">
+                             <div className="flex items-start gap-2 flex-1">
+                               <span className="text-blue-600 font-bold">2.</span>
+                               <span>Monitor engagement patterns regularly</span>
+                             </div>
+                             <Button size="sm" variant="outline" className="text-xs">
+                               Create Task
+                             </Button>
+                           </div>
+                           <div className="flex items-start justify-between">
+                             <div className="flex items-start gap-2 flex-1">
+                               <span className="text-blue-600 font-bold">3.</span>
+                               <span>Celebrate member involvement and milestones</span>
+                             </div>
+                             <Button size="sm" variant="outline" className="text-xs">
+                               Create Task
+                             </Button>
+                           </div>
+                         </>
+                       )}
+                     </div>
+                   </div>
+                </div>
+              )}
+
+              {/* Sunday Service Rate Analysis */}
+              {selectedCardType === 'sunday-service-rate' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-emerald-600">
+                            {stats.sundayServiceRate.toFixed(0)}%
+                          </div>
+                          <p className="text-sm text-muted-foreground">Current Rate</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-blue-600">
+                            {stats.totalPeople}
+                          </div>
+                          <p className="text-sm text-muted-foreground">Total Members</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-purple-600">
+                            {Math.round((stats.sundayServiceRate / 100) * stats.totalPeople)}
+                          </div>
+                          <p className="text-sm text-muted-foreground">Active Attendees</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                  
+                  <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-lg">
+                    <h4 className="font-semibold text-emerald-800 dark:text-emerald-200 mb-2">
+                      Analysis
+                    </h4>
+                    <p className="text-sm text-emerald-700 dark:text-emerald-300">
+                      {stats.sundayServiceRate >= 70 
+                        ? 'Excellent attendance rate! Your congregation shows strong engagement with Sunday services.'
+                        : stats.sundayServiceRate >= 50
+                        ? 'Good attendance rate with room for improvement. Consider outreach to inactive members.'
+                        : 'Attendance rate needs attention. Focus on re-engaging inactive members and improving service experiences.'
+                      }
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Weekly Trend Analysis */}
+              {selectedCardType === 'weekly-trend' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-blue-600">
+                            {!canCalculateTrend ? `Week ${weekAnalyzed}` : (donationTrend > 0 ? '+' : '') + donationTrend.toFixed(1) + '%'}
+                          </div>
+                          <p className="text-sm text-muted-foreground">Weekly Trend</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-600">
+                            ${donationTrendAnalysis.currentWeekTotal?.toFixed(2) || '0.00'}
+                          </div>
+                          <p className="text-sm text-muted-foreground">This Week</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                  
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                    <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">
+                      Trend Analysis
+                    </h4>
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      {donationTrend > 0 
+                        ? 'Positive giving trend! Your congregation is showing strong stewardship.'
+                        : donationTrend < 0
+                        ? 'Giving trend needs attention. Consider sharing impact stories and ministry updates.'
+                        : 'Stable giving pattern. Continue building trust and transparency in financial stewardship.'
+                      }
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Event Activity Analysis */}
+              {selectedCardType === 'event-activity' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-purple-600">
+                            {stats.eventsThisMonth}
+                          </div>
+                          <p className="text-sm text-muted-foreground">This Month</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-pink-600">
+                            {stats.averageEventsPerMonth}
+                          </div>
+                          <p className="text-sm text-muted-foreground">Monthly Average</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-orange-600">
+                            {stats.eventsNeedingVolunteers}
+                          </div>
+                          <p className="text-sm text-muted-foreground">Need Volunteers</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                  
+                  <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
+                    <h4 className="font-semibold text-purple-800 dark:text-purple-200 mb-2">
+                      Event Planning Analysis
+                    </h4>
+                    <p className="text-sm text-purple-700 dark:text-purple-300">
+                      {stats.eventsThisMonth >= stats.averageEventsPerMonth
+                        ? 'Strong event planning! You\'re meeting or exceeding your monthly event targets.'
+                        : 'Event activity is below average. Consider planning more events to engage your congregation.'
+                      }
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Task Management Analysis */}
+              {selectedCardType === 'task-management' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-amber-600">
+                            {stats.totalTasks}
+                          </div>
+                          <p className="text-sm text-muted-foreground">Total Tasks</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-600">
+                            {stats.completedTasks}
+                          </div>
+                          <p className="text-sm text-muted-foreground">Completed</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-blue-600">
+                            {stats.pendingTasks}
+                          </div>
+                          <p className="text-sm text-muted-foreground">Pending</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-red-600">
+                            {stats.overdueTasks}
+                          </div>
+                          <p className="text-sm text-muted-foreground">Overdue</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                  
+                  <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg">
+                    <h4 className="font-semibold text-amber-800 dark:text-amber-200 mb-2">
+                      Task Management Analysis
+                    </h4>
+                    <p className="text-sm text-amber-700 dark:text-amber-300">
+                      {stats.overdueTasks === 0
+                        ? 'Excellent task management! All tasks are on track and being completed on time.'
+                        : `There are ${stats.overdueTasks} overdue tasks that need immediate attention.`
+                      }
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Volunteer Engagement Analysis */}
+              {selectedCardType === 'volunteer-engagement' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-violet-600">
+                            {stats.eventsStillNeedingVolunteers}
+                          </div>
+                          <p className="text-sm text-muted-foreground">Events Needing Volunteers</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-fuchsia-600">
+                            {stats.totalEvents}
+                          </div>
+                          <p className="text-sm text-muted-foreground">Total Events</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-600">
+                            {stats.totalEvents > 0 ? Math.round(((stats.totalEvents - stats.eventsStillNeedingVolunteers) / stats.totalEvents) * 100) : 0}%
+                          </div>
+                          <p className="text-sm text-muted-foreground">Volunteer Coverage</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                  
+                  <div className="bg-violet-50 dark:bg-violet-900/20 p-4 rounded-lg">
+                    <h4 className="font-semibold text-violet-800 dark:text-violet-200 mb-3">
+                      Quick Analysis
+                    </h4>
+                    <div className="text-sm text-violet-700 dark:text-violet-300">
+                      {stats.eventsStillNeedingVolunteers === 0 
+                        ? '✅ All events fully staffed - excellent volunteer engagement'
+                        : `⚠️ ${stats.eventsStillNeedingVolunteers} events need volunteers (${Math.round((stats.eventsStillNeedingVolunteers / Math.max(stats.totalEvents, 1)) * 100)}% gap)`
+                      }
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                    <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-3">
+                      Action Items
+                    </h4>
+                    <div className="text-sm text-blue-700 dark:text-blue-300 space-y-3">
+                      {stats.eventsStillNeedingVolunteers > 0 ? (
+                        <>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-blue-600 font-bold">1.</span>
+                              <span>Send targeted recruitment messages to {stats.activeMembers} active members</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-blue-600 font-bold">2.</span>
+                              <span>Create volunteer appreciation program for current volunteers</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-blue-600 font-bold">3.</span>
+                              <span>Develop volunteer training program</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-blue-600 font-bold">1.</span>
+                              <span>Expand volunteer opportunities for {stats.activeMembers} members</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-blue-600 font-bold">2.</span>
+                              <span>Create leadership development programs</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-blue-600 font-bold">3.</span>
+                              <span>Implement volunteer recognition events</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Recent Visitors Analysis */}
+              {selectedCardType === 'recent-visitors' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-rose-600">
+                            {(() => {
+                              const thirtyDaysAgo = new Date();
+                              thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                              return people.filter(person => 
+                                person.status === 'visitor' && 
+                                new Date(person.createdAt) >= thirtyDaysAgo
+                              ).length;
+                            })()}
+                          </div>
+                          <p className="text-sm text-muted-foreground">Recent Visitors (30 days)</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-pink-600">
+                            {people.filter(person => person.status === 'visitor').length}
+                          </div>
+                          <p className="text-sm text-muted-foreground">Total Visitors</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-600">
+                            {(() => {
+                              const thirtyDaysAgo = new Date();
+                              thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                              const recentVisitors = people.filter(person => 
+                                person.status === 'visitor' && 
+                                new Date(person.createdAt) >= thirtyDaysAgo
+                              ).length;
+                              return recentVisitors >= 3 ? 'Strong' : recentVisitors >= 1 ? 'Growing' : 'Needs Focus';
+                            })()}
+                          </div>
+                          <p className="text-sm text-muted-foreground">Outreach Health</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                  
+                  <div className="bg-rose-50 dark:bg-rose-900/20 p-4 rounded-lg">
+                    <h4 className="font-semibold text-rose-800 dark:text-rose-200 mb-3">
+                      Quick Analysis
+                    </h4>
+                    <div className="text-sm text-rose-700 dark:text-rose-300">
+                      {(() => {
+                        const thirtyDaysAgo = new Date();
+                        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                        const recentVisitors = people.filter(person => 
+                          person.status === 'visitor' && 
+                          new Date(person.createdAt) >= thirtyDaysAgo
+                        ).length;
+                        
+                        if (recentVisitors >= 3) {
+                          return '✅ Strong visitor outreach - excellent invitation culture';
+                        } else if (recentVisitors >= 1) {
+                          return `📈 Good visitor activity - ${recentVisitors} new visitor${recentVisitors > 1 ? 's' : ''} this month`;
+                        } else {
+                          return '⚠️ Visitor outreach needs attention - no recent visitors';
+                        }
+                      })()}
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                    <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-3">
+                      Action Items
+                    </h4>
+                    <div className="text-sm text-blue-700 dark:text-blue-300 space-y-3">
+                      {(() => {
+                        const thirtyDaysAgo = new Date();
+                        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                        const recentVisitors = people.filter(person => 
+                          person.status === 'visitor' && 
+                          new Date(person.createdAt) >= thirtyDaysAgo
+                        );
+                        const activeMembers = people.filter(person => person.status === 'active');
+                        
+                        if (recentVisitors.length >= 3) {
+                          return (
+                            <>
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-2 flex-1">
+                                  <span className="text-blue-600 font-bold">1.</span>
+                                  <span>Follow up with {recentVisitors.length} recent visitors</span>
+                                </div>
+                                <Button size="sm" variant="outline" className="text-xs">
+                                  Create Task
+                                </Button>
+                              </div>
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-2 flex-1">
+                                  <span className="text-blue-600 font-bold">2.</span>
+                                  <span>Create visitor integration strategies</span>
+                                </div>
+                                <Button size="sm" variant="outline" className="text-xs">
+                                  Create Task
+                                </Button>
+                              </div>
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-2 flex-1">
+                                  <span className="text-blue-600 font-bold">3.</span>
+                                  <span>Track conversion rates</span>
+                                </div>
+                                <Button size="sm" variant="outline" className="text-xs">
+                                  Create Task
+                                </Button>
+                              </div>
+                            </>
+                          );
+                        } else if (recentVisitors.length >= 1) {
+                          return (
+                            <>
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-2 flex-1">
+                                  <span className="text-blue-600 font-bold">1.</span>
+                                  <span>Encourage {activeMembers.length} active members to invite friends</span>
+                                </div>
+                                <Button size="sm" variant="outline" className="text-xs">
+                                  Create Task
+                                </Button>
+                              </div>
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-2 flex-1">
+                                  <span className="text-blue-600 font-bold">2.</span>
+                                  <span>Create compelling invitation materials</span>
+                                </div>
+                                <Button size="sm" variant="outline" className="text-xs">
+                                  Create Task
+                                </Button>
+                              </div>
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-2 flex-1">
+                                  <span className="text-blue-600 font-bold">3.</span>
+                                  <span>Develop community outreach programs</span>
+                                </div>
+                                <Button size="sm" variant="outline" className="text-xs">
+                                  Create Task
+                                </Button>
+                              </div>
+                            </>
+                          );
+                        } else {
+                          return (
+                            <>
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-2 flex-1">
+                                  <span className="text-blue-600 font-bold">1.</span>
+                                  <span>Launch invitation campaign with {activeMembers.length} active members</span>
+                                </div>
+                                <Button size="sm" variant="outline" className="text-xs">
+                                  Create Task
+                                </Button>
+                              </div>
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-2 flex-1">
+                                  <span className="text-blue-600 font-bold">2.</span>
+                                  <span>Create visitor-friendly experiences</span>
+                                </div>
+                                <Button size="sm" variant="outline" className="text-xs">
+                                  Create Task
+                                </Button>
+                              </div>
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-2 flex-1">
+                                  <span className="text-blue-600 font-bold">3.</span>
+                                  <span>Develop community partnerships</span>
+                                </div>
+                                <Button size="sm" variant="outline" className="text-xs">
+                                  Create Task
+                                </Button>
+                              </div>
+                            </>
+                          );
+                        }
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Community Health Analysis */}
+              {selectedCardType === 'community-health' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-blue-600">
+                            {stats.inactiveMembers}
+                          </div>
+                          <p className="text-sm text-muted-foreground">Inactive Members</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-600">
+                            {stats.activeMembers}
+                          </div>
+                          <p className="text-sm text-muted-foreground">Active Members</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-emerald-600">
+                            {stats.totalPeople > 0 ? Math.round((stats.activeMembers / stats.totalPeople) * 100) : 0}%
+                          </div>
+                          <p className="text-sm text-muted-foreground">Engagement Rate</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                  
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                    <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-3">
+                      Quick Analysis
+                    </h4>
+                    <div className="text-sm text-blue-700 dark:text-blue-300">
+                      {stats.inactiveMembers === 0 ? (
+                        '✅ Exceptional community health - all members engaged'
+                      ) : stats.inactiveMembers < 5 ? (
+                        `📊 Good health - ${stats.inactiveMembers} inactive (${Math.round((stats.inactiveMembers / Math.max(stats.totalPeople, 1)) * 100)}%)`
+                      ) : (
+                        `⚠️ Needs attention - ${stats.inactiveMembers} inactive (${Math.round((stats.inactiveMembers / Math.max(stats.totalPeople, 1)) * 100)}%)`
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                    <h4 className="font-semibold text-green-800 dark:text-green-200 mb-3">
+                      Action Items
+                    </h4>
+                    <div className="text-sm text-green-700 dark:text-green-300 space-y-3">
+                      {stats.inactiveMembers === 0 ? (
+                        <>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-green-600 font-bold">1.</span>
+                              <span>Maintain strong pastoral care relationships with {stats.activeMembers} active members</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-green-600 font-bold">2.</span>
+                              <span>Develop preventive care programs</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-green-600 font-bold">3.</span>
+                              <span>Create milestone celebration programs</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                        </>
+                      ) : stats.inactiveMembers < 5 ? (
+                        <>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-green-600 font-bold">1.</span>
+                              <span>Schedule personal visits with {stats.inactiveMembers} inactive members</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-green-600 font-bold">2.</span>
+                              <span>Send personalized outreach messages to {stats.inactiveMembers} inactive members</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-green-600 font-bold">3.</span>
+                              <span>Invite {stats.inactiveMembers} inactive members to upcoming events</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-green-600 font-bold">1.</span>
+                              <span>Implement comprehensive pastoral care outreach for {stats.inactiveMembers} inactive members</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-green-600 font-bold">2.</span>
+                              <span>Develop personalized re-engagement strategies for {stats.inactiveMembers} members</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-green-600 font-bold">3.</span>
+                              <span>Create support groups for {stats.inactiveMembers} struggling members</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Family Engagement Analysis */}
+              {selectedCardType === 'family-engagement' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-600">
+                            {stats.totalFamilies}
+                          </div>
+                          <p className="text-sm text-muted-foreground">Total Families</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-emerald-600">
+                            {stats.membersInFamilies}
+                          </div>
+                          <p className="text-sm text-muted-foreground">Members in Families</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-orange-600">
+                            {stats.membersWithoutFamilies}
+                          </div>
+                          <p className="text-sm text-muted-foreground">Unassigned Members</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-blue-600">
+                            {stats.totalFamilies > 0 ? Math.round((stats.membersInFamilies / Math.max(stats.totalPeople, 1)) * 100) : 0}%
+                          </div>
+                          <p className="text-sm text-muted-foreground">Family Connection Rate</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                  
+                  <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                    <h4 className="font-semibold text-green-800 dark:text-green-200 mb-3">
+                      Quick Analysis
+                    </h4>
+                    <div className="text-sm text-green-700 dark:text-green-300">
+                      {stats.totalFamilies > 0 ? (
+                        `${stats.totalFamilies} family unit${stats.totalFamilies > 1 ? 's' : ''} • ${Math.round((stats.membersInFamilies / Math.max(stats.totalPeople, 1)) * 100)}% connected${stats.membersWithoutFamilies > 0 ? ` • ${stats.membersWithoutFamilies} unassigned` : ''}`
+                      ) : (
+                        'No family units established - opportunity for community building'
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                    <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-3">
+                      Action Items
+                    </h4>
+                    <div className="text-sm text-blue-700 dark:text-blue-300 space-y-3">
+                      {stats.membersWithoutFamilies > 0 ? (
+                        <>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-blue-600 font-bold">1.</span>
+                              <span>Assign {stats.membersWithoutFamilies} unassigned members to family groups</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-blue-600 font-bold">2.</span>
+                              <span>Create family-based ministry programs for {stats.totalFamilies} families</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-blue-600 font-bold">3.</span>
+                              <span>Develop family support systems</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-blue-600 font-bold">1.</span>
+                              <span>Strengthen existing family connections for {stats.totalFamilies} families</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-blue-600 font-bold">2.</span>
+                              <span>Create family-based ministry opportunities</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-blue-600 font-bold">3.</span>
+                              <span>Implement family celebration programs</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Communication Analysis */}
+              {selectedCardType === 'communication' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-violet-600">
+                            {stats.totalSMSMessages || 0}
+                          </div>
+                          <p className="text-sm text-muted-foreground">Total SMS Messages</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-purple-600">
+                            {stats.totalSMSConversations || 0}
+                          </div>
+                          <p className="text-sm text-muted-foreground">Active Conversations</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-600">
+                            {stats.totalSMSConversations > 0 ? 'Active' : 'Growing'}
+                          </div>
+                          <p className="text-sm text-muted-foreground">Communication Health</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                  
+                  <div className="bg-violet-50 dark:bg-violet-900/20 p-4 rounded-lg">
+                    <h4 className="font-semibold text-violet-800 dark:text-violet-200 mb-3">
+                      Quick Analysis
+                    </h4>
+                    <div className="text-sm text-violet-700 dark:text-violet-300">
+                      {stats.totalSMSConversations > 0 ? (
+                        `✅ Strong communication - ${stats.totalSMSConversations} active conversations`
+                      ) : (
+                        `📱 Established channels - ${stats.totalSMSMessages} messages sent`
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
+                    <h4 className="font-semibold text-purple-800 dark:text-purple-200 mb-3">
+                      Action Items
+                    </h4>
+                    <div className="text-sm text-purple-700 dark:text-purple-300 space-y-3">
+                      {stats.totalSMSConversations > 0 ? (
+                        <>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-purple-600 font-bold">1.</span>
+                              <span>Maintain responsive pastoral protocols for {stats.totalSMSConversations} active conversations</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-purple-600 font-bold">2.</span>
+                              <span>Develop communication templates</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-purple-600 font-bold">3.</span>
+                              <span>Create automated follow-up systems</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-purple-600 font-bold">1.</span>
+                              <span>Encourage two-way communication with {stats.activeMembers} active members</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-purple-600 font-bold">2.</span>
+                              <span>Create pastoral care protocols</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-purple-600 font-bold">3.</span>
+                              <span>Develop communication templates</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Celebrations Analysis */}
+              {selectedCardType === 'celebrations' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-yellow-600">
+                            {stats.totalUpcoming || 0}
+                          </div>
+                          <p className="text-sm text-muted-foreground">Upcoming Celebrations</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-amber-600">
+                            {stats.upcomingBirthdays || 0}
+                          </div>
+                          <p className="text-sm text-muted-foreground">Birthdays This Month</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-orange-600">
+                            {stats.upcomingAnniversaries || 0}
+                          </div>
+                          <p className="text-sm text-muted-foreground">Anniversaries This Month</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                  
+                  <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
+                    <h4 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-3">
+                      Quick Analysis
+                    </h4>
+                    <div className="text-sm text-yellow-700 dark:text-yellow-300">
+                      {stats.totalUpcoming > 0 ? (
+                        `🎉 Active tracking - ${stats.totalUpcoming} celebrations this month`
+                      ) : (
+                        '📅 No celebrations tracked - opportunity for milestone programs'
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg">
+                    <h4 className="font-semibold text-amber-800 dark:text-amber-200 mb-3">
+                      Action Items
+                    </h4>
+                    <div className="text-sm text-amber-700 dark:text-amber-300 space-y-3">
+                      {stats.totalUpcoming > 0 ? (
+                        <>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-amber-600 font-bold">1.</span>
+                              <span>Plan personalized celebration outreach for {stats.totalUpcoming} upcoming celebrations</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-amber-600 font-bold">2.</span>
+                              <span>Create celebration cards and gifts</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-amber-600 font-bold">3.</span>
+                              <span>Implement celebration announcements</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-amber-600 font-bold">1.</span>
+                              <span>Implement milestone tracking system for {stats.activeMembers} active members</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-amber-600 font-bold">2.</span>
+                              <span>Create celebration outreach programs</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-amber-600 font-bold">3.</span>
+                              <span>Develop celebration ministries</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Create Task
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Attendance Diversity Analysis */}
+              {selectedCardType === 'attendance-diversity' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-cyan-600">
+                            {stats.sundayServiceEvents || 0}
+                          </div>
+                          <p className="text-sm text-muted-foreground">Sunday Services</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-teal-600">
+                            {stats.bibleStudyEvents || 0}
+                          </div>
+                          <p className="text-sm text-muted-foreground">Bible Studies</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-600">
+                            {stats.fellowshipEvents || 0}
+                          </div>
+                          <p className="text-sm text-muted-foreground">Fellowship Events</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                  
+                  <div className="bg-cyan-50 dark:bg-cyan-900/20 p-4 rounded-lg">
+                    <h4 className="font-semibold text-cyan-800 dark:text-cyan-200 mb-3">
+                      Quick Analysis
+                    </h4>
+                    <div className="text-sm text-cyan-700 dark:text-cyan-300">
+                      {(() => {
+                        const eventTypes = [stats.sundayServiceEvents, stats.bibleStudyEvents, stats.fellowshipEvents].filter(count => count > 0);
+                        const totalEvents = stats.sundayServiceEvents + stats.bibleStudyEvents + stats.fellowshipEvents;
+                        
+                        if (eventTypes.length >= 3) {
+                          return `✅ Excellent diversity - ${totalEvents} events across ${eventTypes.length} categories`;
+                        } else if (eventTypes.length >= 2) {
+                          return `📊 Good variety - ${totalEvents} events across ${eventTypes.length} categories`;
+                        } else {
+                          return `⚠️ Limited diversity - ${totalEvents} events in ${eventTypes.length} category${eventTypes.length > 1 ? 'ies' : ''}`;
+                        }
+                      })()}
+                    </div>
+                  </div>
+
+                  <div className="bg-teal-50 dark:bg-teal-900/20 p-4 rounded-lg">
+                    <h4 className="font-semibold text-teal-800 dark:text-teal-200 mb-3">
+                      Action Items
+                    </h4>
+                    <div className="text-sm text-teal-700 dark:text-teal-300 space-y-3">
+                      {(() => {
+                        const eventTypes = [stats.sundayServiceEvents, stats.bibleStudyEvents, stats.fellowshipEvents].filter(count => count > 0);
+                        const totalEvents = stats.sundayServiceEvents + stats.bibleStudyEvents + stats.fellowshipEvents;
+                        
+                        if (eventTypes.length >= 3) {
+                          return (
+                            <>
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-2 flex-1">
+                                  <span className="text-teal-600 font-bold">1.</span>
+                                  <span>Maintain and strengthen {totalEvents} existing programs</span>
+                                </div>
+                                <Button size="sm" variant="outline" className="text-xs">
+                                  Create Task
+                                </Button>
+                              </div>
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-2 flex-1">
+                                  <span className="text-teal-600 font-bold">2.</span>
+                                  <span>Develop specialized age group ministries</span>
+                                </div>
+                                <Button size="sm" variant="outline" className="text-xs">
+                                  Create Task
+                                </Button>
+                              </div>
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-2 flex-1">
+                                  <span className="text-teal-600 font-bold">3.</span>
+                                  <span>Create seasonal and special events</span>
+                                </div>
+                                <Button size="sm" variant="outline" className="text-xs">
+                                  Create Task
+                                </Button>
+                              </div>
+                            </>
+                          );
+                        } else if (eventTypes.length >= 2) {
+                          return (
+                            <>
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-2 flex-1">
+                                  <span className="text-teal-600 font-bold">1.</span>
+                                  <span>Expand to include missing categories</span>
+                                </div>
+                                <Button size="sm" variant="outline" className="text-xs">
+                                  Create Task
+                                </Button>
+                              </div>
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-2 flex-1">
+                                  <span className="text-teal-600 font-bold">2.</span>
+                                  <span>Develop specialized programs</span>
+                                </div>
+                                <Button size="sm" variant="outline" className="text-xs">
+                                  Create Task
+                                </Button>
+                              </div>
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-2 flex-1">
+                                  <span className="text-teal-600 font-bold">3.</span>
+                                  <span>Create seasonal opportunities</span>
+                                </div>
+                                <Button size="sm" variant="outline" className="text-xs">
+                                  Create Task
+                                </Button>
+                              </div>
+                            </>
+                          );
+                        } else {
+                          return (
+                            <>
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-2 flex-1">
+                                  <span className="text-teal-600 font-bold">1.</span>
+                                  <span>Develop comprehensive ministry planning</span>
+                                </div>
+                                <Button size="sm" variant="outline" className="text-xs">
+                                  Create Task
+                                </Button>
+                              </div>
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-2 flex-1">
+                                  <span className="text-teal-600 font-bold">2.</span>
+                                  <span>Create diverse ministry opportunities</span>
+                                </div>
+                                <Button size="sm" variant="outline" className="text-xs">
+                                  Create Task
+                                </Button>
+                              </div>
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-2 flex-1">
+                                  <span className="text-teal-600 font-bold">3.</span>
+                                  <span>Implement specialized programs</span>
+                                </div>
+                                <Button size="sm" variant="outline" className="text-xs">
+                                  Create Task
+                                </Button>
+                              </div>
+                            </>
+                          );
+                        }
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Add more card type analyses as needed */}
+            </div>
+          </DialogContent>
+                  </Dialog>
+        </motion.div>
       </div>
     </motion.div>
   );

@@ -96,6 +96,17 @@ export class SmartInsightsQueries {
       return [];
     }
 
+    const cacheKey = getCacheKey('at_risk_members', organizationId);
+    
+    // Check cache first
+    const cached = getCachedData(cacheKey);
+    if (cached) {
+      console.log('📊 [AIInsights] Using cached at-risk members');
+      return cached;
+    }
+
+    console.log('📊 [AIInsights] Generating fresh at-risk members data');
+    
     const sixtyDaysAgo = new Date();
     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
     
@@ -120,18 +131,48 @@ export class SmartInsightsQueries {
       return [];
     }
 
-    // Further filter by giving and event attendance
-    const atRiskMembers = [];
-    for (const member of data) {
-      const hasRecentGiving = await this.checkRecentGiving(member.id, sixtyDaysAgo);
-      const hasRecentEvents = await this.checkRecentEvents(member.id, sixtyDaysAgo);
+    // Batch query for recent giving and events instead of individual calls
+    const memberIds = data.map(member => member.id);
+    
+    // Get all recent donations for these members
+    const { data: recentDonations, error: donationsError } = await supabase
+      .from('donations')
+      .select('donor_id')
+      .in('donor_id', memberIds)
+      .gte('created_at', sixtyDaysAgo.toISOString());
+
+    // Get all recent event attendance for these members
+    const { data: recentAttendance, error: attendanceError } = await supabase
+      .from('event_attendance')
+      .select('member_id')
+      .in('member_id', memberIds)
+      .gte('created_at', sixtyDaysAgo.toISOString());
+
+    if (donationsError || attendanceError) {
+      console.error('Error fetching recent activity:', { donationsError, attendanceError });
+      return [];
+    }
+
+    // Create sets for O(1) lookup
+    const membersWithRecentGiving = new Set(recentDonations.map(d => d.donor_id));
+    const membersWithRecentEvents = new Set(recentAttendance.map(a => a.member_id));
+
+    // Filter at-risk members
+    const atRiskMembers = data.filter(member => {
+      const hasRecentGiving = membersWithRecentGiving.has(member.id);
+      const hasRecentEvents = membersWithRecentEvents.has(member.id);
       
       if (!hasRecentGiving && !hasRecentEvents) {
         // Add profile link to member data
         member.profileUrl = `/members/${member.id}`;
-        atRiskMembers.push(member);
+        return true;
       }
-    }
+      return false;
+    });
+
+    // Cache the result
+    setCachedData(cacheKey, atRiskMembers);
+    console.log('📊 [AIInsights] Cached at-risk members');
 
     return atRiskMembers;
   }
@@ -163,100 +204,21 @@ export class SmartInsightsQueries {
 
   /**
    * Get predictive attendance data
+   * TEMPORARILY DISABLED - Returns null to prevent API calls
    */
   static async getPredictiveAttendance(organizationId) {
-    try {
-      // Get historical attendance data for the last 6 months
-      const sixMonthsAgo = new Date();
-      sixMonthsAgo.setDate(sixMonthsAgo.getDate() - 180); // 6 months
-
-      const { data: historicalAttendance, error } = await supabase
-      .from('event_attendance')
-      .select(`
-          id,
-        member_id,
-          event_id,
-          created_at,
-          events (
-          id,
-          title,
-            end_date,
-            event_type
-        )
-      `)
-        .eq('organization_id', organizationId)
-        .gte('created_at', sixMonthsAgo.toISOString())
-        .order('created_at', { ascending: false });
-
-    if (error) {
-        console.error('Error fetching historical attendance:', error);
-        return null;
-      }
-
-      // Get upcoming events
-      const { data: upcomingEvents, error: eventsError } = await supabase
-        .from('events')
-        .select('id, title, end_date, event_type')
-        .eq('organization_id', organizationId)
-        .gte('end_date', new Date().toISOString())
-        .lte('end_date', new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()) // Next 30 days
-        .order('end_date', { ascending: true });
-
-      if (eventsError) {
-        console.error('Error fetching upcoming events:', eventsError);
-        return null;
-      }
-
-      // Calculate detailed attendance patterns
-      const attendancePatterns = this.calculateDetailedAttendancePatterns(historicalAttendance);
-      
-      // Generate predictions for upcoming events
-      const predictions = this.generateDetailedAttendancePredictions(upcomingEvents, attendancePatterns, historicalAttendance);
-
-      return {
-        historicalData: historicalAttendance,
-        upcomingEvents,
-        attendancePatterns,
-        predictions
-      };
-    } catch (error) {
-      console.error('Error generating predictive attendance:', error);
-      return null;
-    }
+    // TEMPORARILY DISABLED - Predictive attendance disabled to reduce API calls
+    console.log('📊 [AIInsights] Predictive attendance disabled');
+    return null;
   }
 
   /**
    * Get donation insights and trends
    */
   static async getDonationInsights(organizationId) {
-    try {
-      // Use the dashboard service to get consistent donation data
-      const { dashboardService } = await import('./dashboardService');
-      const dashboardData = await dashboardService.getDonationsData(organizationId);
-      
-      // Get current week and month data for immediate insights
-      const now = new Date();
-      const sevenDaysAgo = new Date(now);
-      sevenDaysAgo.setDate(now.getDate() - 7); // Last 7 days (rolling window)
-      sevenDaysAgo.setHours(0, 0, 0, 0);
-
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-
-      // Use the same donation data as the dashboard for consistency
-      const donations = dashboardData.all || [];
-
-      // Calculate comprehensive donation insights including current periods and predictions
-      const insights = this.calculateDonationInsights(donations, sevenDaysAgo, startOfMonth, endOfMonth, now);
-
-      return {
-        donations,
-        insights
-      };
-    } catch (error) {
-      console.error('Error generating donation insights:', error);
-      return null;
-    }
+    // TEMPORARILY DISABLED - Donation insights disabled to reduce API calls
+    console.log('📊 [AIInsights] Donation insights disabled');
+    return null;
   }
 
   /**
@@ -1223,49 +1185,68 @@ export class AIInsightsService {
    */
   static async getDashboardInsights(organizationId, forceRefresh = false) {
     try {
-      const [atRisk, predictiveAttendance, donationInsights] = await Promise.all([
-        SmartInsightsQueries.getAtRiskMembers(organizationId),
-        SmartInsightsQueries.getPredictiveAttendance(organizationId),
-        SmartInsightsQueries.getDonationInsights(organizationId)
+      const cacheKey = getCacheKey('dashboard_insights', organizationId);
+      
+      // Check cache first (unless force refresh)
+      if (!forceRefresh) {
+        const cached = getCachedData(cacheKey);
+        if (cached) {
+          console.log('📊 [AIInsights] Using cached dashboard insights');
+          return cached;
+        }
+      }
+
+      console.log('📊 [AIInsights] Generating fresh dashboard insights');
+      
+      const [atRisk] = await Promise.all([
+        SmartInsightsQueries.getAtRiskMembers(organizationId)
+        // SmartInsightsQueries.getPredictiveAttendance(organizationId) // TEMPORARILY DISABLED
+        // SmartInsightsQueries.getDonationInsights(organizationId) // TEMPORARILY DISABLED
       ]);
 
       // Use simple SQL-based summaries instead of AI
       const atRiskSummary = AIInsightsGenerator.generateFallbackSummary(atRisk, 'at-risk-members');
       const atRiskActions = AIInsightsGenerator.generateFallbackAction(atRisk, 'at-risk-members');
-      const donationSummary = AIInsightsGenerator.generateFallbackSummary(donationInsights, 'donation-insights');
-      const donationActions = AIInsightsGenerator.generateFallbackAction(donationInsights, 'donation-insights');
+      // const donationSummary = AIInsightsGenerator.generateFallbackSummary(donationInsights, 'donation-insights'); // TEMPORARILY DISABLED
+      // const donationActions = AIInsightsGenerator.generateFallbackAction(donationInsights, 'donation-insights'); // TEMPORARILY DISABLED
 
-      // Enhance predictions with AI if available
-      let enhancedPredictions = predictiveAttendance?.predictions || [];
-      if (predictiveAttendance?.predictions?.length > 0) {
-        try {
-          enhancedPredictions = await this.enhancePredictionsWithAI(predictiveAttendance.predictions, organizationId, forceRefresh);
-        } catch (error) {
-          console.warn('AI enhancement failed, using base predictions:', error);
-        }
-      }
+      // Enhance predictions with AI if available - TEMPORARILY DISABLED
+      // let enhancedPredictions = predictiveAttendance?.predictions || [];
+      // if (predictiveAttendance?.predictions?.length > 0) {
+      //   try {
+      //     enhancedPredictions = await this.enhancePredictionsWithAI(predictiveAttendance.predictions, organizationId, forceRefresh);
+      //   } catch (error) {
+      //     console.warn('AI enhancement failed, using base predictions:', error);
+      //   }
+      // }
 
-      return {
+      const result = {
         insights: {
           atRisk: {
             data: atRisk,
             summary: atRiskSummary,
             actions: atRiskActions
           },
-          predictiveAttendance: {
-            data: {
-              ...predictiveAttendance,
-              predictions: enhancedPredictions
-            }
-          },
-          donationInsights: {
-            data: donationInsights,
-            summary: donationSummary,
-            actions: donationActions
-          }
+          // predictiveAttendance: {
+          //   data: {
+          //     ...predictiveAttendance,
+          //     predictions: enhancedPredictions
+          //   }
+          // }, // TEMPORARILY DISABLED
+          // donationInsights: {
+          //   data: donationInsights,
+          //   summary: donationSummary,
+          //   actions: donationActions
+          // } // TEMPORARILY DISABLED
         },
         timestamp: new Date().toISOString()
       };
+
+      // Cache the result
+      setCachedData(cacheKey, result);
+      console.log('📊 [AIInsights] Cached dashboard insights');
+
+      return result;
     } catch (error) {
       console.error('Error generating dashboard insights:', error);
       return {

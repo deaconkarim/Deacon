@@ -37,15 +37,17 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useNavigate } from 'react-router-dom';
 import { PermissionGuard, PermissionButton } from '@/components/PermissionGuard';
 import { PERMISSIONS } from '@/lib/permissions.jsx';
-import { getMembers, deleteMember } from '@/lib/data';
+import { getMembers, addMember, deleteMember } from '@/lib/data';
 import { familyService } from '@/lib/familyService';
 import { useToast } from '@/components/ui/use-toast';
+import MemberForm from '@/components/members/MemberForm';
 
 export function People() {
   const navigate = useNavigate();
@@ -70,6 +72,15 @@ export function People() {
   const [selectedMember, setSelectedMember] = useState(null);
   const [selectedFamily, setSelectedFamily] = useState(null);
   const [selectedFamilyForDetails, setSelectedFamilyForDetails] = useState(null);
+  const [isEditFamilyDialogOpen, setIsEditFamilyDialogOpen] = useState(false);
+  const [availableMembers, setAvailableMembers] = useState([]);
+  const [memberSearchQuery, setMemberSearchQuery] = useState('');
+  const [newFamily, setNewFamily] = useState({
+    family_name: '',
+    primary_contact_id: ''
+  });
+  
+
 
   // Animation variants
   const containerVariants = {
@@ -162,6 +173,153 @@ export function People() {
 
   const handleMemberClick = (memberId) => {
     navigate(`/members/${memberId}`);
+  };
+
+  const handleAddMember = async (memberData) => {
+    try {
+      const addedMember = await addMember(memberData);
+      setMembers(prev => [addedMember, ...prev]);
+      
+      setIsAddDialogOpen(false);
+      toast({
+        title: "Success",
+        description: "Member added successfully"
+      });
+    } catch (error) {
+      console.error('Error adding member:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add member",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleFamilyCardClick = (family) => {
+    setSelectedFamilyForDetails(family);
+    setIsFamilyDetailsDialogOpen(true);
+  };
+
+  const handleEditFamily = async (family) => {
+    console.log('handleEditFamily called with family:', family);
+    setMemberSearchQuery(''); // Clear search query when dialog opens
+    try {
+      // Get fresh family data to ensure we have the latest member information
+      console.log('Getting fresh family data for ID:', family.id);
+      const freshFamily = await familyService.getFamily(family.id);
+      console.log('Fresh family data:', freshFamily);
+      if (freshFamily) {
+        setSelectedFamily(freshFamily);
+      } else {
+        setSelectedFamily(family);
+      }
+      
+      // Get members that can be added to this family (unassigned + current family members)
+      console.log('Getting available members for family ID:', family.id);
+      const available = await familyService.getAvailableMembers(family.id);
+      console.log('Available members:', available);
+      setAvailableMembers(available);
+      setIsEditFamilyDialogOpen(true);
+    } catch (error) {
+      console.error('Error loading family data:', error);
+      setSelectedFamily(family); // Fallback to original family data
+      toast({
+        title: "Error",
+        description: "Failed to load family data",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddMemberToFamily = async (memberId, relationshipType = 'other') => {
+    try {
+      await familyService.addMemberToFamily(selectedFamily.id, memberId, relationshipType);
+      await loadFamilies(); // Reload to get updated family data
+      await loadMembers(); // Reload members to update their family status
+      
+      // Update the selected family and available members in the dialog
+      const updatedFamilies = await familyService.getFamilies();
+      const updatedFamily = updatedFamilies.find(f => f.id === selectedFamily.id);
+      setSelectedFamily(updatedFamily);
+      
+      const available = await familyService.getAvailableMembers(selectedFamily.id);
+      setAvailableMembers(available);
+      
+      toast({
+        title: "Success",
+        description: "Member added to family"
+      });
+    } catch (error) {
+      console.error('Error adding member to family:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add member to family",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateMemberRole = async (memberId, newRelationshipType) => {
+    try {
+      await familyService.updateFamilyRelationship(selectedFamily.id, memberId, {
+        relationship_type: newRelationshipType
+      });
+      await loadFamilies(); // Reload to get updated family data
+      
+      // Update the selected family in the dialog
+      const updatedFamilies = await familyService.getFamilies();
+      const updatedFamily = updatedFamilies.find(f => f.id === selectedFamily.id);
+      setSelectedFamily(updatedFamily);
+      
+      toast({
+        title: "Success",
+        description: "Member role updated"
+      });
+    } catch (error) {
+      console.error('Error updating member role:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update member role",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCreateFamily = async () => {
+    console.log('handleCreateFamily called with:', newFamily);
+    try {
+      if (!newFamily.family_name.trim()) {
+        console.log('Family name is empty');
+        toast({
+          title: "Error",
+          description: "Family name is required",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('Creating family with data:', newFamily);
+      const result = await familyService.createFamily(newFamily);
+      console.log('Family created:', result);
+      
+      await loadFamilies(); // Reload families to get the complete data with members
+      setIsFamilyDialogOpen(false);
+      setNewFamily({
+        family_name: '',
+        primary_contact_id: ''
+      });
+      toast({
+        title: "Success",
+        description: "Family created successfully"
+      });
+    } catch (error) {
+      console.error('Error creating family:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create family",
+        variant: "destructive",
+      });
+    }
   };
 
   const formatName = (firstname, lastname) => {
@@ -266,121 +424,130 @@ export function People() {
 
   return (
     <PermissionGuard permission={PERMISSIONS.MEMBERS_VIEW}>
-      <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
-        {/* Clean header */}
-        <div className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-4 py-4">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+        {/* Modern header with gradient */}
+        <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-b border-slate-200/50 dark:border-slate-700/50 px-6 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">People</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Church directory</p>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
+                People
+              </h1>
+              <p className="text-slate-600 dark:text-slate-400 mt-1">Church directory & family management</p>
             </div>
             <PermissionButton 
               permission={PERMISSIONS.MEMBERS_CREATE}
               onClick={() => setIsAddDialogOpen(true)}
-              className="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+              className="h-12 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 font-medium"
             >
-              <Plus className="mr-2 h-4 w-4" />
-              Add
+              <Plus className="mr-2 h-5 w-5" />
+              Add Person
             </PermissionButton>
           </div>
         </div>
 
-        {/* Simple search */}
-        <div className="bg-white dark:bg-slate-800 px-4 py-3 border-b border-gray-200 dark:border-slate-700">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search people..."
-              className="pl-10 h-11 bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 rounded-lg"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+        {/* Enhanced search and filters */}
+        <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm px-6 py-4 border-b border-slate-200/50 dark:border-slate-700/50">
+          <div className="flex flex-col lg:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+              <Input
+                placeholder="Search people by name, email, or phone..."
+                className="pl-12 h-12 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-3">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="h-12 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 rounded-xl shadow-sm">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="visitor">Visitor</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Select value={ageFilter} onValueChange={setAgeFilter}>
+                <SelectTrigger className="h-12 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 rounded-xl shadow-sm">
+                  <SelectValue placeholder="Age" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Ages</SelectItem>
+                  <SelectItem value="adults">Adults</SelectItem>
+                  <SelectItem value="children">Children</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 
-        {/* Simple filters */}
-        <div className="bg-white dark:bg-slate-800 px-4 py-3 border-b border-gray-200 dark:border-slate-700">
-          <div className="flex gap-2">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-10 bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 rounded-lg">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-                <SelectItem value="visitor">Visitor</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <Select value={ageFilter} onValueChange={setAgeFilter}>
-              <SelectTrigger className="h-10 bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 rounded-lg">
-                <SelectValue placeholder="Age" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Ages</SelectItem>
-                <SelectItem value="adults">Adults</SelectItem>
-                <SelectItem value="children">Children</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Content area */}
-        <div className="px-4 py-4">
+        {/* Content area with enhanced spacing */}
+        <div className="px-6 py-6">
           {members.length === 0 ? (
             <EmptyState onAddMember={() => setIsAddDialogOpen(true)} />
           ) : (
             <Tabs defaultValue="list" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-4 h-12 bg-gray-100 dark:bg-slate-700 rounded-lg p-1">
-                <TabsTrigger value="list" className="text-sm rounded-md">List</TabsTrigger>
-                <TabsTrigger value="families" className="text-sm rounded-md">Families</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 mb-6 h-14 bg-white/80 dark:bg-slate-700/80 backdrop-blur-sm rounded-xl p-1 shadow-sm border border-slate-200/50 dark:border-slate-600/50">
+                <TabsTrigger value="list" className="text-sm font-medium rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md">
+                  <Users className="w-4 h-4 mr-2" />
+                  Member List
+                </TabsTrigger>
+                <TabsTrigger value="families" className="text-sm font-medium rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md">
+                  <Heart className="w-4 h-4 mr-2" />
+                  Families
+                </TabsTrigger>
               </TabsList>
               
               <TabsContent value="list">
-                <Card>
+                <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-slate-200/50 dark:border-slate-600/50 shadow-lg rounded-xl overflow-hidden">
                   <CardContent className="p-0">
                     <div className="relative w-full overflow-auto">
                       <table className="w-full caption-bottom text-sm">
-                        <thead className="[&_tr]:border-b">
-                          <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                            <th className="h-16 px-4 text-left align-middle font-medium">
+                        <thead className="[&_tr]:border-b border-slate-200/50 dark:border-slate-600/50">
+                          <tr className="border-b border-slate-200/50 dark:border-slate-600/50 transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-700/50 data-[state=selected]:bg-slate-100/50 dark:data-[state=selected]:bg-slate-600/50">
+                            <th className="h-16 px-6 text-left align-middle font-semibold text-slate-700 dark:text-slate-300">
                               <Button 
                                 variant="ghost" 
-                                className="flex items-center gap-1 h-12"
+                                className="flex items-center gap-2 h-12 font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100/50 dark:hover:bg-slate-700/50"
                                 onClick={() => handleSort('lastname')}
                               >
+                                <User className="w-4 h-4" />
                                 Name
                                 {sortField === 'lastname' && (
                                   sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
                                 )}
                               </Button>
                             </th>
-                            <th className="h-16 px-4 text-left align-middle font-medium hidden md:table-cell">
+                            <th className="h-16 px-6 text-left align-middle font-semibold text-slate-700 dark:text-slate-300 hidden md:table-cell">
                               <Button 
                                 variant="ghost" 
-                                className="flex items-center gap-1 h-12"
+                                className="flex items-center gap-2 h-12 font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100/50 dark:hover:bg-slate-700/50"
                                 onClick={() => handleSort('email')}
                               >
+                                <Mail className="w-4 h-4" />
                                 Email
                                 {sortField === 'email' && (
                                   sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
                                 )}
                               </Button>
                             </th>
-                            <th className="h-16 px-4 text-left align-middle font-medium hidden lg:table-cell">
+                            <th className="h-16 px-6 text-left align-middle font-semibold text-slate-700 dark:text-slate-300 hidden lg:table-cell">
                               <Button 
                                 variant="ghost" 
-                                className="flex items-center gap-1 h-12"
+                                className="flex items-center gap-2 h-12 font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100/50 dark:hover:bg-slate-700/50"
                                 onClick={() => handleSort('phone')}
                               >
+                                <Phone className="w-4 h-4" />
                                 Phone
                                 {sortField === 'phone' && (
                                   sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
                                 )}
                               </Button>
                             </th>
-                            <th className="h-16 px-4 align-middle">
+                            <th className="h-16 px-6 align-middle font-semibold text-slate-700 dark:text-slate-300">
                               Status
                             </th>
                           </tr>
@@ -389,39 +556,47 @@ export function People() {
                           {filteredMembers.map((member) => (
                             <tr 
                               key={member.id} 
-                              className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted cursor-pointer"
+                              className="border-b border-slate-200/50 dark:border-slate-600/50 transition-all duration-200 hover:bg-slate-50/80 dark:hover:bg-slate-700/80 data-[state=selected]:bg-slate-100/80 dark:data-[state=selected]:bg-slate-600/80 cursor-pointer group"
                               onClick={() => handleMemberClick(member.id)}
                             >
-                              <td className="h-16 px-4 align-middle">
-                                <div className="flex items-center space-x-3">
-                                  <Avatar className="h-8 w-8">
+                              <td className="h-16 px-6 align-middle">
+                                <div className="flex items-center space-x-4">
+                                  <Avatar className="h-10 w-10 ring-2 ring-slate-200/50 dark:ring-slate-600/50 group-hover:ring-blue-200 dark:group-hover:ring-blue-600 transition-all duration-200">
                                     <AvatarImage src={member.image_url} />
-                                    <AvatarFallback className="text-xs">
+                                    <AvatarFallback className="text-sm font-medium bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-600 dark:to-slate-700 text-slate-700 dark:text-slate-300">
                                       {getInitials(member.firstname, member.lastname)}
                                     </AvatarFallback>
                                   </Avatar>
                                   <div>
-                                    <div className="font-medium">{formatName(member.firstname, member.lastname)}</div>
+                                    <div className="font-semibold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                      {formatName(member.firstname, member.lastname)}
+                                    </div>
+                                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                                      {member.member_type === 'child' ? 'Child' : 'Adult'}
+                                    </div>
                                   </div>
                                 </div>
                               </td>
-                              <td className="h-16 px-4 align-middle hidden md:table-cell">
-                                <div className="text-sm">{member.email}</div>
+                              <td className="h-16 px-6 align-middle hidden md:table-cell">
+                                <div className="text-sm text-slate-600 dark:text-slate-300">{member.email}</div>
                               </td>
-                              <td className="h-16 px-4 align-middle hidden lg:table-cell">
-                                <div className="text-sm">{member.phone}</div>
+                              <td className="h-16 px-6 align-middle hidden lg:table-cell">
+                                <div className="text-sm text-slate-600 dark:text-slate-300">{member.phone}</div>
                               </td>
-                              <td className="h-16 px-4 align-middle">
+                              <td className="h-16 px-6 align-middle">
                                 {member.status === 'active' ? (
-                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 dark:from-green-900/30 dark:to-emerald-900/30 dark:text-green-300 border border-green-200/50 dark:border-green-700/50">
+                                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
                                     Active
                                   </span>
                                 ) : member.status === 'visitor' ? (
-                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 dark:from-blue-900/30 dark:to-indigo-900/30 dark:text-blue-300 border border-blue-200/50 dark:border-blue-700/50">
+                                    <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
                                     Visitor
                                   </span>
                                 ) : (
-                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-slate-100 to-gray-100 text-slate-700 dark:from-slate-800/30 dark:to-gray-800/30 dark:text-slate-300 border border-slate-200/50 dark:border-slate-600/50">
+                                    <div className="w-2 h-2 bg-slate-500 rounded-full mr-2"></div>
                                     Inactive
                                   </span>
                                 )}
@@ -436,44 +611,45 @@ export function People() {
               </TabsContent>
               
               <TabsContent value="families">
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <Card className="p-3">
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-0">
-                        <CardTitle className="text-xs font-medium">Total Families</CardTitle>
-                        <Heart className="h-3 w-3 text-muted-foreground" />
+                <div className="space-y-6">
+                  {/* Stats Cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800 shadow-lg">
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
+                        <CardTitle className="text-sm font-semibold text-blue-900 dark:text-blue-100">Total Families</CardTitle>
+                        <Heart className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                       </CardHeader>
-                      <CardContent className="p-0">
-                        <div className="text-xl font-bold">{families.length}</div>
+                      <CardContent className="p-4 pt-0">
+                        <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{families.length}</div>
                       </CardContent>
                     </Card>
-                    <Card className="p-3">
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-0">
-                        <CardTitle className="text-xs font-medium">Total People</CardTitle>
-                        <Users className="h-3 w-3 text-muted-foreground" />
+                    <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-green-200 dark:border-green-800 shadow-lg">
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
+                        <CardTitle className="text-sm font-semibold text-green-900 dark:text-green-100">Total People</CardTitle>
+                        <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
                       </CardHeader>
-                      <CardContent className="p-0">
-                        <div className="text-xl font-bold">{members.length}</div>
+                      <CardContent className="p-4 pt-0">
+                        <div className="text-2xl font-bold text-green-900 dark:text-green-100">{members.length}</div>
                       </CardContent>
                     </Card>
-                    <Card className="p-3">
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-0">
-                        <CardTitle className="text-xs font-medium">In Families</CardTitle>
-                        <User className="h-3 w-3 text-muted-foreground" />
+                    <Card className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-950 dark:to-violet-950 border-purple-200 dark:border-purple-800 shadow-lg">
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
+                        <CardTitle className="text-sm font-semibold text-purple-900 dark:text-purple-100">In Families</CardTitle>
+                        <User className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                       </CardHeader>
-                      <CardContent className="p-0">
-                        <div className="text-xl font-bold">
+                      <CardContent className="p-4 pt-0">
+                        <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
                           {families.reduce((total, family) => total + family.members.length, 0)}
                         </div>
                       </CardContent>
                     </Card>
-                    <Card className="p-3">
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-0">
-                        <CardTitle className="text-xs font-medium">Children</CardTitle>
-                        <Baby className="h-3 w-3 text-muted-foreground" />
+                    <Card className="bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-950 dark:to-rose-950 border-pink-200 dark:border-pink-800 shadow-lg">
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
+                        <CardTitle className="text-sm font-semibold text-pink-900 dark:text-pink-100">Children</CardTitle>
+                        <Baby className="h-5 w-5 text-pink-600 dark:text-pink-400" />
                       </CardHeader>
-                      <CardContent className="p-0">
-                        <div className="text-xl font-bold">
+                      <CardContent className="p-4 pt-0">
+                        <div className="text-2xl font-bold text-pink-900 dark:text-pink-100">
                           {members.filter(m => m.member_type === 'child').length}
                         </div>
                       </CardContent>
@@ -481,53 +657,89 @@ export function People() {
                   </div>
 
                   <div className="flex justify-end">
-                    <Button onClick={() => setIsFamilyDialogOpen(true)}>
-                      <Plus className="w-4 h-4 mr-2" />
+                    <Button 
+                      onClick={() => {
+                        console.log('Create Family button clicked');
+                        setIsFamilyDialogOpen(true);
+                      }}
+                      className="h-12 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 font-medium"
+                    >
+                      <Plus className="w-5 h-5 mr-2" />
                       Create Family
                     </Button>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {families.map((family) => (
                       <Card 
                         key={family.id} 
-                        className="hover:shadow-lg transition-shadow cursor-pointer"
-                        onClick={() => navigate(`/families/${family.id}`)}
+                        className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-slate-200/50 dark:border-slate-600/50 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer group overflow-hidden"
+                        onClick={() => handleFamilyCardClick(family)}
                       >
-                        <CardHeader>
+                        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-950/50 dark:to-indigo-950/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <CardHeader className="relative">
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
-                              <CardTitle className="text-lg">{family.family_name}</CardTitle>
-                              <CardDescription>
+                              <CardTitle className="text-xl font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                {family.family_name}
+                              </CardTitle>
+                              <CardDescription className="text-slate-600 dark:text-slate-400">
                                 {family.members.length} member{family.members.length !== 1 ? 's' : ''}
                               </CardDescription>
                             </div>
+                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                className="h-8 w-8 p-0 bg-white/80 dark:bg-slate-700/80 hover:bg-white dark:hover:bg-slate-600 shadow-sm"
+                                onClick={(e) => {
+                                  console.log('Edit Family button clicked for family:', family);
+                                  e.stopPropagation();
+                                  handleEditFamily(family);
+                                }}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                className="h-8 w-8 p-0 bg-white/80 dark:bg-slate-700/80 hover:bg-white dark:hover:bg-slate-600 shadow-sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setIsAddDialogOpen(true);
+                                }}
+                              >
+                                <Plus className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </div>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div className="space-y-2">
-                            <h4 className="text-sm font-medium">Members</h4>
-                            <div className="space-y-1">
+                        <CardContent className="space-y-4 relative">
+                          <div className="space-y-3">
+                            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Members</h4>
+                            <div className="space-y-2">
                               {family.members.slice(0, 3).map((member) => (
-                                <div key={member.id} className="flex items-center justify-between text-sm">
-                                  <div className="flex items-center gap-2">
-                                    <Avatar className="h-6 w-6">
+                                <div key={member.id} className="flex items-center justify-between p-2 rounded-lg bg-slate-50/50 dark:bg-slate-700/50 hover:bg-slate-100/50 dark:hover:bg-slate-600/50 transition-colors">
+                                  <div className="flex items-center gap-3">
+                                    <Avatar className="h-8 w-8 ring-2 ring-slate-200/50 dark:ring-slate-600/50">
                                       <AvatarImage src={member.image_url} />
-                                      <AvatarFallback className="text-xs">
+                                      <AvatarFallback className="text-xs font-medium bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-600 dark:to-slate-700 text-slate-700 dark:text-slate-300">
                                         {getInitials(member.firstname, member.lastname)}
                                       </AvatarFallback>
                                     </Avatar>
-                                    <div className="flex items-center gap-1">
-                                      <span>{member.firstname} {member.lastname}</span>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium text-slate-900 dark:text-slate-100">
+                                        {member.firstname} {member.lastname}
+                                      </span>
                                       {member.id === family.primary_contact_id && (
-                                        <Crown className="w-3 h-3 text-yellow-500" />
+                                        <Crown className="w-4 h-4 text-yellow-500" />
                                       )}
                                     </div>
                                   </div>
                                 </div>
                               ))}
                               {family.members.length > 3 && (
-                                <div className="text-xs text-muted-foreground">
+                                <div className="text-sm text-slate-500 dark:text-slate-400 font-medium">
                                   +{family.members.length - 3} more member{family.members.length - 3 !== 1 ? 's' : ''}
                                 </div>
                               )}
@@ -535,11 +747,13 @@ export function People() {
                           </div>
 
                           {family.primary_contact_id && (
-                            <div className="pt-2 border-t">
-                              <div className="text-xs text-muted-foreground">Primary Contact</div>
-                              <div className="text-sm font-medium flex items-center gap-1">
-                                <Crown className="w-3 h-3 text-yellow-500" />
-                                {family.members.find(m => m.id === family.primary_contact_id)?.firstname} {family.members.find(m => m.id === family.primary_contact_id)?.lastname}
+                            <div className="pt-3 border-t border-slate-200/50 dark:border-slate-600/50">
+                              <div className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">Primary Contact</div>
+                              <div className="flex items-center gap-2 p-2 rounded-lg bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-950/50 dark:to-orange-950/50 border border-yellow-200/50 dark:border-yellow-700/50">
+                                <Crown className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+                                <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                  {family.members.find(m => m.id === family.primary_contact_id)?.firstname} {family.members.find(m => m.id === family.primary_contact_id)?.lastname}
+                                </span>
                               </div>
                             </div>
                           )}
@@ -549,14 +763,19 @@ export function People() {
                   </div>
 
                   {families.length === 0 && (
-                    <div className="text-center py-12">
-                      <Heart className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-lg font-medium mb-2">No families yet</h3>
-                      <p className="text-muted-foreground mb-4">
-                        Get started by creating your first family
+                    <div className="text-center py-16">
+                      <div className="mx-auto w-24 h-24 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-full flex items-center justify-center mb-6">
+                        <Heart className="w-12 h-12 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-3">No families yet</h3>
+                      <p className="text-slate-600 dark:text-slate-400 mb-8 max-w-md mx-auto">
+                        Get started by creating your first family to organize your church members
                       </p>
-                      <Button onClick={() => setIsFamilyDialogOpen(true)}>
-                        <Plus className="w-4 h-4 mr-2" />
+                      <Button 
+                        onClick={() => setIsFamilyDialogOpen(true)}
+                        className="h-12 px-8 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 font-medium"
+                      >
+                        <Plus className="w-5 h-5 mr-2" />
                         Create First Family
                       </Button>
                     </div>
@@ -567,6 +786,77 @@ export function People() {
           )}
         </div>
       </div>
+
+      {/* Add Person Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Add New Member</DialogTitle>
+            <DialogDescription>
+              Enter the member's information below.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="overflow-y-auto max-h-[70vh] pr-2">
+            <MemberForm
+              initialData={{
+                firstname: '',
+                lastname: '',
+                email: '',
+                phone: '',
+                status: 'active',
+                image_url: '',
+                gender: 'male',
+                member_type: 'adult',
+                role: 'member',
+                birth_date: '',
+                join_date: new Date().toISOString().split('T')[0],
+                anniversary_date: '',
+                spouse_name: '',
+                has_children: false,
+                marital_status: 'single',
+                occupation: '',
+                address: {
+                  street: '',
+                  city: '',
+                  state: '',
+                  zip: '',
+                  country: ''
+                },
+                emergency_contact: {
+                  name: '',
+                  phone: '',
+                  relationship: ''
+                },
+                notes: '',
+                last_attendance_date: '',
+                attendance_frequency: 'regular',
+                ministry_involvement: [],
+                communication_preferences: { sms: true, email: true, mail: false },
+                tags: []
+              }}
+              onSave={async (memberData) => {
+                try {
+                  const addedMember = await addMember(memberData);
+                  setMembers(prev => [addedMember, ...prev]);
+                  setIsAddDialogOpen(false);
+                  toast({
+                    title: "Success",
+                    description: "Member added successfully"
+                  });
+                } catch (error) {
+                  console.error('Error adding member:', error);
+                  toast({
+                    title: "Error",
+                    description: "Failed to add member",
+                    variant: "destructive",
+                  });
+                }
+              }}
+              onCancel={() => setIsAddDialogOpen(false)}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
@@ -585,6 +875,424 @@ export function People() {
               Delete
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Family Details Dialog */}
+      <Dialog open={isFamilyDetailsDialogOpen} onOpenChange={setIsFamilyDetailsDialogOpen}>
+        <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-hidden bg-white/95 backdrop-blur-xl border-0 shadow-2xl">
+          <DialogHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-t-xl border-b border-blue-100">
+            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              Family Details
+            </DialogTitle>
+            <DialogDescription className="text-slate-600 text-base">
+              View and manage family information with enhanced details.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedFamilyForDetails && (
+            <div className="space-y-6 p-6 overflow-y-auto max-h-[60vh]">
+              {/* Family Header */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-100">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+                    <Users className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-slate-800">{selectedFamilyForDetails.family_name}</h3>
+                    <p className="text-slate-600">
+                      {selectedFamilyForDetails.members?.length || 0} family member{selectedFamilyForDetails.members?.length !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Family Members */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Users className="w-5 h-5 text-blue-600" />
+                  <h4 className="text-lg font-semibold text-slate-800">Family Members</h4>
+                </div>
+                <div className="space-y-3">
+                  {(() => {
+                    // Sort members: adults first, then children, both sorted alphabetically
+                    const sortedMembers = selectedFamilyForDetails.members.sort((a, b) => {
+                      // First sort by member type (adults before children)
+                      if (a.member_type !== b.member_type) {
+                        return a.member_type === 'adult' ? -1 : 1;
+                      }
+                      // Then sort alphabetically by name
+                      return `${a.firstname} ${a.lastname}`.localeCompare(`${b.firstname} ${b.lastname}`);
+                    });
+                    
+                    return sortedMembers.map((member) => (
+                      <div 
+                        key={member.id} 
+                        className="group bg-white/80 backdrop-blur-sm border border-slate-200 rounded-xl p-4 cursor-pointer hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:border-blue-200 transition-all duration-200 hover:shadow-lg"
+                        onClick={() => navigate(`/members/${member.id}`)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <Avatar className="h-12 w-12 ring-2 ring-blue-100 group-hover:ring-blue-200 transition-all duration-200">
+                              <AvatarImage src={member.image_url} />
+                              <AvatarFallback className="text-sm font-semibold bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+                                {getInitials(member.firstname, member.lastname)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-semibold text-slate-800 text-base">
+                                {member.firstname} {member.lastname}
+                              </div>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge 
+                                  variant={member.member_type === 'adult' ? 'default' : 'secondary'}
+                                  className={`text-xs ${
+                                    member.member_type === 'adult' 
+                                      ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
+                                      : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                                  }`}
+                                >
+                                  {member.member_type}
+                                </Badge>
+                                <Badge 
+                                  variant="outline" 
+                                  className="text-xs border-slate-300 text-slate-600"
+                                >
+                                  {member.relationship_type}
+                                </Badge>
+                                {member.id === selectedFamilyForDetails.primary_contact_id && (
+                                  <div className="flex items-center gap-1">
+                                    <Crown className="w-3 h-3 text-yellow-500" />
+                                    <span className="text-xs text-yellow-600 font-medium">Primary</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-blue-600 transition-colors duration-200" />
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+
+              {/* Primary Contact Section */}
+              {selectedFamilyForDetails.primary_contact_id && (
+                <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-4 rounded-xl border border-yellow-200">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
+                      <Crown className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-semibold text-slate-800">Primary Contact</h4>
+                      <p className="text-slate-600 text-sm">
+                        {selectedFamilyForDetails.members.find(m => m.id === selectedFamilyForDetails.primary_contact_id)?.firstname} {selectedFamilyForDetails.members.find(m => m.id === selectedFamilyForDetails.primary_contact_id)?.lastname}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Family Stats */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-xl border border-green-200">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center">
+                      <User className="w-4 h-4 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-600">Adults</p>
+                      <p className="text-lg font-bold text-slate-800">
+                        {selectedFamilyForDetails.members?.filter(m => m.member_type === 'adult').length || 0}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-xl border border-purple-200">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center">
+                      <Baby className="w-4 h-4 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-600">Children</p>
+                      <p className="text-lg font-bold text-slate-800">
+                        {selectedFamilyForDetails.members?.filter(m => m.member_type === 'child').length || 0}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Family Dialog */}
+      <Dialog open={isFamilyDialogOpen} onOpenChange={setIsFamilyDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Create New Family</DialogTitle>
+            <DialogDescription>
+              Create a new family and optionally assign a primary contact.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="family_name">Family Name</Label>
+              <Input
+                id="family_name"
+                placeholder="Enter family name"
+                value={newFamily.family_name}
+                onChange={(e) => setNewFamily(prev => ({ ...prev, family_name: e.target.value }))}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="primary_contact">Primary Contact (Optional)</Label>
+              <Select 
+                value={newFamily.primary_contact_id || "none"} 
+                onValueChange={(value) => setNewFamily(prev => ({ ...prev, primary_contact_id: value === "none" ? "" : value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select primary contact" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No primary contact</SelectItem>
+                  {members.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {formatName(member.firstname, member.lastname)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsFamilyDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateFamily}>
+              Create Family
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Family Dialog */}
+      <Dialog open={isEditFamilyDialogOpen} onOpenChange={setIsEditFamilyDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Edit Family</DialogTitle>
+            <DialogDescription>
+              Manage family members and settings.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedFamily && (
+            <div className="space-y-6 overflow-y-auto max-h-[60vh]">
+              {/* Family Name */}
+              <div className="space-y-2">
+                <Label htmlFor="edit_family_name">Family Name</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="edit_family_name"
+                    value={selectedFamily.family_name}
+                    onChange={(e) => setSelectedFamily(prev => ({ ...prev, family_name: e.target.value }))}
+                  />
+                  <Button 
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        await familyService.updateFamily(selectedFamily.id, { family_name: selectedFamily.family_name });
+                        await loadFamilies();
+                        toast({
+                          title: "Success",
+                          description: "Family name updated"
+                        });
+                      } catch (error) {
+                        console.error('Error updating family name:', error);
+                        toast({
+                          title: "Error",
+                          description: "Failed to update family name",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                  >
+                    Update
+                  </Button>
+                </div>
+              </div>
+
+              {/* Primary Contact */}
+              <div className="space-y-2">
+                <Label htmlFor="edit_primary_contact">Primary Contact</Label>
+                <div className="flex gap-2">
+                                     <Select 
+                     value={selectedFamily.primary_contact_id || "none"} 
+                     onValueChange={async (value) => {
+                       try {
+                         const contactId = value === "none" ? null : value;
+                         await familyService.updateFamily(selectedFamily.id, { primary_contact_id: contactId });
+                         await loadFamilies();
+                         setSelectedFamily(prev => ({ ...prev, primary_contact_id: value === "none" ? "" : value }));
+                         toast({
+                           title: "Success",
+                           description: "Primary contact updated"
+                         });
+                       } catch (error) {
+                         console.error('Error updating primary contact:', error);
+                         toast({
+                           title: "Error",
+                           description: "Failed to update primary contact",
+                           variant: "destructive",
+                         });
+                       }
+                     }}
+                   >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select primary contact" />
+                    </SelectTrigger>
+                                         <SelectContent>
+                       <SelectItem value="none">No primary contact</SelectItem>
+                       {selectedFamily.members?.map((member) => (
+                         <SelectItem key={member.id} value={member.id}>
+                           {formatName(member.firstname, member.lastname)}
+                         </SelectItem>
+                       ))}
+                     </SelectContent>
+                   </Select>
+                </div>
+              </div>
+
+              {/* Add Member Section */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold">Add Member to Family</h4>
+                <div className="space-y-2">
+                  <Input
+                    placeholder="Search available members..."
+                    value={memberSearchQuery}
+                    onChange={(e) => setMemberSearchQuery(e.target.value)}
+                  />
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {availableMembers
+                      .filter(member => 
+                        member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                        member.lastname?.toLowerCase().includes(memberSearchQuery.toLowerCase())
+                      )
+                      .map((member) => (
+                        <div key={member.id} className="flex items-center justify-between p-2 border rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={member.image_url} />
+                              <AvatarFallback className="text-xs">
+                                {getInitials(member.firstname, member.lastname)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm">
+                              {formatName(member.firstname, member.lastname)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Select
+                              defaultValue="other"
+                              onValueChange={(value) => handleAddMemberToFamily(member.id, value)}
+                            >
+                              <SelectTrigger className="w-32">
+                                <SelectValue placeholder="Relationship" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="spouse">Spouse</SelectItem>
+                                <SelectItem value="parent">Parent</SelectItem>
+                                <SelectItem value="child">Child</SelectItem>
+                                <SelectItem value="sibling">Sibling</SelectItem>
+                                <SelectItem value="other">Other</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Button
+                              size="sm"
+                              onClick={() => handleAddMemberToFamily(member.id, 'other')}
+                            >
+                              Add
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Current Members */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold">Current Family Members</h4>
+                <div className="space-y-2">
+                  {selectedFamily.members?.map((member) => (
+                    <div key={member.id} className="flex items-center justify-between p-2 border rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={member.image_url} />
+                          <AvatarFallback className="text-xs">
+                            {getInitials(member.firstname, member.lastname)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <span className="text-sm font-medium">
+                            {formatName(member.firstname, member.lastname)}
+                          </span>
+                          {member.id === selectedFamily.primary_contact_id && (
+                            <div className="flex items-center gap-1">
+                              <Crown className="w-3 h-3 text-yellow-500" />
+                              <span className="text-xs text-slate-500">Primary Contact</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Select
+                          value={member.relationship_type || 'other'}
+                          onValueChange={(value) => handleUpdateMemberRole(member.id, value)}
+                        >
+                          <SelectTrigger className="w-32">
+                            <SelectValue placeholder="Role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="spouse">Spouse</SelectItem>
+                            <SelectItem value="parent">Parent</SelectItem>
+                            <SelectItem value="child">Child</SelectItem>
+                            <SelectItem value="sibling">Sibling</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              await familyService.removeMemberFromFamily(selectedFamily.id, member.id);
+                              await loadFamilies();
+                              await loadMembers();
+                              toast({
+                                title: "Success",
+                                description: "Member removed from family"
+                              });
+                            } catch (error) {
+                              console.error('Error removing member from family:', error);
+                              toast({
+                                title: "Error",
+                                description: "Failed to remove member from family",
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </PermissionGuard>
