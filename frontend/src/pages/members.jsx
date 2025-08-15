@@ -29,7 +29,9 @@ import {
   ArrowRight,
   MoreVertical,
   Star,
-  MessageSquare
+  MessageSquare,
+  Hash,
+  UserMinus
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,10 +46,11 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { useNavigate } from 'react-router-dom';
 import { PermissionGuard, PermissionButton } from '@/components/PermissionGuard';
 import { PERMISSIONS } from '@/lib/permissions.jsx';
-import { getMembers, addMember, deleteMember } from '@/lib/data';
+import { getMembers, addMember, deleteMember, getGroups, getCurrentUserOrganizationId } from '@/lib/data';
 import { familyService } from '@/lib/familyService';
 import { useToast } from '@/components/ui/use-toast';
 import MemberForm from '@/components/members/MemberForm';
+import { supabase } from '@/lib/supabaseClient';
 
 export function People() {
   const navigate = useNavigate();
@@ -80,6 +83,25 @@ export function People() {
     primary_contact_id: ''
   });
   
+  // Groups state
+  const [groups, setGroups] = useState([]);
+  const [filteredGroups, setFilteredGroups] = useState([]);
+  const [groupSearchQuery, setGroupSearchQuery] = useState('');
+  const [isAddGroupOpen, setIsAddGroupOpen] = useState(false);
+  const [isDeleteGroupDialogOpen, setIsDeleteGroupDialogOpen] = useState(false);
+  const [groupToDelete, setGroupToDelete] = useState(null);
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [isViewGroupOpen, setIsViewGroupOpen] = useState(false);
+  const [isAddMemberToGroupOpen, setIsAddMemberToGroupOpen] = useState(false);
+  const [isEditGroupOpen, setIsEditGroupOpen] = useState(false);
+  const [editingGroup, setEditingGroup] = useState(null);
+  const [newGroup, setNewGroup] = useState({
+    name: '',
+    description: '',
+    leader_id: '',
+    members: []
+  });
+  
 
 
   // Animation variants
@@ -107,6 +129,7 @@ export function People() {
   useEffect(() => {
     loadMembers();
     loadFamilies();
+    loadGroups();
   }, []);
 
   const loadMembers = async () => {
@@ -137,6 +160,57 @@ export function People() {
         description: "Failed to load families",
         variant: "destructive",
       });
+    }
+  };
+
+  const loadGroups = async () => {
+    try {
+      // Get groups with proper organization filtering
+      const groupsData = await getGroups();
+      
+      // Get the current user's organization ID using the helper function
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) throw new Error('User not associated with any organization');
+
+      // Fetch additional data for each group with organization filtering
+      const enrichedGroups = await Promise.all(
+        groupsData.map(async (group) => {
+          // Get group members count
+          const { count: memberCount } = await supabase
+            .from('group_members')
+            .select('*', { count: 'exact', head: true })
+            .eq('group_id', group.id)
+            .eq('organization_id', organizationId);
+
+          // Get leader info only if leader_id exists
+          let leader = null;
+          if (group.leader_id) {
+            const { data: leaderData } = await supabase
+              .from('members')
+              .select('firstname, lastname')
+              .eq('id', group.leader_id)
+              .eq('organization_id', organizationId)
+              .single();
+            leader = leaderData;
+          }
+
+          return {
+            ...group,
+            group_members: [{ count: memberCount || 0 }],
+            leader: leader ? {
+              ...leader,
+              firstName: leader.firstname,
+              lastName: leader.lastname
+            } : null
+          };
+        })
+      );
+
+      setGroups(enrichedGroups || []);
+      setFilteredGroups(enrichedGroups || []);
+    } catch (error) {
+      console.error('Error fetching groups:', error);
+      toast({ title: 'Error', description: 'Failed to fetch groups', variant: 'destructive' });
     }
   };
 
@@ -173,6 +247,238 @@ export function People() {
 
   const handleMemberClick = (memberId) => {
     navigate(`/members/${memberId}`);
+  };
+
+  // Group management functions
+  const handleAddGroup = async () => {
+    if (!newGroup.name || !newGroup.leader_id) {
+      toast({ title: 'Missing Information', description: 'Please fill in all required fields.', variant: 'destructive' });
+      return;
+    }
+    try {
+      // Get the current user's organization ID
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) throw new Error('User not associated with any organization');
+
+      // Create the group with organization_id
+      const { data, error } = await supabase
+        .from('groups')
+        .insert([{
+          name: newGroup.name,
+          description: newGroup.description,
+          leader_id: newGroup.leader_id,
+          organization_id: organizationId
+        }])
+        .select();
+      
+      if (error) throw error;
+
+      // If there are members to add, add them to the group_members table
+      if (newGroup.members && newGroup.members.length > 0) {
+        const memberInserts = newGroup.members.map(memberId => ({
+          group_id: data[0].id,
+          member_id: memberId,
+          organization_id: organizationId
+        }));
+
+        const { error: memberError } = await supabase
+          .from('group_members')
+          .insert(memberInserts);
+
+        if (memberError) throw memberError;
+      }
+
+      await loadGroups();
+      setIsAddGroupOpen(false);
+      setNewGroup({
+        name: '',
+        description: '',
+        leader_id: '',
+        members: []
+      });
+      toast({ title: 'Group Added', description: `"${data[0].name}" has been added successfully.` });
+    } catch (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const handleDeleteGroup = async () => {
+    if (!groupToDelete) return;
+    try {
+      const { error } = await supabase
+        .from('groups')
+        .delete()
+        .eq('id', groupToDelete.id);
+      if (error) throw error;
+      await loadGroups();
+      setGroupToDelete(null);
+      setIsDeleteGroupDialogOpen(false);
+      toast({ title: 'Group Deleted', description: `"${groupToDelete.name}" has been removed.` });
+    } catch (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const handleViewGroup = async (group) => {
+    try {
+      // Fetch the complete group data including members
+      const { data: completeGroup, error } = await supabase
+        .from('groups')
+        .select(`
+          *,
+          group_members(
+            member_id,
+            members(
+              id,
+              firstname,
+              lastname,
+              image_url
+            )
+          ),
+          leader:members!leader_id(
+            id,
+            firstname,
+            lastname,
+            image_url
+          )
+        `)
+        .eq('id', group.id)
+        .single();
+
+      if (error) throw error;
+
+      // Transform the members data for display
+      const transformedGroup = {
+        ...completeGroup,
+        leader: completeGroup.leader ? {
+          ...completeGroup.leader,
+          firstName: completeGroup.leader.firstname,
+          lastName: completeGroup.leader.lastname,
+          image_url: completeGroup.leader.image_url
+        } : null,
+        members: completeGroup.group_members.map(gm => ({
+          id: gm.members.id,
+          firstName: gm.members.firstname,
+          lastName: gm.members.lastname,
+          image_url: gm.members.image_url
+        }))
+      };
+
+      setSelectedGroup(transformedGroup);
+      setIsViewGroupOpen(true);
+    } catch (error) {
+      console.error('Error fetching group details:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load group details.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleAddMemberToGroup = async (memberId) => {
+    if (!selectedGroup) return;
+    try {
+      // First check if the member is already in the group
+      const { data: existingMembers, error: checkError } = await supabase
+        .from('group_members')
+        .select('member_id')
+        .eq('group_id', selectedGroup.id)
+        .eq('member_id', memberId);
+
+      if (checkError) throw checkError;
+
+      if (existingMembers && existingMembers.length > 0) {
+        toast({
+          title: "Already Added",
+          description: "This member is already in the group.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Get the current user's organization ID
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) throw new Error('User not associated with any organization');
+
+      const { error } = await supabase
+        .from('group_members')
+        .insert([{
+          group_id: selectedGroup.id,
+          member_id: memberId,
+          organization_id: organizationId
+        }]);
+
+      if (error) throw error;
+
+      // Refresh the group data
+      await handleViewGroup({ id: selectedGroup.id });
+      setIsAddMemberToGroupOpen(false);
+      toast({
+        title: "Success",
+        description: "Person added to group successfully."
+      });
+    } catch (error) {
+      console.error('Error adding person to group:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add person to group.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleRemoveMemberFromGroup = async (memberId) => {
+    if (!selectedGroup) return;
+    try {
+      const { error } = await supabase
+        .from('group_members')
+        .delete()
+        .eq('group_id', selectedGroup.id)
+        .eq('member_id', memberId);
+
+      if (error) throw error;
+
+      // Refresh the group data
+      await handleViewGroup({ id: selectedGroup.id });
+      toast({
+        title: "Success",
+        description: "Member removed from group successfully."
+      });
+    } catch (error) {
+      console.error('Error removing member from group:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove member from group.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleEditGroup = async () => {
+    if (!editingGroup || !editingGroup.name || !editingGroup.leader_id) {
+      toast({ title: 'Missing Information', description: 'Please fill in all required fields.', variant: 'destructive' });
+      return;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('groups')
+        .update({
+          name: editingGroup.name,
+          description: editingGroup.description,
+          leader_id: editingGroup.leader_id
+        })
+        .eq('id', editingGroup.id)
+        .select();
+      if (error) throw error;
+      
+      await loadGroups();
+      setIsEditGroupOpen(false);
+      setEditingGroup(null);
+      toast({ title: 'Group Updated', description: `"${data[0].name}" has been updated successfully.` });
+    } catch (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
   };
 
   const handleAddMember = async (memberData) => {
@@ -349,6 +655,20 @@ export function People() {
     }
   };
 
+  // Filter groups
+  useEffect(() => {
+    let filtered = [...groups];
+    if (groupSearchQuery) {
+      const query = groupSearchQuery.toLowerCase();
+      filtered = filtered.filter(group => 
+        group.name.toLowerCase().includes(query) || 
+        (group.description && group.description.toLowerCase().includes(query))
+      );
+    }
+    filtered.sort((a, b) => a.name.localeCompare(b.name));
+    setFilteredGroups(filtered);
+  }, [groups, groupSearchQuery]);
+
   // Filter and sort members
   const filteredMembers = members
     .filter(member => {
@@ -490,7 +810,7 @@ export function People() {
             <EmptyState onAddMember={() => setIsAddDialogOpen(true)} />
           ) : (
             <Tabs defaultValue="list" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6 h-14 bg-white/80 dark:bg-slate-700/80 backdrop-blur-sm rounded-xl p-1 shadow-sm border border-slate-200/50 dark:border-slate-600/50">
+              <TabsList className="grid w-full grid-cols-3 mb-6 h-14 bg-white/80 dark:bg-slate-700/80 backdrop-blur-sm rounded-xl p-1 shadow-sm border border-slate-200/50 dark:border-slate-600/50">
                 <TabsTrigger value="list" className="text-sm font-medium rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md">
                   <Users className="w-4 h-4 mr-2" />
                   Member List
@@ -498,6 +818,10 @@ export function People() {
                 <TabsTrigger value="families" className="text-sm font-medium rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md">
                   <Heart className="w-4 h-4 mr-2" />
                   Families
+                </TabsTrigger>
+                <TabsTrigger value="groups" className="text-sm font-medium rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md">
+                  <Hash className="w-4 h-4 mr-2" />
+                  Groups
                 </TabsTrigger>
               </TabsList>
               
@@ -777,6 +1101,173 @@ export function People() {
                       >
                         <Plus className="w-5 h-5 mr-2" />
                         Create First Family
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="groups">
+                <div className="space-y-6">
+                  {/* Stats Cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800 shadow-lg">
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
+                        <CardTitle className="text-sm font-semibold text-blue-900 dark:text-blue-100">Total Groups</CardTitle>
+                        <Hash className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      </CardHeader>
+                      <CardContent className="p-4 pt-0">
+                        <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{groups.length}</div>
+                      </CardContent>
+                    </Card>
+                    <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-green-200 dark:border-green-800 shadow-lg">
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
+                        <CardTitle className="text-sm font-semibold text-green-900 dark:text-green-100">Active Groups</CardTitle>
+                        <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
+                      </CardHeader>
+                      <CardContent className="p-4 pt-0">
+                        <div className="text-2xl font-bold text-green-900 dark:text-green-100">
+                          {groups.filter(g => g.group_members?.[0]?.count > 0).length}
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-950 dark:to-violet-950 border-purple-200 dark:border-purple-800 shadow-lg">
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
+                        <CardTitle className="text-sm font-semibold text-purple-900 dark:text-purple-100">Total Members</CardTitle>
+                        <User className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                      </CardHeader>
+                      <CardContent className="p-4 pt-0">
+                        <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+                          {groups.reduce((total, group) => total + (group.group_members?.[0]?.count || 0), 0)}
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card className="bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-950 dark:to-rose-950 border-pink-200 dark:border-pink-800 shadow-lg">
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
+                        <CardTitle className="text-sm font-semibold text-pink-900 dark:text-pink-100">Avg Group Size</CardTitle>
+                        <Star className="h-5 w-5 text-pink-600 dark:text-pink-400" />
+                      </CardHeader>
+                      <CardContent className="p-4 pt-0">
+                        <div className="text-2xl font-bold text-pink-900 dark:text-pink-100">
+                          {groups.length > 0 ? Math.round(groups.reduce((total, group) => total + (group.group_members?.[0]?.count || 0), 0) / groups.length) : 0}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Search and Add Group */}
+                  <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+                    <div className="flex-1 relative max-w-md">
+                      <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                      <Input
+                        placeholder="Search groups..."
+                        className="pl-12 h-12 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        value={groupSearchQuery}
+                        onChange={(e) => setGroupSearchQuery(e.target.value)}
+                      />
+                    </div>
+                    <Button 
+                      onClick={() => setIsAddGroupOpen(true)}
+                      className="h-12 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 font-medium"
+                    >
+                      <Plus className="w-5 h-5 mr-2" />
+                      Create Group
+                    </Button>
+                  </div>
+
+                  {/* Groups Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredGroups.map((group) => (
+                      <Card 
+                        key={group.id} 
+                        className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-slate-200/50 dark:border-slate-600/50 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer group overflow-hidden"
+                        onClick={() => handleViewGroup(group)}
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-950/50 dark:to-blue-950/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <CardHeader className="relative">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <CardTitle className="text-xl font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                {group.name}
+                              </CardTitle>
+                              <CardDescription className="text-slate-600 dark:text-slate-400 line-clamp-2">
+                                {group.description || 'No description provided'}
+                              </CardDescription>
+                            </div>
+                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                className="h-8 w-8 p-0 bg-white/80 dark:bg-slate-700/80 hover:bg-white dark:hover:bg-slate-600 shadow-sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingGroup(group);
+                                  setIsEditGroupOpen(true);
+                                }}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                className="h-8 w-8 p-0 bg-white/80 dark:bg-slate-700/80 hover:bg-white dark:hover:bg-slate-600 shadow-sm text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setGroupToDelete(group);
+                                  setIsDeleteGroupDialogOpen(true);
+                                }}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4 relative">
+                          <div className="space-y-3">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                                <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium text-slate-900 dark:text-slate-100">Leader</div>
+                                <div className="text-sm text-slate-600 dark:text-slate-400 truncate">
+                                  {group.leader ? `${group.leader.firstName} ${group.leader.lastName}` : 'Not assigned'}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center space-x-3">
+                              <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                                <Users className="h-4 w-4 text-green-600 dark:text-green-400" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium text-slate-900 dark:text-slate-100">Members</div>
+                                <div className="text-sm text-slate-600 dark:text-slate-400">
+                                  {group.group_members?.[0]?.count || 0} people
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+
+                  {filteredGroups.length === 0 && (
+                    <div className="text-center py-16">
+                      <div className="mx-auto w-24 h-24 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-full flex items-center justify-center mb-6">
+                        <Hash className="w-12 h-12 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-3">No groups yet</h3>
+                      <p className="text-slate-600 dark:text-slate-400 mb-8 max-w-md mx-auto">
+                        Get started by creating your first group, ministry, or committee
+                      </p>
+                      <Button 
+                        onClick={() => setIsAddGroupOpen(true)}
+                        className="h-12 px-8 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 font-medium"
+                      >
+                        <Plus className="w-5 h-5 mr-2" />
+                        Create First Group
                       </Button>
                     </div>
                   )}
@@ -1293,6 +1784,338 @@ export function People() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Group Dialog */}
+      <Dialog open={isAddGroupOpen} onOpenChange={setIsAddGroupOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Add New Group</DialogTitle>
+            <DialogDescription>
+              Create a new group, ministry, or committee.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Group Name *</Label>
+              <Input
+                id="name"
+                value={newGroup.name}
+                onChange={(e) => setNewGroup({...newGroup, name: e.target.value})}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Input
+                id="description"
+                value={newGroup.description}
+                onChange={(e) => setNewGroup({...newGroup, description: e.target.value})}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="leader">Group Leader *</Label>
+              <Select 
+                value={newGroup.leader_id} 
+                onValueChange={(value) => setNewGroup({...newGroup, leader_id: value})}
+              >
+                <SelectTrigger id="leader">
+                  <SelectValue placeholder="Select leader">
+                    {newGroup.leader_id && (() => {
+                      const leaderMember = members.find(m => m.id === newGroup.leader_id);
+                      return leaderMember ? (
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarFallback className="text-xs">
+                              {leaderMember.firstname?.[0]}{leaderMember.lastname?.[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span>
+                            {leaderMember.firstname} {leaderMember.lastname}
+                          </span>
+                        </div>
+                      ) : null;
+                    })()}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {members.map(member => (
+                    <SelectItem key={member.id} value={`${member.id}`}>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarFallback className="text-xs">
+                            {member.firstname?.[0]}{member.lastname?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span>{member.firstname} {member.lastname}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddGroupOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddGroup}>
+              Add Group
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete Group Confirmation Dialog */}
+      <Dialog open={isDeleteGroupDialogOpen} onOpenChange={setIsDeleteGroupDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this group? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {groupToDelete && (
+            <div className="py-4">
+              <p className="font-medium">{groupToDelete.name}</p>
+              <p className="text-sm text-muted-foreground">
+                {groupToDelete.group_members?.[0]?.count || 0} members
+              </p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteGroupDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteGroup}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* View Group Dialog */}
+      <Dialog open={isViewGroupOpen} onOpenChange={setIsViewGroupOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          {selectedGroup && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-2xl">{selectedGroup.name}</DialogTitle>
+                <DialogDescription>
+                  {selectedGroup.description}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-1">Leader</h4>
+                    {selectedGroup.leader ? (
+                      <div className="flex items-center space-x-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={selectedGroup.leader.image_url} />
+                          <AvatarFallback>{getInitials(selectedGroup.leader.firstName, selectedGroup.leader.lastName)}</AvatarFallback>
+                        </Avatar>
+                        <span>{`${selectedGroup.leader.firstName} ${selectedGroup.leader.lastName}`}</span>
+                      </div>
+                    ) : (
+                      <p>Not assigned</p>
+                    )}
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-sm font-medium text-muted-foreground">Members ({selectedGroup.members.length})</h4>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setIsAddMemberToGroupOpen(true)}
+                      >
+                        <UserPlus className="mr-2 h-4 w-4" />
+                        Add Person
+                      </Button>
+                    </div>
+                    <div className="border rounded-md divide-y">
+                      {selectedGroup.members.length > 0 ? (
+                        selectedGroup.members.map((member) => (
+                          <div key={member.id} className="flex items-center justify-between p-3">
+                            <div className="flex items-center space-x-2">
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src={member.image_url} />
+                                <AvatarFallback>{getInitials(member.firstName, member.lastName)}</AvatarFallback>
+                              </Avatar>
+                              <span>{`${member.firstName} ${member.lastName}`}</span>
+                            </div>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => handleRemoveMemberFromGroup(member.id)}
+                            >
+                              <UserMinus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="p-4 text-center text-muted-foreground">
+                          No members in this group
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsViewGroupOpen(false)}>
+                  Close
+                </Button>
+                <Button onClick={() => {
+                  setEditingGroup(selectedGroup);
+                  setIsEditGroupOpen(true);
+                  setIsViewGroupOpen(false);
+                }}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit Group
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Person to Group Dialog */}
+      <Dialog open={isAddMemberToGroupOpen} onOpenChange={setIsAddMemberToGroupOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Add Person to Group</DialogTitle>
+            <DialogDescription>
+              Select a person to add to {selectedGroup?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search members..."
+              className="pl-8 mb-4"
+              value={memberSearchQuery}
+              onChange={(e) => setMemberSearchQuery(e.target.value)}
+            />
+          </div>
+          <div className="max-h-[400px] overflow-y-auto space-y-2">
+            {members
+              .filter(member => !selectedGroup?.members.some(m => m.id === member.id))
+              .filter(member => {
+                const fullName = `${member.firstname} ${member.lastname}`.toLowerCase();
+                return fullName.includes(memberSearchQuery.toLowerCase());
+              })
+              .sort((a, b) => `${a.firstname} ${a.lastname}`.localeCompare(`${b.firstname} ${b.lastname}`))
+              .map((member) => (
+                <div 
+                  key={member.id} 
+                  className="flex items-center space-x-2 p-2 hover:bg-muted rounded-lg cursor-pointer"
+                  onClick={() => handleAddMemberToGroup(member.id)}
+                >
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={member.image_url} />
+                    <AvatarFallback>{getInitials(member.firstname, member.lastname)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col">
+                    <span className="font-medium">{`${member.firstname} ${member.lastname}`}</span>
+                    {member.email && (
+                      <span className="text-sm text-muted-foreground">{member.email}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddMemberToGroupOpen(false)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Group Dialog */}
+      <Dialog open={isEditGroupOpen} onOpenChange={setIsEditGroupOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Group</DialogTitle>
+            <DialogDescription>
+              Update the group's information.
+            </DialogDescription>
+          </DialogHeader>
+          {editingGroup && (
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Group Name *</Label>
+                <Input
+                  id="edit-name"
+                  value={editingGroup.name}
+                  onChange={(e) => setEditingGroup({...editingGroup, name: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">Description</Label>
+                <Input
+                  id="edit-description"
+                  value={editingGroup.description || ''}
+                  onChange={(e) => setEditingGroup({...editingGroup, description: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-leader">Group Leader *</Label>
+                <Select 
+                  value={editingGroup.leader_id} 
+                  onValueChange={(value) => setEditingGroup({...editingGroup, leader_id: value})}
+                >
+                  <SelectTrigger id="edit-leader">
+                    <SelectValue placeholder="Select leader">
+                      {editingGroup.leader_id && (() => {
+                        const leaderMember = members.find(m => m.id === editingGroup.leader_id);
+                        return leaderMember ? (
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-6 w-6">
+                              <AvatarFallback className="text-xs">
+                                {leaderMember.firstname?.[0]}{leaderMember.lastname?.[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span>
+                              {leaderMember.firstname} {leaderMember.lastname}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-slate-500">Leader not found</span>
+                        );
+                      })()}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {members.map(member => (
+                      <SelectItem key={member.id} value={`${member.id}`}>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarFallback className="text-xs">
+                              {member.firstname?.[0]}{member.lastname?.[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span>{member.firstname} {member.lastname}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditGroupOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditGroup}>
+              Save Changes
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </PermissionGuard>

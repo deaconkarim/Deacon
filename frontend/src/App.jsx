@@ -9,7 +9,7 @@ import { People } from './pages/members';
 import MemberProfile from './pages/member-profile';
 import Events from './pages/events';
 import { Donations } from './pages/donations';
-import { Groups } from './pages/groups';
+
 import { Tasks } from './pages/tasks';
 import { Reports } from './pages/reports';
 import { Settings } from './pages/settings';
@@ -68,7 +68,7 @@ function App() {
 
           <Route path="/events" element={<Events />} />
           <Route path="/donations" element={<Donations />} />
-          <Route path="/groups" element={<Groups />} />
+
           <Route path="/tasks" element={<Tasks />} />
           <Route path="/children-check-in" element={<ChildrenCheckin />} />
           <Route path="/children-check-in/add" element={<AddChild />} />
