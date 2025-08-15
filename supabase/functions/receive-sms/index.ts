@@ -241,11 +241,11 @@ serve(async (req) => {
       }
     }
     
-    // Now pick the most recently created conversation from all possible conversations
+    // Now find the most recently created conversation for this member/phone number
     if (allPossibleConversations.length > 0) {
       console.log('🔍 Found', allPossibleConversations.length, 'possible conversations for member')
       
-      // Sort by creation date (most recent first)
+      // Sort by creation date (most recent first) - this is what we want
       allPossibleConversations.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
       
       const mostRecentConversation = allPossibleConversations[0]
@@ -253,52 +253,60 @@ serve(async (req) => {
       console.log('✅ Selected most recently created conversation:', conversationId, 'type:', mostRecentConversation.type, 'created at:', mostRecentConversation.created_at, 'title:', mostRecentConversation.title)
     }
     
-    // If no member-based conversation found, try to find existing conversation by looking for any messages with this phone number
+    // If no member-based conversation found, find the most recently created conversation for this phone number
     if (!conversationId) {
-      console.log('🔍 Looking for existing conversation by phone number:', from, 'normalized:', normalizedFrom, 'clean digits:', cleanFromDigits, 'local digits:', localFromDigits)
+      console.log('🔍 Looking for most recently created conversation for phone number:', from)
       
-      // Try to find the most recently created conversation with this phone number
-      // First, get all unique conversations with this phone number, ordered by most recently created
+      // Find all conversations that have messages from/to this phone number
+      // Try multiple phone number formats to ensure we find the right conversation
       const { data: allPhoneMessages } = await supabaseClient
         .from('sms_messages')
-        .select('conversation_id, from_number, to_number, created_at')
-        .or(`from_number.eq.${from},to_number.eq.${from},from_number.eq.${normalizedFrom},to_number.eq.${normalizedFrom},from_number.eq.${localFromDigits},to_number.eq.${localFromDigits}`)
-        .order('created_at', { ascending: false })
-        .limit(200) // Get more messages to ensure we find the most recent conversation
-      
-      console.log('🔍 Found', allPhoneMessages?.length || 0, 'messages with this phone number')
+        .select(`
+          conversation_id,
+          conversation:sms_conversations!inner(
+            id,
+            title,
+            created_at,
+            status
+          )
+        `)
+        .or(`from_number.eq.${from},to_number.eq.${from},from_number.eq.${normalizedFrom},to_number.eq.${normalizedFrom},from_number.eq.${cleanFromDigits},to_number.eq.${cleanFromDigits}`)
+        .eq('conversation.status', 'active')
       
       if (allPhoneMessages && allPhoneMessages.length > 0) {
-        // Get unique conversation IDs and find the most recently created one
-        const uniqueConversationIds = [...new Set(allPhoneMessages.map(msg => msg.conversation_id))]
-        console.log('🔍 Unique conversations found:', uniqueConversationIds.length)
+        // Get unique conversations and sort by creation date (most recent first)
+        const uniqueConversations = allPhoneMessages
+          .filter((msg, index, self) => 
+            index === self.findIndex(m => m.conversation_id === msg.conversation_id)
+          )
+          .map(msg => msg.conversation)
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
         
-        // Get conversation details ordered by creation date
-        const { data: conversations } = await supabaseClient
-          .from('sms_conversations')
-          .select('id, created_at, title')
-          .in('id', uniqueConversationIds)
-          .order('created_at', { ascending: false })
-        
-        if (conversations && conversations.length > 0) {
-          // Get the most recently created conversation
-          const mostRecentConversation = conversations[0]
+        if (uniqueConversations.length > 0) {
+          const mostRecentConversation = uniqueConversations[0]
           conversationId = mostRecentConversation.id
           console.log('✅ Found most recently created conversation:', conversationId, 'created at:', mostRecentConversation.created_at, 'title:', mostRecentConversation.title)
         }
       } else {
-        // If no direct match, try flexible digit matching
-        console.log('🔍 Trying flexible digit matching...')
+        // If no exact match, try flexible digit matching
+        console.log('🔍 Trying flexible digit matching for most recently created conversation...')
         const { data: allMessages } = await supabaseClient
           .from('sms_messages')
-          .select('conversation_id, from_number, to_number, created_at')
-          .order('created_at', { ascending: false })
-          .limit(200) // Get more messages for better matching
+          .select(`
+            conversation_id,
+            from_number,
+            to_number,
+            conversation:sms_conversations!inner(
+              id,
+              title,
+              created_at,
+              status
+            )
+          `)
+          .eq('conversation.status', 'active')
         
         if (allMessages) {
-          console.log('🔍 Checking', allMessages.length, 'recent messages for phone match')
-          
-          // Find all matching messages
+          // Find messages where the phone number matches (using digit comparison)
           const matchingMessages = allMessages.filter(msg => {
             const fromDigits = msg.from_number?.replace(/\D/g, '') || ''
             const toDigits = msg.to_number?.replace(/\D/g, '') || ''
@@ -311,20 +319,16 @@ serve(async (req) => {
           })
           
           if (matchingMessages.length > 0) {
-            // Get unique conversation IDs from matching messages
-            const uniqueMatchingConversationIds = [...new Set(matchingMessages.map(msg => msg.conversation_id))]
-            console.log('🔍 Unique matching conversations found:', uniqueMatchingConversationIds.length)
+            // Get unique conversations and sort by creation date (most recent first)
+            const uniqueMatchingConversations = matchingMessages
+              .filter((msg, index, self) => 
+                index === self.findIndex(m => m.conversation_id === msg.conversation_id)
+              )
+              .map(msg => msg.conversation)
+              .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
             
-            // Get conversation details ordered by creation date
-            const { data: matchingConversations } = await supabaseClient
-              .from('sms_conversations')
-              .select('id, created_at, title')
-              .in('id', uniqueMatchingConversationIds)
-              .order('created_at', { ascending: false })
-            
-            if (matchingConversations && matchingConversations.length > 0) {
-              // Get the most recently created conversation
-              const mostRecentMatchingConversation = matchingConversations[0]
+            if (uniqueMatchingConversations.length > 0) {
+              const mostRecentMatchingConversation = uniqueMatchingConversations[0]
               conversationId = mostRecentMatchingConversation.id
               console.log('✅ Found most recently created conversation via digit matching:', conversationId, 'created at:', mostRecentMatchingConversation.created_at, 'title:', mostRecentMatchingConversation.title)
             }

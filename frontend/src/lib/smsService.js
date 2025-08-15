@@ -155,12 +155,20 @@ export const smsService = {
       throw new Error('User not associated with any organization');
     }
     
-    // Get Twilio phone number from environment
-    const twilioPhoneNumber = import.meta.env.TWILIO_PHONE_NUMBER;
+    // Get Twilio phone number from environment (try both VITE_ and non-VITE_ versions)
+    const twilioPhoneNumber = import.meta.env.VITE_TWILIO_PHONE_NUMBER || import.meta.env.TWILIO_PHONE_NUMBER;
     console.log('📞 Twilio Phone Number:', twilioPhoneNumber ? '✅ Configured' : '❌ Not configured');
     
+    // Debug: Check all available environment variables
+    console.log('🔍 Available environment variables:', {
+      VITE_TWILIO_PHONE_NUMBER: import.meta.env.VITE_TWILIO_PHONE_NUMBER,
+      TWILIO_PHONE_NUMBER: import.meta.env.TWILIO_PHONE_NUMBER,
+      VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL ? '✅ Set' : '❌ Not set',
+      NODE_ENV: import.meta.env.NODE_ENV
+    });
+    
     if (!twilioPhoneNumber) {
-      throw new Error('Twilio phone number not configured. Please set TWILIO_PHONE_NUMBER in your environment variables.');
+      throw new Error('Twilio phone number not configured. Please set VITE_TWILIO_PHONE_NUMBER or TWILIO_PHONE_NUMBER in your environment variables.');
     }
 
     // Render template if template_id is provided
