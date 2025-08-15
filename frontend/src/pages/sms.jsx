@@ -24,6 +24,7 @@ import {
   Bell,
   AlertTriangle,
   CheckCircle,
+  CheckCircle2,
   XCircle,
   CalendarDays,
   Repeat,
@@ -49,6 +50,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { smsService } from '@/lib/smsService';
 import { supabase } from '@/lib/supabaseClient';
 import { getInitials } from '@/lib/utils/formatters';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 
 export function SMS() {
   const [conversations, setConversations] = useState([]);
@@ -108,6 +110,7 @@ export function SMS() {
     type: 'immediate'
   });
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
+  const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(false);
   const [analyticsData, setAnalyticsData] = useState({
     deliveryRates: [],
     messageVolume: [],
@@ -140,6 +143,140 @@ export function SMS() {
   useEffect(() => {
     updateRecipientCount();
   }, [selectedMembers, selectedGroups]);
+
+  const loadAnalyticsData = async (organizationId) => {
+    setIsAnalyticsLoading(true);
+    try {
+      // Get SMS messages for analytics
+      const { data: messages, error: messagesError } = await supabase
+        .from('sms_messages')
+        .select(`
+          *,
+          member:members(firstname, lastname),
+          conversation:sms_conversations(conversation_type)
+        `)
+        .eq('organization_id', organizationId)
+        .order('sent_at', { ascending: true });
+
+      if (messagesError) throw messagesError;
+
+      if (!messages || messages.length === 0) {
+        setAnalyticsData({
+          deliveryRates: [],
+          messageVolume: [],
+          topRecipients: [],
+          responseRates: []
+        });
+        return;
+      }
+
+      // Process delivery rates by month
+      const deliveryRatesByMonth = {};
+      const messageVolumeByMonth = {};
+      const recipientCounts = {};
+      const conversationTypeCounts = {};
+
+      messages.forEach(message => {
+        const date = new Date(message.sent_at);
+        const monthKey = date.toLocaleDateString('en-US', { month: 'short' });
+        const year = date.getFullYear();
+        const monthYear = `${monthKey} ${year}`;
+
+        // Delivery rates
+        if (!deliveryRatesByMonth[monthYear]) {
+          deliveryRatesByMonth[monthYear] = { total: 0, delivered: 0 };
+        }
+        deliveryRatesByMonth[monthYear].total++;
+        if (message.status === 'delivered') {
+          deliveryRatesByMonth[monthYear].delivered++;
+        }
+
+        // Message volume
+        if (!messageVolumeByMonth[monthYear]) {
+          messageVolumeByMonth[monthYear] = { sent: 0, delivered: 0 };
+        }
+        messageVolumeByMonth[monthYear].sent++;
+        if (message.status === 'delivered') {
+          messageVolumeByMonth[monthYear].delivered++;
+        }
+
+        // Top recipients (for outbound messages)
+        if (message.direction === 'outbound' && message.member) {
+          const memberName = `${message.member.firstname} ${message.member.lastname}`;
+          recipientCounts[memberName] = (recipientCounts[memberName] || 0) + 1;
+        }
+
+        // Conversation types
+        if (message.conversation?.conversation_type) {
+          const type = message.conversation.conversation_type.replace('_', ' ');
+          conversationTypeCounts[type] = (conversationTypeCounts[type] || 0) + 1;
+        }
+      });
+
+      // Convert to chart data format with proper validation
+      const deliveryRates = Object.entries(deliveryRatesByMonth)
+        .map(([month, data]) => {
+          const rate = data.total > 0 ? Math.round((data.delivered / data.total) * 100 * 10) / 10 : 0;
+          return {
+            month,
+            rate: isNaN(rate) ? 0 : rate
+          };
+        })
+        .filter(item => item.rate >= 0 && item.rate <= 100) // Ensure valid percentage
+        .slice(-6); // Last 6 months
+
+      const messageVolume = Object.entries(messageVolumeByMonth)
+        .map(([month, data]) => ({
+          month,
+          sent: isNaN(data.sent) ? 0 : data.sent,
+          delivered: isNaN(data.delivered) ? 0 : data.delivered
+        }))
+        .filter(item => item.sent >= 0 && item.delivered >= 0) // Ensure valid counts
+        .slice(-6); // Last 6 months
+
+      const topRecipients = Object.entries(recipientCounts)
+        .map(([name, count]) => ({ 
+          name: name || 'Unknown', 
+          count: isNaN(count) ? 0 : count 
+        }))
+        .filter(item => item.count > 0) // Only include recipients with messages
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+
+      // Calculate response rates (simplified - based on conversation types)
+      const totalMessages = messages.length;
+      const responseRates = Object.entries(conversationTypeCounts)
+        .map(([type, count]) => {
+          const rate = totalMessages > 0 ? Math.round((count / totalMessages) * 100) : 0;
+          return {
+            type: type || 'Unknown',
+            rate: isNaN(rate) ? 0 : rate
+          };
+        })
+        .filter(item => item.rate > 0) // Only include types with messages
+        .sort((a, b) => b.rate - a.rate);
+
+      // Final validation before setting state
+      const validatedAnalyticsData = {
+        deliveryRates: Array.isArray(deliveryRates) ? deliveryRates : [],
+        messageVolume: Array.isArray(messageVolume) ? messageVolume : [],
+        topRecipients: Array.isArray(topRecipients) ? topRecipients : [],
+        responseRates: Array.isArray(responseRates) ? responseRates : []
+      };
+
+      setAnalyticsData(validatedAnalyticsData);
+    } catch (error) {
+      console.error('Error loading analytics data:', error);
+      setAnalyticsData({
+        deliveryRates: [],
+        messageVolume: [],
+        topRecipients: [],
+        responseRates: []
+      });
+    } finally {
+      setIsAnalyticsLoading(false);
+    }
+  };
 
   const loadData = async () => {
     setIsLoading(true);
@@ -240,6 +377,9 @@ export function SMS() {
         thisMonth: 0,
         lastMonth: 0
       });
+
+      // Load analytics data
+      await loadAnalyticsData(organizationId);
     } catch (error) {
       console.error('Error loading SMS data:', error);
       toast({
@@ -1007,6 +1147,21 @@ export function SMS() {
     return orgData[0].organization_id;
   };
 
+  const handleAnalyticsOpen = async () => {
+    try {
+      const organizationId = await getCurrentUserOrganizationId();
+      await loadAnalyticsData(organizationId);
+      setIsAnalyticsOpen(true);
+    } catch (error) {
+      console.error('Error opening analytics:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load analytics data',
+        variant: 'destructive'
+      });
+    }
+  };
+
   // Campaign recipient selection helpers
   const toggleCampaignGroupSelection = (groupId) => {
     setNewCampaign(prev => ({
@@ -1067,103 +1222,141 @@ export function SMS() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">SMS Management</h1>
-        <p className="text-muted-foreground">
-          Manage SMS conversations, messages, and templates.
-        </p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      {/* Modern header with gradient */}
+      <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-b border-slate-200/50 dark:border-slate-700/50 px-6 py-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
+              SMS Management
+            </h1>
+            <p className="text-slate-600 dark:text-slate-400 mt-1">Manage SMS conversations, messages, and templates</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="outline"
+              onClick={handleAnalyticsOpen}
+              className="h-12 px-6 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 rounded-xl shadow-sm hover:bg-white dark:hover:bg-slate-600"
+            >
+              <BarChart3 className="mr-2 h-4 w-4" />
+              Analytics
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={exportSMSData}
+              className="h-12 px-6 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 rounded-xl shadow-sm hover:bg-white dark:hover:bg-slate-600"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Export
+            </Button>
+            <Button 
+              onClick={() => setIsNewMessageOpen(true)}
+              className="h-12 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 font-medium"
+            >
+              <Send className="mr-2 h-4 w-4" />
+              Send Message
+            </Button>
+          </div>
+        </div>
       </div>
 
-      <Tabs defaultValue="conversations" className="space-y-4" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="conversations">Conversations</TabsTrigger>
-          <TabsTrigger value="templates">Templates</TabsTrigger>
-          <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="opt-out">Opt-Out</TabsTrigger>
+      {/* Content area with enhanced spacing */}
+      <div className="px-6 py-6">
+
+      <Tabs defaultValue="conversations" className="space-y-6" value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-5 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 rounded-xl p-1 shadow-sm">
+          <TabsTrigger value="conversations" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg transition-all duration-200">Conversations</TabsTrigger>
+          <TabsTrigger value="templates" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg transition-all duration-200">Templates</TabsTrigger>
+          <TabsTrigger value="campaigns" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg transition-all duration-200">Campaigns</TabsTrigger>
+          <TabsTrigger value="analytics" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg transition-all duration-200">Analytics</TabsTrigger>
+          <TabsTrigger value="opt-out" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg transition-all duration-200">Opt-Out</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="conversations" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <div className="flex space-x-2">
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+        <TabsContent value="conversations" className="space-y-6">
+          {/* Enhanced search and filters */}
+          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm px-6 py-4 border border-slate-200/50 dark:border-slate-700/50 rounded-xl">
+            <div className="flex flex-col lg:flex-row gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
                 <Input
-                  placeholder="Search conversations..."
+                  placeholder="Search conversations by title or content..."
+                  className="pl-12 h-12 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 w-64"
                 />
               </div>
-              <select
-                value={selectedType}
-                onChange={(e) => setSelectedType(e.target.value)}
-                className="px-3 py-2 border rounded-md"
-              >
-                <option value="all">All Types</option>
-                <option value="general">General</option>
-                <option value="prayer_request">Prayer Request</option>
-                <option value="event_reminder">Event Reminder</option>
-                <option value="emergency">Emergency</option>
-                <option value="pastoral_care">Pastoral Care</option>
-              </select>
+              <div className="flex gap-3">
+                <select
+                  value={selectedType}
+                  onChange={(e) => setSelectedType(e.target.value)}
+                  className="h-12 px-4 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="all">All Types</option>
+                  <option value="general">General</option>
+                  <option value="prayer_request">Prayer Request</option>
+                  <option value="event_reminder">Event Reminder</option>
+                  <option value="emergency">Emergency</option>
+                  <option value="pastoral_care">Pastoral Care</option>
+                </select>
+              </div>
             </div>
-            <Button onClick={() => setIsNewMessageOpen(true)}>
-              <Send className="mr-2 h-4 w-4" />
-              Send New Message
-            </Button>
           </div>
 
           {filteredConversations.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <MessageSquare className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No SMS Conversations Yet</h3>
-                <p className="text-muted-foreground mb-4">
-                  {conversations.length === 0 
-                    ? "Start sending SMS messages to your church members and groups. Create conversations by sending your first message."
-                    : "No conversations match your current filters."
-                  }
-                </p>
-                {conversations.length === 0 && (
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <p>Ready to get started?</p>
-                    <ul className="list-disc list-inside space-y-1">
-                      <li>Select members or groups from your church directory</li>
-                      <li>Write your message or use a template</li>
-                      <li>Send and start conversations with your congregation</li>
-                    </ul>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                <MessageSquare className="h-8 w-8 text-slate-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">No SMS Conversations Yet</h3>
+              <p className="text-slate-600 dark:text-slate-400 mb-4">
+                {conversations.length === 0 
+                  ? "Start sending SMS messages to your church members and groups. Create conversations by sending your first message."
+                  : "No conversations match your current filters."
+                }
+              </p>
+              {conversations.length === 0 && (
+                <div className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
+                  <p>Ready to get started?</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li>Select members or groups from your church directory</li>
+                    <li>Write your message or use a template</li>
+                    <li>Send and start conversations with your congregation</li>
+                  </ul>
+                </div>
+              )}
+            </div>
           ) : (
-            <div className="grid gap-4">
+            <div className="grid gap-6">
               {filteredConversations.map((conversation) => (
                 <Card 
                   key={conversation.id} 
-                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-slate-200/50 dark:border-slate-600/50 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
                   onClick={() => handleConversationClick(conversation)}
                 >
-                  <CardHeader>
+                  <CardHeader className="pb-4">
                     <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-lg">{conversation.title}</CardTitle>
-                        <CardDescription>
-                          {getUniqueMessageCount(conversation.sms_messages)} messages • 
-                          Last updated {format(new Date(conversation.updated_at), 'MMM d, yyyy')}
-                        </CardDescription>
+                      <div className="flex-1">
+                        <CardTitle className="text-xl font-bold text-slate-900 dark:text-slate-100">{conversation.title}</CardTitle>
+                        <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center mt-3">
+                          <CardDescription className="text-slate-600 dark:text-slate-400">
+                            {getUniqueMessageCount(conversation.sms_messages)} messages • 
+                            Last updated {format(new Date(conversation.updated_at), 'MMM d, yyyy')}
+                          </CardDescription>
+                          <div className="flex flex-wrap gap-2">
+                            <Badge className={`${getConversationTypeColor(conversation.conversation_type)} text-white font-medium`}>
+                              {conversation.conversation_type.replace('_', ' ')}
+                            </Badge>
+                          </div>
+                        </div>
                       </div>
-                      <Badge className={getConversationTypeColor(conversation.conversation_type)}>
-                        {conversation.conversation_type.replace('_', ' ')}
-                      </Badge>
                     </div>
                   </CardHeader>
                   {conversation.sms_messages && conversation.sms_messages.length > 0 && (
-                    <CardContent>
-                      <div className="text-sm text-muted-foreground">
-                        Latest: {conversation.sms_messages[0].body.substring(0, 100)}...
+                    <CardContent className="pt-0">
+                      <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
+                        <p className="text-sm text-slate-700 dark:text-slate-300">
+                          Latest: {conversation.sms_messages[0].body.substring(0, 100)}...
+                        </p>
                       </div>
                     </CardContent>
                   )}
@@ -1173,53 +1366,69 @@ export function SMS() {
           )}
         </TabsContent>
 
-        <TabsContent value="templates" className="space-y-4">
+        <TabsContent value="templates" className="space-y-6">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">SMS Templates</h3>
-            <Button onClick={() => setIsTemplateOpen(true)}>
+            <div>
+              <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100">SMS Templates</h3>
+              <p className="text-slate-600 dark:text-slate-400 mt-1">Create and manage message templates for consistent communication</p>
+            </div>
+            <Button 
+              onClick={() => setIsTemplateOpen(true)}
+              className="h-12 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 font-medium"
+            >
               <Plus className="mr-2 h-4 w-4" />
               Create Template
             </Button>
           </div>
 
-          <div className="grid gap-4">
+          <div className="grid gap-6">
             {templates.map((template) => (
-              <Card key={template.id}>
-                <CardHeader>
-                  <CardTitle className="text-lg">{template.name}</CardTitle>
-                  <CardDescription>{template.description}</CardDescription>
+              <Card key={template.id} className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-slate-200/50 dark:border-slate-600/50 shadow-lg hover:shadow-xl transition-all duration-300">
+                <CardHeader className="pb-4">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <CardTitle className="text-xl font-bold text-slate-900 dark:text-slate-100">{template.name}</CardTitle>
+                      <CardDescription className="text-slate-600 dark:text-slate-400 mt-2">{template.description}</CardDescription>
+                    </div>
+                  </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium">Template:</div>
-                    <div className="p-3 bg-muted rounded-md text-sm">
-                      {template.template_text}
+                <CardContent className="pt-0">
+                  <div className="space-y-4">
+                    <div>
+                      <div className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Template:</div>
+                      <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg text-sm text-slate-700 dark:text-slate-300">
+                        {template.template_text}
+                      </div>
                     </div>
                     {template.variables && template.variables.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        <span className="text-sm font-medium">Variables:</span>
-                        {template.variables.map((variable, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            {variable}
-                          </Badge>
-                        ))}
+                      <div>
+                        <div className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Variables:</div>
+                        <div className="flex flex-wrap gap-2">
+                          {template.variables.map((variable, index) => (
+                            <Badge key={index} variant="outline" className="border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300">
+                              {variable}
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
                     )}
-                    <div className="flex justify-end pt-2 space-x-2">
+                    <div className="flex justify-end pt-4 space-x-3">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleEditTemplate(template)}
+                        className="h-10 px-4 bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-700/50 dark:hover:bg-slate-600/50 dark:text-slate-300 dark:border-slate-600 rounded-lg font-medium"
                       >
-                        <Edit className="mr-2 h-3 w-3" />
+                        <Edit className="mr-2 h-4 w-4" />
                         Edit
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleDeleteTemplate(template.id)}
+                        className="h-10 px-4 bg-red-50 hover:bg-red-100 text-red-700 border-red-200 dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-red-300 dark:border-red-700 rounded-lg font-medium"
                       >
-                        <Trash2 className="mr-2 h-3 w-3" />
+                        <Trash2 className="mr-2 h-4 w-4" />
                         Delete
                       </Button>
                       <Button
@@ -1233,8 +1442,9 @@ export function SMS() {
                           });
                           setIsNewMessageOpen(true);
                         }}
+                        className="h-10 px-4 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700 rounded-lg font-medium"
                       >
-                        <Send className="mr-2 h-3 w-3" />
+                        <Send className="mr-2 h-4 w-4" />
                         Use Template
                       </Button>
                     </div>
@@ -1246,15 +1456,25 @@ export function SMS() {
         </TabsContent>
 
         {/* Campaigns Tab */}
-        <TabsContent value="campaigns" className="space-y-4">
+        <TabsContent value="campaigns" className="space-y-6">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">SMS Campaigns</h3>
-            <div className="flex space-x-2">
-              <Button variant="outline" onClick={() => setIsABTestOpen(true)}>
+            <div>
+              <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100">SMS Campaigns</h3>
+              <p className="text-slate-600 dark:text-slate-400 mt-1">Create and manage SMS campaigns to reach your congregation</p>
+            </div>
+            <div className="flex space-x-3">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsABTestOpen(true)}
+                className="h-12 px-6 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 rounded-xl shadow-sm hover:bg-white dark:hover:bg-slate-600"
+              >
                 <Target className="mr-2 h-4 w-4" />
                 A/B Test
               </Button>
-              <Button onClick={() => setIsCampaignOpen(true)}>
+              <Button 
+                onClick={() => setIsCampaignOpen(true)}
+                className="h-12 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 font-medium"
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Create Campaign
               </Button>
@@ -1262,87 +1482,105 @@ export function SMS() {
           </div>
 
           {/* Campaign Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Total Campaigns</CardTitle>
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-4">
+            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800 shadow-lg">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
+                <CardTitle className="text-sm font-semibold text-blue-900 dark:text-blue-100">Total Campaigns</CardTitle>
+                <Target className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{campaigns.length}</div>
+              <CardContent className="p-4 pt-0">
+                <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{campaigns.length}</div>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Active Campaigns</CardTitle>
+            <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-green-200 dark:border-green-800 shadow-lg">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
+                <CardTitle className="text-sm font-semibold text-green-900 dark:text-green-100">Active Campaigns</CardTitle>
+                <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{campaigns.filter(c => c.status === 'active').length}</div>
+              <CardContent className="p-4 pt-0">
+                <div className="text-2xl font-bold text-green-900 dark:text-green-100">{campaigns.filter(c => c.status === 'active').length}</div>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Scheduled</CardTitle>
+            <Card className="bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-950 dark:to-amber-950 border-yellow-200 dark:border-yellow-800 shadow-lg">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
+                <CardTitle className="text-sm font-semibold text-yellow-900 dark:text-yellow-100">Scheduled</CardTitle>
+                <Clock className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{campaigns.filter(c => c.status === 'scheduled').length}</div>
+              <CardContent className="p-4 pt-0">
+                <div className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">{campaigns.filter(c => c.status === 'scheduled').length}</div>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Completed</CardTitle>
+            <Card className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-950 dark:to-violet-950 border-purple-200 dark:border-purple-800 shadow-lg">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
+                <CardTitle className="text-sm font-semibold text-purple-900 dark:text-purple-100">Completed</CardTitle>
+                <CheckCircle2 className="h-5 w-5 text-purple-600 dark:text-purple-400" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{campaigns.filter(c => c.status === 'completed').length}</div>
+              <CardContent className="p-4 pt-0">
+                <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">{campaigns.filter(c => c.status === 'completed').length}</div>
               </CardContent>
             </Card>
           </div>
 
           {/* Campaigns List */}
-          <div className="grid gap-4">
+          <div className="grid gap-6">
             {campaigns.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <Target className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Campaigns Yet</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Create your first SMS campaign to reach your congregation effectively.
-                  </p>
-                </CardContent>
-              </Card>
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Target className="h-8 w-8 text-slate-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">No Campaigns Yet</h3>
+                <p className="text-slate-600 dark:text-slate-400 mb-4">
+                  Create your first SMS campaign to reach your congregation effectively.
+                </p>
+              </div>
             ) : (
               campaigns.map((campaign) => (
-                <Card key={campaign.id}>
-                  <CardHeader>
+                <Card key={campaign.id} className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-slate-200/50 dark:border-slate-600/50 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <CardHeader className="pb-4">
                     <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-lg">{campaign.name}</CardTitle>
-                        <CardDescription>{campaign.description}</CardDescription>
+                      <div className="flex-1">
+                        <CardTitle className="text-xl font-bold text-slate-900 dark:text-slate-100">{campaign.name}</CardTitle>
+                        <CardDescription className="text-slate-600 dark:text-slate-400 mt-2">{campaign.description}</CardDescription>
                       </div>
-                      <Badge variant={campaign.status === 'active' ? 'default' : campaign.status === 'scheduled' ? 'secondary' : 'outline'}>
+                      <Badge className={`${
+                        campaign.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
+                        campaign.status === 'scheduled' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
+                        'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300'
+                      } font-medium`}>
                         {campaign.status}
                       </Badge>
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="text-sm font-medium">Message:</div>
-                      <div className="p-3 bg-muted rounded-md text-sm">
-                        {campaign.message}
-                      </div>
-                      <div className="flex justify-between items-center text-sm text-muted-foreground">
-                        <span>Type: {campaign.type}</span>
-                        <span>Created: {format(new Date(campaign.created_at), 'MMM d, yyyy')}</span>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        <span>Target: {campaign.targetType === 'all' ? 'All Church' : 
-                          campaign.targetType === 'groups' ? `${campaign.selectedGroups?.length || 0} Groups` :
-                          `${campaign.selectedMembers?.length || 0} Members`}</span>
-                      </div>
-                      {campaign.recipients && campaign.recipients.length > 0 && (
-                        <div className="text-sm text-muted-foreground">
-                          <span>Recipients: {campaign.recipients.length} people</span>
+                  <CardContent className="pt-0">
+                    <div className="space-y-4">
+                      <div>
+                        <div className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Message:</div>
+                        <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg text-sm text-slate-700 dark:text-slate-300">
+                          {campaign.message}
                         </div>
-                      )}
+                      </div>
+                      <div className="flex flex-wrap gap-6 text-sm text-slate-600 dark:text-slate-400">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">Type:</span>
+                          <span>{campaign.type}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">Created:</span>
+                          <span>{format(new Date(campaign.created_at), 'MMM d, yyyy')}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">Target:</span>
+                          <span>{campaign.targetType === 'all' ? 'All Church' : 
+                            campaign.targetType === 'groups' ? `${campaign.selectedGroups?.length || 0} Groups` :
+                            `${campaign.selectedMembers?.length || 0} Members`}</span>
+                        </div>
+                        {campaign.recipients && campaign.recipients.length > 0 && (
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">Recipients:</span>
+                            <span>{campaign.recipients.length} people</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -1352,10 +1590,17 @@ export function SMS() {
         </TabsContent>
 
         {/* Analytics Tab */}
-        <TabsContent value="analytics" className="space-y-4">
+        <TabsContent value="analytics" className="space-y-6">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">SMS Analytics</h3>
-            <Button variant="outline" onClick={exportSMSData}>
+            <div>
+              <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100">SMS Analytics</h3>
+              <p className="text-slate-600 dark:text-slate-400 mt-1">Track performance and delivery rates for your SMS campaigns</p>
+            </div>
+            <Button 
+              variant="outline" 
+              onClick={exportSMSData}
+              className="h-12 px-6 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 rounded-xl shadow-sm hover:bg-white dark:hover:bg-slate-600"
+            >
               <Download className="mr-2 h-4 w-4" />
               Export Data
             </Button>
@@ -1363,61 +1608,64 @@ export function SMS() {
 
           {/* Analytics Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Total Messages Sent</CardTitle>
+            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800 shadow-lg">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
+                <CardTitle className="text-sm font-semibold text-blue-900 dark:text-blue-100">Total Messages Sent</CardTitle>
+                <MessageSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{smsStats.totalSent}</div>
-                <p className="text-xs text-muted-foreground">All time</p>
+              <CardContent className="p-4 pt-0">
+                <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{smsStats.totalSent}</div>
+                <p className="text-xs text-blue-700 dark:text-blue-300">All time</p>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Delivery Rate</CardTitle>
+            <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-green-200 dark:border-green-800 shadow-lg">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
+                <CardTitle className="text-sm font-semibold text-green-900 dark:text-green-100">Delivery Rate</CardTitle>
+                <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{smsStats.deliveryRate}%</div>
-                <p className="text-xs text-muted-foreground">Successfully delivered</p>
+              <CardContent className="p-4 pt-0">
+                <div className="text-2xl font-bold text-green-900 dark:text-green-100">{smsStats.deliveryRate}%</div>
+                <p className="text-xs text-green-700 dark:text-green-300">Successfully delivered</p>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">This Month</CardTitle>
+            <Card className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-950 dark:to-violet-950 border-purple-200 dark:border-purple-800 shadow-lg">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
+                <CardTitle className="text-sm font-semibold text-purple-900 dark:text-purple-100">This Month</CardTitle>
+                <TrendingUp className="h-5 w-5 text-purple-600 dark:text-purple-400" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{smsStats.thisMonth}</div>
-                <p className="text-xs text-muted-foreground">Messages sent</p>
+              <CardContent className="p-4 pt-0">
+                <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">{smsStats.thisMonth}</div>
+                <p className="text-xs text-purple-700 dark:text-purple-300">Messages sent</p>
               </CardContent>
             </Card>
           </div>
 
           {/* Message Status Breakdown */}
-          <Card>
+          <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-slate-200/50 dark:border-slate-600/50 shadow-lg">
             <CardHeader>
-              <CardTitle>Message Status Breakdown</CardTitle>
+              <CardTitle className="text-slate-900 dark:text-slate-100">Message Status Breakdown</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="flex items-center space-x-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
                   <div>
-                    <div className="font-semibold">{smsStats.totalDelivered}</div>
-                    <div className="text-sm text-muted-foreground">Delivered</div>
+                    <div className="font-bold text-green-900 dark:text-green-100">{smsStats.totalDelivered}</div>
+                    <div className="text-sm text-green-700 dark:text-green-300">Delivered</div>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Clock className="h-5 w-5 text-yellow-500" />
+                <div className="flex items-center space-x-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                  <Clock className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
                   <div>
-                    <div className="font-semibold">{smsStats.totalSent - smsStats.totalDelivered - smsStats.totalFailed}</div>
-                    <div className="text-sm text-muted-foreground">Pending</div>
+                    <div className="font-bold text-yellow-900 dark:text-yellow-100">{smsStats.totalSent - smsStats.totalDelivered - smsStats.totalFailed}</div>
+                    <div className="text-sm text-yellow-700 dark:text-yellow-300">Pending</div>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <XCircle className="h-5 w-5 text-red-500" />
+                <div className="flex items-center space-x-3 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                  <XCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
                   <div>
-                    <div className="font-semibold">{smsStats.totalFailed}</div>
-                    <div className="text-sm text-muted-foreground">Failed</div>
+                    <div className="font-bold text-red-900 dark:text-red-100">{smsStats.totalFailed}</div>
+                    <div className="text-sm text-red-700 dark:text-red-300">Failed</div>
                   </div>
                 </div>
               </div>
@@ -2437,37 +2685,185 @@ export function SMS() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6">
-            {/* Delivery Rate Chart */}
-            <Card>
+            {isAnalyticsLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="text-center space-y-4">
+                  <RefreshCw className="h-12 w-12 animate-spin text-slate-400 mx-auto" />
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Loading analytics data...</p>
+                </div>
+              </div>
+            ) : analyticsData.deliveryRates.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <BarChart3 className="h-8 w-8 text-slate-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">No Analytics Data Yet</h3>
+                <p className="text-slate-600 dark:text-slate-400 mb-4">
+                  Start sending SMS messages to see analytics and insights.
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Delivery Rate Chart */}
+                <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-slate-200/50 dark:border-slate-600/50 shadow-lg">
+                  <CardHeader>
+                    <CardTitle className="text-slate-900 dark:text-slate-100">Delivery Rate Over Time</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                                         <div className="h-64">
+                       {analyticsData.deliveryRates.length > 0 ? (
+                         <ResponsiveContainer width="100%" height="100%">
+                           <LineChart data={analyticsData.deliveryRates}>
+                             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                             <XAxis 
+                               dataKey="month" 
+                               stroke="#64748b"
+                               fontSize={12}
+                             />
+                             <YAxis 
+                               stroke="#64748b"
+                               fontSize={12}
+                               domain={[0, 100]}
+                               tickFormatter={(value) => `${value}%`}
+                             />
+                             <Tooltip 
+                               contentStyle={{
+                                 backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                 border: '1px solid #e2e8f0',
+                                 borderRadius: '8px',
+                                 boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                               }}
+                               formatter={(value) => [`${value}%`, 'Delivery Rate']}
+                             />
+                             <Line 
+                               type="monotone" 
+                               dataKey="rate" 
+                               stroke="#3b82f6" 
+                               strokeWidth={3}
+                               dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
+                               activeDot={{ r: 6, stroke: '#3b82f6', strokeWidth: 2 }}
+                             />
+                           </LineChart>
+                         </ResponsiveContainer>
+                       ) : (
+                         <div className="h-full flex items-center justify-center text-slate-500">
+                           <p>No delivery rate data available</p>
+                         </div>
+                       )}
+                     </div>
+                  </CardContent>
+                </Card>
+
+            {/* Message Volume Chart */}
+            <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-slate-200/50 dark:border-slate-600/50 shadow-lg">
               <CardHeader>
-                <CardTitle>Delivery Rate Over Time</CardTitle>
+                <CardTitle className="text-slate-900 dark:text-slate-100">Message Volume</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-64 flex items-center justify-center text-muted-foreground">
-                  Chart placeholder - Integration with charting library needed
+                <div className="h-64">
+                  {analyticsData.messageVolume.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={analyticsData.messageVolume}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis 
+                          dataKey="month" 
+                          stroke="#64748b"
+                          fontSize={12}
+                        />
+                        <YAxis 
+                          stroke="#64748b"
+                          fontSize={12}
+                        />
+                        <Tooltip 
+                          contentStyle={{
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                          }}
+                        />
+                        <Bar dataKey="sent" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="delivered" fill="#10b981" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-slate-500">
+                      <p>No message volume data available</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Response Rates Chart */}
+            <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-slate-200/50 dark:border-slate-600/50 shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-slate-900 dark:text-slate-100">Response Rates by Message Type</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64">
+                  {analyticsData.responseRates.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={analyticsData.responseRates} layout="horizontal">
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis 
+                          type="number"
+                          stroke="#64748b"
+                          fontSize={12}
+                          domain={[0, 100]}
+                          tickFormatter={(value) => `${value}%`}
+                        />
+                        <YAxis 
+                          type="category"
+                          dataKey="type" 
+                          stroke="#64748b"
+                          fontSize={12}
+                          width={120}
+                        />
+                        <Tooltip 
+                          contentStyle={{
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                          }}
+                          formatter={(value) => [`${value}%`, 'Response Rate']}
+                        />
+                        <Bar dataKey="rate" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-slate-500">
+                      <p>No response rate data available</p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
 
             {/* Top Recipients */}
-            <Card>
+            <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-slate-200/50 dark:border-slate-600/50 shadow-lg">
               <CardHeader>
-                <CardTitle>Top Recipients</CardTitle>
+                <CardTitle className="text-slate-900 dark:text-slate-100">Top Recipients</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  {analyticsData.topRecipients.slice(0, 5).map((recipient, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 border rounded">
-                      <div className="flex items-center space-x-2">
-                        <span className="font-medium">{index + 1}.</span>
-                        <span>{recipient.name}</span>
+                <div className="space-y-3">
+                  {analyticsData.topRecipients.map((recipient, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                          {index + 1}
+                        </div>
+                        <span className="font-medium text-slate-900 dark:text-slate-100">{recipient.name}</span>
                       </div>
-                      <span className="text-sm text-muted-foreground">{recipient.count} messages</span>
+                      <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">{recipient.count} messages</span>
                     </div>
                   ))}
                 </div>
               </CardContent>
             </Card>
+              </>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAnalyticsOpen(false)}>
@@ -2533,6 +2929,7 @@ export function SMS() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
     </div>
   );
 } 
