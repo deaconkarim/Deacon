@@ -560,7 +560,12 @@ export const addEvent = async (event) => {
       needs_volunteers: event.needs_volunteers || false,
       volunteer_roles: event.volunteer_roles ? JSON.stringify(event.volunteer_roles) : null,
       parent_event_id: null, // Will be set for instances
-      organization_id: organizationId
+      organization_id: organizationId,
+      
+      // SMS reminder fields
+      enable_sms_reminders: event.enable_sms_reminders || false,
+      sms_reminder_timing: event.sms_reminder_timing ? JSON.stringify(event.sms_reminder_timing) : null,
+      sms_reminder_groups: event.sms_reminder_groups ? JSON.stringify(event.sms_reminder_groups) : null
     };
 
     // If it's a recurring event, create the master event and instances
@@ -708,7 +713,12 @@ export const updateEvent = async (id, updates) => {
       allow_rsvp: updates.allow_rsvp !== undefined ? updates.allow_rsvp : true,
       attendance_type: updates.attendance_type || 'rsvp',
       needs_volunteers: updates.needs_volunteers || false,
-      volunteer_roles: updates.volunteer_roles ? JSON.stringify(updates.volunteer_roles) : null
+      volunteer_roles: updates.volunteer_roles ? JSON.stringify(updates.volunteer_roles) : null,
+      
+      // SMS reminder fields
+      enable_sms_reminders: updates.enable_sms_reminders || false,
+      sms_reminder_timing: updates.sms_reminder_timing ? JSON.stringify(updates.sms_reminder_timing) : null,
+      sms_reminder_groups: updates.sms_reminder_groups ? JSON.stringify(updates.sms_reminder_groups) : null
     };
 
     // If it's a recurring event, update master and all instances

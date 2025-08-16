@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { parseVolunteerRoles, getCurrentUserOrganizationId } from '@/lib/data';
 import { locationService } from '@/lib/locationService';
 import { supabase } from '@/lib/supabaseClient';
-import { AlertTriangle, CheckCircle, MapPin, Users, Building } from 'lucide-react';
+import { AlertTriangle, CheckCircle, MapPin, Users, Building, MessageSquare, Clock, Trash2, Plus } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const EventForm = ({ initialData, onSave, onCancel }) => {
@@ -32,12 +32,18 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
     attendance_type: initialData.attendance_type || 'rsvp',
     event_type: initialData.event_type || 'Worship Service',
     needs_volunteers: initialData.needs_volunteers || false,
-    volunteer_roles: parseVolunteerRoles(initialData.volunteer_roles)
+    volunteer_roles: parseVolunteerRoles(initialData.volunteer_roles),
+    
+    // SMS reminder fields
+    enable_sms_reminders: initialData.enable_sms_reminders || false,
+    sms_reminder_timing: initialData.sms_reminder_timing || [],
+    sms_reminder_groups: initialData.sms_reminder_groups || []
   });
   const [locations, setLocations] = useState([]);
   const [availableLocations, setAvailableLocations] = useState([]);
   const [locationConflict, setLocationConflict] = useState(null);
   const [isCheckingConflict, setIsCheckingConflict] = useState(false);
+  const [groups, setGroups] = useState([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -60,13 +66,23 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
       attendance_type: initialData.attendance_type || 'rsvp',
       event_type: initialData.event_type || 'Worship Service',
       needs_volunteers: initialData.needs_volunteers || false,
-      volunteer_roles: parseVolunteerRoles(initialData.volunteer_roles)
+      volunteer_roles: parseVolunteerRoles(initialData.volunteer_roles),
+      
+      // SMS reminder fields
+      enable_sms_reminders: initialData.enable_sms_reminders || false,
+      sms_reminder_timing: initialData.sms_reminder_timing || [],
+      sms_reminder_groups: initialData.sms_reminder_groups || []
     });
   }, [initialData]);
 
   // Load locations on component mount
   useEffect(() => {
     loadLocations();
+  }, []);
+
+  // Load groups for SMS reminders
+  useEffect(() => {
+    loadGroups();
   }, []);
 
   // Check for conflicts when location or dates change
@@ -107,6 +123,71 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
     } catch (error) {
       console.error('Error loading available locations:', error);
     }
+  };
+
+  const loadGroups = async () => {
+    try {
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) return;
+
+      const { data, error } = await supabase
+        .from('groups')
+        .select('id, name')
+        .eq('organization_id', organizationId);
+
+      if (error) {
+        console.error('Error loading groups:', error);
+        toast({ title: "Error loading groups", description: "Could not load groups for SMS reminders.", variant: "destructive" });
+        return;
+      }
+      setGroups(data || []);
+    } catch (error) {
+      console.error('Error loading groups:', error);
+      toast({ title: "Error loading groups", description: "Could not load groups for SMS reminders.", variant: "destructive" });
+    }
+  };
+
+  // Helper functions for SMS reminders
+  const addReminderTiming = () => {
+    setEventData(prev => ({
+      ...prev,
+      sms_reminder_timing: [...prev.sms_reminder_timing, { value: 24, unit: 'hours' }]
+    }));
+  };
+
+  const removeReminderTiming = (index) => {
+    setEventData(prev => ({
+      ...prev,
+      sms_reminder_timing: prev.sms_reminder_timing.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateReminderTiming = (index, field, value) => {
+    setEventData(prev => ({
+      ...prev,
+      sms_reminder_timing: prev.sms_reminder_timing.map((timing, i) => 
+        i === index ? { ...timing, [field]: value } : timing
+      )
+    }));
+  };
+
+  const toggleGroup = (groupId) => {
+    setEventData(prev => {
+      const currentGroups = prev.sms_reminder_groups || [];
+      const groupExists = currentGroups.some(g => g.id === groupId);
+      
+      if (groupExists) {
+        return {
+          ...prev,
+          sms_reminder_groups: currentGroups.filter(g => g.id !== groupId)
+        };
+      } else {
+        return {
+          ...prev,
+          sms_reminder_groups: [...currentGroups, { id: groupId }]
+        };
+      }
+    });
   };
 
   const checkLocationConflict = async () => {
@@ -444,7 +525,7 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
                 <div className="flex items-center space-x-2">
                   {location.location_type === 'room' && <Building className="h-4 w-4" />}
                   {location.location_type === 'outdoor' && <MapPin className="h-4 w-4" />}
-                  {location.location_type === 'virtual' && <Calendar className="h-4 w-4" />}
+                  {location.location_type === 'virtual' && <MessageSquare className="h-4 w-4" />}
                   <span>{location.name}</span>
                   {location.capacity && (
                     <span className="text-xs text-gray-500">({location.capacity} capacity)</span>
@@ -643,6 +724,120 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
           </p>
         </div>
       )}
+
+             {/* SMS Reminder Section */}
+       <div className="space-y-4 border-t pt-4">
+         <div className="flex items-center space-x-2">
+           <Checkbox
+             id="enable_sms_reminders"
+             checked={eventData.enable_sms_reminders}
+             onCheckedChange={(checked) => setEventData(prev => ({ ...prev, enable_sms_reminders: checked }))}
+           />
+           <Label htmlFor="enable_sms_reminders" className="flex items-center gap-2">
+             <MessageSquare className="h-4 w-4" />
+             Enable SMS Reminders
+           </Label>
+         </div>
+         
+         {eventData.enable_sms_reminders && (
+           <div className="space-y-4 ml-6 border-l-2 border-gray-200 pl-4">
+             {/* Reminder Timing */}
+             <div className="space-y-2">
+               <div className="flex items-center justify-between">
+                 <Label>Reminder Timing</Label>
+                 <Button 
+                   type="button" 
+                   variant="outline" 
+                   size="sm" 
+                   onClick={addReminderTiming}
+                   className="h-8"
+                 >
+                   <Plus className="h-3 w-3 mr-1" />
+                   Add
+                 </Button>
+               </div>
+               
+               {eventData.sms_reminder_timing.map((timing, index) => (
+                 <div key={index} className="flex items-center gap-2">
+                   <Input
+                     type="number"
+                     min="1"
+                     value={timing.value}
+                     onChange={(e) => updateReminderTiming(index, 'value', parseInt(e.target.value))}
+                     className="w-20"
+                   />
+                   <Select
+                     value={timing.unit}
+                     onValueChange={(value) => updateReminderTiming(index, 'unit', value)}
+                   >
+                     <SelectTrigger className="w-32">
+                       <SelectValue />
+                     </SelectTrigger>
+                     <SelectContent>
+                       <SelectItem value="minutes">Minutes</SelectItem>
+                       <SelectItem value="hours">Hours</SelectItem>
+                       <SelectItem value="days">Days</SelectItem>
+                       <SelectItem value="weeks">Weeks</SelectItem>
+                     </SelectContent>
+                   </Select>
+                   <span className="text-sm text-gray-500">before event</span>
+                   <Button
+                     type="button"
+                     variant="ghost"
+                     size="sm"
+                     onClick={() => removeReminderTiming(index)}
+                     className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                   >
+                     <Trash2 className="h-3 w-3" />
+                   </Button>
+                 </div>
+               ))}
+               
+               {eventData.sms_reminder_timing.length === 0 && (
+                 <div className="text-sm text-gray-500 italic">
+                   No reminders set. Click "Add" to add reminder timing.
+                 </div>
+               )}
+             </div>
+
+             {/* Groups Selection */}
+             <div className="space-y-2">
+               <Label>Send Reminders To</Label>
+               <div className="space-y-2 max-h-32 overflow-y-auto">
+                 {groups.length > 0 ? (
+                   groups.map(group => (
+                     <div key={group.id} className="flex items-center space-x-2">
+                       <Checkbox
+                         id={`group-${group.id}`}
+                         checked={eventData.sms_reminder_groups.some(g => g.id === group.id)}
+                         onCheckedChange={() => toggleGroup(group.id)}
+                       />
+                       <Label htmlFor={`group-${group.id}`} className="text-sm">
+                         {group.name}
+                       </Label>
+                     </div>
+                   ))
+                 ) : (
+                   <div className="text-sm text-gray-500 italic">
+                     No groups available. Create groups first to send SMS reminders.
+                   </div>
+                 )}
+               </div>
+               
+               {eventData.sms_reminder_groups.length > 0 && (
+                 <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                   <Clock className="h-3 w-3 inline mr-1" />
+                   Reminders will be sent to {eventData.sms_reminder_groups.length} group(s) 
+                   {eventData.sms_reminder_timing.length > 0 && 
+                     ` at ${eventData.sms_reminder_timing.length} different time(s)`
+                   }
+                 </div>
+               )}
+             </div>
+           </div>
+         )}
+       </div>
+
       <div className="flex justify-end space-x-2 pt-4">
         <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
         <Button type="submit">Save Event</Button>
