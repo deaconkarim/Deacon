@@ -2,8 +2,14 @@
 -- Note: This may require superuser permissions
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 
--- Remove any existing cron job with the same name
-SELECT cron.unschedule('process-sms-reminders');
+-- Safely remove any existing cron job with the same name
+DO $$
+BEGIN
+    -- Check if the job exists before trying to unschedule it
+    IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'process-sms-reminders') THEN
+        PERFORM cron.unschedule('process-sms-reminders');
+    END IF;
+END $$;
 
 -- Create a cron job to process SMS reminders every 5 minutes
 -- This will call our database function that processes scheduled reminders
