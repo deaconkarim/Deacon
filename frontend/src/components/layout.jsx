@@ -112,13 +112,6 @@ export function Layout() {
         permission: PERMISSIONS.DONATIONS_VIEW
       },
       { 
-        name: 'Groups', 
-        href: '/groups', 
-        icon: UserPlus, 
-        color: 'text-indigo-500',
-        permission: PERMISSIONS.GROUPS_VIEW
-      },
-      { 
         name: 'Tasks', 
         href: '/tasks', 
         icon: ClipboardList, 

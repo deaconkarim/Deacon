@@ -2660,6 +2660,12 @@ export default function Events() {
             // For today, use the same day
             filterEndDate = new Date(today);
             filterEndDate.setHours(23, 59, 59, 999);
+          } else if (timeWindowFilter === 'next30days') {
+            // For next 30 days filter, get events for the next 30 days
+            filterEndDate = new Date(today);
+            filterEndDate.setDate(today.getDate() + 30);
+            filterEndDate.setHours(23, 59, 59, 999);
+            console.log('[Events] Next 30 days filter - Today:', today.toISOString(), 'End date:', filterEndDate.toISOString());
           } else {
             // For 'all', use 3 months as default
             filterEndDate = new Date();
@@ -7519,21 +7525,22 @@ export default function Events() {
             )}
 
             {/* Enhanced Events Display */}
-          {isLoading ? (
-            <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <Card key={i} className="p-6">
-                  <div className="animate-pulse">
-                    <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          ) : filteredEvents.length > 0 ? (
-            <>
-              {viewMode === 'calendar' ? (
+            {viewMode === 'calendar' ? (
+              // Calendar View
+              isCalendarLoading ? (
+                <div className="space-y-4">
+                  <Card className="p-6">
+                    <div className="animate-pulse">
+                      <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+                      <div className="grid grid-cols-7 gap-1">
+                        {[...Array(35)].map((_, i) => (
+                          <div key={i} className="h-24 bg-gray-200 rounded"></div>
+                        ))}
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+              ) : (
                 <div className="space-y-6">
                   <CalendarView
                     events={rawEvents}
@@ -7542,7 +7549,22 @@ export default function Events() {
                     onMonthChange={setCurrentMonth}
                   />
                 </div>
-              ) : (
+              )
+            ) : (
+              // List View
+              isLoading ? (
+                <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => (
+                    <Card key={i} className="p-6">
+                      <div className="animate-pulse">
+                        <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
+                        <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+                        <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              ) : filteredEvents.length > 0 ? (
                 <div className="space-y-4">
                   {filteredEvents.map((event) => (
                     <EventCard
@@ -7569,26 +7591,27 @@ export default function Events() {
                     />
                   ))}
                 </div>
-              )}
-            </>
-            ) : (
-              <div className="text-center py-12">
-                <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No upcoming events</h3>
-                <p className="text-gray-500 mb-4">
-                                    {searchQuery || attendanceFilter !== 'all' || eventTypeFilter !== 'all' || timeWindowFilter !== 'month'
-                    ? 'No events match your current filters.' 
-                    : 'Get started by creating your first event.'}
-                </p>
+              ) : (
+                <div className="text-center py-12">
+                  <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No upcoming events</h3>
+                  <p className="text-gray-500 mb-4">
+                    {searchQuery || attendanceFilter !== 'all' || eventTypeFilter !== 'all' || timeWindowFilter !== 'month'
+                      ? 'No events match your current filters.' 
+                      : 'Get started by creating your first event.'}
+                  </p>
                   {!searchQuery && attendanceFilter === 'all' && eventTypeFilter === 'all' && timeWindowFilter === 'month' && (
-                  <Button onClick={() => setIsCreateEventOpen(true)}>
+                    <Button onClick={() => setIsCreateEventOpen(true)}>
                       <Plus className="mr-2 h-4 w-4" />
-                    Create Event
-                  </Button>
-                )}
-              </div>
+                      Create Event
+                    </Button>
+                  )}
+                </div>
+              )
             )}
-        </TabsContent>
+          </TabsContent>
+
+
 
         {/* Past Events Tab */}
         <TabsContent value="past" className="space-y-4">
@@ -7602,16 +7625,16 @@ export default function Events() {
                 className="w-full h-14 text-lg"
               />
             </div>
-            <Button
+                  <Button
               onClick={fetchPastEvents}
-              variant="outline"
+                    variant="outline"
               className="w-full md:w-auto h-14 text-lg"
               disabled={isLoadingPast}
-            >
+                  >
               <RefreshCw className={`mr-2 h-4 w-4 ${isLoadingPast ? 'animate-spin' : ''}`} />
               Refresh
-            </Button>
-          </div>
+                  </Button>
+                </div>
 
           {/* Past Events List */}
           {isLoadingPast ? (
@@ -7688,7 +7711,7 @@ export default function Events() {
               onSave={handleCreateEvent}
               onCancel={() => setIsCreateEventOpen(false)}
             />
-          </div>
+                </div>
         </DialogContent>
       </Dialog>
 
@@ -7711,7 +7734,7 @@ export default function Events() {
                   <span className="text-sm md:text-lg text-green-600 font-normal">
                     Smart suggestions available
                   </span>
-                </div>
+              </div>
               )}
             </div>
             <DialogDescription className="text-sm md:text-lg mt-2">
@@ -7751,23 +7774,23 @@ export default function Events() {
                         className="w-full h-10 md:h-14 text-sm md:text-lg"
                       />
                     </div>
-                    <Button
+                  <Button
                       onClick={() => setIsCreateMemberOpen(true)}
                       className="w-full md:w-auto h-10 md:h-14 text-sm md:text-lg bg-blue-600 hover:bg-blue-700"
                     >
                       <Plus className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
                       Add New Person
-                    </Button>
+                  </Button>
                     {selectedEvent?.attendance_type === 'check-in' && (
-                      <Button
+                  <Button
                         onClick={() => setIsAnonymousCheckinOpen(true)}
                         className="w-full md:w-auto h-10 md:h-14 text-sm md:text-lg bg-orange-600 hover:bg-orange-700"
-                      >
+                  >
                         <UserPlus className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
                         Anonymous Check-in
-                      </Button>
+                  </Button>
                     )}
-                  </div>
+                </div>
                   <div className="space-y-2">
                     {suggestedMembers.length > 0 && (
                       <div className="mb-3 md:mb-4">
@@ -7802,8 +7825,8 @@ export default function Events() {
                                     {memberAttendanceCount[member.id] || 0} previous attendances
                                   </Badge>
                                   <span className="text-xs md:text-sm text-green-600">Frequent attendee</span>
-                                </div>
-                              </div>
+              </div>
+                </div>
                               <Star className="h-4 w-4 md:h-5 md:w-5 text-green-600 flex-shrink-0" />
                             </div>
                           ))}
@@ -7840,11 +7863,11 @@ export default function Events() {
                                   {memberAttendanceCount[member.id]} previous attendances
                                 </Badge>
                               </div>
-                            )}
-                          </div>
-                        </div>
+                    )}
+                  </div>
+                  </div>
                       ))}
-                    </div>
+                  </div>
                   </div>
                 </div>
               </TabsContent>
@@ -7874,14 +7897,14 @@ export default function Events() {
                           )}
                         </div>
                       </div>
-                      <Button
+                  <Button
                         variant="ghost"
                         size="lg"
                         onClick={() => handleRemoveMember(member.id)}
                         className="h-10 w-10 md:h-12 md:w-12 lg:h-14 lg:w-14 p-0 flex-shrink-0"
                       >
                         <X className="h-5 w-5 md:h-6 md:w-6 lg:h-7 lg:w-7" />
-                      </Button>
+                  </Button>
                     </div>
                   ))}
                   {alreadyRSVPMembers.length === 0 && (
@@ -7898,14 +7921,14 @@ export default function Events() {
 
           <DialogFooter className="p-6 md:p-8 border-t">
             <div className="flex flex-col md:flex-row gap-4 md:gap-6 w-full">
-              <Button
+                    <Button
                 onClick={() => setIsCreateMemberOpen(true)}
                 className="w-full md:w-auto text-lg md:text-xl h-16 md:h-20 bg-blue-600 hover:bg-blue-700"
-              >
+                    >
                 <Plus className="mr-2 md:mr-3 h-5 w-5 md:h-6 md:w-6" />
                 Create New Person
-              </Button>
-              <Button
+                    </Button>
+                      <Button
                 variant={selectedEvent?.attendance_type === 'check-in' ? 'default' : 'outline'}
                 onClick={handleCloseDialog}
                 className={`w-full md:w-auto text-lg md:text-xl h-16 md:h-20 ${
@@ -7913,8 +7936,8 @@ export default function Events() {
                 }`}
               >
                 Close
-              </Button>
-            </div>
+                      </Button>
+                  </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -7991,13 +8014,13 @@ export default function Events() {
           </div>
 
           <DialogFooter className="p-3 md:p-6 border-t">
-            <Button
+                      <Button
               type="submit"
               onClick={handleCreateMember}
               className="w-full md:w-auto text-sm md:text-lg h-10 md:h-14"
             >
               Create and {selectedEvent?.attendance_type === 'check-in' ? 'Check In' : 'RSVP'}
-            </Button>
+                      </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -8036,9 +8059,9 @@ export default function Events() {
                 />
               </div>
               <div className="p-3 md:p-6 border-t">
-                <Button
+                      <Button
                   variant="destructive"
-                  onClick={() => {
+                        onClick={() => {
                     const eventType = editingEvent.is_recurring ? 'recurring event series' : 'event';
                     const message = editingEvent.is_recurring 
                       ? `Are you sure you want to delete "${editingEvent.title}" and all its recurring instances? This cannot be undone.`
@@ -8055,7 +8078,7 @@ export default function Events() {
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete {editingEvent?.is_recurring ? 'Series' : 'Event'}
-                </Button>
+                      </Button>
               </div>
             </>
           )}
@@ -8120,12 +8143,12 @@ export default function Events() {
           </div>
 
           <DialogFooter className="p-3 md:p-6 border-t">
-            <Button 
+                      <Button
               onClick={() => setIsVolunteerDialogOpen(false)}
               className="w-full md:w-auto text-lg h-14"
             >
               Close
-            </Button>
+                      </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -8145,7 +8168,7 @@ export default function Events() {
             <div className="text-center space-y-3 md:space-y-4">
               <div className="flex items-center justify-center w-12 h-12 md:w-16 md:h-16 mx-auto bg-orange-100 rounded-full">
                 <UserPlus className="h-6 w-6 md:h-8 md:w-8 text-orange-600" />
-              </div>
+                    </div>
               <div>
                 <h3 className="text-base md:text-lg font-medium text-gray-900 mb-1 md:mb-2">
                   Add Anonymous Attendee
@@ -8153,27 +8176,27 @@ export default function Events() {
                 <p className="text-sm md:text-base text-gray-600">
                   This will add one anonymous attendee to the event attendance count.
                 </p>
+                </div>
               </div>
             </div>
-          </div>
 
           <DialogFooter className="p-3 md:p-6 border-t">
             <div className="flex flex-col md:flex-row gap-2 md:gap-3 w-full">
-              <Button
-                variant="outline"
+                        <Button
+                          variant="outline"
                 onClick={() => setIsAnonymousCheckinOpen(false)}
                 className="w-full md:w-auto text-sm md:text-lg h-10 md:h-14"
-              >
+                        >
                 Cancel
-              </Button>
-              <Button
+                        </Button>
+                    <Button
                 onClick={handleAnonymousCheckin}
                 className="w-full md:w-auto text-sm md:text-lg h-10 md:h-14 bg-orange-600 hover:bg-orange-700"
               >
                 <UserPlus className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
                 Add Anonymous Attendee
-              </Button>
-            </div>
+                    </Button>
+                  </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -8188,10 +8211,10 @@ export default function Events() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <Button
-              variant="outline"
+                  <Button
+                    variant="outline"
               className="w-full justify-start"
-              onClick={() => {
+                    onClick={() => {
                 // Bulk delete functionality
                 if (confirm(`Are you sure you want to delete ${bulkSelectedEvents.length} event${bulkSelectedEvents.length !== 1 ? 's' : ''}?`)) {
                   bulkSelectedEvents.forEach(eventId => handleDeleteEvent(eventId));
@@ -8202,11 +8225,11 @@ export default function Events() {
             >
               <Trash2 className="mr-2 h-4 w-4" />
               Delete Selected Events
-            </Button>
-            <Button
-              variant="outline"
+                  </Button>
+                  <Button
+                    variant="outline"
               className="w-full justify-start"
-              onClick={() => {
+                    onClick={() => {
                 // Bulk duplicate functionality
                 toast({
                   title: "Feature Coming Soon",
@@ -8214,26 +8237,26 @@ export default function Events() {
                 });
                 setIsBulkActionsOpen(false);
               }}
-            >
-              <Copy className="mr-2 h-4 w-4" />
+                  >
+                    <Copy className="mr-2 h-4 w-4" />
               Duplicate Selected Events
-            </Button>
-            <Button
-              variant="outline"
+                  </Button>
+                  <Button
+                    variant="outline"
               className="w-full justify-start"
-              onClick={() => {
+                    onClick={() => {
                 // Bulk export functionality
-                toast({
-                  title: "Feature Coming Soon",
+                      toast({
+                        title: "Feature Coming Soon",
                   description: "Bulk export functionality will be available soon!",
-                });
+                      });
                 setIsBulkActionsOpen(false);
-              }}
-            >
+                    }}
+                  >
               <Download className="mr-2 h-4 w-4" />
               Export Selected Events
-            </Button>
-          </div>
+                  </Button>
+                </div>
           <DialogFooter>
             <Button
               variant="outline"
@@ -8265,7 +8288,7 @@ export default function Events() {
                     <div>
                       <label className="text-sm font-medium text-gray-600">Title</label>
                       <p className="text-base">{selectedEventForDetails.title}</p>
-                    </div>
+                      </div>
                     <div>
                       <label className="text-sm font-medium text-gray-600">Description</label>
                       <p className="text-base">{selectedEventForDetails.description || 'No description'}</p>
@@ -8273,7 +8296,7 @@ export default function Events() {
                     <div>
                       <label className="text-sm font-medium text-gray-600">Location</label>
                       <p className="text-base">{selectedEventForDetails.location || 'No location specified'}</p>
-                    </div>
+                </div>
                     <div>
                       <label className="text-sm font-medium text-gray-600">Date & Time</label>
                       <p className="text-base">
@@ -8281,8 +8304,8 @@ export default function Events() {
                         <br />
                         {format(new Date(selectedEventForDetails.start_date), 'h:mm a')} - {format(new Date(selectedEventForDetails.end_date), 'h:mm a')}
                       </p>
-                    </div>
-                  </div>
+                </div>
+                      </div>
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold mb-3">Attendance & Settings</h3>
@@ -8290,11 +8313,11 @@ export default function Events() {
                     <div>
                       <label className="text-sm font-medium text-gray-600">Attendance Type</label>
                       <p className="text-base capitalize">{selectedEventForDetails.attendance_type}</p>
-                    </div>
+                </div>
                     <div>
                       <label className="text-sm font-medium text-gray-600">Current Attendance</label>
                       <p className="text-base">{selectedEventForDetails.attendance || 0} people</p>
-                    </div>
+                </div>
                     <div>
                       <label className="text-sm font-medium text-gray-600">RSVP Allowed</label>
                       <p className="text-base">{selectedEventForDetails.allow_rsvp ? 'Yes' : 'No'}</p>
@@ -8309,13 +8332,13 @@ export default function Events() {
             </div>
           )}
           <DialogFooter className="p-3 md:p-6 border-t">
-            <Button
-              variant="outline"
+                  <Button
+                    variant="outline"
               onClick={() => setIsEventDetailsOpen(false)}
               className="w-full md:w-auto"
-            >
+                  >
               Close
-            </Button>
+                  </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -8334,7 +8357,7 @@ export default function Events() {
             <div className="mt-6 space-y-4">
               {/* Edit Instance Option */}
               <div className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer" 
-                   onClick={() => {
+                    onClick={() => {
                      setEditingEvent(eventToEdit);
                      setIsEditEventOpen(true);
                      setShowEditChoiceDialog(false);
@@ -8355,7 +8378,7 @@ export default function Events() {
 
               {/* Edit Master Event Option */}
               <div className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer" 
-                   onClick={() => {
+                    onClick={() => {
                      setEditingEvent(masterEventToEdit);
                      setIsEditEventOpen(true);
                      setShowEditChoiceDialog(false);
@@ -8376,9 +8399,9 @@ export default function Events() {
             </div>
 
             <DialogFooter className="mt-6">
-              <Button 
+                  <Button
                 variant="outline" 
-                onClick={() => {
+                    onClick={() => {
                   setShowEditChoiceDialog(false);
                   setEventToEdit(null);
                   setMasterEventToEdit(null);
@@ -8386,7 +8409,7 @@ export default function Events() {
                 className="flex-1"
               >
                 Cancel
-              </Button>
+                  </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

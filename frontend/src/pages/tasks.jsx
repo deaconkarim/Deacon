@@ -759,171 +759,213 @@ export function Tasks() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Tasks</h1>
-          <p className="text-muted-foreground">Manage and track church tasks and assignments.</p>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Button 
-            variant="outline"
-            onClick={() => setShowAnalytics(!showAnalytics)}
-            className="w-full sm:w-auto"
-          >
-            <BarChart3 className="mr-2 h-4 w-4" />
-            Analytics
-          </Button>
-          <Button 
-            variant="outline"
-            onClick={exportTasksToCSV}
-            className="w-full sm:w-auto"
-          >
-            <Download className="mr-2 h-4 w-4" />
-            Export
-          </Button>
-          <Button 
-            onClick={() => setIsCreateDialogOpen(true)}
-            className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">New Task</span>
-            <span className="sm:hidden">Add Task</span>
-          </Button>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      {/* Modern header with gradient */}
+      <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-b border-slate-200/50 dark:border-slate-700/50 px-6 py-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
+              Tasks
+            </h1>
+            <p className="text-slate-600 dark:text-slate-400 mt-1">Manage and track church tasks and assignments</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="outline"
+              onClick={() => setShowAnalytics(!showAnalytics)}
+              className="h-12 px-6 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 rounded-xl shadow-sm hover:bg-white dark:hover:bg-slate-600"
+            >
+              <BarChart3 className="mr-2 h-4 w-4" />
+              Analytics
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={exportTasksToCSV}
+              className="h-12 px-6 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 rounded-xl shadow-sm hover:bg-white dark:hover:bg-slate-600"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Export
+            </Button>
+            <Button 
+              onClick={() => setIsCreateDialogOpen(true)}
+              className="h-12 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 font-medium"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              New Task
+            </Button>
+          </div>
         </div>
       </div>
+
+      {/* Content area with enhanced spacing */}
+      <div className="px-6 py-6">
 
       {/* Analytics Panel */}
       {showAnalytics && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Task Analytics
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+        <div className="mb-8">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4">
             {(() => {
               const analytics = getTaskAnalytics();
               return (
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{analytics.total}</div>
-                    <div className="text-sm text-muted-foreground">Total Tasks</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">{analytics.completed}</div>
-                    <div className="text-sm text-muted-foreground">Completed</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-yellow-600">{analytics.pending}</div>
-                    <div className="text-sm text-muted-foreground">Pending</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{analytics.inProgress}</div>
-                    <div className="text-sm text-muted-foreground">In Progress</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-red-600">{analytics.overdue}</div>
-                    <div className="text-sm text-muted-foreground">Overdue</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-orange-600">{analytics.highPriority}</div>
-                    <div className="text-sm text-muted-foreground">High Priority</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600">{analytics.completionRate}%</div>
-                    <div className="text-sm text-muted-foreground">Completion Rate</div>
-                  </div>
-                </div>
+                <>
+                  <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800 shadow-lg">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
+                      <CardTitle className="text-sm font-semibold text-blue-900 dark:text-blue-100">Total Tasks</CardTitle>
+                      <CheckSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                      <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{analytics.total}</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-green-200 dark:border-green-800 shadow-lg">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
+                      <CardTitle className="text-sm font-semibold text-green-900 dark:text-green-100">Completed</CardTitle>
+                      <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                      <div className="text-2xl font-bold text-green-900 dark:text-green-100">{analytics.completed}</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-950 dark:to-amber-950 border-yellow-200 dark:border-yellow-800 shadow-lg">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
+                      <CardTitle className="text-sm font-semibold text-yellow-900 dark:text-yellow-100">Pending</CardTitle>
+                      <Clock className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                      <div className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">{analytics.pending}</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950 border-blue-200 dark:border-blue-800 shadow-lg">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
+                      <CardTitle className="text-sm font-semibold text-blue-900 dark:text-blue-100">In Progress</CardTitle>
+                      <Loader2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                      <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{analytics.inProgress}</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-950 dark:to-rose-950 border-red-200 dark:border-red-800 shadow-lg">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
+                      <CardTitle className="text-sm font-semibold text-red-900 dark:text-red-100">Overdue</CardTitle>
+                      <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                      <div className="text-2xl font-bold text-red-900 dark:text-red-100">{analytics.overdue}</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-950 dark:to-red-950 border-orange-200 dark:border-orange-800 shadow-lg">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
+                      <CardTitle className="text-sm font-semibold text-orange-900 dark:text-orange-100">High Priority</CardTitle>
+                      <AlertCircle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                      <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">{analytics.highPriority}</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-950 dark:to-violet-950 border-purple-200 dark:border-purple-800 shadow-lg">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
+                      <CardTitle className="text-sm font-semibold text-purple-900 dark:text-purple-100">Completion Rate</CardTitle>
+                      <TrendingUp className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                      <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">{analytics.completionRate}%</div>
+                    </CardContent>
+                  </Card>
+                </>
               );
             })()}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search tasks..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8"
-          />
+      {/* Enhanced search and filters */}
+      <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm px-6 py-4 border border-slate-200/50 dark:border-slate-700/50 rounded-xl mb-6">
+        <div className="flex flex-col lg:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+            <Input
+              placeholder="Search tasks by title or description..."
+              className="pl-12 h-12 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-3">
+            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <SelectTrigger className="h-12 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 rounded-xl shadow-sm">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={selectedPriority} onValueChange={setSelectedPriority}>
+              <SelectTrigger className="h-12 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 rounded-xl shadow-sm">
+                <SelectValue placeholder="Priority" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Priorities</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="low">Low</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={selectedAssignee} onValueChange={setSelectedAssignee}>
+              <SelectTrigger className="h-12 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 rounded-xl shadow-sm">
+                <SelectValue placeholder="Assignee" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Assignees</SelectItem>
+                {users.map((user) => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.name} ({user.role})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="h-12 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 rounded-xl shadow-sm">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {taskCategories.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-          <SelectTrigger className="w-full md:w-[200px]">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="in_progress">In Progress</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={selectedPriority} onValueChange={setSelectedPriority}>
-          <SelectTrigger className="w-full md:w-[200px]">
-            <SelectValue placeholder="Filter by priority" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Priorities</SelectItem>
-            <SelectItem value="high">High</SelectItem>
-            <SelectItem value="medium">Medium</SelectItem>
-            <SelectItem value="low">Low</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={selectedAssignee} onValueChange={setSelectedAssignee}>
-          <SelectTrigger className="w-full md:w-[200px]">
-            <SelectValue placeholder="Filter by assignee" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Assignees</SelectItem>
-            {users.map((user) => (
-              <SelectItem key={user.id} value={user.id}>
-                {user.name} ({user.role})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-          <SelectTrigger className="w-full md:w-[200px]">
-            <SelectValue placeholder="Filter by category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {taskCategories.map((category) => (
-              <SelectItem key={category} value={category}>
-                {category}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
 
       {/* Bulk Actions and View Controls */}
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setIsBulkActionMode(!isBulkActionMode)}
-            className={isBulkActionMode ? "bg-blue-50 border-blue-200" : ""}
+            className={`h-10 px-4 rounded-lg ${isBulkActionMode ? "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-700" : "bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600"}`}
           >
             <CheckSquare className="mr-2 h-4 w-4" />
             Bulk Actions
           </Button>
           {isBulkActionMode && selectedTasks.length > 0 && (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">
                 {selectedTasks.length} selected
               </span>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleSelectAll}
+                className="h-8 px-3 rounded-lg bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600"
               >
                 Select All
               </Button>
@@ -931,6 +973,7 @@ export function Tasks() {
                 variant="outline"
                 size="sm"
                 onClick={handleClearSelection}
+                className="h-8 px-3 rounded-lg bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600"
               >
                 Clear
               </Button>
@@ -942,7 +985,7 @@ export function Tasks() {
             variant="outline"
             size="sm"
             onClick={() => setShowCompleted(!showCompleted)}
-            className={!showCompleted ? "bg-gray-50" : ""}
+            className={`h-10 px-4 rounded-lg ${!showCompleted ? "bg-gray-50 dark:bg-gray-800" : "bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600"}`}
           >
             {showCompleted ? <Eye className="mr-2 h-4 w-4" /> : <EyeOff className="mr-2 h-4 w-4" />}
             {showCompleted ? "Hide Completed" : "Show Completed"}
@@ -951,6 +994,7 @@ export function Tasks() {
             variant="outline"
             size="sm"
             onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
+            className="h-10 px-4 rounded-lg bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600"
           >
             {viewMode === 'list' ? <Grid3X3 className="mr-2 h-4 w-4" /> : <List className="mr-2 h-4 w-4" />}
             {viewMode === 'list' ? 'Grid' : 'List'}
@@ -960,16 +1004,16 @@ export function Tasks() {
 
       {/* Bulk Action Buttons */}
       {isBulkActionMode && selectedTasks.length > 0 && (
-        <div className="flex flex-wrap gap-2 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <span className="text-sm font-medium text-blue-900 w-full">
+        <div className="flex flex-wrap gap-3 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 rounded-xl border border-blue-200/50 dark:border-blue-700/50 mb-6">
+          <span className="text-sm font-semibold text-blue-900 dark:text-blue-100 w-full mb-3">
             Bulk Actions ({selectedTasks.length} tasks selected)
           </span>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-3">
             <Button
               variant="outline"
               size="sm"
               onClick={() => handleBulkStatusUpdate('completed')}
-              className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+              className="h-10 px-4 bg-green-50 hover:bg-green-100 text-green-700 border-green-200 dark:bg-green-900/20 dark:hover:bg-green-900/30 dark:text-green-300 dark:border-green-700 rounded-lg"
             >
               <CheckCircle2 className="mr-2 h-4 w-4" />
               Mark Complete
@@ -978,16 +1022,16 @@ export function Tasks() {
               variant="outline"
               size="sm"
               onClick={() => handleBulkStatusUpdate('in_progress')}
-              className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+              className="h-10 px-4 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700 rounded-lg"
             >
               <Play className="mr-2 h-4 w-4" />
-              Start Progress
+              Mark In Progress
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => handleBulkStatusUpdate('pending')}
-              className="bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-200"
+              className="h-10 px-4 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:hover:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700 rounded-lg"
             >
               <Pause className="mr-2 h-4 w-4" />
               Mark Pending
@@ -996,7 +1040,7 @@ export function Tasks() {
               variant="outline"
               size="sm"
               onClick={() => handleBulkStatusUpdate('cancelled')}
-              className="bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
+              className="h-10 px-4 bg-red-50 hover:bg-red-100 text-red-700 border-red-200 dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-red-300 dark:border-red-700 rounded-lg"
             >
               <XCircle className="mr-2 h-4 w-4" />
               Cancel Tasks
@@ -1005,7 +1049,7 @@ export function Tasks() {
               variant="outline"
               size="sm"
               onClick={handleBulkDelete}
-              className="bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
+              className="h-10 px-4 bg-red-50 hover:bg-red-100 text-red-700 border-red-200 dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-red-300 dark:border-red-700 rounded-lg"
             >
               <Trash2 className="mr-2 h-4 w-4" />
               Delete Tasks
@@ -1014,263 +1058,281 @@ export function Tasks() {
         </div>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-6">
         {isLoading ? (
-          <div className="flex justify-center items-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <div className="flex justify-center items-center py-12">
+            <div className="text-center space-y-4">
+              <Loader2 className="h-12 w-12 animate-spin text-slate-400 mx-auto" />
+              <p className="text-sm text-slate-600 dark:text-slate-400">Loading tasks...</p>
+            </div>
           </div>
         ) : (
           <>
             {/* Active Tasks Section */}
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Active Tasks</h2>
+            <div className="space-y-6">
+              <div className="flex items-center gap-3">
+                <div className="w-1 h-6 bg-gradient-to-b from-blue-500 to-indigo-500 rounded-full"></div>
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Active Tasks</h2>
+              </div>
               {filteredTasks.filter(task => task.status !== 'completed').length > 0 ? (
-                filteredTasks
-                  .filter(task => task.status !== 'completed')
-                  .map(task => (
-                    <Card key={task.id} className={`${isTaskOverdue(task) ? 'border-red-200 bg-red-50/30' : ''} ${selectedTasks.includes(task.id) ? 'ring-2 ring-blue-500' : ''}`}>
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-3 flex-1">
-                            {isBulkActionMode && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleTaskSelection(task.id)}
-                                className="p-1 h-auto"
-                              >
-                                {selectedTasks.includes(task.id) ? (
-                                  <CheckSquare className="h-4 w-4 text-blue-600" />
-                                ) : (
-                                  <Square className="h-4 w-4 text-gray-400" />
-                                )}
-                              </Button>
-                            )}
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <CardTitle className="text-lg">{task.title}</CardTitle>
-                                {isTaskOverdue(task) && (
-                                  <AlertTriangle className="h-4 w-4 text-red-500" />
-                                )}
-                              </div>
-                              <div className="flex flex-col sm:flex-row gap-2">
-                                <CardDescription>
-                                  Requested by {task.requestor?.fullName || 'Unknown'}
-                                </CardDescription>
-                                <div className="flex gap-2">
-                                  <Badge className={getPriorityColor(task.priority)}>
-                                    {formatPriority(task.priority)}
-                                  </Badge>
-                                  <Badge className={getStatusColor(task.status)}>
-                                    {formatStatus(task.status)}
-                                  </Badge>
-                                  {task.category && (
-                                    <Badge variant="outline">
-                                      {task.category}
-                                    </Badge>
+                <div className="grid gap-6">
+                  {filteredTasks
+                    .filter(task => task.status !== 'completed')
+                    .map(task => (
+                      <Card key={task.id} className={`bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-slate-200/50 dark:border-slate-600/50 shadow-lg hover:shadow-xl transition-all duration-300 ${isTaskOverdue(task) ? 'border-red-200/50 bg-red-50/30 dark:bg-red-900/20' : ''} ${selectedTasks.includes(task.id) ? 'ring-2 ring-blue-500' : ''}`}>
+                        <CardHeader className="pb-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-4 flex-1">
+                              {isBulkActionMode && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleTaskSelection(task.id)}
+                                  className="p-1 h-auto hover:bg-slate-100 dark:hover:bg-slate-700"
+                                >
+                                  {selectedTasks.includes(task.id) ? (
+                                    <CheckSquare className="h-4 w-4 text-blue-600" />
+                                  ) : (
+                                    <Square className="h-4 w-4 text-slate-400" />
                                   )}
+                                </Button>
+                              )}
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-3">
+                                  <CardTitle className="text-xl font-bold text-slate-900 dark:text-slate-100">{task.title}</CardTitle>
+                                  {isTaskOverdue(task) && (
+                                    <div className="flex items-center gap-1 px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-full text-xs font-medium">
+                                      <AlertTriangle className="h-3 w-3" />
+                                      Overdue
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center">
+                                  <CardDescription className="text-slate-600 dark:text-slate-400">
+                                    Requested by {task.requestor?.fullName || 'Unknown'}
+                                  </CardDescription>
+                                  <div className="flex flex-wrap gap-2">
+                                    <Badge className={`${getPriorityColor(task.priority)} text-white font-medium`}>
+                                      {formatPriority(task.priority)}
+                                    </Badge>
+                                    <Badge className={`${getStatusColor(task.status)} text-white font-medium`}>
+                                      {formatStatus(task.status)}
+                                    </Badge>
+                                    {task.category && (
+                                      <Badge variant="outline" className="border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300">
+                                        {task.category}
+                                      </Badge>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          {task.description && (
-                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{task.description}</p>
-                          )}
-                          <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                            {task.due_date && (
-                              <div className="flex items-center gap-2">
-                                <Clock className="h-4 w-4" />
-                                Due {format(new Date(task.due_date), 'MMM d, yyyy')}
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                          <div className="space-y-4">
+                            {task.description && (
+                              <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
+                                <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">{task.description}</p>
                               </div>
                             )}
-                            {task.assignee && (
-                              <div className="flex items-center gap-2">
-                                <UserPlus className="h-4 w-4" />
-                                Assigned to {task.assignee.fullName}
-                              </div>
-                            )}
+                            <div className="flex flex-wrap gap-6 text-sm">
+                              {task.due_date && (
+                                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                                  <Clock className="h-4 w-4" />
+                                  <span className="font-medium">Due {format(new Date(task.due_date), "MMM d, yyyy")}</span>
+                                </div>
+                              )}
+                              {task.assignee && (
+                                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                                  <UserPlus className="h-4 w-4" />
+                                  <span className="font-medium">Assigned to {task.assignee.fullName}</span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {task.status !== 'completed' && (
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => handleUpdateTaskStatus(task.id, 'completed')}
+                                  className="h-10 px-4 bg-green-50 hover:bg-green-100 text-green-700 border-green-200 dark:bg-green-900/20 dark:hover:bg-green-900/30 dark:text-green-300 dark:border-green-700 rounded-lg font-medium"
+                                >
+                                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                                  Mark Complete
+                                </Button>
+                              )}
+                              {task.status === 'completed' && (
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => handleUpdateTaskStatus(task.id, 'in_progress')}
+                                  className="h-10 px-4 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700 rounded-lg font-medium"
+                                >
+                                  <Loader2 className="mr-2 h-4 w-4" />
+                                  Back to In Progress
+                                </Button>
+                              )}
+                              {task.status !== 'in_progress' && task.status !== 'completed' && (
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => handleUpdateTaskStatus(task.id, 'in_progress')}
+                                  className="h-10 px-4 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700 rounded-lg font-medium"
+                                >
+                                  <Loader2 className="mr-2 h-4 w-4" />
+                                  Start Progress
+                                </Button>
+                              )}
+                              {task.status === 'in_progress' && (
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => handleUpdateTaskStatus(task.id, 'pending')}
+                                  className="h-10 px-4 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:hover:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700 rounded-lg font-medium"
+                                >
+                                  <AlertCircle className="mr-2 h-4 w-4" />
+                                  Back to Pending
+                                </Button>
+                              )}
+                              {task.status !== 'cancelled' && (
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => handleUpdateTaskStatus(task.id, 'cancelled')}
+                                  className="h-10 px-4 bg-red-50 hover:bg-red-100 text-red-700 border-red-200 dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-red-300 dark:border-red-700 rounded-lg font-medium"
+                                >
+                                  <XCircle className="mr-2 h-4 w-4" />
+                                  Cancel
+                                </Button>
+                              )}
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => openEditDialog(task)}
+                                className="h-10 px-4 bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-700/50 dark:hover:bg-slate-600/50 dark:text-slate-300 dark:border-slate-600 rounded-lg font-medium"
+                              >
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Edit
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => openDeleteDialog(task)}
+                                className="h-10 px-4 bg-red-50 hover:bg-red-100 text-red-700 border-red-200 dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-red-300 dark:border-red-700 rounded-lg font-medium"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </Button>
+                            </div>
                           </div>
-                          <div className="flex flex-wrap gap-1.5">
-                            {task.status !== 'completed' && (
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => handleUpdateTaskStatus(task.id, 'completed')}
-                                className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
-                              >
-                                <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
-                                <span className="hidden sm:inline">Mark Complete</span>
-                                <span className="sm:hidden">Complete</span>
-                              </Button>
-                            )}
-                            {task.status === 'completed' && (
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => handleUpdateTaskStatus(task.id, 'in_progress')}
-                                className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
-                              >
-                                <Loader2 className="mr-1 h-3.5 w-3.5" />
-                                <span className="hidden sm:inline">Back to In Progress</span>
-                                <span className="sm:hidden">In Progress</span>
-                              </Button>
-                            )}
-                            {task.status !== 'in_progress' && task.status !== 'completed' && (
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => handleUpdateTaskStatus(task.id, 'in_progress')}
-                                className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
-                              >
-                                <Loader2 className="mr-1 h-3.5 w-3.5" />
-                                <span className="hidden sm:inline">Start Progress</span>
-                                <span className="sm:hidden">Start</span>
-                              </Button>
-                            )}
-                            {task.status === 'in_progress' && (
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => handleUpdateTaskStatus(task.id, 'pending')}
-                                className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-200"
-                              >
-                                <AlertCircle className="mr-1 h-3.5 w-3.5" />
-                                <span className="hidden sm:inline">Back to Pending</span>
-                                <span className="sm:hidden">Pending</span>
-                              </Button>
-                            )}
-                            {task.status !== 'cancelled' && (
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => handleUpdateTaskStatus(task.id, 'cancelled')}
-                                className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
-                              >
-                                <XCircle className="mr-1 h-3.5 w-3.5" />
-                                <span className="hidden sm:inline">Cancel</span>
-                                <span className="sm:hidden">Cancel</span>
-                              </Button>
-                            )}
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => openEditDialog(task)}
-                              className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200"
-                            >
-                              <Pencil className="mr-1 h-3.5 w-3.5" />
-                              <span className="hidden sm:inline">Edit</span>
-                              <span className="sm:hidden">Edit</span>
-                            </Button>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => openDeleteDialog(task)}
-                              className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
-                            >
-                              <Trash2 className="mr-1 h-3.5 w-3.5" />
-                              <span className="hidden sm:inline">Delete</span>
-                              <span className="sm:hidden">Delete</span>
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
+                        </CardContent>
+                      </Card>
+                    ))}
+                </div>
               ) : (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">No active tasks found.</p>
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckSquare className="h-8 w-8 text-slate-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">No active tasks</h3>
+                  <p className="text-slate-600 dark:text-slate-400">All caught up! No pending tasks at the moment.</p>
                 </div>
               )}
             </div>
 
             {/* Completed Tasks Section */}
-            <div className="space-y-4 pt-8 border-t">
-              <h2 className="text-xl font-semibold">Completed Tasks</h2>
+            <div className="space-y-6 pt-8 border-t border-slate-200/50 dark:border-slate-700/50">
+              <div className="flex items-center gap-3">
+                <div className="w-1 h-6 bg-gradient-to-b from-green-500 to-emerald-500 rounded-full"></div>
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Completed Tasks</h2>
+              </div>
               {filteredTasks.filter(task => task.status === 'completed').length > 0 ? (
-                filteredTasks
-                  .filter(task => task.status === 'completed')
-                  .map(task => (
-                    <Card key={task.id} className="bg-muted/50">
-                      <CardHeader>
-                        <div className="flex flex-col gap-2">
-                          <CardTitle className="text-muted-foreground">{task.title}</CardTitle>
-                          <div className="flex flex-col sm:flex-row gap-2">
-                            <CardDescription>
-                              Requested by {task.requestor?.fullName || 'Unknown'}
-                            </CardDescription>
-                            <div className="flex gap-2">
-                              <Badge className={getPriorityColor(task.priority)}>
-                                {formatPriority(task.priority)}
-                              </Badge>
-                              <Badge className={getStatusColor(task.status)}>
-                                {formatStatus(task.status)}
-                              </Badge>
+                <div className="grid gap-6">
+                  {filteredTasks
+                    .filter(task => task.status === 'completed')
+                    .map(task => (
+                      <Card key={task.id} className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border-slate-200/50 dark:border-slate-600/50 shadow-lg hover:shadow-xl transition-all duration-300">
+                        <CardHeader className="pb-4">
+                          <div className="flex flex-col gap-3">
+                            <CardTitle className="text-lg font-bold text-slate-700 dark:text-slate-300">{task.title}</CardTitle>
+                            <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center">
+                              <CardDescription className="text-slate-600 dark:text-slate-400">
+                                Requested by {task.requestor?.fullName || 'Unknown'}
+                              </CardDescription>
+                              <div className="flex flex-wrap gap-2">
+                                <Badge className={`${getPriorityColor(task.priority)} text-white font-medium`}>
+                                  {formatPriority(task.priority)}
+                                </Badge>
+                                <Badge className={`${getStatusColor(task.status)} text-white font-medium`}>
+                                  {formatStatus(task.status)}
+                                </Badge>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          {task.description && (
-                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{task.description}</p>
-                          )}
-                          <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                            {task.due_date && (
-                              <div className="flex items-center gap-2">
-                                <Clock className="h-4 w-4" />
-                                Due {format(new Date(task.due_date), 'MMM d, yyyy')}
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                          <div className="space-y-4">
+                            {task.description && (
+                              <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
+                                <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">{task.description}</p>
                               </div>
                             )}
-                            {task.assignee && (
-                              <div className="flex items-center gap-2">
-                                <UserPlus className="h-4 w-4" />
-                                Assigned to {task.assignee.fullName}
-                              </div>
-                            )}
+                            <div className="flex flex-wrap gap-6 text-sm">
+                              {task.due_date && (
+                                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                                  <Clock className="h-4 w-4" />
+                                  <span className="font-medium">Due {format(new Date(task.due_date), "MMM d, yyyy")}</span>
+                                </div>
+                              )}
+                              {task.assignee && (
+                                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                                  <UserPlus className="h-4 w-4" />
+                                  <span className="font-medium">Assigned to {task.assignee.fullName}</span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => handleUpdateTaskStatus(task.id, 'in_progress')}
+                                className="h-10 px-4 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700 rounded-lg font-medium"
+                              >
+                                <Loader2 className="mr-2 h-4 w-4" />
+                                Back to In Progress
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => openEditDialog(task)}
+                                className="h-10 px-4 bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-700/50 dark:hover:bg-slate-600/50 dark:text-slate-300 dark:border-slate-600 rounded-lg font-medium"
+                              >
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Edit
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => openDeleteDialog(task)}
+                                className="h-10 px-4 bg-red-50 hover:bg-red-100 text-red-700 border-red-200 dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-red-300 dark:border-red-700 rounded-lg font-medium"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </Button>
+                            </div>
                           </div>
-                          <div className="flex flex-wrap gap-1.5">
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => handleUpdateTaskStatus(task.id, 'in_progress')}
-                              className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
-                            >
-                              <Loader2 className="mr-1 h-3.5 w-3.5" />
-                              <span className="hidden sm:inline">Back to In Progress</span>
-                              <span className="sm:hidden">In Progress</span>
-                            </Button>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => openEditDialog(task)}
-                              className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200"
-                            >
-                              <Pencil className="mr-1 h-3.5 w-3.5" />
-                              <span className="hidden sm:inline">Edit</span>
-                              <span className="sm:hidden">Edit</span>
-                            </Button>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => openDeleteDialog(task)}
-                              className="flex-1 sm:flex-none text-xs px-2 py-1 h-8 bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
-                            >
-                              <Trash2 className="mr-1 h-3.5 w-3.5" />
-                              <span className="hidden sm:inline">Delete</span>
-                              <span className="sm:hidden">Delete</span>
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
+                        </CardContent>
+                      </Card>
+                    ))}
+                </div>
               ) : (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">No completed tasks found.</p>
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle2 className="h-8 w-8 text-slate-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">No completed tasks</h3>
+                  <p className="text-slate-600 dark:text-slate-400">Completed tasks will appear here once you finish some tasks.</p>
                 </div>
               )}
             </div>
@@ -1601,6 +1663,7 @@ export function Tasks() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
     </div>
   );
 } 

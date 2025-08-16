@@ -443,13 +443,76 @@ export function Groups() {
   };
   
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Groups</h1>
-        <p className="text-muted-foreground">
-          Manage your church groups, ministries, and committees.
-        </p>
+    <motion.div 
+      className="min-h-screen bg-white dark:bg-slate-900"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
+      {/* Mobile Header - Hidden on Desktop */}
+      <div className="lg:hidden sticky top-0 z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700">
+        <div className="flex items-center justify-between p-4">
+          <div className="flex-1">
+            <h1 className="text-lg font-semibold text-slate-900 dark:text-white">Groups</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Manage your church groups</p>
+          </div>
+          <Button onClick={() => setIsAddGroupOpen(true)} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Group
+          </Button>
+        </div>
       </div>
+
+      {/* Desktop Header - Hidden on Mobile */}
+      <div className="hidden lg:block bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Groups</h1>
+              <p className="text-slate-600 dark:text-slate-400">
+                Manage your church groups, ministries, and committees.
+              </p>
+            </div>
+            <Button onClick={() => setIsAddGroupOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Group
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Content */}
+      <div className="lg:hidden p-4 space-y-4">
+        {/* Search and Filters */}
+        <motion.div variants={itemVariants}>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder="Search groups..."
+              className="pl-10"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Desktop Content */}
+      <div className="hidden lg:block max-w-7xl mx-auto px-6 py-6">
+        {/* Search and Filters */}
+        <motion.div variants={itemVariants} className="mb-6">
+          <div className="flex items-center justify-between">
+            <div className="relative w-96">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Search groups..."
+                className="pl-10"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+        </motion.div>
       
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div className="relative w-full sm:w-96">
@@ -486,168 +549,331 @@ export function Groups() {
             >
               {filteredGroups.map((group) => (
                 <motion.div key={group.id} variants={itemVariants}>
-                  <Card className="overflow-hidden h-full flex flex-col">
-                    <CardHeader className="pb-2">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="mb-1">
-                            <CardTitle className="text-xl">{group.name}</CardTitle>
-                            <CardDescription className="line-clamp-2 mt-1">
-                              {group.description}
-                            </CardDescription>
+                  <Card className="overflow-hidden h-full flex flex-col border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white dark:bg-slate-800">
+                    <div className="relative h-24 bg-gradient-to-r from-blue-500 to-indigo-600">
+                      <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-indigo-600/20"></div>
+                      <div className="absolute top-3 right-3 flex space-x-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm"
+                          onClick={() => {
+                            setEditingGroup(group);
+                            setIsEditGroupOpen(true);
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm"
+                          onClick={() => {
+                            setGroupToDelete(group);
+                            setIsDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <CardContent className="p-6 flex-grow">
+                      <div className="mb-4">
+                        <CardTitle className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+                          {group.name}
+                        </CardTitle>
+                        <CardDescription className="text-slate-600 dark:text-slate-400 line-clamp-2">
+                          {group.description || 'No description provided'}
+                        </CardDescription>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                            <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-slate-900 dark:text-white">
+                              Leader
+                            </div>
+                            <div className="text-sm text-slate-600 dark:text-slate-400 truncate">
+                              {group.leader ? `${group.leader.firstName} ${group.leader.lastName}` : 'Not assigned'}
+                            </div>
                           </div>
                         </div>
-                        <div className="flex space-x-1">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8"
-                            onClick={() => {
-                              setEditingGroup(group);
-                              setIsEditGroupOpen(true);
-                            }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => {
-                              setGroupToDelete(group);
-                              setIsDeleteDialogOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pb-3 flex-grow">
-                      <div className="space-y-2">
-                        <div className="flex items-center text-sm">
-                          <User className="mr-2 h-4 w-4 text-muted-foreground" />
-                          <span>Leader: {group.leader ? `${group.leader.firstName} ${group.leader.lastName}` : 'Not assigned'}</span>
-                        </div>
-                        <div className="flex items-center text-sm">
-                          <Users className="mr-2 h-4 w-4 text-muted-foreground" />
-                          <span>{group.group_members?.[0]?.count || 0} members</span>
+                        
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                            <Users className="h-4 w-4 text-green-600 dark:text-green-400" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-slate-900 dark:text-white">
+                              Members
+                            </div>
+                            <div className="text-sm text-slate-600 dark:text-slate-400">
+                              {group.group_members?.[0]?.count || 0} people
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
-                    <CardFooter className="bg-gray-50 py-2 border-t mt-auto">
+                    <div className="p-6 pt-0">
                       <Button 
-                        variant="ghost" 
+                        variant="outline" 
                         size="sm" 
-                        className="w-full"
+                        className="w-full hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-600"
                         onClick={() => handleViewGroup(group)}
                       >
+                        <ChevronRight className="h-4 w-4 mr-2" />
                         View Details
                       </Button>
-                    </CardFooter>
+                    </div>
                   </Card>
                 </motion.div>
               ))}
             </motion.div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Users className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium">No groups found</h3>
-              <p className="text-muted-foreground mt-1">
+            <motion.div variants={itemVariants} className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-full flex items-center justify-center mb-6">
+                <Users className="h-10 w-10 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">No groups found</h3>
+              <p className="text-slate-600 dark:text-slate-400 max-w-md">
                 {searchQuery 
-                  ? "Try adjusting your search criteria."
-                  : "Get started by adding your first church group."}
+                  ? "Try adjusting your search criteria to find what you're looking for."
+                  : "Get started by creating your first church group, ministry, or committee."}
               </p>
               {!searchQuery && (
-                <Button className="mt-4" onClick={() => setIsAddGroupOpen(true)}>
+                <Button className="mt-6" onClick={() => setIsAddGroupOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Group
+                  Create First Group
                 </Button>
               )}
-            </div>
+            </motion.div>
           )}
         </TabsContent>
         
         <TabsContent value="list">
-          <Card>
-            <CardContent className="p-0">
-              <div className="relative w-full overflow-auto">
-                <table className="w-full caption-bottom text-sm">
-                  <thead className="[&_tr]:border-b">
-                    <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                      <th className="h-12 px-4 text-left align-middle font-medium">Name</th>
-                      <th className="h-12 px-4 text-left align-middle font-medium">Leader</th>
-                      <th className="h-12 px-4 text-left align-middle font-medium">Members</th>
-                      <th className="h-12 px-4 text-right align-middle font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="[&_tr:last-child]:border-0">
-                    {filteredGroups.length > 0 ? (
-                      filteredGroups.map((group) => (
-                        <tr 
-                          key={group.id} 
-                          className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
-                        >
-                          <td className="p-4 align-middle font-medium">{group.name}</td>
-                          <td className="p-4 align-middle">{group.leader ? `${group.leader.firstName} ${group.leader.lastName}` : 'Not assigned'}</td>
-                          <td className="p-4 align-middle">
-                            <div className="flex -space-x-2">
-                              {group.group_members?.[0]?.count > 0 && (
-                                <div className="flex items-center justify-center h-6 w-6 rounded-full bg-muted text-xs font-medium">
-                                  {group.group_members[0].count}
+          <motion.div variants={itemVariants}>
+            <Card className="border-0 shadow-lg bg-white dark:bg-slate-800">
+              <CardContent className="p-0">
+                <div className="relative w-full overflow-auto">
+                  <table className="w-full caption-bottom text-sm">
+                    <thead className="bg-slate-50 dark:bg-slate-900/50">
+                      <tr className="border-b border-slate-200 dark:border-slate-700">
+                        <th className="h-12 px-6 text-left align-middle font-semibold text-slate-900 dark:text-white">Name</th>
+                        <th className="h-12 px-6 text-left align-middle font-semibold text-slate-900 dark:text-white">Leader</th>
+                        <th className="h-12 px-6 text-left align-middle font-semibold text-slate-900 dark:text-white">Members</th>
+                        <th className="h-12 px-6 text-right align-middle font-semibold text-slate-900 dark:text-white">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                      {filteredGroups.length > 0 ? (
+                        filteredGroups.map((group) => (
+                          <tr 
+                            key={group.id} 
+                            className="transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                          >
+                            <td className="p-6 align-middle">
+                              <div>
+                                <div className="font-semibold text-slate-900 dark:text-white">{group.name}</div>
+                                {group.description && (
+                                  <div className="text-sm text-slate-600 dark:text-slate-400 mt-1 line-clamp-1">
+                                    {group.description}
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-6 align-middle">
+                              <div className="flex items-center space-x-3">
+                                <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                                  <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                                 </div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-4 align-middle text-right">
-                            <div className="flex justify-end space-x-1">
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => handleViewGroup(group)}
-                              >
-                                View
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-8 w-8"
-                                onClick={() => {
-                                  setEditingGroup(group);
-                                  setIsEditGroupOpen(true);
-                                }}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                                onClick={() => {
-                                  setGroupToDelete(group);
-                                  setIsDeleteDialogOpen(true);
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                                <span className="text-slate-900 dark:text-white">
+                                  {group.leader ? `${group.leader.firstName} ${group.leader.lastName}` : 'Not assigned'}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="p-6 align-middle">
+                              <div className="flex items-center space-x-3">
+                                <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                                  <Users className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                </div>
+                                <span className="text-slate-900 dark:text-white font-medium">
+                                  {group.group_members?.[0]?.count || 0}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="p-6 align-middle text-right">
+                              <div className="flex justify-end space-x-2">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => handleViewGroup(group)}
+                                  className="hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-600"
+                                >
+                                  <ChevronRight className="h-4 w-4 mr-2" />
+                                  View
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-700"
+                                  onClick={() => {
+                                    setEditingGroup(group);
+                                    setIsEditGroupOpen(true);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                  onClick={() => {
+                                    setGroupToDelete(group);
+                                    setIsDeleteDialogOpen(true);
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="4" className="p-12 text-center">
+                            <div className="flex flex-col items-center justify-center">
+                              <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-full flex items-center justify-center mb-4">
+                                <Users className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                              </div>
+                              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No groups found</h3>
+                              <p className="text-slate-600 dark:text-slate-400">
+                                {searchQuery ? "Try adjusting your search criteria." : "Get started by creating your first group."}
+                              </p>
                             </div>
                           </td>
                         </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan="5" className="p-4 text-center text-muted-foreground">
-                          No groups found
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
         </TabsContent>
       </Tabs>
+      
+      {/* Mobile Groups List */}
+      <div className="lg:hidden space-y-4">
+        {filteredGroups.length > 0 ? (
+          <motion.div 
+            className="space-y-4"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            {filteredGroups.map((group) => (
+              <motion.div key={group.id} variants={itemVariants}>
+                <Card className="overflow-hidden border-0 shadow-lg bg-white dark:bg-slate-800">
+                  <div className="relative h-20 bg-gradient-to-r from-blue-500 to-indigo-600">
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-indigo-600/20"></div>
+                    <div className="absolute top-2 right-2 flex space-x-1">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7 bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm"
+                        onClick={() => {
+                          setEditingGroup(group);
+                          setIsEditGroupOpen(true);
+                        }}
+                      >
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7 bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm"
+                        onClick={() => {
+                          setGroupToDelete(group);
+                          setIsDeleteDialogOpen(true);
+                        }}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                  <CardContent className="p-4">
+                    <div className="mb-3">
+                      <CardTitle className="text-lg font-bold text-slate-900 dark:text-white mb-1">
+                        {group.name}
+                      </CardTitle>
+                      <CardDescription className="text-slate-600 dark:text-slate-400 line-clamp-2">
+                        {group.description || 'No description provided'}
+                      </CardDescription>
+                    </div>
+                    
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900/30 rounded flex items-center justify-center">
+                          <User className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-medium text-slate-900 dark:text-white">Leader</div>
+                          <div className="text-xs text-slate-600 dark:text-slate-400 truncate">
+                            {group.leader ? `${group.leader.firstName} ${group.leader.lastName}` : 'Not assigned'}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <div className="w-6 h-6 bg-green-100 dark:bg-green-900/30 rounded flex items-center justify-center">
+                          <Users className="h-3 w-3 text-green-600 dark:text-green-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-medium text-slate-900 dark:text-white">Members</div>
+                          <div className="text-xs text-slate-600 dark:text-slate-400">
+                            {group.group_members?.[0]?.count || 0} people
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-600"
+                      onClick={() => handleViewGroup(group)}
+                    >
+                      <ChevronRight className="h-4 w-4 mr-2" />
+                      View Details
+                    </Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </motion.div>
+        ) : (
+          <motion.div variants={itemVariants} className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-full flex items-center justify-center mb-4">
+              <Users className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No groups found</h3>
+            <p className="text-slate-600 dark:text-slate-400 text-sm">
+              {searchQuery 
+                ? "Try adjusting your search criteria."
+                : "Get started by creating your first church group."}
+            </p>
+            {!searchQuery && (
+              <Button className="mt-4" onClick={() => setIsAddGroupOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create First Group
+              </Button>
+            )}
+          </motion.div>
+        )}
+      </div>
       
       {/* Add Group Dialog */}
       <Dialog open={isAddGroupOpen} onOpenChange={setIsAddGroupOpen}>
@@ -684,20 +910,21 @@ export function Groups() {
               >
                 <SelectTrigger id="leader">
                   <SelectValue placeholder="Select leader">
-                    {newGroup.leader_id && members.find(m => m.id === newGroup.leader_id) && (
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-6 w-6">
-                          <AvatarFallback className="text-xs">
-                            {members.find(m => m.id === newGroup.leader_id)?.firstName?.[0]}
-                            {members.find(m => m.id === newGroup.leader_id)?.lastName?.[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span>
-                          {members.find(m => m.id === newGroup.leader_id)?.firstName}{' '}
-                          {members.find(m => m.id === newGroup.leader_id)?.lastName}
-                        </span>
-                      </div>
-                    )}
+                    {newGroup.leader_id && (() => {
+                      const leaderMember = members.find(m => m.id === newGroup.leader_id);
+                      return leaderMember ? (
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarFallback className="text-xs">
+                              {leaderMember.firstname?.[0]}{leaderMember.lastname?.[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span>
+                            {leaderMember.firstname} {leaderMember.lastname}
+                          </span>
+                        </div>
+                      ) : null;
+                    })()}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -706,10 +933,10 @@ export function Groups() {
                       <div className="flex items-center gap-2">
                         <Avatar className="h-6 w-6">
                           <AvatarFallback className="text-xs">
-                            {member.firstName?.[0]}{member.lastName?.[0]}
+                            {member.firstname?.[0]}{member.lastname?.[0]}
                           </AvatarFallback>
                         </Avatar>
-                        <span>{member.firstName} {member.lastName}</span>
+                        <span>{member.firstname} {member.lastname}</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -928,20 +1155,23 @@ export function Groups() {
                 >
                   <SelectTrigger id="edit-leader">
                     <SelectValue placeholder="Select leader">
-                      {editingGroup.leader_id && members.find(m => m.id === editingGroup.leader_id) && (
-                        <div className="flex items-center gap-2">
+                      {editingGroup.leader_id && (() => {
+                        const leaderMember = members.find(m => m.id === editingGroup.leader_id);
+                        return leaderMember ? (
+                                                  <div className="flex items-center gap-2">
                           <Avatar className="h-6 w-6">
                             <AvatarFallback className="text-xs">
-                              {members.find(m => m.id === editingGroup.leader_id)?.firstName?.[0]}
-                              {members.find(m => m.id === editingGroup.leader_id)?.lastName?.[0]}
+                              {leaderMember.firstname?.[0]}{leaderMember.lastname?.[0]}
                             </AvatarFallback>
                           </Avatar>
                           <span>
-                            {members.find(m => m.id === editingGroup.leader_id)?.firstName}{' '}
-                            {members.find(m => m.id === editingGroup.leader_id)?.lastName}
+                            {leaderMember.firstname} {leaderMember.lastname}
                           </span>
                         </div>
-                      )}
+                        ) : (
+                          <span className="text-slate-500">Leader not found</span>
+                        );
+                      })()}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
@@ -950,10 +1180,10 @@ export function Groups() {
                         <div className="flex items-center gap-2">
                           <Avatar className="h-6 w-6">
                             <AvatarFallback className="text-xs">
-                              {member.firstName?.[0]}{member.lastName?.[0]}
+                              {member.firstname?.[0]}{member.lastname?.[0]}
                             </AvatarFallback>
                           </Avatar>
-                          <span>{member.firstName} {member.lastName}</span>
+                          <span>{member.firstname} {member.lastname}</span>
                         </div>
                       </SelectItem>
                     ))}
@@ -973,5 +1203,6 @@ export function Groups() {
         </DialogContent>
       </Dialog>
     </div>
+  </motion.div>
   );
 }
