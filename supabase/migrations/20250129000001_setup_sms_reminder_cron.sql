@@ -1,5 +1,9 @@
 -- Enable the pg_cron extension if not already enabled
+-- Note: This may require superuser permissions
 CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+-- Remove any existing cron job with the same name
+SELECT cron.unschedule('process-sms-reminders');
 
 -- Create a cron job to process SMS reminders every 5 minutes
 -- This will call our database function that processes scheduled reminders
@@ -11,6 +15,7 @@ SELECT cron.schedule(
 
 -- Grant necessary permissions for the cron job
 GRANT EXECUTE ON FUNCTION send_scheduled_sms_reminders() TO postgres;
+GRANT EXECUTE ON FUNCTION send_scheduled_sms_reminders() TO authenticated;
 
 -- Create a function to manually trigger reminder processing (for testing)
 CREATE OR REPLACE FUNCTION trigger_reminder_processing() 
