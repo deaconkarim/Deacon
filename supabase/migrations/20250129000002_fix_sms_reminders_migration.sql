@@ -102,11 +102,40 @@ BEGIN
     WHERE event_id = p_event_id AND status = 'scheduled';
     
     -- Only proceed if we have timing and groups configured
+    -- Handle both array and non-array JSON values
     IF event_record.sms_reminder_timing IS NULL OR 
-       event_record.sms_reminder_groups IS NULL OR
-       jsonb_array_length(event_record.sms_reminder_timing) = 0 OR
-       jsonb_array_length(event_record.sms_reminder_groups) = 0 THEN
+       event_record.sms_reminder_groups IS NULL THEN
         RETURN;
+    END IF;
+    
+    -- Check if timing is configured (handle both array and scalar)
+    IF jsonb_typeof(event_record.sms_reminder_timing) = 'array' THEN
+        IF jsonb_array_length(event_record.sms_reminder_timing) = 0 THEN
+            RETURN;
+        END IF;
+    ELSE
+        -- If not an array, convert to array or skip if empty
+        IF event_record.sms_reminder_timing = 'null'::jsonb OR 
+           event_record.sms_reminder_timing = '[]'::jsonb THEN
+            RETURN;
+        END IF;
+        -- Convert scalar to array for processing
+        event_record.sms_reminder_timing := jsonb_build_array(event_record.sms_reminder_timing);
+    END IF;
+    
+    -- Check if groups is configured (handle both array and scalar)
+    IF jsonb_typeof(event_record.sms_reminder_groups) = 'array' THEN
+        IF jsonb_array_length(event_record.sms_reminder_groups) = 0 THEN
+            RETURN;
+        END IF;
+    ELSE
+        -- If not an array, convert to array or skip if empty
+        IF event_record.sms_reminder_groups = 'null'::jsonb OR 
+           event_record.sms_reminder_groups = '[]'::jsonb THEN
+            RETURN;
+        END IF;
+        -- Convert scalar to array for processing
+        event_record.sms_reminder_groups := jsonb_build_array(event_record.sms_reminder_groups);
     END IF;
     
     -- Create reminders for each timing configuration

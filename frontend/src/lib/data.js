@@ -564,8 +564,12 @@ export const addEvent = async (event) => {
       
       // SMS reminder fields
       enable_sms_reminders: event.enable_sms_reminders || false,
-      sms_reminder_timing: event.sms_reminder_timing ? JSON.stringify(event.sms_reminder_timing) : null,
-      sms_reminder_groups: event.sms_reminder_groups ? JSON.stringify(event.sms_reminder_groups) : null
+      sms_reminder_timing: event.sms_reminder_timing && event.sms_reminder_timing.length > 0 
+        ? event.sms_reminder_timing 
+        : [],
+      sms_reminder_groups: event.sms_reminder_groups && event.sms_reminder_groups.length > 0 
+        ? event.sms_reminder_groups 
+        : []
     };
 
     // If it's a recurring event, create the master event and instances
@@ -717,8 +721,12 @@ export const updateEvent = async (id, updates) => {
       
       // SMS reminder fields
       enable_sms_reminders: updates.enable_sms_reminders || false,
-      sms_reminder_timing: updates.sms_reminder_timing ? JSON.stringify(updates.sms_reminder_timing) : null,
-      sms_reminder_groups: updates.sms_reminder_groups ? JSON.stringify(updates.sms_reminder_groups) : null
+      sms_reminder_timing: updates.sms_reminder_timing && updates.sms_reminder_timing.length > 0 
+        ? updates.sms_reminder_timing 
+        : [],
+      sms_reminder_groups: updates.sms_reminder_groups && updates.sms_reminder_groups.length > 0 
+        ? updates.sms_reminder_groups 
+        : []
     };
 
     // If it's a recurring event, update master and all instances
