@@ -850,7 +850,57 @@ const generateRecurringInstances = (event) => {
   let instanceCount = 0;
   const maxInstances = 52; // Safety limit to prevent infinite loops
   
+  // Skip the first instance if it would be on the same day as the master event
+  // This prevents duplicate events on the same day
+  let isFirstInstance = true;
+  
   while (currentDate <= maxDate && instanceCount < maxInstances) {
+    // Skip the first instance to avoid duplicate with master event
+    if (isFirstInstance) {
+      isFirstInstance = false;
+      // Increment to the next occurrence before creating the first instance
+      switch (event.recurrence_pattern) {
+        case 'daily':
+          currentDate.setDate(currentDate.getDate() + 1);
+          break;
+        case 'weekly':
+          currentDate.setDate(currentDate.getDate() + 7);
+          break;
+        case 'biweekly':
+          currentDate.setDate(currentDate.getDate() + 14);
+          break;
+        case 'monthly':
+          currentDate.setMonth(currentDate.getMonth() + 1);
+          break;
+        case 'monthly_weekday':
+          // Get the target weekday (0-6, where 0 is Sunday)
+          const targetWeekday = parseInt(event.monthly_weekday);
+          // Get the target week (1-5, where 5 means last week)
+          const targetWeek = parseInt(event.monthly_week);
+          
+          // Calculate the next occurrence
+          const nextMonth = new Date(currentDate);
+          nextMonth.setMonth(nextMonth.getMonth() + 1);
+          
+          const nextOccurrence = getNthWeekdayOfMonth(
+            nextMonth.getFullYear(),
+            nextMonth.getMonth(),
+            targetWeek,
+            targetWeekday
+          );
+          
+          // Preserve the original time
+          const originalTime = new Date(event.start_date);
+          nextOccurrence.setHours(originalTime.getHours(), originalTime.getMinutes(), 0, 0);
+          
+          currentDate = nextOccurrence;
+          break;
+        default:
+          currentDate.setDate(currentDate.getDate() + 7); // Default to weekly
+      }
+      continue; // Skip this iteration and continue to the next
+    }
+    
     const occurrenceEndDate = new Date(currentDate.getTime() + duration);
     
     // Generate a shorter, more reliable instance ID

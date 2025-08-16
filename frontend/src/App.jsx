@@ -8,6 +8,7 @@ import { People } from './pages/members';
 
 import MemberProfile from './pages/member-profile';
 import Events from './pages/events';
+import KioskPage from './pages/kiosk';
 import { Donations } from './pages/donations';
 import { Groups } from './pages/groups';
 import { Tasks } from './pages/tasks';
@@ -80,6 +81,9 @@ function App() {
           <Route path="/alerts" element={<AlertsPage />} />
           <Route path="/pwa-test" element={<PWATest />} />
         </Route>
+        
+        {/* Kiosk route - standalone without layout */}
+        <Route path="/kiosk" element={<ProtectedRoute><KioskPage /></ProtectedRoute>} />
         
         {/* System Admin only routes */}
         <Route path="/admin-center" element={<AdminRoute><AdminCenter /></AdminRoute>} />

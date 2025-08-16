@@ -128,9 +128,10 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
       }
 
       // Get all events at this location and check for conflicts manually
+      // When editing, exclude the current event by ID, and also check by title and time to avoid false conflicts
       const { data: events, error } = await supabase
         .from('events')
-        .select('id, title, start_date, end_date')
+        .select('id, title, start_date, end_date, parent_event_id')
         .eq('organization_id', organizationId)
         .eq('location_id', eventData.location_id)
         .neq('id', initialData.id || ''); // Exclude current event if editing
@@ -151,6 +152,29 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
         // 1. New event starts before existing event ends AND
         // 2. New event ends after existing event starts
         const hasConflict = startDate < eventEnd && endDate > eventStart;
+        
+        // Additional checks to avoid false conflicts when editing the same event
+        if (initialData.id) {
+          // Don't conflict with events of the same title when editing (prevents self-conflict)
+          if (event.title === initialData.title) {
+            return false;
+          }
+          
+          // Don't conflict with related recurring events (same parent or same master)
+          if (initialData.parent_event_id && event.parent_event_id === initialData.parent_event_id) {
+            return false;
+          }
+          
+          // Don't conflict with the master event if editing an instance
+          if (initialData.parent_event_id && event.id === initialData.parent_event_id) {
+            return false;
+          }
+          
+          // Don't conflict with instances if editing the master
+          if (initialData.is_master && event.parent_event_id === initialData.id) {
+            return false;
+          }
+        }
         
         return hasConflict;
       });

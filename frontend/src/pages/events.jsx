@@ -979,13 +979,24 @@ const CalendarView = ({ events, onEventClick, currentMonth, onMonthChange }) => 
 
   const eventsByDate = useMemo(() => {
     const eventsMap = {};
+    
+    // Filter events to only include those in the current month
+    const startOfCurrentMonth = startOfMonth(currentMonth);
+    const endOfCurrentMonth = endOfMonth(currentMonth);
+    
     events.forEach(event => {
-      const eventDate = format(new Date(event.start_date), 'yyyy-MM-dd');
-      if (!eventsMap[eventDate]) {
-        eventsMap[eventDate] = [];
+      const eventDate = new Date(event.start_date);
+      
+      // Only include events that fall within the current month
+      if (eventDate >= startOfCurrentMonth && eventDate <= endOfCurrentMonth) {
+        const eventDateKey = format(eventDate, 'yyyy-MM-dd');
+        if (!eventsMap[eventDateKey]) {
+          eventsMap[eventDateKey] = [];
+        }
+        eventsMap[eventDateKey].push(event);
       }
-      eventsMap[eventDate].push(event);
     });
+    
     console.log('[CalendarView] Events by date:', Object.keys(eventsMap).length, 'days with events');
     
     // Debug: Show which events are on which dates
@@ -994,7 +1005,7 @@ const CalendarView = ({ events, onEventClick, currentMonth, onMonthChange }) => 
     });
     
     return eventsMap;
-  }, [events]);
+  }, [events, currentMonth]);
 
   return (
     <div className="space-y-4">
@@ -2338,6 +2349,67 @@ export default function Events() {
         }
       }
 
+      // For calendar view, fetch ALL events without time filtering
+      if (viewMode === 'calendar') {
+        console.log('[Events] Calendar view - fetching ALL events without time filtering');
+        const { data: calendarEvents, error: calendarError } = await supabase
+          .from('events')
+          .select(`
+            *,
+            event_attendance (
+              id,
+              member_id,
+              anonymous_name
+            )
+          `)
+          .eq('organization_id', organizationId)
+          .order('start_date', { ascending: true });
+
+        if (calendarError) {
+          console.error('[Events] Error fetching calendar events:', calendarError);
+          throw calendarError;
+        }
+
+        console.log('[Events] Calendar events fetched:', calendarEvents.length);
+        
+        // Log all event IDs to see what we're working with
+        console.log('[Events] All calendar event IDs:', calendarEvents.map(e => ({ 
+          id: e.id, 
+          title: e.title, 
+          idLength: e.id?.length,
+          is_master: e.is_master,
+          is_recurring: e.is_recurring,
+          start_date: e.start_date
+        })));
+        
+        // Also log master events specifically
+        const masterEvents = calendarEvents.filter(e => e.is_master === true);
+        console.log('[Events] Master events found:', masterEvents.map(e => ({ 
+          id: e.id, 
+          title: e.title, 
+          is_recurring: e.is_recurring 
+        })));
+        
+        // For now, include all events in calendar view (we'll handle malformed IDs in the edit function)
+        const validCalendarEvents = calendarEvents;
+        
+        console.log('[Events] Calendar events to display:', validCalendarEvents.length);
+        
+        // Store raw events for calendar view
+        setRawEvents(validCalendarEvents);
+        
+        // Process calendar events with attendance count
+        const eventsWithAttendance = validCalendarEvents.map(event => ({
+          ...event,
+          attendance: event.event_attendance?.length || 0
+        }));
+        
+        setEvents(eventsWithAttendance);
+        setIsLoading(false);
+        return;
+      }
+
+      // For non-calendar views, apply time-based filtering
       // Determine the date range based on time filter
       let startDate = today;
       let endDate = null;
@@ -2810,90 +2882,19 @@ export default function Events() {
   // State for calendar events
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [isCalendarLoading, setIsCalendarLoading] = useState(false);
+  const [showEditChoiceDialog, setShowEditChoiceDialog] = useState(false);
+  const [eventToEdit, setEventToEdit] = useState(null);
+  const [masterEventToEdit, setMasterEventToEdit] = useState(null);
 
-  // Fetch calendar events when month changes
+  // Fetch calendar events when view mode changes to calendar
   useEffect(() => {
     if (viewMode === 'calendar') {
-      const loadCalendarEvents = async () => {
-        console.log('[Calendar] Starting calendar load...');
-        setIsCalendarLoading(true);
-        setCalendarEvents([]); // Clear previous events
-        
-        try {
-          console.log('[Calendar] Loading events for month:', format(currentMonth, 'MMMM yyyy'));
-          
-          // Add a timeout to prevent hanging
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Request timeout')), 30000)
-          );
-          
-          console.log('[Calendar] About to fetch month events...');
-          const monthEventsPromise = fetchMonthEvents(currentMonth);
-          console.log('[Calendar] Fetch promise created, waiting for result...');
-          const monthEvents = await Promise.race([monthEventsPromise, timeoutPromise]);
-          
-          console.log('[Calendar] Loaded events:', monthEvents.length);
-          console.log('[Calendar] Setting calendar events...');
-          setCalendarEvents(monthEvents);
-          console.log('[Calendar] Calendar events set successfully');
-        } catch (error) {
-          console.error('[Calendar] Error loading events:', error);
-          
-          // If it's an authentication error, try to refresh the session
-          if (error.message?.includes('Authentication required') || error.message?.includes('401')) {
-            try {
-              console.log('[Calendar] Attempting to refresh authentication...');
-              const { data, error: refreshError } = await supabase.auth.refreshSession();
-              if (refreshError) {
-                console.error('[Calendar] Session refresh failed:', refreshError);
-                toast({
-                  title: 'Authentication Error',
-                  description: 'Please log in again to continue.',
-                  variant: 'destructive'
-                });
-              } else {
-                console.log('[Calendar] Session refreshed, retrying...');
-                // Retry the fetch after successful refresh
-                const retryEvents = await fetchMonthEvents(currentMonth);
-                setCalendarEvents(retryEvents);
-                return;
-              }
-            } catch (refreshError) {
-              console.error('[Calendar] Session refresh failed:', refreshError);
-            }
-          }
-          
-          toast({
-            title: 'Error',
-            description: error.message === 'Request timeout' 
-              ? 'Request timed out. Please try again.' 
-              : error.message || 'Failed to load calendar events',
-            variant: 'destructive'
-          });
-          setCalendarEvents([]);
-        } finally {
-          console.log('[Calendar] Calendar load completed');
-          setIsCalendarLoading(false);
-        }
-      };
-      
-      // Wrap in try-catch to prevent component from crashing
-      loadCalendarEvents().catch(error => {
-        console.error('[Calendar] Unhandled error in calendar load:', error);
-        setIsCalendarLoading(false);
-        setCalendarEvents([]);
-        toast({
-          title: 'Calendar Error',
-          description: 'Failed to load calendar. Please try switching back to list view.',
-          variant: 'destructive'
-        });
-      });
-    } else {
-      // Clear calendar events when switching away from calendar view
-      setCalendarEvents([]);
-      setIsCalendarLoading(false);
+      console.log('[Calendar] Switching to calendar view, fetching events...');
+      // Reset to current month when switching to calendar view
+      setCurrentMonth(new Date());
+      fetchEvents();
     }
-  }, [viewMode, currentMonth, fetchMonthEvents, toast]);
+  }, [viewMode, fetchEvents]);
 
   const fetchPastEvents = useCallback(async () => {
     try {
@@ -4648,6 +4649,111 @@ export default function Events() {
     }
   };
 
+  // Helper function to find and edit master events directly
+  const handleEditMasterEvent = (eventTitle) => {
+    console.log('[Events] Looking for master event with title:', eventTitle);
+    
+    // First try to find master event with UUID format
+    let masterEvent = events.find(e => 
+      e.title === eventTitle && 
+      e.is_master === true && 
+      e.is_recurring === true &&
+      e.id && 
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(e.id)
+    );
+    
+    // If no UUID master found, try to find any master event with same title
+    if (!masterEvent) {
+      console.log('[Events] No UUID master found, looking for any master event...');
+      masterEvent = events.find(e => 
+        e.title === eventTitle && 
+        e.is_master === true && 
+        e.is_recurring === true
+      );
+    }
+    
+    if (masterEvent) {
+      console.log('[Events] Found master event, opening edit dialog:', masterEvent);
+      setEditingEvent(masterEvent);
+      setIsEditEventOpen(true);
+    } else {
+      console.log('[Events] No master event found for title:', eventTitle);
+      
+      // Check if we have recurring instances that could become master events
+      const recurringInstances = events.filter(e => 
+        e.title === eventTitle && 
+        e.is_recurring === true &&
+        e.id && e.id.includes('-') && e.id.length > 36
+      );
+      
+      if (recurringInstances.length > 0) {
+        console.log('[Events] Found recurring instances that could become master events:', recurringInstances);
+        toast({
+          title: "No Master Event Found",
+          description: `"${eventTitle}" has recurring instances but no master event. Use the admin view to create a master event.`,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Master Event Not Found",
+          description: `Could not find a master event for "${eventTitle}". Check if it exists in the admin view.`,
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
+  // Helper function to create a master event from an existing instance
+  const handleCreateMasterEvent = async (eventTitle) => {
+    console.log('[Events] Attempting to create master event for:', eventTitle);
+    
+    // Find the first recurring instance to use as a template
+    const templateInstance = events.find(e => 
+      e.title === eventTitle && 
+      e.is_recurring === true &&
+      e.id && e.id.includes('-') && e.id.length > 36
+    );
+    
+    if (!templateInstance) {
+      toast({
+        title: "Cannot Create Master Event",
+        description: `No recurring instances found for "${eventTitle}".`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Create a new master event based on the template
+    const newMasterEvent = {
+      ...templateInstance,
+      id: undefined, // Let Supabase generate a new UUID
+      is_master: true,
+      is_recurring: true,
+      // Remove instance-specific fields
+      start_date: templateInstance.start_date,
+      end_date: templateInstance.end_date
+    };
+    
+    console.log('[Events] Creating new master event:', newMasterEvent);
+    
+    try {
+      // This would need to be implemented in your backend
+      // For now, just show what we would create
+      toast({
+        title: "Master Event Creation",
+        description: `Would create master event for "${eventTitle}". Use admin view to create manually.`,
+        variant: "default"
+      });
+    } catch (error) {
+      console.error('[Events] Error creating master event:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create master event. Use admin view instead.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleEditClick = (event) => {
     console.log('handleEditClick called with event:', event);
     console.log('Event ID:', event.id);
@@ -4665,25 +4771,38 @@ export default function Events() {
       if (event.id.includes('_')) {
         originalEventId = event.id.split('_')[0];
       } else if (event.id.includes('-')) {
-        // For the format like "sunday-morning-worship-service-1746381600000-2025-07-20t18-00-00-000z"
+        // For the format like "men-s-minitry-breakfast-1752940800000" or "sunday-morning-worship-service-1746381600000-2025-07-20t18-00-00-000z"
         // We need to find where the timestamp starts (after the original ID)
-        // The timestamp format is: YYYY-MM-DDTHH-MM-SS-000Z
-        const timestampPattern = /\d{4}-\d{2}-\d{2}t\d{2}-\d{2}-\d{2}-\d{3}z$/i;
-        const match = event.id.match(timestampPattern);
+        
+        // First try the complex timestamp format: YYYY-MM-DDTHH-MM-SS-000Z
+        const complexTimestampPattern = /\d{4}-\d{2}-\d{2}t\d{2}-\d{2}-\d{2}-\d{3}z$/i;
+        let match = event.id.match(complexTimestampPattern);
+        
         if (match) {
-          // Remove the timestamp part from the end
+          // Remove the complex timestamp part from the end
           originalEventId = event.id.substring(0, match.index);
+          console.log('[Events] Extracted ID from complex timestamp pattern:', originalEventId);
         } else {
-          // Fallback: try to find the last numeric part that looks like a timestamp
-          const parts = event.id.split('-');
-          if (parts.length >= 2) {
-            // Look for the part that contains 't' (indicating timestamp)
-            const timestampIndex = parts.findIndex(part => part.includes('t'));
-            if (timestampIndex !== -1) {
-              originalEventId = parts.slice(0, timestampIndex).join('-');
-            } else {
-              // Remove the last part as fallback
-              originalEventId = parts.slice(0, -1).join('-');
+          // Try the simple timestamp format: just a long number like 1752940800000
+          const simpleTimestampPattern = /\d{10,}/; // 10+ digits indicates a timestamp
+          match = event.id.match(simpleTimestampPattern);
+          
+          if (match) {
+            // Extract everything before the simple timestamp
+            originalEventId = event.id.substring(0, match.index);
+            console.log('[Events] Extracted ID from simple timestamp pattern:', originalEventId);
+          } else {
+            // Fallback: try to find the last numeric part that looks like a timestamp
+            const parts = event.id.split('-');
+            if (parts.length >= 2) {
+              // Look for the part that contains 't' (indicating timestamp)
+              const timestampIndex = parts.findIndex(part => part.includes('t'));
+              if (timestampIndex !== -1) {
+                originalEventId = parts.slice(0, timestampIndex).join('-');
+              } else {
+                // Remove the last part as fallback
+                originalEventId = parts.slice(0, -1).join('-');
+              }
             }
           }
         }
@@ -4692,6 +4811,8 @@ export default function Events() {
       console.log('Extracted original event ID:', originalEventId);
       
       if (originalEventId) {
+        console.log('[Events] Looking for master event with extracted ID:', originalEventId);
+        
         // Find the original event in our events list
         const originalEvent = events.find(e => e.id === originalEventId);
         
@@ -4701,10 +4822,74 @@ export default function Events() {
           setIsEditEventOpen(true);
         } else {
           console.log('Could not find original event with ID:', originalEventId);
-          console.log('Available events:', events.map(e => ({ id: e.id, title: e.title, idLength: e.id.length })));
-          console.log('Editing as regular event:', event);
-    setEditingEvent(event);
-    setIsEditEventOpen(true);
+          console.log('Available events:', events.map(e => ({ id: e.id, title: e.title, idLength: e.id.length, is_master: e.is_master, is_recurring: e.is_recurring })));
+          
+          // Try to find the master recurring event by title and recurring properties
+          console.log('[Events] Looking for master event with criteria:', {
+            title: event.title,
+            is_master: true,
+            is_recurring: true
+          });
+          
+          // First try to find master event with UUID format
+          let masterEvent = events.find(e => 
+            e.title === event.title && 
+            e.is_master === true && 
+            e.is_recurring === true &&
+            e.id && 
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(e.id)
+          );
+          
+          // If no UUID master found, try to find any master event with same title
+          if (!masterEvent) {
+            console.log('[Events] No UUID master found, looking for any master event...');
+            masterEvent = events.find(e => 
+              e.title === event.title && 
+              e.is_master === true && 
+              e.is_recurring === true
+            );
+          }
+          
+          if (masterEvent) {
+            // Show confirmation dialog asking user what to edit
+            setEventToEdit(event);
+            setMasterEventToEdit(masterEvent);
+            setShowEditChoiceDialog(true);
+          } else {
+            console.log('[Events] No master event found. Checking all events with same title...');
+            
+            // Log all events with the same title to see what we have
+            const eventsWithSameTitle = events.filter(e => e.title === event.title);
+            console.log('[Events] Events with same title:', eventsWithSameTitle.map(e => ({
+              id: e.id,
+              is_master: e.is_master,
+              is_recurring: e.is_recurring,
+              isValidUUID: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(e.id)
+            })));
+            
+            // Try to find any event with the same title that has a valid UUID
+            const similarEvent = events.find(e => 
+              e.title === event.title && 
+              e.id && 
+              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(e.id)
+            );
+            
+            if (similarEvent) {
+              console.log('Found similar event with valid UUID, using for editing:', similarEvent);
+              setEditingEvent(similarEvent);
+              setIsEditEventOpen(true);
+            } else {
+              console.log('[Events] No suitable event found. Cannot edit this recurring event instance.');
+              console.log('[Events] Available events for this title:', eventsWithSameTitle);
+              
+              // Show a toast or alert that this event cannot be edited
+              toast({
+                title: "Cannot Edit Event",
+                description: "This is a recurring event instance. Please edit the master event instead.",
+                variant: "destructive"
+              });
+            }
+          }
         }
       } else {
         console.log('Could not extract original event ID, editing as regular event:', event);
@@ -6607,11 +6792,7 @@ export default function Events() {
           {/* Kiosk Mode Button - Desktop */}
           <div className="mt-6">
             <Button
-              onClick={() => {
-                setViewMode('kiosk');
-                setIsFullKioskMode(true);
-                navigate('/events?kiosk=true');
-              }}
+              onClick={() => navigate('/kiosk')}
               className="w-full h-16 text-xl font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
             >
               <Monitor className="mr-3 h-7 w-7" />
@@ -6748,11 +6929,7 @@ export default function Events() {
           
           {/* Kiosk Mode Button */}
           <Button
-            onClick={() => {
-              setViewMode('kiosk');
-              setIsFullKioskMode(true);
-              navigate('/events?kiosk=true');
-            }}
+            onClick={() => navigate('/kiosk')}
             className="w-full h-16 text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
           >
             <Monitor className="mr-3 h-6 w-6" />
@@ -6826,16 +7003,13 @@ export default function Events() {
                   <Button
                     variant={viewMode === 'kiosk' ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => {
-                      setViewMode('kiosk');
-                      setIsFullKioskMode(true);
-                      navigate('/events?kiosk=true');
-                    }}
+                    onClick={() => navigate('/kiosk')}
                     className="text-xs"
                   >
                     <Monitor className="mr-1 h-3 w-3" />
                     Kiosk
                   </Button>
+
                   <Button
                     variant={viewMode === 'calendar' ? 'default' : 'outline'}
                     size="sm"
@@ -6870,15 +7044,12 @@ export default function Events() {
                   <Button
                     variant={viewMode === 'kiosk' ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => {
-                      setViewMode('kiosk');
-                      setIsFullKioskMode(true);
-                      navigate('/events?kiosk=true');
-                    }}
+                    onClick={() => navigate('/kiosk')}
                   >
                     <Monitor className="mr-2 h-4 w-4" />
                     Kiosk View
                   </Button>
+
                   <Button
                     variant={viewMode === 'calendar' ? 'default' : 'outline'}
                     size="sm"
@@ -6933,18 +7104,20 @@ export default function Events() {
                       </SelectContent>
                     </Select>
 
-                    <Select value={timeWindowFilter} onValueChange={setTimeWindowFilter}>
-                      <SelectTrigger className="h-10 text-sm">
-                        <SelectValue placeholder="Time Window" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Time</SelectItem>
-                        <SelectItem value="today">Today</SelectItem>
-                        <SelectItem value="week">This Week</SelectItem>
-                        <SelectItem value="month">This Month</SelectItem>
-                        <SelectItem value="quarter">This Quarter</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    {viewMode !== 'calendar' && (
+                      <Select value={timeWindowFilter} onValueChange={setTimeWindowFilter}>
+                        <SelectTrigger className="h-10 text-sm">
+                          <SelectValue placeholder="Time Window" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Time</SelectItem>
+                          <SelectItem value="today">Today</SelectItem>
+                          <SelectItem value="week">This Week</SelectItem>
+                          <SelectItem value="month">This Month</SelectItem>
+                          <SelectItem value="quarter">This Quarter</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
@@ -6992,19 +7165,21 @@ export default function Events() {
                     </Select>
                   </div>
                   
-                  <Select value={timeWindowFilter} onValueChange={setTimeWindowFilter}>
-                    <SelectTrigger className="h-12">
-                      <SelectValue placeholder="Time Window" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Time</SelectItem>
-                      <SelectItem value="today">Today</SelectItem>
-                      <SelectItem value="week">This Week</SelectItem>
-                      <SelectItem value="month">This Month</SelectItem>
-                      <SelectItem value="quarter">This Quarter</SelectItem>
-                      <SelectItem value="year">This Year</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  {viewMode !== 'calendar' && (
+                    <Select value={timeWindowFilter} onValueChange={setTimeWindowFilter}>
+                      <SelectTrigger className="h-12">
+                        <SelectValue placeholder="Time Window" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Time</SelectItem>
+                        <SelectItem value="today">Today</SelectItem>
+                        <SelectItem value="week">This Week</SelectItem>
+                        <SelectItem value="month">This Month</SelectItem>
+                        <SelectItem value="quarter">This Quarter</SelectItem>
+                        <SelectItem value="year">This Year</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
                   
             <Select value={attendanceFilter} onValueChange={setAttendanceFilter}>
                     <SelectTrigger className="h-12">
@@ -7076,77 +7251,79 @@ export default function Events() {
                     )}
                   </div>
                   
-                  {/* Time Window Quick Filters */}
-                  <div className="flex flex-wrap gap-2">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mr-2">Time:</span>
-                    <Button
-                      variant={timeWindowFilter === 'all' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setTimeWindowFilter('all')}
-                    >
-                      All Time
-                    </Button>
-                    <Button
-                      variant={timeWindowFilter === 'today' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => {
-                        setIsAutoSwitchingFilter(false);
-                        setTimeWindowFilter('today');
-                      }}
-                    >
-                      Today
-                    </Button>
-                    <Button
-                      variant={timeWindowFilter === 'week' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => {
-                        setIsAutoSwitchingFilter(false);
-                        setTimeWindowFilter('week');
-                      }}
-                    >
-                      This Week
-                    </Button>
-                    <Button
-                      variant={timeWindowFilter === 'month' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => {
-                        setIsAutoSwitchingFilter(false);
-                        setTimeWindowFilter('month');
-                      }}
-                    >
-                      This Month
-                    </Button>
-                    <Button
-                      variant={timeWindowFilter === 'next30days' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => {
-                        setIsAutoSwitchingFilter(false);
-                        setTimeWindowFilter('next30days');
-                      }}
-                    >
-                      Next 30 Days
-                    </Button>
-                    <Button
-                      variant={timeWindowFilter === 'quarter' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => {
-                        setIsAutoSwitchingFilter(false);
-                        setTimeWindowFilter('quarter');
-                      }}
-                    >
-                      This Quarter
-                    </Button>
-                    <Button
-                      variant={timeWindowFilter === 'year' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => {
-                        setIsAutoSwitchingFilter(false);
-                        setTimeWindowFilter('year');
-                      }}
-                    >
-                      This Year
-                    </Button>
-                  </div>
+                  {/* Time Window Quick Filters - Hidden in Calendar View */}
+                  {viewMode !== 'calendar' && (
+                    <div className="flex flex-wrap gap-2">
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mr-2">Time:</span>
+                      <Button
+                        variant={timeWindowFilter === 'all' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setTimeWindowFilter('all')}
+                      >
+                        All Time
+                      </Button>
+                      <Button
+                        variant={timeWindowFilter === 'today' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => {
+                          setIsAutoSwitchingFilter(false);
+                          setTimeWindowFilter('today');
+                        }}
+                      >
+                        Today
+                      </Button>
+                      <Button
+                        variant={timeWindowFilter === 'week' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => {
+                          setIsAutoSwitchingFilter(false);
+                          setTimeWindowFilter('week');
+                        }}
+                      >
+                        This Week
+                      </Button>
+                      <Button
+                        variant={timeWindowFilter === 'month' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => {
+                          setIsAutoSwitchingFilter(false);
+                          setTimeWindowFilter('month');
+                        }}
+                      >
+                        This Month
+                      </Button>
+                      <Button
+                        variant={timeWindowFilter === 'next30days' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => {
+                          setIsAutoSwitchingFilter(false);
+                          setTimeWindowFilter('next30days');
+                        }}
+                      >
+                        Next 30 Days
+                      </Button>
+                      <Button
+                        variant={timeWindowFilter === 'quarter' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => {
+                          setIsAutoSwitchingFilter(false);
+                          setTimeWindowFilter('quarter');
+                        }}
+                      >
+                        This Quarter
+                      </Button>
+                      <Button
+                        variant={timeWindowFilter === 'year' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => {
+                          setIsAutoSwitchingFilter(false);
+                          setTimeWindowFilter('year');
+                        }}
+                      >
+                        This Year
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -7341,17 +7518,28 @@ export default function Events() {
               ))}
             </div>
           ) : filteredEvents.length > 0 ? (
-            <div className="space-y-4">
-        {filteredEvents.map((event) => (
-          <EventCard
-            key={event.id}
-            event={event}
+            <>
+              {viewMode === 'calendar' ? (
+                <div className="space-y-6">
+                  <CalendarView
+                    events={rawEvents}
+                    onEventClick={handleEditClick}
+                    currentMonth={currentMonth}
+                    onMonthChange={setCurrentMonth}
+                  />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {filteredEvents.map((event) => (
+                    <EventCard
+                      key={event.id}
+                      event={event}
                       viewMode={viewMode}
-            onRSVP={handleOpenDialog}
-            onPotluckRSVP={handlePotluckRSVP}
-            onEdit={handleEditClick}
-            onDelete={handleDeleteEvent}
-            onManageVolunteers={handleManageVolunteers}
+                      onRSVP={handleOpenDialog}
+                      onPotluckRSVP={handlePotluckRSVP}
+                      onEdit={handleEditClick}
+                      onDelete={handleDeleteEvent}
+                      onManageVolunteers={handleManageVolunteers}
                       onViewDetails={(event) => {
                         setSelectedEventForDetails(event);
                         setIsEventDetailsOpen(true);
@@ -7364,9 +7552,11 @@ export default function Events() {
                         }
                       }}
                       isBulkSelected={bulkSelectedEvents.includes(event.id)}
-          />
-        ))}
-      </div>
+                    />
+                  ))}
+                </div>
+              )}
+            </>
             ) : (
               <div className="text-center py-12">
                 <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
@@ -8116,7 +8306,77 @@ export default function Events() {
         </DialogContent>
       </Dialog>
 
+      {/* Edit Choice Dialog */}
+      {showEditChoiceDialog && eventToEdit && masterEventToEdit && (
+        <Dialog open={showEditChoiceDialog} onOpenChange={setShowEditChoiceDialog}>
+          <DialogContent className="w-[90vw] max-w-md p-6">
+            <DialogHeader>
+              <DialogTitle className="text-xl">What would you like to edit?</DialogTitle>
+              <DialogDescription className="text-base mt-2">
+                This is a recurring event. You can edit either this specific instance or the master event that controls all future instances.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="mt-6 space-y-4">
+              {/* Edit Instance Option */}
+              <div className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer" 
+                   onClick={() => {
+                     setEditingEvent(eventToEdit);
+                     setIsEditEventOpen(true);
+                     setShowEditChoiceDialog(false);
+                     setEventToEdit(null);
+                     setMasterEventToEdit(null);
+                   }}>
+                <div className="flex items-center space-x-3">
+                  <div className="w-4 h-4 rounded-full border-2 border-blue-500 bg-blue-100"></div>
+                  <div>
+                    <h4 className="font-medium text-gray-900">Edit This Instance</h4>
+                    <p className="text-sm text-gray-600">
+                      Change details for this specific occurrence only. 
+                      Other instances will remain unchanged.
+                    </p>
+                  </div>
+                </div>
+              </div>
 
+              {/* Edit Master Event Option */}
+              <div className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer" 
+                   onClick={() => {
+                     setEditingEvent(masterEventToEdit);
+                     setIsEditEventOpen(true);
+                     setShowEditChoiceDialog(false);
+                     setEventToEdit(null);
+                     setMasterEventToEdit(null);
+                   }}>
+                <div className="flex items-center space-x-3">
+                  <div className="w-4 h-4 rounded-full border-2 border-green-500 bg-green-100"></div>
+                  <div>
+                    <h4 className="font-medium text-gray-900">Edit Master Event</h4>
+                    <p className="text-sm text-gray-600">
+                      Change the recurring pattern, times, and settings. 
+                      This affects all future instances.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="mt-6">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setShowEditChoiceDialog(false);
+                  setEventToEdit(null);
+                  setMasterEventToEdit(null);
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
         </motion.div>
       )}
