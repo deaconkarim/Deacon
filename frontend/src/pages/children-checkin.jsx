@@ -2,8 +2,9 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { format } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { userCacheService } from '../lib/userCache';
-import { Search, Filter, Users, CheckCircle, XCircle, Plus, Download, RefreshCw, QrCode, BarChart3, Tabs, TabsContent, TabsList, TabsTrigger } from 'lucide-react';
+import { Search, Filter, Users, CheckCircle, XCircle, Plus, Download, RefreshCw, QrCode, BarChart3 } from 'lucide-react';
 import QuickCheckin from '../components/QuickCheckin';
 import CheckinAnalytics from '../components/CheckinAnalytics';
 
@@ -274,6 +275,32 @@ export default function ChildrenCheckin() {
     }
   }, [selectedEvent]);
 
+  // Fetch all check-in history
+  const fetchAllCheckinHistory = useCallback(async () => {
+    try {
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) return;
+
+      const { data, error } = await supabase
+        .from('child_checkin_logs')
+        .select(`
+          *,
+          child:members!child_checkin_logs_child_id_fkey(*),
+          checked_in_by:members!child_checkin_logs_checked_in_by_fkey(*),
+          checked_out_by:members!child_checkin_logs_checked_out_by_fkey(*),
+          event:events!child_checkin_logs_event_id_fkey(*)
+        `)
+        .eq('organization_id', organizationId)
+        .order('check_in_time', { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+      setAllCheckinHistory(data || []);
+    } catch (err) {
+      console.error('Error fetching check-in history:', err);
+    }
+  }, []);
+
   // Calculate statistics
   const calculateStats = useCallback(() => {
     const checkedIn = checkinLogs.filter(log => !log.check_out_time).length;
@@ -297,7 +324,8 @@ export default function ChildrenCheckin() {
     fetchChildren();
     fetchGuardians();
     fetchEvents();
-  }, [fetchChildren, fetchGuardians, fetchEvents]);
+    fetchAllCheckinHistory();
+  }, [fetchChildren, fetchGuardians, fetchEvents, fetchAllCheckinHistory]);
 
   // Fetch check-in logs when event changes
   useEffect(() => {
