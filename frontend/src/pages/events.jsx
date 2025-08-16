@@ -4867,27 +4867,41 @@ export default function Events() {
               isValidUUID: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(e.id)
             })));
             
-            // Try to find any event with the same title that has a valid UUID
-            const similarEvent = events.find(e => 
+            // Try to find any master event with the same title (regardless of ID format)
+            const anyMasterEvent = events.find(e => 
               e.title === event.title && 
-              e.id && 
-              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(e.id)
+              e.is_master === true && 
+              e.is_recurring === true
             );
             
-            if (similarEvent) {
-              console.log('Found similar event with valid UUID, using for editing:', similarEvent);
-              setEditingEvent(similarEvent);
-              setIsEditEventOpen(true);
+            if (anyMasterEvent) {
+              console.log('Found master event with same title, showing edit choice dialog:', anyMasterEvent);
+              setEventToEdit(event);
+              setMasterEventToEdit(anyMasterEvent);
+              setShowEditChoiceDialog(true);
             } else {
-              console.log('[Events] No suitable event found. Cannot edit this recurring event instance.');
-              console.log('[Events] Available events for this title:', eventsWithSameTitle);
+              // Try to find any event with the same title that has a valid UUID
+              const similarEvent = events.find(e => 
+                e.title === event.title && 
+                e.id && 
+                /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(e.id)
+              );
               
-              // Show a toast or alert that this event cannot be edited
-              toast({
-                title: "Cannot Edit Event",
-                description: "This is a recurring event instance. Please edit the master event instead.",
-                variant: "destructive"
-              });
+              if (similarEvent) {
+                console.log('Found similar event with valid UUID, using for editing:', similarEvent);
+                setEditingEvent(similarEvent);
+                setIsEditEventOpen(true);
+              } else {
+                console.log('[Events] No suitable event found. Cannot edit this recurring event instance.');
+                console.log('[Events] Available events for this title:', eventsWithSameTitle);
+                
+                // Show a toast or alert that this event cannot be edited
+                toast({
+                  title: "Cannot Edit Event",
+                  description: "This is a recurring event instance. Please edit the master event instead.",
+                  variant: "destructive"
+                });
+              }
             }
           }
         }
