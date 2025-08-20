@@ -98,6 +98,7 @@ import { getInitials } from '@/lib/utils/formatters';
 import { PotluckRSVPDialog } from '@/components/events/PotluckRSVPDialog';
 import { VolunteerList } from '@/components/events/VolunteerList';
 import { AddVolunteerForm } from '@/components/events/AddVolunteerForm';
+import { EventRemindersDialog } from '@/components/events/EventRemindersDialog';
 import { automationService } from '@/lib/automationService';
 import { PermissionGuard, PermissionButton, PermissionFeature } from '@/components/PermissionGuard';
 import { PERMISSIONS } from '@/lib/permissions.jsx';
@@ -236,7 +237,7 @@ const formatRecurrencePattern = (pattern, monthlyWeek, monthlyWeekday) => {
 };
 
 // Enhanced Event Card Component
-const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVolunteers, onViewDetails, isPastEvent = false, viewMode = 'admin', onBulkSelect, isBulkSelected = false }) => {
+const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVolunteers, onManageReminders, onViewDetails, isPastEvent = false, viewMode = 'admin', onBulkSelect, isBulkSelected = false }) => {
   const startDate = new Date(event.start_date);
   const endDate = new Date(event.end_date);
   const isRecurring = event.is_recurring;
@@ -823,6 +824,10 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVol
                   <DropdownMenuItem onClick={() => onEdit(event)}>
                     <Pencil className="mr-2 h-4 w-4" />
                     Edit Event
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onManageReminders(event)}>
+                    <Bell className="mr-2 h-4 w-4" />
+                    Manage Reminders
                   </DropdownMenuItem>
                   {event.needs_volunteers && (
                     <DropdownMenuItem onClick={() => onManageVolunteers(event)}>
@@ -2219,6 +2224,8 @@ export default function Events() {
   const [isAnonymousCheckinOpen, setIsAnonymousCheckinOpen] = useState(false);
   const [anonymousName, setAnonymousName] = useState('');
   const [isAutoSwitchingFilter, setIsAutoSwitchingFilter] = useState(false);
+  const [isRemindersDialogOpen, setIsRemindersDialogOpen] = useState(false);
+  const [selectedEventForReminders, setSelectedEventForReminders] = useState(null);
 
   // Kiosk mode detection
   const isKioskMode = location.pathname === '/events' && location.search.includes('kiosk=true');
@@ -5298,6 +5305,12 @@ export default function Events() {
     setIsVolunteerDialogOpen(true);
   };
 
+  const handleManageReminders = (event) => {
+    console.log('handleManageReminders called with event:', event);
+    setSelectedEventForReminders(event);
+    setIsRemindersDialogOpen(true);
+  };
+
   const renderEventCard = useCallback((event) => {
     return (
       <EventCard
@@ -5309,9 +5322,10 @@ export default function Events() {
         onEdit={handleEditClick}
         onDelete={handleDeleteEvent}
         onManageVolunteers={handleManageVolunteers}
+        onManageReminders={handleManageReminders}
       />
     );
-  }, [viewMode, handleOpenDialog, handlePotluckRSVP, handleEditClick, handleDeleteEvent, handleManageVolunteers]);
+  }, [viewMode, handleOpenDialog, handlePotluckRSVP, handleEditClick, handleDeleteEvent, handleManageVolunteers, handleManageReminders]);
 
   const processRecurringEvents = (events, customEndDate = null) => {
     const processedEvents = [];
@@ -8414,6 +8428,20 @@ export default function Events() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Event Reminders Dialog */}
+      <EventRemindersDialog
+        event={selectedEventForReminders}
+        isOpen={isRemindersDialogOpen}
+        onClose={() => {
+          setIsRemindersDialogOpen(false);
+          setSelectedEventForReminders(null);
+        }}
+        onUpdate={() => {
+          // Refresh events if needed
+          fetchEvents();
+        }}
+      />
 
         </motion.div>
       )}
