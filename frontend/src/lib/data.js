@@ -747,6 +747,15 @@ export const updateEvent = async (id, updates) => {
 
       if (masterError) throw masterError;
 
+      // Get existing instances to avoid ID conflicts
+      const { data: existingInstances, error: fetchError } = await supabase
+        .from('events')
+        .select('id')
+        .eq('parent_event_id', masterId)
+        .eq('organization_id', organizationId);
+
+      if (fetchError) throw fetchError;
+
       // Delete all existing instances
       const { error: deleteError } = await supabase
         .from('events')
@@ -940,10 +949,8 @@ const generateRecurringInstances = (event) => {
     
     const occurrenceEndDate = new Date(currentDate.getTime() + duration);
     
-    // Generate a shorter, more reliable instance ID
-    const dateStr = currentDate.toISOString().split('T')[0].replace(/-/g, '');
-    const timeStr = currentDate.toISOString().split('T')[1].split('.')[0].replace(/:/g, '');
-    const instanceId = `${event.id}-${dateStr}-${timeStr}`;
+    // Generate a unique instance ID using UUID to avoid conflicts
+    const instanceId = crypto.randomUUID();
     
     instances.push({
       ...event,
