@@ -759,8 +759,8 @@ export const updateEvent = async (id, updates) => {
       // Generate new instances with the updated master event data
       const updatedMasterEvent = {
         ...masterData,
-        startDate: updates.startDate,
-        endDate: updates.endDate
+        start_date: updates.startDate,
+        end_date: updates.endDate
       };
       
       const newInstances = generateRecurringInstances(updatedMasterEvent);
