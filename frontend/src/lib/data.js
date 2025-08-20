@@ -729,7 +729,7 @@ export const updateEvent = async (id, updates) => {
         : []
     };
 
-    // If it's a recurring event, update master and all instances
+    // If it's a recurring event, update master and regenerate instances
     if (originalEvent.is_recurring) {
       // First update the master event
       const masterId = originalEvent.is_master ? originalEvent.id : originalEvent.parent_event_id;
@@ -747,15 +747,34 @@ export const updateEvent = async (id, updates) => {
 
       if (masterError) throw masterError;
 
-      // Then update all instances
-      const { data: instancesData, error: instancesError } = await supabase
+      // Delete all existing instances
+      const { error: deleteError } = await supabase
         .from('events')
-        .update(eventData)
+        .delete()
         .eq('parent_event_id', masterId)
-        .eq('organization_id', organizationId)
-        .select();
+        .eq('organization_id', organizationId);
+
+      if (deleteError) throw deleteError;
+
+      // Generate new instances with the updated master event data
+      const updatedMasterEvent = {
+        ...masterData,
+        startDate: updates.startDate,
+        endDate: updates.endDate
+      };
       
-      if (instancesError) throw instancesError;
+      const newInstances = generateRecurringInstances(updatedMasterEvent);
+      
+      if (newInstances.length > 0) {
+        // Insert the new instances
+        const { data: instancesData, error: instancesError } = await supabase
+          .from('events')
+          .insert(newInstances)
+          .select();
+        
+        if (instancesError) throw instancesError;
+      }
+      
       return masterData;
     } else {
       // For non-recurring events, just update the single event
