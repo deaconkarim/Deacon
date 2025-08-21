@@ -1354,9 +1354,17 @@ export function SMS() {
                   {conversation.sms_messages && conversation.sms_messages.length > 0 && (
                     <CardContent className="pt-0">
                       <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
-                        <p className="text-sm text-slate-700 dark:text-slate-300">
-                          Latest: {conversation.sms_messages[0].body.substring(0, 100)}...
-                        </p>
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm text-slate-700 dark:text-slate-300">
+                            Latest: {conversation.sms_messages[0].body.substring(0, 100)}...
+                          </p>
+                          {conversation.sms_messages.some(m => m.message_type === 'event_reminder') && (
+                            <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                              <Bell className="h-3 w-3 mr-1" />
+                              Event Reminders
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </CardContent>
                   )}
@@ -1905,6 +1913,12 @@ export function SMS() {
                           {message.direction === 'outbound' && (
                             <Badge variant="outline" className="text-xs">
                               {message.status}
+                            </Badge>
+                          )}
+                          {message.message_type === 'event_reminder' && (
+                            <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                              <Bell className="h-3 w-3 mr-1" />
+                              Event Reminder
                             </Badge>
                           )}
                         </div>

@@ -3,13 +3,15 @@ import { format, isAfter, addDays } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import { parseVolunteerRoles, getCurrentUserOrganizationId } from '@/lib/data';
 import { locationService } from '@/lib/locationService';
+import { eventReminderService } from '@/lib/eventReminderService';
 import { supabase } from '@/lib/supabaseClient';
-import { AlertTriangle, CheckCircle, MapPin, Users, Building } from 'lucide-react';
+import { AlertTriangle, CheckCircle, MapPin, Users, Building, Bell, MessageSquare, Clock, Plus, Trash2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const EventForm = ({ initialData, onSave, onCancel }) => {
@@ -32,12 +34,28 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
     attendance_type: initialData.attendance_type || 'rsvp',
     event_type: initialData.event_type || 'Worship Service',
     needs_volunteers: initialData.needs_volunteers || false,
-    volunteer_roles: parseVolunteerRoles(initialData.volunteer_roles)
+    volunteer_roles: parseVolunteerRoles(initialData.volunteer_roles),
+    
+    // Reminder settings
+    enable_reminders: initialData.enable_reminders || false,
+    reminders: initialData.reminders || [
+      {
+        id: null,
+        reminder_type: 'sms',
+        timing_unit: 'hours',
+        timing_value: 24,
+        message_template: 'Reminder: {event_title} on {event_date} at {event_time}. {event_location}',
+        target_type: 'all',
+        target_groups: [],
+        is_enabled: true
+      }
+    ]
   });
   const [locations, setLocations] = useState([]);
   const [availableLocations, setAvailableLocations] = useState([]);
   const [locationConflict, setLocationConflict] = useState(null);
   const [isCheckingConflict, setIsCheckingConflict] = useState(false);
+  const [groups, setGroups] = useState([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -60,13 +78,29 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
       attendance_type: initialData.attendance_type || 'rsvp',
       event_type: initialData.event_type || 'Worship Service',
       needs_volunteers: initialData.needs_volunteers || false,
-      volunteer_roles: parseVolunteerRoles(initialData.volunteer_roles)
+      volunteer_roles: parseVolunteerRoles(initialData.volunteer_roles),
+      
+      // Reminder settings
+      enable_reminders: initialData.enable_reminders || false,
+      reminders: initialData.reminders || [
+        {
+          id: null,
+          reminder_type: 'sms',
+          timing_unit: 'hours',
+          timing_value: 24,
+          message_template: 'Reminder: {event_title} on {event_date} at {event_time}. {event_location}',
+          target_type: 'all',
+          target_groups: [],
+          is_enabled: true
+        }
+      ]
     });
   }, [initialData]);
 
-  // Load locations on component mount
+  // Load locations and groups on component mount
   useEffect(() => {
     loadLocations();
+    loadGroups();
   }, []);
 
   // Check for conflicts when location or dates change
@@ -91,6 +125,15 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
       setLocations(data);
     } catch (error) {
       console.error('Error loading locations:', error);
+    }
+  };
+
+  const loadGroups = async () => {
+    try {
+      const data = await eventReminderService.getTargetGroups();
+      setGroups(data);
+    } catch (error) {
+      console.error('Error loading groups:', error);
     }
   };
 
@@ -245,6 +288,16 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
       return;
     }
 
+    // Validate reminder settings
+    if (eventData.enable_reminders && eventData.reminders) {
+      for (const reminder of eventData.reminders) {
+        if (reminder.is_enabled && reminder.target_type === 'groups' && (reminder.target_groups || []).length === 0) {
+          toast({ title: "Reminder Configuration Error", description: "Please select at least one group when targeting specific groups.", variant: "destructive" });
+          return;
+        }
+      }
+    }
+
     // Check for location conflicts
     if (locationConflict) {
       toast({ 
@@ -277,7 +330,10 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
       ...eventData,
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
-      volunteer_roles: formattedVolunteerRoles
+      volunteer_roles: formattedVolunteerRoles,
+      // Include reminder settings
+      enable_reminders: eventData.enable_reminders,
+      reminders: eventData.reminders || []
     };
 
     onSave(formattedData);
@@ -643,6 +699,254 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
           </p>
         </div>
       )}
+      
+      {/* Multiple Reminders Configuration Section */}
+      <div className="space-y-4 pt-4 border-t">
+        <div className="flex items-center space-x-2">
+          <Bell className="h-5 w-5 text-blue-600" />
+          <h3 className="text-lg font-semibold">Event Reminders</h3>
+        </div>
+        
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="enable_reminders"
+              checked={eventData.enable_reminders}
+              onCheckedChange={(checked) => setEventData(prev => ({ ...prev, enable_reminders: checked }))}
+            />
+            <Label htmlFor="enable_reminders">Enable automatic reminders for this event</Label>
+          </div>
+        </div>
+        
+        {eventData.enable_reminders && (
+          <div className="space-y-4 pl-6">
+            {/* Reminders List */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-medium">Reminder Schedule</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const newReminder = {
+                      id: null,
+                      reminder_type: 'sms',
+                      timing_unit: 'hours',
+                      timing_value: 24,
+                      message_template: 'Reminder: {event_title} on {event_date} at {event_time}. {event_location}',
+                      target_type: 'all',
+                      target_groups: [],
+                      is_enabled: true
+                    };
+                    setEventData(prev => ({
+                      ...prev,
+                      reminders: [...(prev.reminders || []), newReminder]
+                    }));
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Reminder
+                </Button>
+              </div>
+              
+              {(eventData.reminders || []).map((reminder, index) => (
+                <div key={index} className="border rounded-lg p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        checked={reminder.is_enabled}
+                        onCheckedChange={(checked) => {
+                          const updatedReminders = [...(eventData.reminders || [])];
+                          updatedReminders[index].is_enabled = checked;
+                          setEventData(prev => ({ ...prev, reminders: updatedReminders }));
+                        }}
+                      />
+                      <Label className="font-medium">Reminder {index + 1}</Label>
+                    </div>
+                    {(eventData.reminders || []).length > 1 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const updatedReminders = (eventData.reminders || []).filter((_, i) => i !== index);
+                          setEventData(prev => ({ ...prev, reminders: updatedReminders }));
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {reminder.is_enabled && (
+                    <div className="space-y-4 pl-6">
+                      {/* Reminder Type */}
+                      <div className="space-y-2">
+                        <Label>Reminder Type</Label>
+                        <Select
+                          value={reminder.reminder_type}
+                          onValueChange={(value) => {
+                            const updatedReminders = [...(eventData.reminders || [])];
+                            updatedReminders[index].reminder_type = value;
+                            setEventData(prev => ({ ...prev, reminders: updatedReminders }));
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select reminder type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="sms">
+                              <div className="flex items-center space-x-2">
+                                <MessageSquare className="h-4 w-4" />
+                                <span>SMS Text Message</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="email">
+                              <div className="flex items-center space-x-2">
+                                <Users className="h-4 w-4" />
+                                <span>Email</span>
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      {/* Timing Configuration */}
+                      <div className="space-y-2">
+                        <Label>Send reminder</Label>
+                        <div className="flex items-center space-x-2">
+                          <Input
+                            type="number"
+                            min="1"
+                            value={reminder.timing_value}
+                            onChange={(e) => {
+                              const updatedReminders = [...(eventData.reminders || [])];
+                              updatedReminders[index].timing_value = parseInt(e.target.value) || 1;
+                              setEventData(prev => ({ ...prev, reminders: updatedReminders }));
+                            }}
+                            className="w-20"
+                          />
+                          <Select
+                            value={reminder.timing_unit}
+                            onValueChange={(value) => {
+                              const updatedReminders = [...(eventData.reminders || [])];
+                              updatedReminders[index].timing_unit = value;
+                              setEventData(prev => ({ ...prev, reminders: updatedReminders }));
+                            }}
+                          >
+                            <SelectTrigger className="w-32">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="minutes">minutes</SelectItem>
+                              <SelectItem value="hours">hours</SelectItem>
+                              <SelectItem value="days">days</SelectItem>
+                              <SelectItem value="weeks">weeks</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <span className="text-sm text-gray-600">before the event</span>
+                        </div>
+                      </div>
+                      
+                      {/* Target Configuration */}
+                      <div className="space-y-2">
+                        <Label>Send to</Label>
+                        <Select
+                          value={reminder.target_type}
+                          onValueChange={(value) => {
+                            const updatedReminders = [...(eventData.reminders || [])];
+                            updatedReminders[index].target_type = value;
+                            updatedReminders[index].target_groups = value === 'groups' ? reminder.target_groups : [];
+                            setEventData(prev => ({ ...prev, reminders: updatedReminders }));
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select target audience" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All active members</SelectItem>
+                            <SelectItem value="groups">Specific groups</SelectItem>
+                            <SelectItem value="rsvp_attendees">Only RSVP attendees</SelectItem>
+                            <SelectItem value="rsvp_declined">Only RSVP declined</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      {/* Group Selection */}
+                      {reminder.target_type === 'groups' && (
+                        <div className="space-y-2">
+                          <Label>
+                            Select Groups
+                            {(reminder.target_groups || []).length > 0 && (
+                              <span className="text-sm text-blue-600 ml-2">
+                                ({(reminder.target_groups || []).length} selected)
+                              </span>
+                            )}
+                          </Label>
+                          <div className="space-y-2 max-h-40 overflow-y-auto border rounded-md p-3">
+                            {groups.map((group) => (
+                              <div key={group.id} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`group-${index}-${group.id}`}
+                                  checked={(reminder.target_groups || []).includes(group.id)}
+                                  onCheckedChange={(checked) => {
+                                    const updatedReminders = [...(eventData.reminders || [])];
+                                    updatedReminders[index].target_groups = checked
+                                      ? [...(reminder.target_groups || []), group.id]
+                                      : (reminder.target_groups || []).filter(id => id !== group.id);
+                                    setEventData(prev => ({ ...prev, reminders: updatedReminders }));
+                                  }}
+                                />
+                                <Label htmlFor={`group-${index}-${group.id}`} className="text-sm cursor-pointer">
+                                  {group.name}
+                                  {group.description && (
+                                    <span className="text-gray-500 ml-1">({group.description})</span>
+                                  )}
+                                </Label>
+                              </div>
+                            ))}
+                          </div>
+                          {(reminder.target_groups || []).length === 0 && (
+                            <p className="text-sm text-orange-600">Please select at least one group</p>
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* Message Template */}
+                      <div className="space-y-2">
+                        <Label>Message Template</Label>
+                        <Textarea
+                          value={reminder.message_template}
+                          onChange={(e) => {
+                            const updatedReminders = [...(eventData.reminders || [])];
+                            updatedReminders[index].message_template = e.target.value;
+                            setEventData(prev => ({ ...prev, reminders: updatedReminders }));
+                          }}
+                          placeholder="Reminder: {event_title} on {event_date} at {event_time}. {event_location}"
+                          className="min-h-[100px]"
+                        />
+                        <div className="text-xs text-gray-500 space-y-1">
+                          <p>Available variables: {'{event_title}'}, {'{event_date}'}, {'{event_time}'}, {'{event_location}'}, {'{hours_until_event}'}, {'{member_name}'}</p>
+                          <p className="font-medium">Preview: {reminder.message_template
+                            .replace(/{event_title}/g, eventData.title || 'Event')
+                            .replace(/{event_date}/g, eventData.startDate ? format(new Date(eventData.startDate), 'MM/dd/yyyy') : 'Date')
+                            .replace(/{event_time}/g, eventData.startTime || 'Time')
+                            .replace(/{event_location}/g, eventData.location || 'Location')
+                            .replace(/{hours_until_event}/g, reminder.timing_value.toString())
+                            .replace(/{member_name}/g, 'John Doe')
+                          }</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      
       <div className="flex justify-end space-x-2 pt-4">
         <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
         <Button type="submit">Save Event</Button>

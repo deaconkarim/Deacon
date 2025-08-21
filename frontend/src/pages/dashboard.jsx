@@ -3222,6 +3222,12 @@ export function Dashboard() {
                               {message.status}
                             </Badge>
                           )}
+                          {message.message_type === 'event_reminder' && (
+                            <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                              <Bell className="h-3 w-3 mr-1" />
+                              Event Reminder
+                            </Badge>
+                          )}
                         </div>
                         
                         {/* Recipients Info (for outbound messages with multiple recipients) */}
