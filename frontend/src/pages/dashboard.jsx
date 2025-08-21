@@ -150,7 +150,7 @@ export function Dashboard() {
     inactiveMembers: 0,
     visitors: 0,
     totalDonations: 0,
-    monthlyDonations: 0,
+    monthly: 0,
     weeklyAverage: 0,
     monthlyAverage: 0,
     growthRate: 0,
@@ -179,9 +179,10 @@ export function Dashboard() {
     membersWithoutFamilies: 0,
     adults: 0,
     children: 0,
-    lastMonthDonations: 0,
+    thisWeek: 0,
+    lastMonth: 0,
     twoMonthsAgoDonations: 0,
-    lastWeekDonations: 0,
+    lastWeek: 0,
     lastSundayDonations: 0,
     totalTasks: 0,
     pendingTasks: 0,
@@ -333,6 +334,8 @@ export function Dashboard() {
     try {
       setIsLoading(true);
       
+      // Cache handled by dashboard service
+      
       // Use the consolidated dashboard service instead of multiple API calls
       const dashboardData = await dashboardService.getDashboardData();
       
@@ -385,6 +388,8 @@ export function Dashboard() {
       const lastWeekDonations = donationsData.stats.lastWeek;
       const lastSundayDonations = donationsData.stats.lastSunday;
       
+      // Debug logging removed for clarity
+      
       // Get sophisticated donation trend analysis
       const donationTrendAnalysis = donationsData.trendAnalysis;
       const weeklyDonationBreakdown = donationsData.weeklyBreakdown;
@@ -408,7 +413,7 @@ export function Dashboard() {
         inactiveMembers: members.counts.inactive,
         visitors: members.counts.visitors,
         totalDonations,
-        monthlyDonations,
+        monthly: monthlyDonations,
         weeklyAverage,
         monthlyAverage,
         growthRate,
@@ -437,10 +442,10 @@ export function Dashboard() {
         membersWithoutFamilies: family.membersWithoutFamilies,
         adults: family.adults,
         children: family.children,
-        lastMonthDonations,
+        lastMonth: lastMonthDonations,
         twoMonthsAgoDonations,
-        thisWeekDonations,
-        lastWeekDonations,
+        thisWeek: thisWeekDonations,
+        lastWeek: lastWeekDonations,
         lastSundayDonations,
         totalTasks: tasks.stats.total,
         pendingTasks: tasks.stats.pending,
@@ -473,6 +478,8 @@ export function Dashboard() {
       setRecentSMSConversations(sms.recentConversations || []);
       setDonationTrendAnalysis(donationTrendAnalysis || {});
       setWeeklyDonationBreakdown(weeklyDonationBreakdown || []);
+      
+      // Debug logging removed for clarity
       
       // Set member data for task creation
       setInactiveMembers(inactiveMembers);
@@ -1055,11 +1062,11 @@ export function Dashboard() {
                   </div>
                   <div className="text-right">
                     <div className="text-3xl font-bold text-emerald-600 mb-1">
-                      {isLoading ? '---' : `$${Math.round(stats.monthlyDonations || stats.lastMonthDonations || 0).toLocaleString()}`}
+                      {isLoading ? '---' : `$${Math.round(stats.thisWeek || 0).toLocaleString()}`}
                     </div>
                     <div className="flex items-center text-sm text-emerald-600">
                       <TrendingUp className="h-4 w-4 mr-1" />
-                      Monthly
+                      This Week
                     </div>
                   </div>
                 </div>
@@ -1070,12 +1077,12 @@ export function Dashboard() {
                     <span className="text-sm font-semibold text-slate-900 dark:text-white">${(stats.monthlyAverage || 0).toLocaleString()}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-600 dark:text-slate-400">Weekly Avg</span>
-                    <span className="text-sm font-semibold text-slate-900 dark:text-white">${(stats.weeklyAverage || 0).toLocaleString()}</span>
+                    <span className="text-slate-600 dark:text-slate-400">This Week</span>
+                    <span className="text-sm font-semibold text-slate-900 dark:text-white">${(stats.thisWeek || 0).toLocaleString()}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-slate-600 dark:text-slate-400">Last Week</span>
-                    <span className="text-sm font-semibold text-slate-900 dark:text-white">${(stats.lastWeekDonations || 0).toLocaleString()}</span>
+                    <span className="text-sm font-semibold text-slate-900 dark:text-white">${(stats.lastWeek || 0).toLocaleString()}</span>
                   </div>
                 </div>
                 
@@ -2373,7 +2380,7 @@ export function Dashboard() {
                   </h4>
                   <div className="text-center">
                     <div className="text-xl sm:text-2xl font-bold text-purple-600 mb-2">
-                      {isLoading ? '...' : `$${(stats.thisWeekDonations || 0).toFixed(2)}`}
+                      {isLoading ? '...' : `$${(stats.thisWeek || 0).toFixed(2)}`}
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       Current week
@@ -2394,7 +2401,7 @@ export function Dashboard() {
                   </h4>
                   <div className="text-center">
                     <div className="text-xl sm:text-2xl font-bold text-indigo-600 mb-2">
-                      {isLoading ? '...' : `$${(stats.lastWeekDonations || 0).toFixed(2)}`}
+                      {isLoading ? '...' : `$${(stats.lastWeek || 0).toFixed(2)}`}
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       Previous week
@@ -2403,7 +2410,7 @@ export function Dashboard() {
                 </div>
               </motion.div>
 
-              {/* Weekly Average */}
+              {/* Weekly Trend */}
               <motion.div 
                 className="group/card relative"
                 variants={itemVariants}
@@ -2411,14 +2418,17 @@ export function Dashboard() {
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-teal-500/20 to-teal-600/20 rounded-2xl blur opacity-0 group-hover/card:opacity-100 transition duration-300"></div>
                 <div className="relative backdrop-blur-sm bg-white/60 dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/30 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
                   <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3">
-                    Weekly Average
+                    Weekly Trend
                   </h4>
                   <div className="text-center">
-                    <div className="text-xl sm:text-2xl font-bold text-teal-600 mb-2">
-                      {isLoading ? '...' : `$${(stats.weeklyAverage || 0).toFixed(2)}`}
+                    <div className={`text-xl sm:text-2xl font-bold mb-2 ${
+                      (stats.weeklyAverage || 0) > 0 ? 'text-green-600' : 
+                      (stats.weeklyAverage || 0) < 0 ? 'text-red-600' : 'text-teal-600'
+                    }`}>
+                      {isLoading ? '...' : `${(stats.weeklyAverage || 0) > 0 ? '+' : ''}${(stats.weeklyAverage || 0)}%`}
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Weekly avg
+                      vs last week
                     </p>
                   </div>
                 </div>
@@ -2436,7 +2446,7 @@ export function Dashboard() {
                   </h4>
                   <div className="text-center">
                     <div className="text-xl sm:text-2xl font-bold text-blue-600 mb-2">
-                      {isLoading ? '...' : `$${(stats.monthlyDonations || 0).toFixed(2)}`}
+                      {isLoading ? '...' : `$${(stats.monthly || 0).toFixed(2)}`}
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       {(() => {
@@ -2463,7 +2473,7 @@ export function Dashboard() {
                   </h4>
                   <div className="text-center">
                     <div className="text-xl sm:text-2xl font-bold text-emerald-600 mb-2">
-                      {isLoading ? '...' : `$${(stats.lastMonthDonations || 0).toFixed(2)}`}
+                      {isLoading ? '...' : `$${(stats.lastMonth || 0).toFixed(2)}`}
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       Previous month
@@ -3787,7 +3797,7 @@ export function Dashboard() {
                       <CardContent className="p-4">
                         <div className="text-center">
                           <div className="text-2xl font-bold text-blue-600">
-                            {!canCalculateTrend ? `Week ${weekAnalyzed}` : (donationTrend > 0 ? '+' : '') + donationTrend.toFixed(1) + '%'}
+                            {(stats.weeklyAverage || 0) > 0 ? '+' : ''}{stats.weeklyAverage || 0}%
                           </div>
                           <p className="text-sm text-muted-foreground">Weekly Trend</p>
                         </div>
@@ -3797,7 +3807,7 @@ export function Dashboard() {
                       <CardContent className="p-4">
                         <div className="text-center">
                           <div className="text-2xl font-bold text-green-600">
-                            ${donationTrendAnalysis.currentWeekTotal?.toFixed(2) || '0.00'}
+                            ${(stats.thisWeek || 0).toFixed(2)}
                           </div>
                           <p className="text-sm text-muted-foreground">This Week</p>
                         </div>
@@ -3810,9 +3820,9 @@ export function Dashboard() {
                       Trend Analysis
                     </h4>
                     <p className="text-sm text-blue-700 dark:text-blue-300">
-                      {donationTrend > 0 
+                      {(stats.weeklyAverage || 0) > 0 
                         ? 'Positive giving trend! Your congregation is showing strong stewardship.'
-                        : donationTrend < 0
+                        : (stats.weeklyAverage || 0) < 0
                         ? 'Giving trend needs attention. Consider sharing impact stories and ministry updates.'
                         : 'Stable giving pattern. Continue building trust and transparency in financial stewardship.'
                       }
@@ -3824,7 +3834,7 @@ export function Dashboard() {
                       Action Items
                     </h4>
                     <div className="text-sm text-indigo-700 dark:text-indigo-300 space-y-3">
-                      {donationTrend > 0 ? (
+                      {(stats.weeklyAverage || 0) > 0 ? (
                         <>
                           <div className="flex items-start justify-between">
                             <div className="flex items-start gap-2 flex-1">

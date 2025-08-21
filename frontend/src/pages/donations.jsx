@@ -1563,14 +1563,60 @@ export function Donations() {
                     </div>
                   </div>
 
+                  {/* Weekly Breakdown */}
+                  <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+                    <h4 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Weekly Breakdown (Last 12 Weeks)</h4>
+                    <div className="grid gap-2 grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-12">
+                      {(() => {
+                        const weeklyData = {};
+                        const now = new Date();
+                        
+                        // Generate last 12 weeks
+                        for (let i = 11; i >= 0; i--) {
+                          const weekStart = new Date(now);
+                          weekStart.setDate(now.getDate() - (now.getDay() + (i * 7)));
+                          weekStart.setHours(0, 0, 0, 0);
+                          
+                          const weekEnd = new Date(weekStart);
+                          weekEnd.setDate(weekStart.getDate() + 6);
+                          weekEnd.setHours(23, 59, 59, 999);
+                          
+                          const weekKey = `Week ${12 - i}`;
+                          weeklyData[weekKey] = {
+                            start: weekStart,
+                            end: weekEnd,
+                            amount: 0,
+                            label: `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d')}`
+                          };
+                        }
+                        
+                        // Calculate donations for each week
+                        recentDonations.forEach(d => {
+                          const donationDate = parseISO(d.date);
+                          Object.values(weeklyData).forEach(week => {
+                            if (donationDate >= week.start && donationDate <= week.end) {
+                              week.amount += parseFloat(d.amount);
+                            }
+                          });
+                        });
+                        
+                        return Object.entries(weeklyData).map(([weekKey, weekData]) => (
+                          <div key={weekKey} className="text-center p-2 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                            <div className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">{weekKey}</div>
+                            <div className="text-xs text-slate-500 dark:text-slate-400 mb-2">{weekData.label}</div>
+                            <div className="text-sm font-bold text-slate-900 dark:text-white">
+                              {formatCurrency(weekData.amount)}
+                            </div>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  </div>
+
                   {/* Top Donors */}
                   <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="mb-4">
                       <h4 className="text-lg font-semibold text-slate-900 dark:text-white">Top Donors (Last 90 Days)</h4>
-                      <Button variant="outline" size="sm" className="text-xs">
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                        View All Donors
-                      </Button>
                     </div>
                     
                     {(() => {
@@ -1934,7 +1980,7 @@ export function Donations() {
           </div>
 
           {/* Desktop Tab Navigation */}
-          <TabsList className="hidden md:grid w-full grid-cols-6">
+          <TabsList className="hidden md:grid w-full grid-cols-4">
             <TabsTrigger value="donations" className="flex items-center justify-center space-x-2">
               <DollarSign className="h-4 w-4" />
               <span>Donations</span>
@@ -1950,14 +1996,6 @@ export function Donations() {
             <TabsTrigger value="batches" className="flex items-center justify-center space-x-2">
               <Archive className="h-4 w-4" />
               <span>Batches</span>
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="flex items-center justify-center space-x-2">
-              <BarChart3 className="h-4 w-4" />
-              <span>Analytics</span>
-            </TabsTrigger>
-            <TabsTrigger value="receipts" className="flex items-center justify-center space-x-2">
-              <Receipt className="h-4 w-4" />
-              <span>Receipts</span>
             </TabsTrigger>
           </TabsList>
 
@@ -2458,21 +2496,7 @@ export function Donations() {
             </div>
           </TabsContent>
 
-          <TabsContent value="analytics" className="space-y-6">
-            <div className="text-center py-12">
-              <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Analytics Coming Soon</h3>
-              <p className="text-muted-foreground">Advanced analytics features are being developed</p>
-            </div>
-          </TabsContent>
 
-          <TabsContent value="receipts" className="space-y-6">
-            <div className="text-center py-12">
-              <Receipt className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Receipts Coming Soon</h3>
-              <p className="text-muted-foreground">Receipt management features are being developed</p>
-            </div>
-          </TabsContent>
         </Tabs>
       </motion.div>
 

@@ -157,6 +157,8 @@ export const dashboardService = {
       .order('date', { ascending: false });
 
     if (error) throw error;
+    
+    // Debug logging removed for clarity
 
     const currentDate = new Date();
     const currentYear = currentDate.getFullYear();
@@ -212,49 +214,44 @@ export const dashboardService = {
     const thisWeekDonations = Math.round(donations
       .filter(d => d.date >= startOfWeekStr)
       .reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0) * 100) / 100;
+    
+    // Debug logging removed for clarity
 
-    // Last week calculations (previous 7 days)
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    const oneWeekAgoStr = oneWeekAgo.toISOString().split('T')[0];
+    // Last week calculations (previous week: Sunday to Saturday)
+    const lastWeekStart = new Date(startOfWeek);
+    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+    const lastWeekEnd = new Date(lastWeekStart);
+    lastWeekEnd.setDate(lastWeekStart.getDate() + 6);
+    
+    const lastWeekStartStr = lastWeekStart.toISOString().split('T')[0];
+    const lastWeekEndStr = lastWeekEnd.toISOString().split('T')[0];
     
     const lastWeekDonations = Math.round(donations
-      .filter(d => d.date >= oneWeekAgoStr && d.date < currentDate.toISOString().split('T')[0])
+      .filter(d => d.date >= lastWeekStartStr && d.date <= lastWeekEndStr)
       .reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0) * 100) / 100;
 
-    // Weekly average calculations (last 90 days)
-    const ninetyDaysAgo = new Date();
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-    const ninetyDaysAgoStr = ninetyDaysAgo.toISOString().split('T')[0];
+    // Weekly average calculations (current week vs same week last month)
+    // Use the simpler current week calculation (Sunday to Saturday)
+    const currentWeekDonations = thisWeekDonations;
     
-    const weeklyDonationTotals = {};
-    donations
-      .filter(d => d.date >= ninetyDaysAgoStr) // Only last 90 days
-      .forEach(donation => {
-        try {
-          const date = new Date(donation.date);
-          if (isNaN(date.getTime())) return;
-          
-          const startOfWeek = new Date(date);
-          const donationDayOfWeek = date.getDay();
-          startOfWeek.setDate(date.getDate() - donationDayOfWeek);
-          startOfWeek.setHours(0, 0, 0, 0);
-          
-          const weekKey = startOfWeek.toISOString().split('T')[0];
-          const amount = parseFloat(donation.amount) || 0;
-          
-          if (!weeklyDonationTotals[weekKey]) {
-            weeklyDonationTotals[weekKey] = 0;
-          }
-          weeklyDonationTotals[weekKey] += amount;
-        } catch (error) {
-          console.error('Error processing donation for weekly average:', donation, error);
-        }
-      });
-
-    const weeklyValues = Object.values(weeklyDonationTotals);
-    const weeklyAverage = weeklyValues.length > 0 ? 
-      Math.round(weeklyValues.reduce((sum, val) => sum + val, 0) / weeklyValues.length * 100) / 100 : 0;
+    // Calculate same week last month for comparison
+    const lastMonthWeekStart = new Date(startOfWeek);
+    lastMonthWeekStart.setDate(lastMonthWeekStart.getDate() - 7);
+    const lastMonthWeekEnd = new Date(lastMonthWeekStart);
+    lastMonthWeekEnd.setDate(lastMonthWeekStart.getDate() + 6);
+    
+    const lastMonthWeekStartStr = lastMonthWeekStart.toISOString().split('T')[0];
+    const lastMonthWeekEndStr = lastMonthWeekEnd.toISOString().split('T')[0];
+    
+    const lastMonthWeekDonations = Math.round(donations
+      .filter(d => d.date >= lastMonthWeekStartStr && d.date <= lastMonthWeekEndStr)
+      .reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0) * 100) / 100;
+    
+    // Weekly average is the current week vs last week comparison
+    const weeklyAverage = lastMonthWeekDonations > 0 ? 
+      Math.round(((currentWeekDonations - lastMonthWeekDonations) / lastMonthWeekDonations) * 100) : 0;
+    
+    // Debug logging removed for clarity
 
     // Monthly average calculations (last 12 months)
     const twelveMonthsAgo = new Date();
@@ -345,7 +342,9 @@ export const dashboardService = {
         lastSunday: lastSundayDonations,
         weeklyAverage,
         monthlyAverage,
-        growthRate
+        growthRate,
+        currentWeekDonations,
+        lastMonthWeekDonations
       },
       trendAnalysis: donationTrendAnalysis,
       weeklyBreakdown: weeklyDonationBreakdown
