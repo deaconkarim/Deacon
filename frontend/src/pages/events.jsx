@@ -414,6 +414,10 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVol
                         <Pencil className="mr-2 h-4 w-4" />
                         Edit Event
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onManageReminders(event)}>
+                        <Bell className="mr-2 h-4 w-4" />
+                        Manage Reminders
+                      </DropdownMenuItem>
                       {event.needs_volunteers && (
                         <DropdownMenuItem onClick={() => onManageVolunteers(event)}>
                           <Handshake className="mr-2 h-4 w-4" />
