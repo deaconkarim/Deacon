@@ -94,6 +94,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from '@/lib/authContext';
 import EventForm from '@/components/events/EventForm';
 import { addEvent, updateEvent, deleteEvent, getEventVolunteers, addEventVolunteer, updateEventVolunteer, removeEventVolunteer, parseVolunteerRoles } from '@/lib/data';
+import { eventReminderService } from '@/lib/eventReminderService';
 import { getInitials } from '@/lib/utils/formatters';
 import { PotluckRSVPDialog } from '@/components/events/PotluckRSVPDialog';
 import { VolunteerList } from '@/components/events/VolunteerList';
@@ -4922,17 +4923,21 @@ export default function Events() {
             }
           }
         }
-      } else {
-        console.log('Could not extract original event ID, editing as regular event:', event);
-        setEditingEvent(event);
-        setIsEditEventOpen(true);
+              } else {
+          console.log('Could not extract original event ID, editing as regular event:', event);
+          loadEventWithReminders(event).then(eventWithReminders => {
+            setEditingEvent(eventWithReminders);
+            setIsEditEventOpen(true);
+          });
+        }
+          } else {
+        // For non-recurring events or master events, edit normally
+        console.log('Editing regular event:', event);
+        loadEventWithReminders(event).then(eventWithReminders => {
+          setEditingEvent(eventWithReminders);
+          setIsEditEventOpen(true);
+        });
       }
-    } else {
-      // For non-recurring events or master events, edit normally
-      console.log('Editing regular event:', event);
-      setEditingEvent(event);
-      setIsEditEventOpen(true);
-    }
   };
 
   const handleOpenDialog = async (event) => {
@@ -5309,8 +5314,59 @@ export default function Events() {
     setIsVolunteerDialogOpen(true);
   };
 
+  const loadEventWithReminders = async (event) => {
+    try {
+      console.log('Loading reminders for event:', event.id, event.title);
+      
+      // Load reminder configurations for this event
+      const reminders = await eventReminderService.getEventReminders(event.id);
+      console.log('Found reminders:', reminders);
+      
+      // Convert database reminders to the new format
+      const formattedReminders = reminders
+        .filter(r => r.is_active)
+        .sort((a, b) => (a.reminder_order || 1) - (b.reminder_order || 1))
+        .map(reminder => ({
+          id: reminder.id,
+          reminder_type: reminder.reminder_type || 'sms',
+          timing_unit: reminder.timing_unit || 'hours',
+          timing_value: reminder.timing_value || reminder.timing_hours || 24,
+          message_template: reminder.message_template || 'Reminder: {event_title} on {event_date} at {event_time}. {event_location}',
+          target_type: reminder.target_type || 'all',
+          target_groups: reminder.target_groups || [],
+          is_enabled: reminder.is_enabled !== false
+        }));
+      
+      console.log('Formatted reminders:', formattedReminders);
+      
+      const eventWithReminders = {
+        ...event,
+        enable_reminders: formattedReminders.length > 0,
+        reminders: formattedReminders.length > 0 ? formattedReminders : [
+          {
+            id: null,
+            reminder_type: 'sms',
+            timing_unit: 'hours',
+            timing_value: 24,
+            message_template: 'Reminder: {event_title} on {event_date} at {event_time}. {event_location}',
+            target_type: 'all',
+            target_groups: [],
+            is_enabled: true
+          }
+        ]
+      };
+      
+      console.log('Event with reminders loaded:', eventWithReminders);
+      return eventWithReminders;
+    } catch (error) {
+      console.error('Error loading reminder data:', error);
+      return event;
+    }
+  };
+
   const handleManageReminders = (event) => {
     console.log('handleManageReminders called with event:', event);
+    console.log('Opening reminders dialog for event:', event.title);
     setSelectedEventForReminders(event);
     setIsRemindersDialogOpen(true);
   };
@@ -8376,11 +8432,13 @@ export default function Events() {
               {/* Edit Instance Option */}
               <div className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer" 
                     onClick={() => {
-                     setEditingEvent(eventToEdit);
-                     setIsEditEventOpen(true);
-                     setShowEditChoiceDialog(false);
-                     setEventToEdit(null);
-                     setMasterEventToEdit(null);
+                     loadEventWithReminders(eventToEdit).then(eventWithReminders => {
+                       setEditingEvent(eventWithReminders);
+                       setIsEditEventOpen(true);
+                       setShowEditChoiceDialog(false);
+                       setEventToEdit(null);
+                       setMasterEventToEdit(null);
+                     });
                    }}>
                 <div className="flex items-center space-x-3">
                   <div className="w-4 h-4 rounded-full border-2 border-blue-500 bg-blue-100"></div>
@@ -8397,11 +8455,13 @@ export default function Events() {
               {/* Edit Master Event Option */}
               <div className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer" 
                     onClick={() => {
-                     setEditingEvent(masterEventToEdit);
-                     setIsEditEventOpen(true);
-                     setShowEditChoiceDialog(false);
-                     setEventToEdit(null);
-                     setMasterEventToEdit(null);
+                     loadEventWithReminders(masterEventToEdit).then(eventWithReminders => {
+                       setEditingEvent(eventWithReminders);
+                       setIsEditEventOpen(true);
+                       setShowEditChoiceDialog(false);
+                       setEventToEdit(null);
+                       setMasterEventToEdit(null);
+                     });
                    }}>
                 <div className="flex items-center space-x-3">
                   <div className="w-4 h-4 rounded-full border-2 border-green-500 bg-green-100"></div>

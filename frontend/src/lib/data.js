@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { userCacheService } from './userCache';
+import { eventReminderService } from './eventReminderService';
 
 // Helper function to get current user's organization ID
 export const getCurrentUserOrganizationId = async () => {
@@ -643,6 +644,40 @@ export const addEvent = async (event) => {
         .single();
       
       if (error) throw error;
+      
+      // Create reminder configurations if enabled
+      if (event.enable_reminders && event.reminders && event.reminders.length > 0) {
+        try {
+          for (let i = 0; i < event.reminders.length; i++) {
+            const reminder = event.reminders[i];
+            if (reminder.is_enabled) {
+              await eventReminderService.createEventReminder({
+                event_id: data.id,
+                name: `Reminder ${i + 1} for ${event.title}`,
+                description: `Automatic reminder ${i + 1} for ${event.title}`,
+                reminder_type: reminder.reminder_type || 'sms',
+                timing_unit: reminder.timing_unit || 'hours',
+                timing_value: reminder.timing_value || 24,
+                timing_hours: reminder.timing_unit === 'hours' ? reminder.timing_value : 
+                             reminder.timing_unit === 'minutes' ? Math.round(reminder.timing_value / 60) :
+                             reminder.timing_unit === 'days' ? reminder.timing_value * 24 :
+                             reminder.timing_unit === 'weeks' ? reminder.timing_value * 168 : 24,
+                message_template: reminder.message_template || 'Reminder: {event_title} on {event_date} at {event_time}. {event_location}',
+                target_type: reminder.target_type || 'all',
+                target_groups: reminder.target_groups || [],
+                is_active: true,
+                is_enabled: reminder.is_enabled,
+                reminder_order: i + 1
+              });
+            }
+          }
+          console.log(`Created ${event.reminders.filter(r => r.is_enabled).length} reminder configurations for event:`, data.id);
+        } catch (reminderError) {
+          console.error('Error creating reminder configurations:', reminderError);
+          // Don't throw error here - event was created successfully
+        }
+      }
+      
       return data;
     }
   } catch (error) {
@@ -749,6 +784,56 @@ export const updateEvent = async (id, updates) => {
         .select();
       
       if (error) throw error;
+      
+      // Update reminder configurations if reminder settings changed
+      if (updates.enable_reminders !== undefined || updates.reminders !== undefined) {
+        try {
+          // Get existing reminder configurations
+          const existingReminders = await eventReminderService.getEventReminders(originalEvent.id);
+          
+          if (updates.enable_reminders && updates.reminders && updates.reminders.length > 0) {
+            // Delete all existing reminders first
+            for (const reminder of existingReminders) {
+              await eventReminderService.deleteEventReminder(reminder.id);
+            }
+            
+            // Create new reminder configurations
+            for (let i = 0; i < updates.reminders.length; i++) {
+              const reminder = updates.reminders[i];
+              if (reminder.is_enabled) {
+                await eventReminderService.createEventReminder({
+                  event_id: originalEvent.id,
+                  name: `Reminder ${i + 1} for ${updates.title}`,
+                  description: `Automatic reminder ${i + 1} for ${updates.title}`,
+                  reminder_type: reminder.reminder_type || 'sms',
+                  timing_unit: reminder.timing_unit || 'hours',
+                  timing_value: reminder.timing_value || 24,
+                  timing_hours: reminder.timing_unit === 'hours' ? reminder.timing_value : 
+                               reminder.timing_unit === 'minutes' ? Math.round(reminder.timing_value / 60) :
+                               reminder.timing_unit === 'days' ? reminder.timing_value * 24 :
+                               reminder.timing_unit === 'weeks' ? reminder.timing_value * 168 : 24,
+                  message_template: reminder.message_template || 'Reminder: {event_title} on {event_date} at {event_time}. {event_location}',
+                  target_type: reminder.target_type || 'all',
+                  target_groups: reminder.target_groups || [],
+                  is_active: true,
+                  is_enabled: reminder.is_enabled,
+                  reminder_order: i + 1
+                });
+              }
+            }
+            console.log(`Updated ${updates.reminders.filter(r => r.is_enabled).length} reminder configurations for event:`, originalEvent.id);
+          } else if (!updates.enable_reminders) {
+            // Disable reminders - deactivate existing ones
+            for (const reminder of existingReminders) {
+              await eventReminderService.updateEventReminder(reminder.id, { is_active: false });
+            }
+          }
+        } catch (reminderError) {
+          console.error('Error updating reminder configurations:', reminderError);
+          // Don't throw error here - event was updated successfully
+        }
+      }
+      
       return data[0];
     }
   } catch (error) {
