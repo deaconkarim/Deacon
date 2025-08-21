@@ -883,6 +883,86 @@ export function SMS() {
     return uniqueCount;
   };
 
+  const getConversationParticipants = (messages) => {
+    if (!messages || messages.length === 0) return 0;
+    
+    const participants = new Set();
+    
+    messages.forEach((message) => {
+      if (message.direction === 'inbound' && message.member) {
+        participants.add(message.member.id);
+      } else if (message.direction === 'outbound') {
+        // Count unique recipients for outbound messages
+        if (message.member) {
+          participants.add(message.member.id);
+        }
+      }
+    });
+    
+    return participants.size;
+  };
+
+  const getConversationStatus = (conversation) => {
+    if (!conversation.mostRecentMessage) return 'unknown';
+    
+    const lastMessageTime = new Date(conversation.mostRecentMessage.sent_at);
+    const now = new Date();
+    const hoursSinceLastMessage = (now - lastMessageTime) / (1000 * 60 * 60);
+    
+    if (hoursSinceLastMessage < 1) return 'very-recent';
+    if (hoursSinceLastMessage < 24) return 'recent';
+    if (hoursSinceLastMessage < 168) return 'week-old'; // 7 days
+    return 'old';
+  };
+
+  const getConversationStatusColor = (status) => {
+    switch (status) {
+      case 'very-recent': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
+      case 'recent': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
+      case 'week-old': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
+      case 'old': return 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+    }
+  };
+
+  const getConversationStatusText = (status) => {
+    switch (status) {
+      case 'very-recent': return 'Very Recent';
+      case 'recent': return 'Recent';
+      case 'week-old': return 'This Week';
+      case 'old': return 'Older';
+      default: return 'Unknown';
+    }
+  };
+
+  const getConversationSummary = (messages) => {
+    if (!messages || messages.length === 0) return '';
+    
+    // Get the last few messages to show conversation flow
+    const recentMessages = messages
+      .sort((a, b) => new Date(a.sent_at) - new Date(b.sent_at))
+      .slice(-3); // Last 3 messages
+    
+    if (recentMessages.length === 1) {
+      return 'Single message';
+    }
+    
+    const directionChanges = recentMessages.reduce((changes, message, index) => {
+      if (index > 0 && message.direction !== recentMessages[index - 1].direction) {
+        changes++;
+      }
+      return changes;
+    }, 0);
+    
+    if (directionChanges === 0) {
+      return 'One-way conversation';
+    } else if (directionChanges === 1) {
+      return 'Simple exchange';
+    } else {
+      return 'Active conversation';
+    }
+  };
+
   const clearRecipientSelection = () => {
     setSelectedMembers([]);
     setSelectedGroups([]);
@@ -1340,11 +1420,29 @@ export function SMS() {
                         <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center mt-3">
                           <CardDescription className="text-slate-600 dark:text-slate-400">
                             {getUniqueMessageCount(conversation.sms_messages)} messages • 
-                            Last updated {format(new Date(conversation.updated_at), 'MMM d, yyyy')}
+                            {getConversationParticipants(conversation.sms_messages)} participant{getConversationParticipants(conversation.sms_messages) !== 1 ? 's' : ''} • 
+                            {conversation.mostRecentMessage ? (
+                              <>
+                                Last {conversation.mostRecentMessage.direction === 'inbound' ? 'received' : 'sent'} {format(new Date(conversation.mostRecentMessage.sent_at), 'MMM d, yyyy')}
+                              </>
+                            ) : (
+                              `Last updated ${format(new Date(conversation.updated_at), 'MMM d, yyyy')}`
+                            )}
                           </CardDescription>
                           <div className="flex flex-wrap gap-2">
                             <Badge className={`${getConversationTypeColor(conversation.conversation_type)} text-white font-medium`}>
                               {conversation.conversation_type.replace('_', ' ')}
+                            </Badge>
+                            {conversation.mostRecentMessage && (
+                              <Badge variant="outline" className="text-xs">
+                                {conversation.mostRecentMessage.direction === 'inbound' ? 'Incoming' : 'Outgoing'}
+                              </Badge>
+                            )}
+                            <Badge className={`${getConversationStatusColor(getConversationStatus(conversation))} text-xs font-medium`}>
+                              {getConversationStatusText(getConversationStatus(conversation))}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs text-slate-600 dark:text-slate-400">
+                              {getConversationSummary(conversation.sms_messages)}
                             </Badge>
                           </div>
                         </div>
@@ -1354,17 +1452,54 @@ export function SMS() {
                   {conversation.sms_messages && conversation.sms_messages.length > 0 && (
                     <CardContent className="pt-0">
                       <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm text-slate-700 dark:text-slate-300">
+                        {conversation.mostRecentMessage ? (
+                          <div className="space-y-2">
+                            {/* Sender Info */}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                <div className={`w-2 h-2 rounded-full ${
+                                  conversation.mostRecentMessage.direction === 'inbound' 
+                                    ? 'bg-blue-500' 
+                                    : 'bg-green-500'
+                                }`} />
+                                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                  {conversation.mostRecentMessage.senderInfo.name}
+                                </span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400">
+                                  {conversation.mostRecentMessage.senderInfo.phone}
+                                </span>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Badge variant="outline" className="text-xs">
+                                  {conversation.mostRecentMessage.direction === 'inbound' ? 'Received' : 'Sent'}
+                                </Badge>
+                                {conversation.mostRecentMessage.message_type === 'event_reminder' && (
+                                  <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                                    <Bell className="h-3 w-3 mr-1" />
+                                    Event Reminder
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Message Content */}
+                            <div className="text-sm text-slate-700 dark:text-slate-300">
+                              {conversation.mostRecentMessage.body.length > 100 
+                                ? `${conversation.mostRecentMessage.body.substring(0, 100)}...`
+                                : conversation.mostRecentMessage.body
+                              }
+                            </div>
+                            
+                            {/* Timestamp */}
+                            <div className="text-xs text-slate-500 dark:text-slate-400">
+                              {format(new Date(conversation.mostRecentMessage.sent_at), 'MMM d, HH:mm')}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-sm text-slate-700 dark:text-slate-300">
                             Latest: {conversation.sms_messages[0].body.substring(0, 100)}...
-                          </p>
-                          {conversation.sms_messages.some(m => m.message_type === 'event_reminder') && (
-                            <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
-                              <Bell className="h-3 w-3 mr-1" />
-                              Event Reminders
-                            </Badge>
-                          )}
-                        </div>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   )}

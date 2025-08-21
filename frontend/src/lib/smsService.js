@@ -25,16 +25,18 @@ export const smsService = {
           body,
           status,
           sent_at,
+          from_number,
+          to_number,
           member:members (
             id,
-          firstname,
-              lastname,
-              image_url
+            firstname,
+            lastname,
+            image_url
           )
         )
       `)
         .eq('organization_id', organizationId)
-      .order('updated_at', { ascending: false });
+        .order('updated_at', { ascending: false });
 
     if (conversationType) {
       query = query.eq('conversation_type', conversationType);
@@ -42,11 +44,80 @@ export const smsService = {
 
     const { data, error } = await query;
     if (error) throw error;
+    
+    // Process conversations to add the most recent message info
+    if (data) {
+      data.forEach(conversation => {
+        if (conversation.sms_messages && conversation.sms_messages.length > 0) {
+          // Sort messages by sent_at to get the most recent
+          const sortedMessages = [...conversation.sms_messages].sort(
+            (a, b) => new Date(b.sent_at) - new Date(a.sent_at)
+          );
+          
+          // Get the most recent message
+          const mostRecentMessage = sortedMessages[0];
+          
+          // Add processed message info to conversation
+          conversation.mostRecentMessage = {
+            ...mostRecentMessage,
+            senderInfo: this.getSenderInfo(mostRecentMessage)
+          };
+        }
+      });
+    }
+    
     return data;
     } catch (error) {
       console.error('Error getting conversations:', error);
       throw error;
     }
+  },
+
+  // Helper function to get sender information for a message
+  getSenderInfo(message) {
+    if (message.direction === 'inbound') {
+      // Incoming message - show member name if available, otherwise phone number
+      if (message.member) {
+        return {
+          type: 'member',
+          name: `${message.member.firstname} ${message.member.lastname}`,
+          phone: message.from_number,
+          isMember: true
+        };
+      } else {
+        return {
+          type: 'unknown',
+          name: 'Unknown Contact',
+          phone: message.from_number,
+          isMember: false
+        };
+      }
+    } else {
+      // Outgoing message - show as "You" or "Church"
+      return {
+        type: 'outgoing',
+        name: 'You',
+        phone: message.to_number,
+        isMember: false
+      };
+    }
+  },
+
+  // Validation function to ensure conversation data has required fields
+  validateConversationData(conversationData) {
+    const requiredFields = ['title', 'conversation_type', 'status'];
+    const missingFields = requiredFields.filter(field => !conversationData[field]);
+    
+    if (missingFields.length > 0) {
+      throw new Error(`Missing required fields for conversation: ${missingFields.join(', ')}`);
+    }
+    
+    // Ensure organization_id is present
+    if (!conversationData.organization_id) {
+      throw new Error('organization_id is required for all conversations');
+    }
+    
+    return true;
   },
 
   async getConversation(conversationId) {
@@ -79,14 +150,31 @@ export const smsService = {
   },
 
   async createConversation(conversationData) {
-    const { data, error } = await supabase
-      .from('sms_conversations')
-      .insert(conversationData)
-      .select()
-      .single();
+    try {
+      // Ensure organization_id is included
+      if (!conversationData.organization_id) {
+        const organizationId = await getCurrentUserOrganizationId();
+        if (!organizationId) {
+          throw new Error('User not associated with any organization');
+        }
+        conversationData.organization_id = organizationId;
+      }
 
-    if (error) throw error;
-    return data;
+      // Validate conversation data
+      this.validateConversationData(conversationData);
+
+      const { data, error } = await supabase
+        .from('sms_conversations')
+        .insert(conversationData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      throw error;
+    }
   },
 
   async updateConversation(conversationId, updates) {
@@ -154,6 +242,8 @@ export const smsService = {
     if (!organizationId) {
       throw new Error('User not associated with any organization');
     }
+    
+    console.log('🏢 Organization ID for SMS:', organizationId);
     
     // Get Twilio phone number from environment (try both VITE_ and non-VITE_ versions)
     const twilioPhoneNumber = import.meta.env.VITE_TWILIO_PHONE_NUMBER || import.meta.env.TWILIO_PHONE_NUMBER;
@@ -268,7 +358,8 @@ export const smsService = {
             title: conversationTitle,
             conversation_type: conversationType,
             group_id: messageData.group_id,
-            status: 'active'
+            status: 'active',
+            organization_id: organizationId
           })
           .select()
           .single();
