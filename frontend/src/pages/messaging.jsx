@@ -48,6 +48,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { smsService } from '@/lib/smsService';
+import { messagingService } from '@/lib/messagingService';
 import { supabase } from '@/lib/supabaseClient';
 import { getInitials } from '@/lib/utils/formatters';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
@@ -62,7 +63,7 @@ const lineClampStyles = `
   }
 `;
 
-export function SMS() {
+export function Messaging() {
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [templates, setTemplates] = useState([]);
@@ -74,6 +75,8 @@ export function SMS() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState('all');
+  const [messageType, setMessageType] = useState('sms'); // 'sms' or 'email'
+  const [activeMessageType, setActiveMessageType] = useState('all'); // Filter for conversations
   const [isNewMessageOpen, setIsNewMessageOpen] = useState(false);
   const [isTemplateOpen, setIsTemplateOpen] = useState(false);
   const [isEditTemplateOpen, setIsEditTemplateOpen] = useState(false);
@@ -81,13 +84,18 @@ export function SMS() {
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [editingTemplateVariables, setEditingTemplateVariables] = useState('');
   const [newMessage, setNewMessage] = useState({
+    messageType: 'sms',
     to_number: '',
+    to_email: '',
+    subject: '',
     body: '',
     template_id: ''
   });
   const [newTemplate, setNewTemplate] = useState({
+    messageType: 'sms',
     name: '',
     description: '',
+    subject: '',
     template_text: '',
     variables: []
   });
@@ -311,11 +319,11 @@ export function SMS() {
 
       // Try to load conversations, templates, members, and groups
       const [conversationsData, templatesData, membersData, groupsData, statsData] = await Promise.all([
-        smsService.getConversations().catch(error => {
+        messagingService.getConversations(activeMessageType).catch(error => {
           console.warn('Failed to load conversations:', error);
           return [];
         }),
-        smsService.getTemplates().catch(error => {
+        messagingService.getTemplates('all').catch(error => {
           console.warn('Failed to load templates:', error);
           return [];
         }),
@@ -345,15 +353,12 @@ export function SMS() {
             }
             return data || [];
           }),
-        smsService.getSMSStats().catch(error => {
-          console.warn('Failed to load SMS stats:', error);
+        messagingService.getMessagingStats().catch(error => {
+          console.warn('Failed to load messaging stats:', error);
           return {
-            totalSent: 0,
-            totalDelivered: 0,
-            totalFailed: 0,
-            deliveryRate: 0,
-            thisMonth: 0,
-            lastMonth: 0
+            sms: { totalSent: 0, totalDelivered: 0, deliveryRate: 0, thisMonth: 0 },
+            email: { totalSent: 0, totalConversations: 0 },
+            combined: { totalMessages: 0, totalConversations: 0 }
           };
         })
       ]);
@@ -379,7 +384,7 @@ export function SMS() {
       setTemplates(templatesData || []);
       setMembers(membersData || []);
       setGroups(enrichedGroups || []);
-      setSmsStats(statsData || {
+      setSmsStats(statsData?.sms || {
         totalSent: 0,
         totalDelivered: 0,
         totalFailed: 0,
@@ -409,7 +414,9 @@ export function SMS() {
 
   const handleConversationClick = async (conversation) => {
     try {
-      const fullConversation = await smsService.getConversation(conversation.id);
+      const fullConversation = await messagingService.getConversation(conversation.id, conversation.messageType);
+      // Add messageType to the conversation for later use
+      fullConversation.messageType = conversation.messageType;
       setSelectedConversation(fullConversation);
     } catch (error) {
       toast({
@@ -423,19 +430,32 @@ export function SMS() {
   const handleSendMessage = async () => {
     const recipients = await getSelectedRecipients();
     
-    if (recipients.length === 0 && !newMessage.to_number) {
+    // Validate recipients
+    const hasDirectRecipient = newMessage.messageType === 'sms' ? newMessage.to_number : newMessage.to_email;
+    if (recipients.length === 0 && !hasDirectRecipient) {
       toast({
         title: 'Missing Recipients',
-        description: 'Please select recipients or enter a phone number.',
+        description: `Please select recipients or enter a ${newMessage.messageType === 'sms' ? 'phone number' : 'email address'}.`,
         variant: 'destructive'
       });
       return;
     }
 
+    // Validate message content
     if (!newMessage.body) {
       toast({
         title: 'Missing Message',
         description: 'Please enter a message to send.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Validate email subject
+    if (newMessage.messageType === 'email' && !newMessage.subject) {
+      toast({
+        title: 'Missing Subject',
+        description: 'Please enter an email subject.',
         variant: 'destructive'
       });
       return;
@@ -459,98 +479,107 @@ export function SMS() {
     }
 
     try {
-      if (recipients.length > 0) {
-        // Check if this is a group message
-        const isGroupMessage = selectedGroups.length > 0;
-        
-        if (isGroupMessage) {
-          // Send group message - create one conversation for the group
-          const groupId = selectedGroups[0]; // Use the first selected group
-          
-          // Send the first message to create the conversation, then reuse the conversation ID
-          const firstMessage = await smsService.sendMessage({
-            to_number: recipients[0].phone,
-            body: newMessage.body,
-            member_id: recipients[0].id,
-            template_id: newMessage.template_id,
-            variables: variables,
-            group_id: groupId
-          });
-          
-          // Send remaining messages using the same conversation
-          if (recipients.length > 1) {
-            const remainingMessagePromises = recipients.slice(1).map(recipient => 
-              smsService.sendMessage({
-                to_number: recipient.phone,
-                body: newMessage.body,
-                member_id: recipient.id,
-                template_id: newMessage.template_id,
-                variables: variables,
-                conversation_id: firstMessage.conversation_id // Reuse the conversation ID
-              })
-            );
+      // Prepare message data based on type
+      const messageData = {
+        messageType: newMessage.messageType,
+        body: newMessage.body,
+        template_id: newMessage.template_id,
+        variables: variables,
+        conversation_type: 'general'
+      };
 
-            await Promise.all(remainingMessagePromises);
-          }
-        } else {
-          // Send to multiple individual recipients - create one conversation for all
-          if (recipients.length > 1) {
-            // Send the first message to create the conversation, then reuse the conversation ID
+      // Add type-specific fields
+      if (newMessage.messageType === 'sms') {
+        if (recipients.length > 0) {
+          // For SMS, handle group messaging and multiple recipients
+          const isGroupMessage = selectedGroups.length > 0;
+          
+          if (isGroupMessage) {
+            const groupId = selectedGroups[0];
             const firstMessage = await smsService.sendMessage({
+              ...messageData,
               to_number: recipients[0].phone,
-              body: newMessage.body,
               member_id: recipients[0].id,
-              template_id: newMessage.template_id,
-              variables: variables,
-              multiple_recipients: true // Flag to indicate this is a multi-recipient message
+              group_id: groupId
             });
             
-            // Send remaining messages using the same conversation
+            if (recipients.length > 1) {
+              const remainingMessagePromises = recipients.slice(1).map(recipient => 
+                smsService.sendMessage({
+                  ...messageData,
+                  to_number: recipient.phone,
+                  member_id: recipient.id,
+                  conversation_id: firstMessage.conversation_id
+                })
+              );
+              await Promise.all(remainingMessagePromises);
+            }
+          } else if (recipients.length > 1) {
+            const firstMessage = await smsService.sendMessage({
+              ...messageData,
+              to_number: recipients[0].phone,
+              member_id: recipients[0].id,
+              multiple_recipients: true
+            });
+            
             const remainingMessagePromises = recipients.slice(1).map(recipient => 
               smsService.sendMessage({
+                ...messageData,
                 to_number: recipient.phone,
-                body: newMessage.body,
                 member_id: recipient.id,
-                template_id: newMessage.template_id,
-                variables: variables,
-                conversation_id: firstMessage.conversation_id // Reuse the conversation ID
+                conversation_id: firstMessage.conversation_id
               })
             );
-
             await Promise.all(remainingMessagePromises);
           } else {
-            // Single recipient - normal individual conversation
             await smsService.sendMessage({
+              ...messageData,
               to_number: recipients[0].phone,
-              body: newMessage.body,
-              member_id: recipients[0].id,
-              template_id: newMessage.template_id,
-              variables: variables
+              member_id: recipients[0].id
             });
           }
+        } else {
+          await smsService.sendMessage({
+            ...messageData,
+            to_number: newMessage.to_number
+          });
         }
+      } else if (newMessage.messageType === 'email') {
+        messageData.subject = newMessage.subject;
         
-        toast({
-          title: 'Success',
-          description: `Message sent to ${recipients.length} recipient${recipients.length > 1 ? 's' : ''}`
-        });
-      } else {
-        // Send to single phone number
-        await smsService.sendMessage({
-          to_number: newMessage.to_number,
-          body: newMessage.body,
-          template_id: newMessage.template_id,
-          variables: variables
-        });
-
-        toast({
-          title: 'Success',
-          description: 'Message sent successfully'
-        });
+        if (recipients.length > 0) {
+          // For email, use bulk sending
+          await messagingService.sendMessage({
+            ...messageData,
+            recipients: recipients.map(r => ({
+              ...r,
+              email: r.email || `${r.firstname}.${r.lastname}@example.com` // Fallback email
+            })),
+            selectedGroups: selectedGroups
+          });
+        } else {
+          await messagingService.sendMessage({
+            ...messageData,
+            to_email: newMessage.to_email,
+            recipients: [{ email: newMessage.to_email }]
+          });
+        }
       }
 
+      toast({
+        title: 'Success',
+        description: `${newMessage.messageType.toUpperCase()} sent to ${recipients.length || 1} recipient${(recipients.length || 1) > 1 ? 's' : ''}`
+      });
+
       setIsNewMessageOpen(false);
-      setNewMessage({ to_number: '', body: '', template_id: '' });
+      setNewMessage({ 
+        messageType: 'sms',
+        to_number: '',
+        to_email: '',
+        subject: '',
+        body: '',
+        template_id: ''
+      });
       clearRecipientSelection();
       
       // Refresh conversations
@@ -634,6 +663,16 @@ export function SMS() {
       return;
     }
 
+    // Validate email subject
+    if (newTemplate.messageType === 'email' && !newTemplate.subject) {
+      toast({
+        title: 'Missing Subject',
+        description: 'Please fill in the email subject.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     // Extract variables from template text and combine with manually entered variables
     const extractedVariables = (newTemplate.template_text.match(/\{([^}]+)\}/g) || [])
       .map(v => v.replace(/[{}]/g, ''));
@@ -654,9 +693,16 @@ export function SMS() {
     };
 
     try {
-      await smsService.createTemplate(templateData);
+      await messagingService.createTemplate(templateData);
       setIsTemplateOpen(false);
-      setNewTemplate({ name: '', description: '', template_text: '', variables: [] });
+      setNewTemplate({ 
+        messageType: 'sms',
+        name: '', 
+        description: '', 
+        subject: '',
+        template_text: '', 
+        variables: [] 
+      });
       setNewTemplateVariables('');
       toast({
         title: 'Success',
@@ -734,13 +780,13 @@ export function SMS() {
     }
   };
 
-  const handleDeleteTemplate = async (templateId) => {
+  const handleDeleteTemplate = async (template) => {
     if (!confirm('Are you sure you want to delete this template?')) {
       return;
     }
 
     try {
-      await smsService.deleteTemplate(templateId);
+      await messagingService.deleteTemplate(template.id, template.messageType);
       toast({
         title: 'Success',
         description: 'Template deleted successfully'
@@ -1321,11 +1367,24 @@ export function SMS() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
-              SMS Management
+              Messaging
             </h1>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Manage conversations, templates, and campaigns</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Manage SMS and email conversations, templates, and campaigns</p>
           </div>
           <div className="flex items-center gap-2">
+            <select
+              value={activeMessageType}
+              onChange={(e) => {
+                setActiveMessageType(e.target.value);
+                // Reload conversations when filter changes
+                loadData();
+              }}
+              className="h-9 px-3 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+            >
+              <option value="all">All Messages</option>
+              <option value="sms">SMS Only</option>
+              <option value="email">Email Only</option>
+            </select>
             <Button 
               variant="outline"
               onClick={handleAnalyticsOpen}
@@ -1421,13 +1480,19 @@ export function SMS() {
                     {/* Conversation Header */}
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
-                          {conversation.title}
-                        </h3>
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">{messagingService.getMessageTypeIcon(conversation.messageType)}</span>
+                          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                            {conversation.title}
+                          </h3>
+                        </div>
                         <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 dark:text-slate-400">
-                          <span>{getUniqueMessageCount(conversation.sms_messages)} messages</span>
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${conversation.messageType === 'sms' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300' : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'}`}>
+                            {conversation.messageType.toUpperCase()}
+                          </span>
+                          <span>{getUniqueMessageCount(conversation.sms_messages || conversation.email_messages)} messages</span>
                           <span>•</span>
-                          <span>{getConversationParticipants(conversation.sms_messages)} participants</span>
+                          <span>{getConversationParticipants(conversation.sms_messages || conversation.email_messages)} participants</span>
                           <span>•</span>
                           <span>{conversation.mostRecentMessage ? format(new Date(conversation.mostRecentMessage.sent_at), 'MMM d') : format(new Date(conversation.updated_at), 'MMM d')}</span>
                         </div>
@@ -1500,7 +1565,13 @@ export function SMS() {
                 <div className="p-4">
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex-1">
-                      <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{template.name}</h4>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">{messagingService.getMessageTypeIcon(template.messageType)}</span>
+                        <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{template.name}</h4>
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${template.messageType === 'sms' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300' : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'}`}>
+                          {template.messageType.toUpperCase()}
+                        </span>
+                      </div>
                       <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">{template.description}</p>
                     </div>
                     <div className="flex gap-2 ml-3">
@@ -1516,7 +1587,7 @@ export function SMS() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleDeleteTemplate(template.id)}
+                        onClick={() => handleDeleteTemplate(template)}
                         className="h-7 px-3 text-xs text-red-600 border-red-200 hover:bg-red-50"
                       >
                         <Trash2 className="mr-1 h-3 w-3" />
@@ -1526,11 +1597,15 @@ export function SMS() {
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          setNewMessage({
+                          const messageData = {
+                            messageType: template.messageType,
                             to_number: '',
+                            to_email: '',
+                            subject: template.template_subject || '',
                             body: template.template_text,
                             template_id: template.id
-                          });
+                          };
+                          setNewMessage(messageData);
                           setIsNewMessageOpen(true);
                         }}
                         className="h-7 px-3 text-xs text-blue-600 border-blue-200 hover:bg-blue-50"
@@ -1542,8 +1617,18 @@ export function SMS() {
                   </div>
                   
                   <div className="space-y-2">
+                    {template.messageType === 'email' && template.template_subject && (
+                      <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md">
+                        <div className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">Subject:</div>
+                        <div className="text-sm text-blue-700 dark:text-blue-300 line-clamp-1">
+                          {template.template_subject}
+                        </div>
+                      </div>
+                    )}
                     <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-md">
-                      <div className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Template:</div>
+                      <div className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                        {template.messageType === 'email' ? 'Body:' : 'Template:'}
+                      </div>
                       <div className="text-sm text-slate-700 dark:text-slate-300 line-clamp-2">
                         {template.template_text}
                       </div>
@@ -2095,6 +2180,29 @@ export function SMS() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Message Type Selection */}
+            <div className="space-y-2">
+              <Label>Message Type</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={newMessage.messageType === 'sms' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setNewMessage({...newMessage, messageType: 'sms', subject: ''})}
+                >
+                  💬 SMS
+                </Button>
+                <Button
+                  type="button"
+                  variant={newMessage.messageType === 'email' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setNewMessage({...newMessage, messageType: 'email'})}
+                >
+                  📧 Email
+                </Button>
+              </div>
+            </div>
+
             {/* Recipient Selection */}
             <div className="space-y-2">
               <Label>Recipients</Label>
@@ -2124,16 +2232,43 @@ export function SMS() {
               )}
             </div>
 
-            {/* Phone Number (fallback) */}
-            <div className="space-y-2">
-              <Label htmlFor="to_number">Or Enter Phone Number</Label>
-              <Input
-                id="to_number"
-                value={newMessage.to_number}
-                onChange={(e) => setNewMessage({...newMessage, to_number: e.target.value})}
-                placeholder="+1234567890 (optional if recipients selected)"
-              />
-            </div>
+            {/* Phone Number or Email (fallback) */}
+            {newMessage.messageType === 'sms' ? (
+              <div className="space-y-2">
+                <Label htmlFor="to_number">Or Enter Phone Number</Label>
+                <Input
+                  id="to_number"
+                  value={newMessage.to_number}
+                  onChange={(e) => setNewMessage({...newMessage, to_number: e.target.value})}
+                  placeholder="+1234567890 (optional if recipients selected)"
+                />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="to_email">Or Enter Email Address</Label>
+                <Input
+                  id="to_email"
+                  type="email"
+                  value={newMessage.to_email}
+                  onChange={(e) => setNewMessage({...newMessage, to_email: e.target.value})}
+                  placeholder="email@example.com (optional if recipients selected)"
+                />
+              </div>
+            )}
+
+            {/* Subject (Email only) */}
+            {newMessage.messageType === 'email' && (
+              <div className="space-y-2">
+                <Label htmlFor="subject">Subject *</Label>
+                <Input
+                  id="subject"
+                  value={newMessage.subject}
+                  onChange={(e) => setNewMessage({...newMessage, subject: e.target.value})}
+                  placeholder="Enter email subject..."
+                  required
+                />
+              </div>
+            )}
             
             <div className="space-y-2">
               <Label htmlFor="template_select">Use Template (Optional)</Label>
@@ -2148,21 +2283,30 @@ export function SMS() {
                   if (templateId) {
                     const selectedTemplate = templates.find(t => t.id === templateId);
                     if (selectedTemplate) {
-                      setNewMessage({
+                      const updates = {
                         ...newMessage, 
                         template_id: templateId,
                         body: selectedTemplate.template_text
-                      });
+                      };
+                      
+                      // Add subject for email templates
+                      if (selectedTemplate.messageType === 'email' && selectedTemplate.template_subject) {
+                        updates.subject = selectedTemplate.template_subject;
+                      }
+                      
+                      setNewMessage(updates);
                     }
                   }
                 }}
               >
                 <option value="">Select a template...</option>
-                {templates.map((template) => (
-                  <option key={template.id} value={template.id}>
-                    {template.name}
-                  </option>
-                ))}
+                {templates
+                  .filter(template => template.messageType === newMessage.messageType)
+                  .map((template) => (
+                    <option key={template.id} value={template.id}>
+                      {template.name}
+                    </option>
+                  ))}
               </select>
             </div>
 
@@ -2246,7 +2390,14 @@ export function SMS() {
           <DialogFooter>
             <Button variant="outline" onClick={() => {
               setIsNewMessageOpen(false);
-              setNewMessage({ to_number: '', body: '', template_id: '' });
+              setNewMessage({ 
+                messageType: 'sms',
+                to_number: '',
+                to_email: '',
+                subject: '',
+                body: '',
+                template_id: ''
+              });
               clearRecipientSelection();
             }}>
               Cancel
@@ -2269,6 +2420,29 @@ export function SMS() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Template Type Selection */}
+            <div className="space-y-2">
+              <Label>Template Type</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={newTemplate.messageType === 'sms' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setNewTemplate({...newTemplate, messageType: 'sms', subject: ''})}
+                >
+                  💬 SMS
+                </Button>
+                <Button
+                  type="button"
+                  variant={newTemplate.messageType === 'email' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setNewTemplate({...newTemplate, messageType: 'email'})}
+                >
+                  📧 Email
+                </Button>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="template_name">Template Name *</Label>
               <Input
@@ -2288,6 +2462,20 @@ export function SMS() {
                 placeholder="Template for event reminders"
               />
             </div>
+            
+            {/* Subject (Email templates only) */}
+            {newTemplate.messageType === 'email' && (
+              <div className="space-y-2">
+                <Label htmlFor="template_subject">Subject *</Label>
+                <Input
+                  id="template_subject"
+                  value={newTemplate.subject}
+                  onChange={(e) => setNewTemplate({...newTemplate, subject: e.target.value})}
+                  placeholder="Email subject with {variables}"
+                  required
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="template_text">Template Text *</Label>
               <Textarea
