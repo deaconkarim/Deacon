@@ -52,6 +52,16 @@ import { supabase } from '@/lib/supabaseClient';
 import { getInitials } from '@/lib/utils/formatters';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 
+// Add CSS for line clamping
+const lineClampStyles = `
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+`;
+
 export function SMS() {
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
@@ -1303,20 +1313,24 @@ export function SMS() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      {/* Modern header with gradient */}
-      <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-b border-slate-200/50 dark:border-slate-700/50 px-6 py-6">
+      {/* Add CSS for line clamping */}
+      <style>{lineClampStyles}</style>
+      
+      {/* Compact header */}
+      <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-b border-slate-200/50 dark:border-slate-700/50 px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
               SMS Management
             </h1>
-            <p className="text-slate-600 dark:text-slate-400 mt-1">Manage SMS conversations, messages, and templates</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Manage conversations, templates, and campaigns</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <Button 
               variant="outline"
               onClick={handleAnalyticsOpen}
-              className="h-12 px-6 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 rounded-xl shadow-sm hover:bg-white dark:hover:bg-slate-600"
+              size="sm"
+              className="h-9 px-4 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600"
             >
               <BarChart3 className="mr-2 h-4 w-4" />
               Analytics
@@ -1324,14 +1338,16 @@ export function SMS() {
             <Button 
               variant="outline"
               onClick={exportSMSData}
-              className="h-12 px-6 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 rounded-xl shadow-sm hover:bg-white dark:hover:bg-slate-600"
+              size="sm"
+              className="h-9 px-4 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600"
             >
               <Download className="mr-2 h-4 w-4" />
               Export
             </Button>
             <Button 
               onClick={() => setIsNewMessageOpen(true)}
-              className="h-12 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 font-medium"
+              size="sm"
+              className="h-9 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
             >
               <Send className="mr-2 h-4 w-4" />
               Send Message
@@ -1340,238 +1356,170 @@ export function SMS() {
         </div>
       </div>
 
-      {/* Content area with enhanced spacing */}
-      <div className="px-6 py-6">
+      {/* Content area with compact spacing */}
+      <div className="px-6 py-4">
 
-      <Tabs defaultValue="conversations" className="space-y-6" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 rounded-xl p-1 shadow-sm">
-          <TabsTrigger value="conversations" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg transition-all duration-200">Conversations</TabsTrigger>
-          <TabsTrigger value="templates" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg transition-all duration-200">Templates</TabsTrigger>
-          <TabsTrigger value="campaigns" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg transition-all duration-200">Campaigns</TabsTrigger>
-          <TabsTrigger value="analytics" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg transition-all duration-200">Analytics</TabsTrigger>
-          <TabsTrigger value="opt-out" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg transition-all duration-200">Opt-Out</TabsTrigger>
+      <Tabs defaultValue="conversations" className="space-y-4" value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-5 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 rounded-lg p-1 shadow-sm">
+          <TabsTrigger value="conversations" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-sm">Conversations</TabsTrigger>
+          <TabsTrigger value="templates" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-sm">Templates</TabsTrigger>
+          <TabsTrigger value="campaigns" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-sm">Campaigns</TabsTrigger>
+          <TabsTrigger value="analytics" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-sm">Analytics</TabsTrigger>
+          <TabsTrigger value="opt-out" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-sm">Opt-Out</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="conversations" className="space-y-6">
-          {/* Enhanced search and filters */}
-          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm px-6 py-4 border border-slate-200/50 dark:border-slate-700/50 rounded-xl">
-            <div className="flex flex-col lg:flex-row gap-4">
+        <TabsContent value="conversations" className="space-y-4">
+          {/* Compact search and filters */}
+          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm px-4 py-3 border border-slate-200/50 dark:border-slate-700/50 rounded-lg">
+            <div className="flex flex-col sm:flex-row gap-3">
               <div className="flex-1 relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input
-                  placeholder="Search conversations by title or content..."
-                  className="pl-12 h-12 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Search conversations..."
+                  className="pl-10 h-9 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <div className="flex gap-3">
-                <select
-                  value={selectedType}
-                  onChange={(e) => setSelectedType(e.target.value)}
-                  className="h-12 px-4 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="all">All Types</option>
-                  <option value="general">General</option>
-                  <option value="prayer_request">Prayer Request</option>
-                  <option value="event_reminder">Event Reminder</option>
-                  <option value="emergency">Emergency</option>
-                  <option value="pastoral_care">Pastoral Care</option>
-                </select>
-              </div>
+              <select
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value)}
+                className="h-9 px-3 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              >
+                <option value="all">All Types</option>
+                <option value="general">General</option>
+                <option value="prayer_request">Prayer Request</option>
+                <option value="event_reminder">Event Reminder</option>
+                <option value="emergency">Emergency</option>
+                <option value="pastoral_care">Pastoral Care</option>
+              </select>
             </div>
           </div>
 
           {filteredConversations.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                <MessageSquare className="h-8 w-8 text-slate-400" />
+            <div className="text-center py-8">
+              <div className="w-12 h-12 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 rounded-full flex items-center justify-center mx-auto mb-3">
+                <MessageSquare className="h-6 w-6 text-slate-400" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">No SMS Conversations Yet</h3>
-              <p className="text-slate-600 dark:text-slate-400 mb-4">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-2">No SMS Conversations Yet</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
                 {conversations.length === 0 
-                  ? "Start sending SMS messages to your church members and groups. Create conversations by sending your first message."
+                  ? "Start sending SMS messages to create conversations."
                   : "No conversations match your current filters."
                 }
               </p>
-              {conversations.length === 0 && (
-                <div className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
-                  <p>Ready to get started?</p>
-                  <ul className="list-disc list-inside space-y-1">
-                    <li>Select members or groups from your church directory</li>
-                    <li>Write your message or use a template</li>
-                    <li>Send and start conversations with your congregation</li>
-                  </ul>
-                </div>
-              )}
             </div>
           ) : (
-            <div className="grid gap-6">
+            <div className="grid gap-3">
               {filteredConversations.map((conversation) => (
                 <Card 
                   key={conversation.id} 
-                  className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-slate-200/50 dark:border-slate-600/50 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
+                  className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-slate-200/50 dark:border-slate-600/50 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
                   onClick={() => handleConversationClick(conversation)}
                 >
-                  <CardHeader className="pb-4">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <CardTitle className="text-xl font-bold text-slate-900 dark:text-slate-100">{conversation.title}</CardTitle>
-                        <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center mt-3">
-                          <CardDescription className="text-slate-600 dark:text-slate-400">
-                            {getUniqueMessageCount(conversation.sms_messages)} messages • 
-                            {getConversationParticipants(conversation.sms_messages)} participant{getConversationParticipants(conversation.sms_messages) !== 1 ? 's' : ''} • 
-                            {conversation.mostRecentMessage ? (
-                              <>
-                                Last {conversation.mostRecentMessage.direction === 'inbound' ? 'received' : 'sent'} {format(new Date(conversation.mostRecentMessage.sent_at), 'MMM d, yyyy')}
-                              </>
-                            ) : (
-                              `Last updated ${format(new Date(conversation.updated_at), 'MMM d, yyyy')}`
-                            )}
-                          </CardDescription>
-                          <div className="flex flex-wrap gap-2">
-                            <Badge className={`${getConversationTypeColor(conversation.conversation_type)} text-white font-medium`}>
-                              {conversation.conversation_type.replace('_', ' ')}
-                            </Badge>
-                            {conversation.mostRecentMessage && (
-                              <Badge variant="outline" className="text-xs">
-                                {conversation.mostRecentMessage.direction === 'inbound' ? 'Incoming' : 'Outgoing'}
-                              </Badge>
-                            )}
-                            <Badge className={`${getConversationStatusColor(getConversationStatus(conversation))} text-xs font-medium`}>
-                              {getConversationStatusText(getConversationStatus(conversation))}
-                            </Badge>
-                            <Badge variant="outline" className="text-xs text-slate-600 dark:text-slate-400">
-                              {getConversationSummary(conversation.sms_messages)}
-                            </Badge>
-                          </div>
+                  <div className="p-4">
+                    {/* Conversation Header */}
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                          {conversation.title}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 dark:text-slate-400">
+                          <span>{getUniqueMessageCount(conversation.sms_messages)} messages</span>
+                          <span>•</span>
+                          <span>{getConversationParticipants(conversation.sms_messages)} participants</span>
+                          <span>•</span>
+                          <span>{conversation.mostRecentMessage ? format(new Date(conversation.mostRecentMessage.sent_at), 'MMM d') : format(new Date(conversation.updated_at), 'MMM d')}</span>
                         </div>
                       </div>
-                    </div>
-                  </CardHeader>
-                  {conversation.sms_messages && conversation.sms_messages.length > 0 && (
-                    <CardContent className="pt-0">
-                      <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
-                        {conversation.mostRecentMessage ? (
-                          <div className="space-y-2">
-                            {/* Sender Info */}
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-2">
-                                <div className={`w-2 h-2 rounded-full ${
-                                  conversation.mostRecentMessage.direction === 'inbound' 
-                                    ? 'bg-blue-500' 
-                                    : 'bg-green-500'
-                                }`} />
-                                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                                  {conversation.mostRecentMessage.senderInfo.name}
-                                </span>
-                                <span className="text-xs text-slate-500 dark:text-slate-400">
-                                  {conversation.mostRecentMessage.senderInfo.phone}
-                                </span>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <Badge variant="outline" className="text-xs">
-                                  {conversation.mostRecentMessage.direction === 'inbound' ? 'Received' : 'Sent'}
-                                </Badge>
-                                {conversation.mostRecentMessage.message_type === 'event_reminder' && (
-                                  <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
-                                    <Bell className="h-3 w-3 mr-1" />
-                                    Event Reminder
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                            
-                            {/* Message Content */}
-                            <div className="text-sm text-slate-700 dark:text-slate-300">
-                              {conversation.mostRecentMessage.body.length > 100 
-                                ? `${conversation.mostRecentMessage.body.substring(0, 100)}...`
-                                : conversation.mostRecentMessage.body
-                              }
-                            </div>
-                            
-                            {/* Timestamp */}
-                            <div className="text-xs text-slate-500 dark:text-slate-400">
-                              {format(new Date(conversation.mostRecentMessage.sent_at), 'MMM d, HH:mm')}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="text-sm text-slate-700 dark:text-slate-300">
-                            Latest: {conversation.sms_messages[0].body.substring(0, 100)}...
-                          </div>
+                      <div className="flex flex-col items-end gap-1 ml-3">
+                        <Badge className={`${getConversationTypeColor(conversation.conversation_type)} text-xs px-2 py-1`}>
+                          {conversation.conversation_type.replace('_', ' ')}
+                        </Badge>
+                        {conversation.mostRecentMessage && (
+                          <Badge variant="outline" className="text-xs px-2 py-1">
+                            {conversation.mostRecentMessage.direction === 'inbound' ? 'In' : 'Out'}
+                          </Badge>
                         )}
                       </div>
-                    </CardContent>
-                  )}
+                    </div>
+
+                    {/* Most Recent Message Preview */}
+                    {conversation.mostRecentMessage && (
+                      <div className="bg-slate-50 dark:bg-slate-700/50 rounded-md p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${
+                              conversation.mostRecentMessage.direction === 'inbound' 
+                                ? 'bg-blue-500' 
+                                : 'bg-green-500'
+                            }`} />
+                            <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                              {conversation.mostRecentMessage.senderInfo.name}
+                            </span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                              {conversation.mostRecentMessage.senderInfo.phone}
+                            </span>
+                          </div>
+                          <span className="text-xs text-slate-500 dark:text-slate-400">
+                            {format(new Date(conversation.mostRecentMessage.sent_at), 'HH:mm')}
+                          </span>
+                        </div>
+                        
+                        <div className="text-sm text-slate-700 dark:text-slate-300 line-clamp-2">
+                          {conversation.mostRecentMessage.body}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </Card>
               ))}
             </div>
           )}
         </TabsContent>
 
-        <TabsContent value="templates" className="space-y-6">
+        <TabsContent value="templates" className="space-y-4">
           <div className="flex justify-between items-center">
             <div>
-              <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100">SMS Templates</h3>
-              <p className="text-slate-600 dark:text-slate-400 mt-1">Create and manage message templates for consistent communication</p>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">SMS Templates</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Create and manage message templates</p>
             </div>
             <Button 
               onClick={() => setIsTemplateOpen(true)}
-              className="h-12 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 font-medium"
+              size="sm"
+              className="h-9 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
             >
               <Plus className="mr-2 h-4 w-4" />
               Create Template
             </Button>
           </div>
 
-          <div className="grid gap-6">
+          <div className="grid gap-3">
             {templates.map((template) => (
-              <Card key={template.id} className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-slate-200/50 dark:border-slate-600/50 shadow-lg hover:shadow-xl transition-all duration-300">
-                <CardHeader className="pb-4">
-                  <div className="flex justify-between items-start">
+              <Card key={template.id} className="bg-white/80 dark:bg-slate-800/80 backdrop-sm border-slate-200/50 dark:border-slate-600/50 shadow-sm hover:shadow-md transition-all duration-200">
+                <div className="p-4">
+                  <div className="flex justify-between items-start mb-3">
                     <div className="flex-1">
-                      <CardTitle className="text-xl font-bold text-slate-900 dark:text-slate-100">{template.name}</CardTitle>
-                      <CardDescription className="text-slate-600 dark:text-slate-400 mt-2">{template.description}</CardDescription>
+                      <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{template.name}</h4>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">{template.description}</p>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="space-y-4">
-                    <div>
-                      <div className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Template:</div>
-                      <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg text-sm text-slate-700 dark:text-slate-300">
-                        {template.template_text}
-                      </div>
-                    </div>
-                    {template.variables && template.variables.length > 0 && (
-                      <div>
-                        <div className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Variables:</div>
-                        <div className="flex flex-wrap gap-2">
-                          {template.variables.map((variable, index) => (
-                            <Badge key={index} variant="outline" className="border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300">
-                              {variable}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    <div className="flex justify-end pt-4 space-x-3">
+                    <div className="flex gap-2 ml-3">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleEditTemplate(template)}
-                        className="h-10 px-4 bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-700/50 dark:hover:bg-slate-600/50 dark:text-slate-300 dark:border-slate-600 rounded-lg font-medium"
+                        className="h-7 px-3 text-xs"
                       >
-                        <Edit className="mr-2 h-4 w-4" />
+                        <Edit className="mr-1 h-3 w-3" />
                         Edit
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleDeleteTemplate(template.id)}
-                        className="h-10 px-4 bg-red-50 hover:bg-red-100 text-red-700 border-red-200 dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-red-300 dark:border-red-700 rounded-lg font-medium"
+                        className="h-7 px-3 text-xs text-red-600 border-red-200 hover:bg-red-50"
                       >
-                        <Trash2 className="mr-2 h-4 w-4" />
+                        <Trash2 className="mr-1 h-3 w-3" />
                         Delete
                       </Button>
                       <Button
@@ -1585,38 +1533,59 @@ export function SMS() {
                           });
                           setIsNewMessageOpen(true);
                         }}
-                        className="h-10 px-4 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700 rounded-lg font-medium"
+                        className="h-7 px-3 text-xs text-blue-600 border-blue-200 hover:bg-blue-50"
                       >
-                        <Send className="mr-2 h-4 w-4" />
-                        Use Template
+                        <Send className="mr-1 h-3 w-3" />
+                        Use
                       </Button>
                     </div>
                   </div>
-                </CardContent>
+                  
+                  <div className="space-y-2">
+                    <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-md">
+                      <div className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Template:</div>
+                      <div className="text-sm text-slate-700 dark:text-slate-300 line-clamp-2">
+                        {template.template_text}
+                      </div>
+                    </div>
+                    
+                    {template.variables && template.variables.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {template.variables.map((variable, index) => (
+                          <Badge key={index} variant="outline" className="text-xs px-2 py-1">
+                            {variable}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </Card>
             ))}
           </div>
         </TabsContent>
 
         {/* Campaigns Tab */}
-        <TabsContent value="campaigns" className="space-y-6">
+        <TabsContent value="campaigns" className="space-y-4">
           <div className="flex justify-between items-center">
             <div>
-              <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100">SMS Campaigns</h3>
-              <p className="text-slate-600 dark:text-slate-400 mt-1">Create and manage SMS campaigns to reach your congregation</p>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">SMS Campaigns</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Create and manage SMS campaigns</p>
             </div>
-            <div className="flex space-x-3">
+            <div className="flex space-x-2">
               <Button 
                 variant="outline" 
                 onClick={() => setIsABTestOpen(true)}
-                className="h-12 px-6 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 rounded-xl shadow-sm hover:bg-white dark:hover:bg-slate-600"
+                size="sm"
+                className="h-9 px-4"
               >
                 <Target className="mr-2 h-4 w-4" />
                 A/B Test
               </Button>
               <Button 
                 onClick={() => setIsCampaignOpen(true)}
-                className="h-12 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 font-medium"
+                size="sm"
+                className="h-9 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
               >
                 <Plus className="mr-2 h-4 w-4" />
                 Create Campaign
@@ -1625,107 +1594,95 @@ export function SMS() {
           </div>
 
           {/* Campaign Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-4">
-            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800 shadow-lg">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
-                <CardTitle className="text-sm font-semibold text-blue-900 dark:text-blue-100">Total Campaigns</CardTitle>
-                <Target className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{campaigns.length}</div>
-              </CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800">
+              <div className="p-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-semibold text-blue-900 dark:text-blue-100">Total</div>
+                  <Target className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="text-lg font-bold text-blue-900 dark:text-blue-100 mt-1">{campaigns.length}</div>
+              </div>
             </Card>
-            <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-green-200 dark:border-green-800 shadow-lg">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
-                <CardTitle className="text-sm font-semibold text-green-900 dark:text-green-100">Active Campaigns</CardTitle>
-                <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <div className="text-2xl font-bold text-green-900 dark:text-green-100">{campaigns.filter(c => c.status === 'active').length}</div>
-              </CardContent>
+            <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-green-200 dark:border-green-800">
+              <div className="p-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-semibold text-green-900 dark:text-green-100">Active</div>
+                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                </div>
+                <div className="text-lg font-bold text-green-900 dark:text-green-100 mt-1">{campaigns.filter(c => c.status === 'active').length}</div>
+              </div>
             </Card>
-            <Card className="bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-950 dark:to-amber-950 border-yellow-200 dark:border-yellow-800 shadow-lg">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
-                <CardTitle className="text-sm font-semibold text-yellow-900 dark:text-yellow-100">Scheduled</CardTitle>
-                <Clock className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <div className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">{campaigns.filter(c => c.status === 'scheduled').length}</div>
-              </CardContent>
+            <Card className="bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-950 dark:to-amber-950 border-yellow-200 dark:border-yellow-800">
+              <div className="p-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-semibold text-yellow-900 dark:text-yellow-100">Scheduled</div>
+                  <Clock className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                </div>
+                <div className="text-lg font-bold text-yellow-900 dark:text-yellow-100 mt-1">{campaigns.filter(c => c.status === 'scheduled').length}</div>
+              </div>
             </Card>
-            <Card className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-950 dark:to-violet-950 border-purple-200 dark:border-purple-800 shadow-lg">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
-                <CardTitle className="text-sm font-semibold text-purple-900 dark:text-purple-100">Completed</CardTitle>
-                <CheckCircle2 className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">{campaigns.filter(c => c.status === 'completed').length}</div>
-              </CardContent>
+            <Card className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-950 dark:to-violet-950 border-purple-200 dark:border-purple-800">
+              <div className="p-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-semibold text-purple-900 dark:text-purple-100">Completed</div>
+                  <CheckCircle2 className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div className="text-lg font-bold text-purple-900 dark:text-purple-100 mt-1">{campaigns.filter(c => c.status === 'completed').length}</div>
+              </div>
             </Card>
           </div>
 
           {/* Campaigns List */}
-          <div className="grid gap-6">
+          <div className="grid gap-3">
             {campaigns.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Target className="h-8 w-8 text-slate-400" />
+              <div className="text-center py-8">
+                <div className="w-12 h-12 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Target className="h-6 w-6 text-slate-400" />
                 </div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">No Campaigns Yet</h3>
-                <p className="text-slate-600 dark:text-slate-400 mb-4">
+                <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-2">No Campaigns Yet</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
                   Create your first SMS campaign to reach your congregation effectively.
                 </p>
               </div>
             ) : (
               campaigns.map((campaign) => (
-                <Card key={campaign.id} className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-slate-200/50 dark:border-slate-600/50 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <CardHeader className="pb-4">
-                    <div className="flex justify-between items-start">
+                <Card key={campaign.id} className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-slate-200/50 dark:border-slate-600/50 shadow-sm hover:shadow-md transition-all duration-200">
+                  <div className="p-4">
+                    <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
-                        <CardTitle className="text-xl font-bold text-slate-900 dark:text-slate-100">{campaign.name}</CardTitle>
-                        <CardDescription className="text-slate-600 dark:text-slate-400 mt-2">{campaign.description}</CardDescription>
+                        <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{campaign.name}</h4>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">{campaign.description}</p>
                       </div>
                       <Badge className={`${
                         campaign.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
                         campaign.status === 'scheduled' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
                         'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300'
-                      } font-medium`}>
+                      } text-xs px-2 py-1`}>
                         {campaign.status}
                       </Badge>
                     </div>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="space-y-4">
-                      <div>
-                        <div className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Message:</div>
-                        <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg text-sm text-slate-700 dark:text-slate-300">
+                    
+                    <div className="space-y-2">
+                      <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-md">
+                        <div className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Message:</div>
+                        <div className="text-sm text-slate-700 dark:text-slate-300 line-clamp-2">
                           {campaign.message}
                         </div>
                       </div>
-                      <div className="flex flex-wrap gap-6 text-sm text-slate-600 dark:text-slate-400">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">Type:</span>
-                          <span>{campaign.type}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">Created:</span>
-                          <span>{format(new Date(campaign.created_at), 'MMM d, yyyy')}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">Target:</span>
-                          <span>{campaign.targetType === 'all' ? 'All Church' : 
-                            campaign.targetType === 'groups' ? `${campaign.selectedGroups?.length || 0} Groups` :
-                            `${campaign.selectedMembers?.length || 0} Members`}</span>
-                        </div>
+                      
+                      <div className="flex flex-wrap gap-3 text-xs text-slate-600 dark:text-slate-400">
+                        <span><strong>Type:</strong> {campaign.type}</span>
+                        <span><strong>Created:</strong> {format(new Date(campaign.created_at), 'MMM d')}</span>
+                        <span><strong>Target:</strong> {campaign.targetType === 'all' ? 'All Church' : 
+                          campaign.targetType === 'groups' ? `${campaign.selectedGroups?.length || 0} Groups` :
+                          `${campaign.selectedMembers?.length || 0} Members`}</span>
                         {campaign.recipients && campaign.recipients.length > 0 && (
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">Recipients:</span>
-                            <span>{campaign.recipients.length} people</span>
-                          </div>
+                          <span><strong>Recipients:</strong> {campaign.recipients.length} people</span>
                         )}
                       </div>
                     </div>
-                  </CardContent>
+                  </div>
                 </Card>
               ))
             )}
@@ -1733,16 +1690,17 @@ export function SMS() {
         </TabsContent>
 
         {/* Analytics Tab */}
-        <TabsContent value="analytics" className="space-y-6">
+        <TabsContent value="analytics" className="space-y-4">
           <div className="flex justify-between items-center">
             <div>
-              <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100">SMS Analytics</h3>
-              <p className="text-slate-600 dark:text-slate-400 mt-1">Track performance and delivery rates for your SMS campaigns</p>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">SMS Analytics</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Track performance and delivery rates</p>
             </div>
             <Button 
               variant="outline" 
               onClick={exportSMSData}
-              className="h-12 px-6 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 rounded-xl shadow-sm hover:bg-white dark:hover:bg-slate-600"
+              size="sm"
+              className="h-9 px-4"
             >
               <Download className="mr-2 h-4 w-4" />
               Export Data
@@ -1750,148 +1708,147 @@ export function SMS() {
           </div>
 
           {/* Analytics Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800 shadow-lg">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
-                <CardTitle className="text-sm font-semibold text-blue-900 dark:text-blue-100">Total Messages Sent</CardTitle>
-                <MessageSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{smsStats.totalSent}</div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800">
+              <div className="p-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-semibold text-blue-900 dark:text-blue-100">Total Sent</div>
+                  <MessageSquare className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="text-lg font-bold text-blue-900 dark:text-blue-100 mt-1">{smsStats.totalSent}</div>
                 <p className="text-xs text-blue-700 dark:text-blue-300">All time</p>
-              </CardContent>
+              </div>
             </Card>
-            <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-green-200 dark:border-green-800 shadow-lg">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
-                <CardTitle className="text-sm font-semibold text-green-900 dark:text-green-100">Delivery Rate</CardTitle>
-                <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <div className="text-2xl font-bold text-green-900 dark:text-green-100">{smsStats.deliveryRate}%</div>
+            <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-green-200 dark:border-green-800">
+              <div className="p-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-semibold text-green-900 dark:text-green-100">Delivery Rate</div>
+                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                </div>
+                <div className="text-lg font-bold text-green-900 dark:text-green-100 mt-1">{smsStats.deliveryRate}%</div>
                 <p className="text-xs text-green-700 dark:text-green-300">Successfully delivered</p>
-              </CardContent>
+              </div>
             </Card>
-            <Card className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-950 dark:to-violet-950 border-purple-200 dark:border-purple-800 shadow-lg">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
-                <CardTitle className="text-sm font-semibold text-purple-900 dark:text-purple-100">This Month</CardTitle>
-                <TrendingUp className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">{smsStats.thisMonth}</div>
+            <Card className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-950 dark:to-violet-950 border-purple-200 dark:border-purple-800">
+              <div className="p-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-semibold text-purple-900 dark:text-purple-100">This Month</div>
+                  <TrendingUp className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div className="text-lg font-bold text-purple-900 dark:text-purple-100 mt-1">{smsStats.thisMonth}</div>
                 <p className="text-xs text-purple-700 dark:text-purple-300">Messages sent</p>
-              </CardContent>
+              </div>
             </Card>
           </div>
 
           {/* Message Status Breakdown */}
-          <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-slate-200/50 dark:border-slate-600/50 shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-slate-900 dark:text-slate-100">Message Status Breakdown</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="flex items-center space-x-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                  <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+          <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-slate-200/50 dark:border-slate-600/50">
+            <div className="p-4">
+              <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">Message Status Breakdown</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="flex items-center space-x-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-md">
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
                   <div>
                     <div className="font-bold text-green-900 dark:text-green-100">{smsStats.totalDelivered}</div>
-                    <div className="text-sm text-green-700 dark:text-green-300">Delivered</div>
+                    <div className="text-xs text-green-700 dark:text-green-300">Delivered</div>
                   </div>
                 </div>
-                <div className="flex items-center space-x-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                  <Clock className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+                <div className="flex items-center space-x-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-md">
+                  <Clock className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
                   <div>
                     <div className="font-bold text-yellow-900 dark:text-yellow-100">{smsStats.totalSent - smsStats.totalDelivered - smsStats.totalFailed}</div>
-                    <div className="text-sm text-yellow-700 dark:text-yellow-300">Pending</div>
+                    <div className="text-xs text-yellow-700 dark:text-yellow-300">Pending</div>
                   </div>
                 </div>
-                <div className="flex items-center space-x-3 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                  <XCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
+                <div className="flex items-center space-x-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-md">
+                  <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
                   <div>
                     <div className="font-bold text-red-900 dark:text-red-100">{smsStats.totalFailed}</div>
-                    <div className="text-sm text-red-700 dark:text-red-300">Failed</div>
+                    <div className="text-xs text-red-700 dark:text-red-300">Failed</div>
                   </div>
                 </div>
               </div>
-            </CardContent>
+            </div>
           </Card>
         </TabsContent>
 
         {/* Opt-Out Management Tab */}
         <TabsContent value="opt-out" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">SMS Opt-Out Management</h3>
-            <Button variant="outline" onClick={() => setIsOptOutOpen(true)}>
+            <div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">SMS Opt-Out Management</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Manage member SMS preferences</p>
+            </div>
+            <Button variant="outline" onClick={() => setIsOptOutOpen(true)} size="sm" className="h-9 px-4">
               <Eye className="mr-2 h-4 w-4" />
               View Details
             </Button>
           </div>
 
           {/* Opt-In Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Opted In</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{members.filter(m => m.sms_opt_in).length}</div>
-                <p className="text-xs text-muted-foreground">Members receiving SMS</p>
-              </CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+              <div className="p-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-semibold text-green-900 dark:text-green-100">Opted In</div>
+                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                </div>
+                <div className="text-lg font-bold text-green-900 dark:text-green-100 mt-1">{members.filter(m => m.sms_opt_in).length}</div>
+                <p className="text-xs text-green-700 dark:text-green-300">Members receiving SMS</p>
+              </div>
             </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Opted Out</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{members.filter(m => !m.sms_opt_in).length}</div>
-                <p className="text-xs text-muted-foreground">Members not receiving SMS</p>
-              </CardContent>
+            <Card className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
+              <div className="p-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-semibold text-red-900 dark:text-red-100">Opted Out</div>
+                  <EyeOff className="h-4 w-4 text-red-600 dark:text-red-400" />
+                </div>
+                <div className="text-lg font-bold text-red-900 dark:text-red-100 mt-1">{members.filter(m => !m.sms_opt_in).length}</div>
+                <p className="text-xs text-red-700 dark:text-red-300">Members not receiving SMS</p>
+              </div>
             </Card>
           </div>
 
           {/* Members List */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Member SMS Preferences</CardTitle>
-              <CardDescription>
-                Manage which members receive SMS messages
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
+          <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-slate-200/50 dark:border-slate-600/50">
+            <div className="p-4">
+              <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">Member SMS Preferences</h4>
+              <div className="space-y-2 max-h-96 overflow-y-auto">
                 {members.map((member) => (
-                  <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <Avatar className="h-8 w-8">
+                  <div key={member.id} className="flex items-center justify-between p-2 border rounded-md">
+                    <div className="flex items-center space-x-2">
+                      <Avatar className="h-6 w-6">
                         <AvatarImage src={member.image_url} />
-                        <AvatarFallback className="text-sm">
+                        <AvatarFallback className="text-xs">
                           {getInitials(member.firstname, member.lastname)}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <div className="font-medium">
+                        <div className="text-sm font-medium">
                           {member.firstname} {member.lastname}
                         </div>
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-xs text-slate-500 dark:text-slate-400">
                           {member.phone}
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Badge variant={member.sms_opt_in ? 'default' : 'secondary'}>
+                      <Badge variant={member.sms_opt_in ? 'default' : 'secondary'} className="text-xs">
                         {member.sms_opt_in ? 'Opted In' : 'Opted Out'}
                       </Badge>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleOptOutToggle(member.id, member.sms_opt_in)}
+                        className="h-7 px-2"
                       >
-                        {member.sms_opt_in ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {member.sms_opt_in ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
                       </Button>
                     </div>
                   </div>
                 ))}
               </div>
-            </CardContent>
+            </div>
           </Card>
         </TabsContent>
       </Tabs>
