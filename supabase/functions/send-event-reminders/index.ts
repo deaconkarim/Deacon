@@ -26,6 +26,12 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
     )
 
+    // Get Twilio phone number for SMS messages
+    const twilioPhoneNumber = Deno.env.get('TWILIO_PHONE_NUMBER');
+    if (!twilioPhoneNumber) {
+      throw new Error('TWILIO_PHONE_NUMBER environment variable is not set');
+    }
+
     // Get all active reminder configs that need to be sent
     const { data: reminderConfigs, error: configError } = await supabaseClient
       .from('event_reminder_configs')
@@ -257,6 +263,7 @@ serve(async (req) => {
                 .insert({
                   conversation_id: null, // Will be created by SMS service
                   member_id: recipient.id,
+                  from_number: twilioPhoneNumber,
                   to_number: recipient.phone,
                   body: messageText,
                   direction: 'outbound',

@@ -18,6 +18,7 @@ export default function ChildrenCheckin() {
   const [error, setError] = useState(null);
   const [checkinLogs, setCheckinLogs] = useState([]);
   const [allCheckinHistory, setAllCheckinHistory] = useState([]);
+  const [searchFilter, setSearchFilter] = useState('');
 
   // Fetch children and their guardians
   useEffect(() => {
@@ -173,6 +174,18 @@ export default function ChildrenCheckin() {
 
     fetchCheckinLogs();
   }, [selectedEvent]);
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape' && searchFilter) {
+        setSearchFilter('');
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [searchFilter]);
 
   // Handle check-in
   const handleCheckin = async (childId, guardianId) => {
@@ -413,55 +426,114 @@ export default function ChildrenCheckin() {
           {/* Check-in Section */}
           <div className="bg-card p-3 md:p-6 rounded-lg border">
             <h2 className="text-2xl md:text-2xl font-semibold mb-6 md:mb-6 px-1 md:px-0 text-foreground">Check-in Children</h2>
+            
+            {/* Search Filter */}
+            <div className="mb-6">
+              <label htmlFor="search-filter" className="block text-sm font-medium text-muted-foreground mb-2">
+                Search Children by Name
+              </label>
+              <div className="relative">
+                <input
+                  id="search-filter"
+                  type="text"
+                  placeholder="Type to search children..."
+                  value={searchFilter}
+                  onChange={(e) => setSearchFilter(e.target.value)}
+                  className="w-full p-3 pl-10 pr-12 border border-input bg-background text-foreground rounded-lg text-sm h-12 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                {searchFilter && (
+                  <button
+                    onClick={() => setSearchFilter('')}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground transition-colors"
+                    type="button"
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              {searchFilter && (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Showing {children.filter(child => 
+                    child.firstname?.toLowerCase().includes(searchFilter.toLowerCase()) ||
+                    child.lastname?.toLowerCase().includes(searchFilter.toLowerCase())
+                  ).length} of {children.length} children
+                </p>
+              )}
+            </div>
+            
             <div className="flex flex-col gap-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4">
-              {children.map(child => {
-                const childGuardians = guardians.filter(g => g.child_id === child.id);
-                const isCheckedIn = checkinLogs.some(
-                  log => log.child_id === child.id && !log.check_out_time
-                );
+              {children
+                .filter(child => 
+                  searchFilter === '' || 
+                  child.firstname?.toLowerCase().includes(searchFilter.toLowerCase()) ||
+                  child.lastname?.toLowerCase().includes(searchFilter.toLowerCase())
+                )
+                .map(child => {
+                  const childGuardians = guardians.filter(g => g.child_id === child.id);
+                  const isCheckedIn = checkinLogs.some(
+                    log => log.child_id === child.id && !log.check_out_time
+                  );
 
-                return (
-                  <div key={child.id} className="border border-border p-4 md:p-4 rounded-lg bg-muted/50 w-full">
-                    <div className="flex items-center justify-between mb-3 md:mb-3">
-                      <div className="flex items-center gap-3 md:gap-3">
-                        <Avatar className="h-12 w-12 md:h-12 md:w-12">
-                          <AvatarImage src={child.image_url} />
-                          <AvatarFallback className="text-lg md:text-lg bg-muted text-muted-foreground">{getInitials(child.firstname, child.lastname)}</AvatarFallback>
-                        </Avatar>
-                        <h3 className="text-lg md:text-lg font-medium text-foreground">{child.firstname} {child.lastname}</h3>
-                      </div>
-                      <a
-                        href={`/edit-child/${child.id}`}
-                        className="text-sm bg-secondary text-secondary-foreground px-3 py-1 rounded hover:bg-secondary/90"
-                      >
-                        Edit
-                      </a>
-                    </div>
-                    {!isCheckedIn ? (
-                      <div className="mt-3 md:mt-3">
-                        <label className="block text-sm md:text-sm text-muted-foreground mb-2 md:mb-2">
-                          Check in with guardian:
-                        </label>
-                        <select
-                          className="w-full p-3 md:p-3 border border-input bg-background text-foreground rounded-lg text-sm md:text-sm h-12 md:h-12 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                          onChange={(e) => handleCheckin(child.id, e.target.value)}
+                  return (
+                    <div key={child.id} className="border border-border p-4 md:p-4 rounded-lg bg-muted/50 w-full">
+                      <div className="flex items-center justify-between mb-3 md:mb-3">
+                        <div className="flex items-center gap-3 md:gap-3">
+                          <Avatar className="h-12 w-12 md:h-12 md:w-12">
+                            <AvatarImage src={child.image_url} />
+                            <AvatarFallback className="text-lg md:text-lg bg-muted text-muted-foreground">{getInitials(child.firstname, child.lastname)}</AvatarFallback>
+                          </Avatar>
+                          <h3 className="text-lg md:text-lg font-medium text-foreground">{child.firstname} {child.lastname}</h3>
+                        </div>
+                        <a
+                          href={`/edit-child/${child.id}`}
+                          className="text-sm bg-secondary text-secondary-foreground px-3 py-1 rounded hover:bg-secondary/90"
                         >
-                          <option value="">Select guardian</option>
-                          {childGuardians.map(guardian => (
-                            <option key={guardian.id} value={guardian.guardian_id}>
-                              {guardian.guardian?.firstname || ''} {guardian.guardian?.lastname || ''}
-                            </option>
-                          ))}
-                        </select>
+                          Edit
+                        </a>
                       </div>
-                    ) : (
-                      <div className="mt-3 md:mt-3 text-green-600 text-sm md:text-sm font-medium">
-                        Checked in
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                      {!isCheckedIn ? (
+                        <div className="mt-3 md:mt-3">
+                          <label className="block text-sm md:text-sm text-muted-foreground mb-2 md:mb-2">
+                            Check in with guardian:
+                          </label>
+                          <select
+                            className="w-full p-3 md:p-3 border border-input bg-background text-foreground rounded-lg text-sm md:text-sm h-12 md:h-12 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                            onChange={(e) => handleCheckin(child.id, e.target.value)}
+                          >
+                            <option value="">Select guardian</option>
+                            {childGuardians.map(guardian => (
+                              <option key={guardian.id} value={guardian.guardian_id}>
+                                {guardian.guardian?.firstname || ''} {guardian.guardian?.lastname || ''}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      ) : (
+                        <div className="mt-3 md:mt-3 text-green-600 text-sm md:text-sm font-medium">
+                          Checked in
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              
+              {/* No children found message */}
+              {children.filter(child => 
+                searchFilter === '' || 
+                child.firstname?.toLowerCase().includes(searchFilter.toLowerCase()) ||
+                child.lastname?.toLowerCase().includes(searchFilter.toLowerCase())
+              ).length === 0 && (
+                <div className="col-span-full text-center py-8 text-muted-foreground">
+                  {searchFilter ? `No children found matching "${searchFilter}"` : 'No children available'}
+                </div>
+              )}
             </div>
           </div>
 
