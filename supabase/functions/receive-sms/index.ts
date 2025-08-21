@@ -156,191 +156,174 @@ serve(async (req) => {
       console.log('ℹ️ No member found for phone number:', from)
     }
 
-    // Create or find conversation
+    // Find the most recent conversation for this person/phone number
     let conversationId = null
-    let allPossibleConversations = []
     
-    // First, check if this member is part of any active group conversations
+    // Strategy 1: If we have a member, find their most recent conversation
     if (member) {
-      console.log('🔍 Checking group conversations for member:', member.id, member.firstname, member.lastname)
+      console.log('🔍 Looking for most recent conversation for member:', member.id, member.firstname, member.lastname)
       
-      const { data: groupConversations } = await supabaseClient
+      // Find conversations where this member has messages, ordered by most recent activity
+      const { data: memberConversations } = await supabaseClient
         .from('sms_conversations')
-        .select('id, title, group_id, created_at')
-        .not('group_id', 'is', null)
-        .eq('status', 'active')
-        .order('updated_at', { ascending: false })
-      
-      console.log('🔍 Found group conversations:', groupConversations?.length || 0)
-      
-      if (groupConversations && groupConversations.length > 0) {
-        // Check if this member is in any of these groups
-        for (const conversation of groupConversations) {
-          console.log('🔍 Checking group:', conversation.group_id, 'for member:', member.id)
-          
-          const { data: groupMembers } = await supabaseClient
-            .from('group_members')
-            .select('member_id')
-            .eq('group_id', conversation.group_id)
-            .eq('member_id', member.id)
-          
-          console.log('🔍 Group members found:', groupMembers?.length || 0)
-          
-          if (groupMembers && groupMembers.length > 0) {
-            // This member is part of this group conversation
-            allPossibleConversations.push({
-              id: conversation.id,
-              title: conversation.title,
-              created_at: conversation.created_at,
-              type: 'group'
-            })
-            console.log('✅ Found group conversation for member:', conversation.id, conversation.title)
-          }
-        }
-      }
-    } else {
-      console.log('⚠️ No member found, skipping group conversation check')
-    }
-    
-    // Check if this member is part of any multi-recipient conversations
-    if (member) {
-      console.log('🔍 Checking multi-recipient conversations for member:', member.id)
-      const { data: multiRecipientConversations } = await supabaseClient
-        .from('sms_conversations')
-        .select('id, title, created_at')
-        .like('title', 'Multiple Recipients%')
-        .eq('status', 'active')
-        .order('updated_at', { ascending: false })
-      
-      console.log('🔍 Found multi-recipient conversations:', multiRecipientConversations?.length || 0)
-      
-      if (multiRecipientConversations && multiRecipientConversations.length > 0) {
-        // Check if this member has any messages in these conversations
-        for (const conversation of multiRecipientConversations) {
-          console.log('🔍 Checking multi-recipient conversation:', conversation.id, conversation.title)
-          const { data: memberMessages } = await supabaseClient
-            .from('sms_messages')
-            .select('id')
-            .eq('conversation_id', conversation.id)
-            .eq('member_id', member.id)
-            .limit(1)
-          
-          console.log('🔍 Member messages in conversation:', memberMessages?.length || 0)
-          
-          if (memberMessages && memberMessages.length > 0) {
-            // This member has messages in this multi-recipient conversation
-            allPossibleConversations.push({
-              id: conversation.id,
-              title: conversation.title,
-              created_at: conversation.created_at,
-              type: 'multi-recipient'
-            })
-            console.log('✅ Found multi-recipient conversation for member:', conversation.id, conversation.title)
-          }
-        }
-      }
-    }
-    
-    // Now find the most recently created conversation for this member/phone number
-    if (allPossibleConversations.length > 0) {
-      console.log('🔍 Found', allPossibleConversations.length, 'possible conversations for member')
-      
-      // Sort by creation date (most recent first) - this is what we want
-      allPossibleConversations.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-      
-      const mostRecentConversation = allPossibleConversations[0]
-      conversationId = mostRecentConversation.id
-      console.log('✅ Selected most recently created conversation:', conversationId, 'type:', mostRecentConversation.type, 'created at:', mostRecentConversation.created_at, 'title:', mostRecentConversation.title)
-    }
-    
-    // If no member-based conversation found, find the most recently created conversation for this phone number
-    if (!conversationId) {
-      console.log('🔍 Looking for most recently created conversation for phone number:', from)
-      
-      // Find all conversations that have messages from/to this phone number
-      // Try multiple phone number formats to ensure we find the right conversation
-      const { data: allPhoneMessages } = await supabaseClient
-        .from('sms_messages')
         .select(`
-          conversation_id,
-          conversation:sms_conversations!inner(
+          id,
+          title,
+          conversation_type,
+          created_at,
+          updated_at,
+          sms_messages!inner(
             id,
-            title,
-            created_at,
-            status
+            member_id,
+            sent_at
           )
         `)
-        .or(`from_number.eq.${from},to_number.eq.${from},from_number.eq.${normalizedFrom},to_number.eq.${normalizedFrom},from_number.eq.${cleanFromDigits},to_number.eq.${cleanFromDigits}`)
-        .eq('conversation.status', 'active')
+        .eq('sms_messages.member_id', member.id)
+        .eq('status', 'active')
+        .order('updated_at', { ascending: false })
+        .limit(5) // Get top 5 most recent conversations
       
-      if (allPhoneMessages && allPhoneMessages.length > 0) {
-        // Get unique conversations and sort by creation date (most recent first)
-        const uniqueConversations = allPhoneMessages
-          .filter((msg, index, self) => 
-            index === self.findIndex(m => m.conversation_id === msg.conversation_id)
-          )
-          .map(msg => msg.conversation)
-          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      if (memberConversations && memberConversations.length > 0) {
+        // Find the conversation with the most recent message from this member
+        let mostRecentConversation = null
+        let mostRecentMessageTime = null
         
-        if (uniqueConversations.length > 0) {
-          const mostRecentConversation = uniqueConversations[0]
-          conversationId = mostRecentConversation.id
-          console.log('✅ Found most recently created conversation:', conversationId, 'created at:', mostRecentConversation.created_at, 'title:', mostRecentConversation.title)
-        }
-      } else {
-        // If no exact match, try flexible digit matching
-        console.log('🔍 Trying flexible digit matching for most recently created conversation...')
-        const { data: allMessages } = await supabaseClient
-          .from('sms_messages')
-          .select(`
-            conversation_id,
-            from_number,
-            to_number,
-            conversation:sms_conversations!inner(
-              id,
-              title,
-              created_at,
-              status
+        for (const conversation of memberConversations) {
+          const memberMessages = conversation.sms_messages.filter(msg => msg.member_id === member.id)
+          if (memberMessages.length > 0) {
+            const latestMessage = memberMessages.reduce((latest, current) => 
+              new Date(current.sent_at) > new Date(latest.sent_at) ? current : latest
             )
-          `)
-          .eq('conversation.status', 'active')
-        
-        if (allMessages) {
-          // Find messages where the phone number matches (using digit comparison)
-          const matchingMessages = allMessages.filter(msg => {
-            const fromDigits = msg.from_number?.replace(/\D/g, '') || ''
-            const toDigits = msg.to_number?.replace(/\D/g, '') || ''
-            const matches = fromDigits === cleanFromDigits || toDigits === cleanFromDigits || 
-                           fromDigits === localFromDigits || toDigits === localFromDigits
-            if (matches) {
-              console.log('🔍 Found matching message:', msg.from_number, '->', msg.to_number, 'conversation:', msg.conversation_id, 'at:', msg.created_at)
-            }
-            return matches
-          })
-          
-          if (matchingMessages.length > 0) {
-            // Get unique conversations and sort by creation date (most recent first)
-            const uniqueMatchingConversations = matchingMessages
-              .filter((msg, index, self) => 
-                index === self.findIndex(m => m.conversation_id === msg.conversation_id)
-              )
-              .map(msg => msg.conversation)
-              .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
             
-            if (uniqueMatchingConversations.length > 0) {
-              const mostRecentMatchingConversation = uniqueMatchingConversations[0]
-              conversationId = mostRecentMatchingConversation.id
-              console.log('✅ Found most recently created conversation via digit matching:', conversationId, 'created at:', mostRecentMatchingConversation.created_at, 'title:', mostRecentMatchingConversation.title)
+            if (!mostRecentMessageTime || new Date(latestMessage.sent_at) > mostRecentMessageTime) {
+              mostRecentMessageTime = new Date(latestMessage.sent_at)
+              mostRecentConversation = conversation
             }
           }
         }
+        
+        if (mostRecentConversation) {
+          conversationId = mostRecentConversation.id
+          console.log('✅ Found most recent conversation for member:', conversationId, 'title:', mostRecentConversation.title, 'last message:', mostRecentMessageTime)
+        }
       }
+    }
+    
+    // Strategy 2: If no member-based conversation found, find by phone number
+    if (!conversationId) {
+      console.log('🔍 Looking for most recent conversation for phone number:', from)
       
-      if (conversationId) {
-        console.log('✅ Found existing conversation:', conversationId)
-      } else {
-        console.log('❌ No existing conversation found for phone number')
+      // Find conversations with messages to/from this phone number, ordered by most recent activity
+      const { data: phoneConversations } = await supabaseClient
+        .from('sms_conversations')
+        .select(`
+          id,
+          title,
+          conversation_type,
+          created_at,
+          updated_at,
+          sms_messages!inner(
+            id,
+            from_number,
+            to_number,
+            sent_at
+          )
+        `)
+        .or(`sms_messages.from_number.eq.${from},sms_messages.to_number.eq.${from},sms_messages.from_number.eq.${normalizedFrom},sms_messages.to_number.eq.${normalizedFrom}`)
+        .eq('status', 'active')
+        .order('updated_at', { ascending: false })
+        .limit(5) // Get top 5 most recent conversations
+      
+      if (phoneConversations && phoneConversations.length > 0) {
+        // Find the conversation with the most recent message involving this phone number
+        let mostRecentConversation = null
+        let mostRecentMessageTime = null
+        
+        for (const conversation of phoneConversations) {
+          const phoneMessages = conversation.sms_messages.filter(msg => 
+            msg.from_number === from || msg.to_number === from ||
+            msg.from_number === normalizedFrom || msg.to_number === normalizedFrom
+          )
+          
+          if (phoneMessages.length > 0) {
+            const latestMessage = phoneMessages.reduce((latest, current) => 
+              new Date(current.sent_at) > new Date(latest.sent_at) ? current : latest
+            )
+            
+            if (!mostRecentMessageTime || new Date(latestMessage.sent_at) > mostRecentMessageTime) {
+              mostRecentMessageTime = new Date(latestMessage.sent_at)
+              mostRecentConversation = conversation
+            }
+          }
+        }
+        
+        if (mostRecentConversation) {
+          conversationId = mostRecentConversation.id
+          console.log('✅ Found most recent conversation for phone number:', conversationId, 'title:', mostRecentConversation.title, 'last message:', mostRecentMessageTime)
+        }
       }
+    }
+    
+    // Strategy 3: If still no conversation found, try flexible digit matching
+    if (!conversationId) {
+      console.log('🔍 Trying flexible digit matching for phone number...')
+      
+      const { data: allConversations } = await supabaseClient
+        .from('sms_conversations')
+        .select(`
+          id,
+          title,
+          conversation_type,
+          created_at,
+          updated_at,
+          sms_messages(
+            id,
+            from_number,
+            to_number,
+            sent_at
+          )
+        `)
+        .eq('status', 'active')
+        .order('updated_at', { ascending: false })
+        .limit(10) // Get top 10 most recent conversations
+      
+      if (allConversations) {
+        let mostRecentConversation = null
+        let mostRecentMessageTime = null
+        
+        for (const conversation of allConversations) {
+          if (conversation.sms_messages && conversation.sms_messages.length > 0) {
+            const matchingMessages = conversation.sms_messages.filter(msg => {
+              const fromDigits = msg.from_number?.replace(/\D/g, '') || ''
+              const toDigits = msg.to_number?.replace(/\D/g, '') || ''
+              return fromDigits === cleanFromDigits || toDigits === cleanFromDigits ||
+                     fromDigits === localFromDigits || toDigits === localFromDigits
+            })
+            
+            if (matchingMessages.length > 0) {
+              const latestMessage = matchingMessages.reduce((latest, current) => 
+                new Date(current.sent_at) > new Date(latest.sent_at) ? current : latest
+              )
+              
+              if (!mostRecentMessageTime || new Date(latestMessage.sent_at) > mostRecentMessageTime) {
+                mostRecentMessageTime = new Date(latestMessage.sent_at)
+                mostRecentConversation = conversation
+              }
+            }
+          }
+        }
+        
+        if (mostRecentConversation) {
+          conversationId = mostRecentConversation.id
+          console.log('✅ Found most recent conversation via digit matching:', conversationId, 'title:', mostRecentConversation.title, 'last message:', mostRecentMessageTime)
+        }
+      }
+    }
+    
+    if (conversationId) {
+      console.log('✅ Found existing conversation:', conversationId)
+    } else {
+      console.log('❌ No existing conversation found, will create new one')
     }
 
     // If still no conversation found, create a new one
@@ -432,6 +415,22 @@ serve(async (req) => {
           organizationId = group.organization_id
           console.log('✅ Found organization_id from group:', organizationId)
         }
+      }
+    }
+    
+    // If still no organization_id, try to get it from any recent conversation
+    if (!organizationId) {
+      const { data: recentConversation } = await supabaseClient
+        .from('sms_conversations')
+        .select('organization_id')
+        .not('organization_id', 'is', null)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      
+      if (recentConversation?.organization_id) {
+        organizationId = recentConversation.organization_id
+        console.log('✅ Found organization_id from recent conversation:', organizationId)
       }
     }
     

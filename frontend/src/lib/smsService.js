@@ -25,16 +25,18 @@ export const smsService = {
           body,
           status,
           sent_at,
+          from_number,
+          to_number,
           member:members (
             id,
-          firstname,
-              lastname,
-              image_url
+            firstname,
+            lastname,
+            image_url
           )
         )
       `)
         .eq('organization_id', organizationId)
-      .order('updated_at', { ascending: false });
+        .order('updated_at', { ascending: false });
 
     if (conversationType) {
       query = query.eq('conversation_type', conversationType);
@@ -42,11 +44,80 @@ export const smsService = {
 
     const { data, error } = await query;
     if (error) throw error;
+    
+    // Process conversations to add the most recent message info
+    if (data) {
+      data.forEach(conversation => {
+        if (conversation.sms_messages && conversation.sms_messages.length > 0) {
+          // Sort messages by sent_at to get the most recent
+          const sortedMessages = [...conversation.sms_messages].sort(
+            (a, b) => new Date(b.sent_at) - new Date(a.sent_at)
+          );
+          
+          // Get the most recent message
+          const mostRecentMessage = sortedMessages[0];
+          
+          // Add processed message info to conversation
+          conversation.mostRecentMessage = {
+            ...mostRecentMessage,
+            senderInfo: this.getSenderInfo(mostRecentMessage)
+          };
+        }
+      });
+    }
+    
     return data;
     } catch (error) {
       console.error('Error getting conversations:', error);
       throw error;
     }
+  },
+
+  // Helper function to get sender information for a message
+  getSenderInfo(message) {
+    if (message.direction === 'inbound') {
+      // Incoming message - show member name if available, otherwise phone number
+      if (message.member) {
+        return {
+          type: 'member',
+          name: `${message.member.firstname} ${message.member.lastname}`,
+          phone: message.from_number,
+          isMember: true
+        };
+      } else {
+        return {
+          type: 'unknown',
+          name: 'Unknown Contact',
+          phone: message.from_number,
+          isMember: false
+        };
+      }
+    } else {
+      // Outgoing message - show as "You" or "Church"
+      return {
+        type: 'outgoing',
+        name: 'You',
+        phone: message.to_number,
+        isMember: false
+      };
+    }
+  },
+
+  // Validation function to ensure conversation data has required fields
+  validateConversationData(conversationData) {
+    const requiredFields = ['title', 'conversation_type', 'status'];
+    const missingFields = requiredFields.filter(field => !conversationData[field]);
+    
+    if (missingFields.length > 0) {
+      throw new Error(`Missing required fields for conversation: ${missingFields.join(', ')}`);
+    }
+    
+    // Ensure organization_id is present
+    if (!conversationData.organization_id) {
+      throw new Error('organization_id is required for all conversations');
+    }
+    
+    return true;
   },
 
   async getConversation(conversationId) {
@@ -79,14 +150,31 @@ export const smsService = {
   },
 
   async createConversation(conversationData) {
-    const { data, error } = await supabase
-      .from('sms_conversations')
-      .insert(conversationData)
-      .select()
-      .single();
+    try {
+      // Ensure organization_id is included
+      if (!conversationData.organization_id) {
+        const organizationId = await getCurrentUserOrganizationId();
+        if (!organizationId) {
+          throw new Error('User not associated with any organization');
+        }
+        conversationData.organization_id = organizationId;
+      }
 
-    if (error) throw error;
-    return data;
+      // Validate conversation data
+      this.validateConversationData(conversationData);
+
+      const { data, error } = await supabase
+        .from('sms_conversations')
+        .insert(conversationData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      throw error;
+    }
   },
 
   async updateConversation(conversationId, updates) {
@@ -154,6 +242,8 @@ export const smsService = {
     if (!organizationId) {
       throw new Error('User not associated with any organization');
     }
+    
+    console.log('🏢 Organization ID for SMS:', organizationId);
     
     // Get Twilio phone number from environment (try both VITE_ and non-VITE_ versions)
     const twilioPhoneNumber = import.meta.env.VITE_TWILIO_PHONE_NUMBER || import.meta.env.TWILIO_PHONE_NUMBER;
@@ -268,7 +358,8 @@ export const smsService = {
             title: conversationTitle,
             conversation_type: conversationType,
             group_id: messageData.group_id,
-            status: 'active'
+            status: 'active',
+            organization_id: organizationId
           })
           .select()
           .single();
@@ -338,7 +429,7 @@ export const smsService = {
 
     // Create or find conversation for this message (only if not already set by group logic)
     if (!messageData.conversation_id) {
-      console.log('💬 Creating new conversation for message...');
+      console.log('💬 Looking for existing conversation or creating new one...');
       
       // Try to find member by phone number
       let memberId = messageData.member_id;
@@ -359,79 +450,134 @@ export const smsService = {
         }
       }
 
-      // Create conversation with message content as title
-      const createTitle = (messageBody, memberName, phoneNumber) => {
-        // Truncate message to 50 characters for title
-        const truncatedMessage = messageBody.length > 50 
-          ? messageBody.substring(0, 47) + '...' 
-          : messageBody
-        
-        if (memberName) {
-          return `${memberName}: ${truncatedMessage}`
-        } else {
-          return `${phoneNumber}: ${truncatedMessage}`
-        }
-      }
+      // First, try to find an existing conversation for this member/phone number
+      let existingConversation = null;
       
-      // Get member name if we have memberId
-      let memberName = null;
       if (memberId) {
-        const { data: member } = await supabase
-          .from('members')
-          .select('firstname, lastname')
-          .eq('id', memberId)
-          .single();
+        // Look for conversations where this member has messages
+        const { data: memberConversations } = await supabase
+          .from('sms_conversations')
+          .select(`
+            id,
+            title,
+            conversation_type,
+            created_at,
+            sms_messages!inner(member_id)
+          `)
+          .eq('sms_messages.member_id', memberId)
+          .eq('status', 'active')
+          .eq('organization_id', organizationId)
+          .order('created_at', { ascending: false })
+          .limit(1);
         
-        if (member) {
-          memberName = `${member.firstname} ${member.lastname}`;
+        if (memberConversations && memberConversations.length > 0) {
+          existingConversation = memberConversations[0];
+          console.log('✅ Found existing conversation for member:', existingConversation.id);
         }
       }
       
-      const conversationTitle = createTitle(messageData.body, memberName, messageData.to_number);
-      
-      // Determine conversation type based on message content or template
-      let conversationType = 'general';
-      if (messageData.template_id) {
-        const template = await supabase
-          .from('sms_templates')
-          .select('name')
-          .eq('id', messageData.template_id)
-          .single();
+      // If no member-based conversation found, look for phone number-based conversation
+      if (!existingConversation && messageData.to_number) {
+        const { data: phoneConversations } = await supabase
+          .from('sms_conversations')
+          .select(`
+            id,
+            title,
+            conversation_type,
+            created_at,
+            sms_messages!inner(to_number)
+          `)
+          .eq('sms_messages.to_number', messageData.to_number)
+          .eq('status', 'active')
+          .eq('organization_id', organizationId)
+          .order('created_at', { ascending: false })
+          .limit(1);
         
-        if (template?.data?.name) {
-          const templateName = template.data.name.toLowerCase();
-          if (templateName.includes('prayer')) {
-            conversationType = 'prayer_request';
-          } else if (templateName.includes('event') || templateName.includes('reminder')) {
-            conversationType = 'event_reminder';
-          } else if (templateName.includes('emergency')) {
-            conversationType = 'emergency';
-          } else if (templateName.includes('pastoral') || templateName.includes('care')) {
-            conversationType = 'pastoral_care';
+        if (phoneConversations && phoneConversations.length > 0) {
+          existingConversation = phoneConversations[0];
+          console.log('✅ Found existing conversation for phone number:', existingConversation.id);
+        }
+      }
+      
+      // If we found an existing conversation, use it
+      if (existingConversation) {
+        messageData.conversation_id = existingConversation.id;
+        console.log('✅ Using existing conversation:', messageData.conversation_id);
+      } else {
+        // Create new conversation
+        console.log('📝 Creating new conversation...');
+        
+        const createTitle = (messageBody, memberName, phoneNumber) => {
+          // Truncate message to 50 characters for title
+          const truncatedMessage = messageBody.length > 50 
+            ? messageBody.substring(0, 47) + '...' 
+            : messageBody
+          
+          if (memberName) {
+            return `${memberName}: ${truncatedMessage}`
+          } else {
+            return `${phoneNumber}: ${truncatedMessage}`
           }
         }
+        
+        // Get member name if we have memberId
+        let memberName = null;
+        if (memberId) {
+          const { data: member } = await supabase
+            .from('members')
+            .select('firstname, lastname')
+            .eq('id', memberId)
+            .single();
+          
+          if (member) {
+            memberName = `${member.firstname} ${member.lastname}`;
+          }
+        }
+        
+        const conversationTitle = createTitle(messageData.body, memberName, messageData.to_number);
+        
+        // Determine conversation type based on message content or template
+        let conversationType = 'general';
+        if (messageData.template_id) {
+          const template = await supabase
+            .from('sms_templates')
+            .select('name')
+            .eq('id', messageData.template_id)
+            .single();
+          
+          if (template?.data?.name) {
+            const templateName = template.data.name.toLowerCase();
+            if (templateName.includes('prayer')) {
+              conversationType = 'prayer_request';
+            } else if (templateName.includes('event') || templateName.includes('reminder')) {
+              conversationType = 'event_reminder';
+            } else if (templateName.includes('emergency')) {
+              conversationType = 'emergency';
+            } else if (templateName.includes('pastoral') || templateName.includes('care')) {
+              conversationType = 'pastoral_care';
+            }
+          }
+        }
+        
+        const { data: conversation, error: conversationError } = await supabase
+          .from('sms_conversations')
+          .insert({
+            title: conversationTitle,
+            conversation_type: conversationType,
+            status: 'active',
+            organization_id: organizationId
+          })
+          .select()
+          .single();
+
+        if (conversationError) {
+          console.error('❌ Conversation creation error:', conversationError);
+          throw conversationError;
+        }
+
+        messageData.conversation_id = conversation.id;
+        console.log('✅ New conversation created:', messageData.conversation_id);
       }
-      
-
-      
-      const { data: conversation, error: conversationError } = await supabase
-        .from('sms_conversations')
-        .insert({
-          title: conversationTitle,
-          conversation_type: conversationType,
-          status: 'active',
-          organization_id: organizationId
-        })
-        .select()
-        .single();
-
-      if (conversationError) {
-        console.error('❌ Conversation creation error:', conversationError);
-        throw conversationError;
-      }
-
-      messageData.conversation_id = conversation.id;
-      console.log('✅ Conversation created:', messageData.conversation_id);
     }
 
     // Create the message record with conversation_id
