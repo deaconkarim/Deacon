@@ -560,7 +560,16 @@ export const addEvent = async (event) => {
       needs_volunteers: event.needs_volunteers || false,
       volunteer_roles: event.volunteer_roles ? JSON.stringify(event.volunteer_roles) : null,
       parent_event_id: null, // Will be set for instances
-      organization_id: organizationId
+      organization_id: organizationId,
+      
+      // SMS reminder fields
+      enable_sms_reminders: event.enable_sms_reminders || false,
+      sms_reminder_timing: event.sms_reminder_timing && event.sms_reminder_timing.length > 0 
+        ? event.sms_reminder_timing 
+        : [],
+      sms_reminder_groups: event.sms_reminder_groups && event.sms_reminder_groups.length > 0 
+        ? event.sms_reminder_groups 
+        : []
     };
 
     // If it's a recurring event, create the master event and instances
@@ -708,10 +717,19 @@ export const updateEvent = async (id, updates) => {
       allow_rsvp: updates.allow_rsvp !== undefined ? updates.allow_rsvp : true,
       attendance_type: updates.attendance_type || 'rsvp',
       needs_volunteers: updates.needs_volunteers || false,
-      volunteer_roles: updates.volunteer_roles ? JSON.stringify(updates.volunteer_roles) : null
+      volunteer_roles: updates.volunteer_roles ? JSON.stringify(updates.volunteer_roles) : null,
+      
+      // SMS reminder fields
+      enable_sms_reminders: updates.enable_sms_reminders || false,
+      sms_reminder_timing: updates.sms_reminder_timing && updates.sms_reminder_timing.length > 0 
+        ? updates.sms_reminder_timing 
+        : [],
+      sms_reminder_groups: updates.sms_reminder_groups && updates.sms_reminder_groups.length > 0 
+        ? updates.sms_reminder_groups 
+        : []
     };
 
-    // If it's a recurring event, update master and all instances
+    // If it's a recurring event, update master and regenerate instances
     if (originalEvent.is_recurring) {
       // First update the master event
       const masterId = originalEvent.is_master ? originalEvent.id : originalEvent.parent_event_id;
@@ -729,15 +747,43 @@ export const updateEvent = async (id, updates) => {
 
       if (masterError) throw masterError;
 
-      // Then update all instances
-      const { data: instancesData, error: instancesError } = await supabase
+      // Get existing instances to avoid ID conflicts
+      const { data: existingInstances, error: fetchError } = await supabase
         .from('events')
-        .update(eventData)
+        .select('id')
         .eq('parent_event_id', masterId)
-        .eq('organization_id', organizationId)
-        .select();
+        .eq('organization_id', organizationId);
+
+      if (fetchError) throw fetchError;
+
+      // Delete all existing instances
+      const { error: deleteError } = await supabase
+        .from('events')
+        .delete()
+        .eq('parent_event_id', masterId)
+        .eq('organization_id', organizationId);
+
+      if (deleteError) throw deleteError;
+
+      // Generate new instances with the updated master event data
+      const updatedMasterEvent = {
+        ...masterData,
+        start_date: updates.startDate,
+        end_date: updates.endDate
+      };
       
-      if (instancesError) throw instancesError;
+      const newInstances = generateRecurringInstances(updatedMasterEvent);
+      
+      if (newInstances.length > 0) {
+        // Insert the new instances
+        const { data: instancesData, error: instancesError } = await supabase
+          .from('events')
+          .insert(newInstances)
+          .select();
+        
+        if (instancesError) throw instancesError;
+      }
+      
       return masterData;
     } else {
       // For non-recurring events, just update the single event
@@ -903,10 +949,8 @@ const generateRecurringInstances = (event) => {
     
     const occurrenceEndDate = new Date(currentDate.getTime() + duration);
     
-    // Generate a shorter, more reliable instance ID
-    const dateStr = currentDate.toISOString().split('T')[0].replace(/-/g, '');
-    const timeStr = currentDate.toISOString().split('T')[1].split('.')[0].replace(/:/g, '');
-    const instanceId = `${event.id}-${dateStr}-${timeStr}`;
+    // Generate a unique instance ID using UUID to avoid conflicts
+    const instanceId = crypto.randomUUID();
     
     instances.push({
       ...event,

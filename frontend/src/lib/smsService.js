@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { userCacheService } from './userCache';
+import { format } from 'date-fns';
 
 // Import the function to get current user's organization ID
 const getCurrentUserOrganizationId = async () => {
@@ -1022,6 +1023,198 @@ export const smsService = {
       return data;
     } catch (error) {
       console.error('Error logging opt-out:', error);
+      throw error;
+    }
+  },
+
+  // Event reminder specific functions
+  async scheduleEventReminders(eventId) {
+    try {
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User not associated with any organization');
+      }
+
+      // Call the database function to schedule reminders
+      const { data, error } = await supabase.rpc('schedule_event_sms_reminders', {
+        p_event_id: eventId,
+        p_organization_id: organizationId
+      });
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error scheduling event reminders:', error);
+      throw error;
+    }
+  },
+
+  async getEventReminders(eventId) {
+    try {
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User not associated with any organization');
+      }
+
+      const { data, error } = await supabase
+        .from('event_sms_reminders')
+        .select(`
+          *,
+          groups (
+            id,
+            name
+          )
+        `)
+        .eq('event_id', eventId)
+        .eq('organization_id', organizationId)
+        .order('scheduled_time', { ascending: true });
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error getting event reminders:', error);
+      throw error;
+    }
+  },
+
+  async cancelEventReminder(reminderId) {
+    try {
+      const { data, error } = await supabase
+        .from('event_sms_reminders')
+        .update({ 
+          status: 'cancelled',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', reminderId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error cancelling event reminder:', error);
+      throw error;
+    }
+  },
+
+  async sendEventReminderManually(eventId, groupIds, message = null) {
+    try {
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User not associated with any organization');
+      }
+
+      // Get event details
+      const { data: event, error: eventError } = await supabase
+        .from('events')
+        .select('*')
+        .eq('id', eventId)
+        .eq('organization_id', organizationId)
+        .single();
+
+      if (eventError) throw eventError;
+
+      // Create default message if none provided
+      const reminderMessage = message || 
+        `Reminder: ${event.title} is today at ${format(new Date(event.start_date), 'h:mm a')}` +
+        (event.location ? ` at ${event.location}` : '') +
+        '. We look forward to seeing you there!';
+
+      const results = [];
+
+      // Send to each group
+      for (const groupId of groupIds) {
+        // Get group members with phone numbers
+        const { data: members, error: membersError } = await supabase
+          .from('group_members')
+          .select(`
+            member_id,
+            members!inner (
+              id,
+              firstname,
+              lastname,
+              phone,
+              status
+            )
+          `)
+          .eq('group_id', groupId)
+          .eq('members.organization_id', organizationId)
+          .eq('members.status', 'active')
+          .not('members.phone', 'is', null);
+
+        if (membersError) {
+          console.error('Error fetching group members:', membersError);
+          continue;
+        }
+
+        // Send SMS to each member
+        for (const memberRecord of members) {
+          const member = memberRecord.members;
+          try {
+            await this.sendMessage({
+              to_number: member.phone,
+              body: reminderMessage,
+              member_id: member.id,
+              group_id: groupId
+            });
+
+            results.push({
+              member_id: member.id,
+              member_name: `${member.firstname} ${member.lastname}`,
+              phone: member.phone,
+              status: 'sent'
+            });
+          } catch (error) {
+            console.error(`Error sending SMS to ${member.firstname} ${member.lastname}:`, error);
+            results.push({
+              member_id: member.id,
+              member_name: `${member.firstname} ${member.lastname}`,
+              phone: member.phone,
+              status: 'failed',
+              error: error.message
+            });
+          }
+        }
+      }
+
+      return results;
+    } catch (error) {
+      console.error('Error sending event reminder manually:', error);
+      throw error;
+    }
+  },
+
+  async getScheduledReminders() {
+    try {
+      const organizationId = await getCurrentUserOrganizationId();
+      if (!organizationId) {
+        throw new Error('User not associated with any organization');
+      }
+
+      const { data, error } = await supabase
+        .from('event_sms_reminders')
+        .select(`
+          *,
+          events (
+            id,
+            title,
+            start_date,
+            location
+          ),
+          groups (
+            id,
+            name
+          )
+        `)
+        .eq('organization_id', organizationId)
+        .eq('status', 'scheduled')
+        .gte('scheduled_time', new Date().toISOString())
+        .order('scheduled_time', { ascending: true });
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error getting scheduled reminders:', error);
       throw error;
     }
   }
