@@ -224,16 +224,23 @@ serve(async (req) => {
               const hoursUntilEvent = Math.ceil((eventStartDate.getTime() - now.getTime()) / (1000 * 60 * 60));
               
               // Format date and time to match the form preview
-              const formattedDate = eventStartDate.toLocaleDateString('en-US', {
+              // Parse the event start_date and ensure UTC interpretation
+              const eventDate = new Date(event.start_date);
+              
+              // Format date as MM/DD/YYYY (using UTC)
+              const formattedDate = eventDate.toLocaleDateString('en-US', {
                 month: '2-digit',
                 day: '2-digit',
-                year: 'numeric'
+                year: 'numeric',
+                timeZone: 'UTC'
               });
               
-              const formattedTime = eventStartDate.toLocaleTimeString('en-US', {
-                hour: '2-digit',
+              // Format time as HH:MM in 12-hour format with AM/PM (using UTC)
+              const formattedTime = eventDate.toLocaleTimeString('en-US', {
+                hour: 'numeric',
                 minute: '2-digit',
-                hour12: false
+                hour12: true,
+                timeZone: 'UTC'
               });
               
               messageText = messageText
