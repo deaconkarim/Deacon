@@ -1,14 +1,82 @@
 import { supabase } from './supabaseClient';
+import { renderEmailTemplate } from './emailTemplates';
 
 export const emailService = {
   // Send a single email
-  async sendEmail({ to, subject, body, member_id = null, conversation_type = 'general' }) {
+  async sendEmail({ to, subject, body, member_id = null, conversation_type = 'general', template_type = 'default', template_variables = {} }) {
     try {
+      // Get organization info for template variables
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const { data: orgData } = await supabase
+        .from('organization_users')
+        .select('organization_id, organizations(name)')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .eq('approval_status', 'approved')
+        .single();
+
+      if (!orgData) throw new Error('User not associated with any organization');
+
+      // Get member info if member_id is provided
+      let memberInfo = {};
+      if (member_id) {
+        const { data: memberData } = await supabase
+          .from('members')
+          .select('firstname, lastname, email')
+          .eq('id', member_id)
+          .single();
+        
+        if (memberData) {
+          memberInfo = {
+            member_name: memberData.firstname,
+            member_full_name: `${memberData.firstname} ${memberData.lastname}`,
+            member_email: memberData.email
+          };
+        }
+      }
+
+      // Prepare template variables with auto-populated data
+      const variables = {
+        church_name: orgData.organizations?.name || 'Our Church',
+        current_year: new Date().getFullYear().toString(),
+        unsubscribe_link: `${window.location.origin}/unsubscribe?email=${encodeURIComponent(to)}`,
+        contact_link: `${window.location.origin}/contact`,
+        ...memberInfo,
+        ...template_variables
+      };
+
+      // Use the body directly if it's already HTML, otherwise render template
+      let htmlBody;
+      if (body && body.includes('<!DOCTYPE html>')) {
+        // Body is already complete HTML, just replace variables
+        htmlBody = body;
+        Object.keys(variables).forEach(variable => {
+          const value = variables[variable];
+          if (value) {
+            // Replace both {{variable}} and {variable} patterns
+            const patterns = [
+              new RegExp(`{{${variable}}}`, 'g'),
+              new RegExp(`{${variable}}`, 'g')
+            ];
+            patterns.forEach(pattern => {
+              htmlBody = htmlBody.replace(pattern, value);
+            });
+          }
+        });
+        
+        console.log('Replaced variables in HTML body:', htmlBody.substring(0, 200) + '...');
+      } else {
+        // Body is plain text, wrap with template
+        htmlBody = renderEmailTemplate(template_type, variables);
+      }
+
       const { data, error } = await supabase.functions.invoke('send-email', {
         body: {
           to,
           subject,
-          body,
+          body: htmlBody,
           member_id,
           conversation_type
         }
@@ -97,6 +165,44 @@ export const emailService = {
       return data || [];
     } catch (error) {
       console.error('Error fetching email conversations:', error);
+      return [];
+    }
+  },
+
+  // Get individual email messages (for emails without conversations)
+  async getEmailMessages() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const { data: orgData } = await supabase
+        .from('organization_users')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .eq('approval_status', 'approved')
+        .single();
+
+      if (!orgData) throw new Error('User not associated with any organization');
+
+      const organizationId = orgData.organization_id;
+
+      const { data, error } = await supabase
+        .from('email_messages')
+        .select(`
+          *,
+          members (
+            id,
+            firstname,
+            lastname
+          )
+        `)
+        .order('sent_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching email messages:', error);
       return [];
     }
   },
@@ -302,5 +408,70 @@ export const emailService = {
       subject: renderedSubject,
       body: renderedBody
     };
+  },
+
+  // Get email statistics
+  async getEmailStats() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const { data: orgData } = await supabase
+        .from('organization_users')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .eq('approval_status', 'approved')
+        .single();
+
+      if (!orgData) throw new Error('User not associated with any organization');
+
+      const organizationId = orgData.organization_id;
+
+      // Get email messages for this organization
+      const { data: messages, error: messagesError } = await supabase
+        .from('email_messages')
+        .select('*');
+
+      if (messagesError) throw messagesError;
+
+      if (!messages || messages.length === 0) {
+        return {
+          totalSent: 0,
+          totalDelivered: 0,
+          totalFailed: 0,
+          deliveryRate: 0,
+          thisMonth: 0,
+          lastMonth: 0
+        };
+      }
+
+      const now = new Date();
+      const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+      const stats = {
+        totalSent: messages.length,
+        totalDelivered: messages.filter(m => m.status === 'delivered').length,
+        totalFailed: messages.filter(m => m.status === 'failed').length,
+        deliveryRate: 0,
+        thisMonth: messages.filter(m => new Date(m.sent_at) >= thisMonth).length,
+        lastMonth: messages.filter(m => new Date(m.sent_at) >= lastMonth && new Date(m.sent_at) < thisMonth).length
+      };
+
+      stats.deliveryRate = stats.totalSent > 0 ? Math.round((stats.totalDelivered / stats.totalSent) * 100) : 0;
+
+      return stats;
+    } catch (error) {
+      console.error('Error fetching email stats:', error);
+      return {
+        totalSent: 0,
+        totalDelivered: 0,
+        totalFailed: 0,
+        deliveryRate: 0,
+        thisMonth: 0,
+        lastMonth: 0
+      };
+    }
   }
 }; 

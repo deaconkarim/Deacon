@@ -20,7 +20,7 @@ import EditChild from './pages/edit-child';
 import { Login } from './pages/login';
 import { Register } from './pages/register';
 import { Invite } from './pages/invite';
-import { SMS } from './pages/sms';
+import { Messaging } from './pages/messaging';
 import AlertsPage from './pages/alerts';
 import { AdminCenter } from './pages/admin-center';
 import { Permissions } from './pages/permissions';
@@ -77,7 +77,8 @@ function App() {
           <Route path="/reports" element={<Reports />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/permissions" element={<Permissions />} />
-          <Route path="/sms" element={<SMS />} />
+          <Route path="/messaging" element={<Messaging />} />
+          <Route path="/sms" element={<Navigate to="/messaging" replace />} />
           <Route path="/alerts" element={<AlertsPage />} />
           <Route path="/pwa-test" element={<PWATest />} />
         </Route>

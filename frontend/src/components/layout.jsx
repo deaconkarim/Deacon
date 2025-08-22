@@ -119,8 +119,8 @@ export function Layout() {
         permission: PERMISSIONS.TASKS_VIEW
       },
       { 
-        name: 'SMS', 
-        href: '/sms', 
+        name: 'Messaging', 
+        href: '/messaging', 
         icon: MessageSquare, 
         color: 'text-teal-500',
         permission: PERMISSIONS.SETTINGS_VIEW // Basic access

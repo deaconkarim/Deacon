@@ -1355,7 +1355,7 @@ export function Dashboard() {
                   className="w-full bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 border-teal-200 dark:border-teal-800 hover:from-teal-100 hover:to-cyan-100 dark:hover:from-teal-900/30 dark:hover:to-cyan-900/30 transition-all duration-300" 
                   asChild
                 >
-                  <a href="/sms" className="flex items-center justify-center space-x-2">
+                  <a href="/messaging" className="flex items-center justify-center space-x-2">
                     <span>View All Messages</span>
                     <ChevronRight className="h-4 w-4" />
                   </a>
@@ -1577,7 +1577,7 @@ export function Dashboard() {
                   className="w-full bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/30 border-indigo-200 dark:border-indigo-800 hover:from-indigo-100 hover:to-purple-100 dark:hover:from-indigo-900/30 dark:hover:to-purple-900/40 transition-all duration-300 h-12 text-base font-medium" 
                   asChild
                 >
-                  <a href="/sms" className="flex items-center justify-center space-x-2">
+                  <a href="/messaging" className="flex items-center justify-center space-x-2">
                     <span>View All Conversations</span>
                     <ArrowUpRight className="h-5 w-5" />
                   </a>
