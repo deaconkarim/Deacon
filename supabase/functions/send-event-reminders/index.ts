@@ -81,17 +81,9 @@ serve(async (req) => {
         reminderTime = new Date(eventStartDate.getTime() - (config.timing_hours * 60 * 60 * 1000));
       }
       
-      // Calculate timing window based on the reminder timing
-      let timingWindowMs = 60 * 60 * 1000; // Default 1 hour
-      if (config.timing_unit === 'minutes') {
-        timingWindowMs = Math.max(5 * 60 * 1000, config.timing_value * 60 * 1000); // At least 5 minutes, or the reminder timing
-      } else if (config.timing_unit === 'hours') {
-        timingWindowMs = Math.max(60 * 60 * 1000, config.timing_value * 60 * 60 * 1000); // At least 1 hour, or the reminder timing
-      } else if (config.timing_unit === 'days') {
-        timingWindowMs = Math.max(60 * 60 * 1000, config.timing_value * 24 * 60 * 60 * 1000); // At least 1 hour, or the reminder timing
-      } else if (config.timing_unit === 'weeks') {
-        timingWindowMs = Math.max(60 * 60 * 1000, config.timing_value * 7 * 24 * 60 * 60 * 1000); // At least 1 hour, or the reminder timing
-      }
+      // Calculate timing window - use a fixed 2-hour window to prevent excessive resending
+      // This ensures reminders are sent within a reasonable time frame of their intended time
+      const timingWindowMs = 2 * 60 * 60 * 1000; // 2 hours
       
       const windowStart = new Date(now.getTime() - timingWindowMs);
       const windowEnd = new Date(now.getTime() + (5 * 60 * 1000)); // 5 minutes grace period
@@ -232,16 +224,23 @@ serve(async (req) => {
               const hoursUntilEvent = Math.ceil((eventStartDate.getTime() - now.getTime()) / (1000 * 60 * 60));
               
               // Format date and time to match the form preview
-              const formattedDate = eventStartDate.toLocaleDateString('en-US', {
+              // Parse the event start_date and ensure UTC interpretation
+              const eventDate = new Date(event.start_date);
+              
+              // Format date as MM/DD/YYYY (using UTC)
+              const formattedDate = eventDate.toLocaleDateString('en-US', {
                 month: '2-digit',
                 day: '2-digit',
-                year: 'numeric'
+                year: 'numeric',
+                timeZone: 'UTC'
               });
               
-              const formattedTime = eventStartDate.toLocaleTimeString('en-US', {
-                hour: '2-digit',
+              // Format time as HH:MM in 12-hour format with AM/PM (using UTC)
+              const formattedTime = eventDate.toLocaleTimeString('en-US', {
+                hour: 'numeric',
                 minute: '2-digit',
-                hour12: false
+                hour12: true,
+                timeZone: 'UTC'
               });
               
               messageText = messageText
