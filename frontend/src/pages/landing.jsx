@@ -1,11 +1,56 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabaseClient';
+import { useToast } from '@/components/ui/use-toast';
 
 export default function Landing() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [showBetaDialog, setShowBetaDialog] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      setShowLoginModal(false);
+      navigate('/dashboard');
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const closeLoginModal = () => {
+    setShowLoginModal(false);
+    setEmail('');
+    setPassword('');
+    setLoading(false);
+  };
+
+  const openLoginModal = () => {
+    setShowLoginModal(true);
+    setEmail('');
+    setPassword('');
+    setLoading(false);
+  };
   
   return (
     <div className="relative min-h-screen text-white overflow-hidden">
@@ -56,7 +101,7 @@ export default function Landing() {
               size="lg" 
               variant="outline" 
               className="px-10 py-4 text-lg font-bold border-2 border-blue-400 text-blue-400 hover:bg-blue-400/10 backdrop-blur-sm" 
-              onClick={() => setShowLoginModal(true)}
+              onClick={openLoginModal}
             >
               Login
             </Button>
@@ -501,17 +546,14 @@ export default function Landing() {
               </p>
             </div>
             
-            <form className="space-y-4" onSubmit={(e) => {
-              e.preventDefault();
-              // Navigate to the actual login page
-              navigate('/login');
-              setShowLoginModal(false);
-            }}>
+            <form className="space-y-4" onSubmit={handleLogin}>
               <div>
                 <label className="block text-blue-200 text-sm font-semibold mb-2">Email Address</label>
                 <input 
                   type="email" 
                   required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-4 py-3 bg-slate-800/50 border border-blue-500/30 rounded-lg text-white placeholder-blue-300 focus:border-blue-400 focus:outline-none"
                   placeholder="your.email@church.org"
                 />
@@ -522,6 +564,8 @@ export default function Landing() {
                 <input 
                   type="password" 
                   required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-3 bg-slate-800/50 border border-blue-500/30 rounded-lg text-white placeholder-blue-300 focus:border-blue-400 focus:outline-none"
                   placeholder="••••••••"
                 />
@@ -530,15 +574,16 @@ export default function Landing() {
               <div className="flex gap-3 pt-4">
                 <Button 
                   type="submit"
-                  className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-3"
+                  disabled={loading}
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-3 disabled:opacity-50"
                 >
-                  Sign In
+                  {loading ? 'Signing In...' : 'Sign In'}
                 </Button>
                 <Button 
                   type="button"
                   variant="outline"
                   className="px-6 border-blue-400 text-blue-400 hover:bg-blue-400/10"
-                  onClick={() => setShowLoginModal(false)}
+                  onClick={closeLoginModal}
                 >
                   Cancel
                 </Button>
@@ -551,7 +596,7 @@ export default function Landing() {
                 <button 
                   className="text-blue-400 hover:text-blue-300 ml-1 underline"
                   onClick={() => {
-                    setShowLoginModal(false);
+                    closeLoginModal();
                     setShowBetaDialog(true);
                   }}
                 >
