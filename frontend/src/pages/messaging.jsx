@@ -741,6 +741,7 @@ export function Messaging() {
           subject: newEmail.subject,
           body: newEmail.body,
           conversation_type: 'general',
+          selectedGroups: selectedGroups,
           template_variables
         });
         
@@ -1311,14 +1312,16 @@ export function Messaging() {
               status
             )
           `)
-          .in('group_id', selectedGroups)
-          .or('phone.not.is.null,email.not.is.null');
+          .in('group_id', selectedGroups);
 
         if (error) {
           console.error('Error fetching group members:', error);
         } else if (groupMembers) {
+          // Filter members to only include those with phone or email
           groupMembers.forEach(gm => {
-            selectedMemberIds.add(gm.members.id);
+            if (gm.members && (gm.members.phone || gm.members.email)) {
+              selectedMemberIds.add(gm.members.id);
+            }
           });
         }
       } catch (error) {

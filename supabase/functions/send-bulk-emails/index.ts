@@ -118,6 +118,26 @@ serve(async (req) => {
     // Send emails to individual recipients
     const emailPromises = recipients.map(async (recipient) => {
       try {
+        // Send email via Resend
+        const resendResponse = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get('RESEND_API_KEY')}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: Deno.env.get('ADMIN_EMAIL') || 'noreply@getdeacon.com',
+            to: recipient.email,
+            subject: subject,
+            html: body,
+          }),
+        });
+
+        if (!resendResponse.ok) {
+          const errorData = await resendResponse.json();
+          throw new Error(`Resend API error: ${errorData.message || resendResponse.statusText}`);
+        }
+
         // Update campaign recipient status
         await supabaseClient
           .from('email_campaign_recipients')
@@ -176,6 +196,26 @@ serve(async (req) => {
           const member = groupMember.members
           if (member && member.email) {
             try {
+              // Send email via Resend
+              const resendResponse = await fetch('https://api.resend.com/emails', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${Deno.env.get('RESEND_API_KEY')}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  from: Deno.env.get('ADMIN_EMAIL') || 'noreply@getdeacon.com',
+                  to: member.email,
+                  subject: subject,
+                  html: body,
+                }),
+              });
+
+              if (!resendResponse.ok) {
+                const errorData = await resendResponse.json();
+                throw new Error(`Resend API error: ${errorData.message || resendResponse.statusText}`);
+              }
+
               // Create email message record for group member
               const { data: message, error: messageError } = await supabaseClient
                 .from('email_messages')
