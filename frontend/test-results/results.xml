@@ -1,0 +1,70 @@
+<testsuites id="" name="" tests="4" failures="4" skipped="0" errors="0" time="0.49699699999999997">
+<testsuite name="recurring-event-edit.spec.js" timestamp="2025-08-27T16:54:30.206Z" hostname="chromium" tests="2" failures="2" skipped="0" time="0.002" errors="0">
+<testcase name="Recurring Event Edit › should show edit choice dialog for recurring event instance" classname="recurring-event-edit.spec.js" time="0.001">
+<failure message="recurring-event-edit.spec.js:9:3 should show edit choice dialog for recurring event instance" type="FAILURE">
+<![CDATA[  [chromium] › recurring-event-edit.spec.js:9:3 › Recurring Event Edit › should show edit choice dialog for recurring event instance 
+
+    Error: browserType.launch: Executable doesn't exist at /Users/karim/Library/Caches/ms-playwright/chromium_headless_shell-1181/chrome-mac/headless_shell
+    ╔═════════════════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright Test or Playwright was just installed or updated. ║
+    ║ Please run the following command to download new browsers:              ║
+    ║                                                                         ║
+    ║     npx playwright install                                              ║
+    ║                                                                         ║
+    ║ <3 Playwright Team                                                      ║
+    ╚═════════════════════════════════════════════════════════════════════════╝
+]]>
+</failure>
+</testcase>
+<testcase name="Recurring Event Edit › should not show error message for recurring event instance" classname="recurring-event-edit.spec.js" time="0.001">
+<failure message="recurring-event-edit.spec.js:58:3 should not show error message for recurring event instance" type="FAILURE">
+<![CDATA[  [chromium] › recurring-event-edit.spec.js:58:3 › Recurring Event Edit › should not show error message for recurring event instance 
+
+    Error: browserType.launch: Executable doesn't exist at /Users/karim/Library/Caches/ms-playwright/chromium_headless_shell-1181/chrome-mac/headless_shell
+    ╔═════════════════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright Test or Playwright was just installed or updated. ║
+    ║ Please run the following command to download new browsers:              ║
+    ║                                                                         ║
+    ║     npx playwright install                                              ║
+    ║                                                                         ║
+    ║ <3 Playwright Team                                                      ║
+    ╚═════════════════════════════════════════════════════════════════════════╝
+]]>
+</failure>
+</testcase>
+</testsuite>
+<testsuite name="recurring-event-edit.spec.js" timestamp="2025-08-27T16:54:30.206Z" hostname="Mobile Chrome" tests="2" failures="2" skipped="0" time="0.002" errors="0">
+<testcase name="Recurring Event Edit › should show edit choice dialog for recurring event instance" classname="recurring-event-edit.spec.js" time="0.001">
+<failure message="recurring-event-edit.spec.js:9:3 should show edit choice dialog for recurring event instance" type="FAILURE">
+<![CDATA[  [Mobile Chrome] › recurring-event-edit.spec.js:9:3 › Recurring Event Edit › should show edit choice dialog for recurring event instance 
+
+    Error: browserType.launch: Executable doesn't exist at /Users/karim/Library/Caches/ms-playwright/chromium_headless_shell-1181/chrome-mac/headless_shell
+    ╔═════════════════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright Test or Playwright was just installed or updated. ║
+    ║ Please run the following command to download new browsers:              ║
+    ║                                                                         ║
+    ║     npx playwright install                                              ║
+    ║                                                                         ║
+    ║ <3 Playwright Team                                                      ║
+    ╚═════════════════════════════════════════════════════════════════════════╝
+]]>
+</failure>
+</testcase>
+<testcase name="Recurring Event Edit › should not show error message for recurring event instance" classname="recurring-event-edit.spec.js" time="0.001">
+<failure message="recurring-event-edit.spec.js:58:3 should not show error message for recurring event instance" type="FAILURE">
+<![CDATA[  [Mobile Chrome] › recurring-event-edit.spec.js:58:3 › Recurring Event Edit › should not show error message for recurring event instance 
+
+    Error: browserType.launch: Executable doesn't exist at /Users/karim/Library/Caches/ms-playwright/chromium_headless_shell-1181/chrome-mac/headless_shell
+    ╔═════════════════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright Test or Playwright was just installed or updated. ║
+    ║ Please run the following command to download new browsers:              ║
+    ║                                                                         ║
+    ║     npx playwright install                                              ║
+    ║                                                                         ║
+    ║ <3 Playwright Team                                                      ║
+    ╚═════════════════════════════════════════════════════════════════════════╝
+]]>
+</failure>
+</testcase>
+</testsuite>
+</testsuites>

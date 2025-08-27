@@ -231,22 +231,38 @@ serve(async (req) => {
               let messageText = config.message_template;
               const hoursUntilEvent = Math.ceil((eventStartDate.getTime() - now.getTime()) / (1000 * 60 * 60));
               
-              // Format date and time to match the form preview
+              // Get organization timezone for proper time formatting
+              const { data: organization } = await supabaseClient
+                .from('organizations')
+                .select('timezone')
+                .eq('id', event.organization_id)
+                .single();
+              
+              const organizationTimezone = organization?.timezone || 'UTC';
+              
+              // Format date and time in organization timezone
               const formattedDate = eventStartDate.toLocaleDateString('en-US', {
                 month: '2-digit',
                 day: '2-digit',
-                year: 'numeric'
+                year: 'numeric',
+                timeZone: organizationTimezone
               });
               
+              // Format time in 12-hour format with AM/PM in organization timezone
               const formattedTime = eventStartDate.toLocaleTimeString('en-US', {
-                hour: '2-digit',
+                hour: 'numeric',
                 minute: '2-digit',
-                hour12: false
+                hour12: true,
+                timeZone: organizationTimezone
               });
+              
+              // Get timezone abbreviation for display
+              const timezoneAbbr = organizationTimezone === 'UTC' ? 'UTC' : 
+                new Date().toLocaleString('en-US', { timeZone: organizationTimezone, timeZoneName: 'short' }).split(' ').pop() || organizationTimezone;
               
               messageText = messageText
                 .replace(/{event_title}/g, event.title || 'Event')
-                .replace(/{event_time}/g, formattedTime)
+                .replace(/{event_time}/g, `${formattedTime} ${timezoneAbbr}`)
                 .replace(/{event_date}/g, formattedDate)
                 .replace(/{event_location}/g, event.location || 'TBD')
                 .replace(/{hours_until_event}/g, hoursUntilEvent.toString())

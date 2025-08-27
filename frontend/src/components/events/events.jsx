@@ -1645,8 +1645,8 @@ export function Events() {
               <EventForm
                 initialData={{
                   ...editingEvent,
-                  startDate: new Date(editingEvent.start_date).toISOString().slice(0, 16),
-                  endDate: new Date(editingEvent.end_date).toISOString().slice(0, 16),
+                  startDate: editingEvent.start_date,
+                  endDate: editingEvent.end_date,
                   allow_rsvp: editingEvent.allow_rsvp !== undefined ? editingEvent.allow_rsvp : true
                 }}
                 onSave={handleEditEvent}

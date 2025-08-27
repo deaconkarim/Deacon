@@ -6,6 +6,7 @@ import AccountSettings from '@/components/settings/AccountSettings';
 import DataManagementSettings from '@/components/settings/DataManagementSettings';
 import AutomationSettings from '@/components/settings/AutomationSettings';
 import DemoSystemSettings from '@/components/settings/DemoSystemSettings';
+import TimezoneSettings from '@/components/settings/TimezoneSettings';
 import { isUserAdmin } from '@/lib/data';
 
 export function Settings() {
@@ -61,6 +62,7 @@ export function Settings() {
         <div className="overflow-x-auto">
           <TabsList className="mb-4 w-max min-w-full">
             <TabsTrigger value="church">Church Information</TabsTrigger>
+            <TabsTrigger value="timezone">Timezone</TabsTrigger>
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="automation">Automation</TabsTrigger>
             {isAdmin && <TabsTrigger value="demo">Demo System</TabsTrigger>}
@@ -70,6 +72,10 @@ export function Settings() {
         
         <TabsContent value="church">
           <ChurchInfoSettings />
+        </TabsContent>
+        
+        <TabsContent value="timezone">
+          <TimezoneSettings />
         </TabsContent>
         
         <TabsContent value="account">

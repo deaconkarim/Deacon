@@ -99,7 +99,7 @@ import { getInitials } from '@/lib/utils/formatters';
 import { PotluckRSVPDialog } from '@/components/events/PotluckRSVPDialog';
 import { VolunteerList } from '@/components/events/VolunteerList';
 import { AddVolunteerForm } from '@/components/events/AddVolunteerForm';
-import { EventRemindersDialog } from '@/components/events/EventRemindersDialog';
+
 import { automationService } from '@/lib/automationService';
 import { PermissionGuard, PermissionButton, PermissionFeature } from '@/components/PermissionGuard';
 import { PERMISSIONS } from '@/lib/permissions.jsx';
@@ -238,7 +238,7 @@ const formatRecurrencePattern = (pattern, monthlyWeek, monthlyWeekday) => {
 };
 
 // Enhanced Event Card Component
-const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVolunteers, onManageReminders, onViewDetails, isPastEvent = false, viewMode = 'admin', onBulkSelect, isBulkSelected = false }) => {
+const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVolunteers, onViewDetails, isPastEvent = false, viewMode = 'admin', onBulkSelect, isBulkSelected = false }) => {
   const startDate = new Date(event.start_date);
   const endDate = new Date(event.end_date);
   const isRecurring = event.is_recurring;
@@ -415,10 +415,7 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVol
                         <Pencil className="mr-2 h-4 w-4" />
                         Edit Event
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onManageReminders(event)}>
-                        <Bell className="mr-2 h-4 w-4" />
-                        Manage Reminders
-                      </DropdownMenuItem>
+
                       {event.needs_volunteers && (
                         <DropdownMenuItem onClick={() => onManageVolunteers(event)}>
                           <Handshake className="mr-2 h-4 w-4" />
@@ -830,10 +827,7 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVol
                     <Pencil className="mr-2 h-4 w-4" />
                     Edit Event
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onManageReminders(event)}>
-                    <Bell className="mr-2 h-4 w-4" />
-                    Manage Reminders
-                  </DropdownMenuItem>
+                  
                   {event.needs_volunteers && (
                     <DropdownMenuItem onClick={() => onManageVolunteers(event)}>
                       <Handshake className="mr-2 h-4 w-4" />
@@ -2229,8 +2223,7 @@ export default function Events() {
   const [isAnonymousCheckinOpen, setIsAnonymousCheckinOpen] = useState(false);
   const [anonymousName, setAnonymousName] = useState('');
   const [isAutoSwitchingFilter, setIsAutoSwitchingFilter] = useState(false);
-  const [isRemindersDialogOpen, setIsRemindersDialogOpen] = useState(false);
-  const [selectedEventForReminders, setSelectedEventForReminders] = useState(null);
+
 
   // Kiosk mode detection
   const isKioskMode = location.pathname === '/events' && location.search.includes('kiosk=true');
@@ -4381,82 +4374,18 @@ export default function Events() {
   };
 
   const handleEditEvent = async (eventData) => {
-    let eventIdToUpdate = editingEvent.id; // Declare at function scope
-    
     try {
       console.log('handleEditEvent called with editingEvent:', editingEvent);
       console.log('editingEvent.id:', editingEvent?.id);
-      console.log('editingEvent.is_instance:', editingEvent?.is_instance);
       
-      // Check if this is a generated recurring event instance
-      // Look for patterns like: originalId_timestamp or originalId-timestamp
-      if (editingEvent.id && (editingEvent.id.includes('-') || editingEvent.id.includes('_')) && editingEvent.id.length > 36) {
-        console.log('Event ID contains hyphens/underscores and is long, checking if it\'s a generated instance...');
-        
-        // Try to extract the original event ID from the generated instance ID
-        // Handle both formats: originalId_timestamp and originalId-timestamp
-        let originalEventId;
-        if (editingEvent.id.includes('_')) {
-          originalEventId = editingEvent.id.split('_')[0];
-        } else if (editingEvent.id.includes('-')) {
-          // For the format like "sunday-morning-worship-service-1746381600000-2025-07-20t18-00-00-000z"
-          // We need to find where the timestamp starts (after the original ID)
-          // The timestamp format is: YYYY-MM-DDTHH-MM-SS-000Z
-          const timestampPattern = /\d{4}-\d{2}-\d{2}t\d{2}-\d{2}-\d{2}-\d{3}z$/i;
-          const match = editingEvent.id.match(timestampPattern);
-          if (match) {
-            // Remove the timestamp part from the end
-            originalEventId = editingEvent.id.substring(0, match.index);
-          } else {
-            // Fallback: try to find the last numeric part that looks like a timestamp
-            const parts = editingEvent.id.split('-');
-            if (parts.length >= 2) {
-              // Look for the part that contains 't' (indicating timestamp)
-              const timestampIndex = parts.findIndex(part => part.includes('t'));
-              if (timestampIndex !== -1) {
-                originalEventId = parts.slice(0, timestampIndex).join('-');
-              } else {
-                // Remove the last part as fallback
-                originalEventId = parts.slice(0, -1).join('-');
-              }
-            }
-          }
-        }
-        
-        console.log('Extracted original event ID:', originalEventId);
-        
-        if (originalEventId) {
-          // Find the original event in our events list
-          const originalEvent = events.find(e => e.id === originalEventId);
-          
-          if (originalEvent) {
-            eventIdToUpdate = originalEvent.id;
-            console.log('Found original event, using ID:', eventIdToUpdate);
-            console.log('Original event details:', originalEvent);
-          } else {
-            console.log('Could not find original event with ID:', originalEventId);
-            console.log('Available events:', events.map(e => ({ id: e.id, title: e.title, idLength: e.id.length })));
-            
-            // If we can't find the original event, try to find it by title
-            const eventByTitle = events.find(e => e.title === editingEvent.title && !e.is_instance);
-            if (eventByTitle) {
-              eventIdToUpdate = eventByTitle.id;
-              console.log('Found event by title, using ID:', eventIdToUpdate);
-            } else {
-              console.log('Could not find event by title either');
-              // If we still can't find it, try to use the parent_event_id if available
-              if (editingEvent.parent_event_id) {
-                eventIdToUpdate = editingEvent.parent_event_id;
-                console.log('Using parent_event_id:', eventIdToUpdate);
-              }
-            }
-          }
-        }
+      // Use the editingEvent ID directly - no complex ID extraction needed
+      const eventIdToUpdate = editingEvent.id;
+      
+      if (!eventIdToUpdate) {
+        throw new Error('No valid event ID found for updating');
       }
       
-      console.log('Final event ID to update:', eventIdToUpdate);
-      console.log('Event ID type:', typeof eventIdToUpdate);
-      console.log('Event ID length:', eventIdToUpdate?.length);
+      console.log('Using event ID to update:', eventIdToUpdate);
       
       await updateEvent(eventIdToUpdate, eventData);
       setIsEditEventOpen(false);
@@ -4470,7 +4399,6 @@ export default function Events() {
       console.error('Error updating event:', error);
       console.error('Error details:', {
         editingEventId: editingEvent?.id,
-        eventIdToUpdate: eventIdToUpdate,
         error: error
       });
       toast({
@@ -4775,169 +4703,89 @@ export default function Events() {
   const handleEditClick = (event) => {
     console.log('handleEditClick called with event:', event);
     console.log('Event ID:', event.id);
-    console.log('Event is_instance:', event.is_instance);
-    console.log('Event ID includes hyphen:', event.id.includes('-'));
+    console.log('Event title:', event.title);
+    console.log('All events:', events.length);
     
-    // Check if this is a generated recurring event instance
-    // Look for patterns like: originalId_timestamp or originalId-timestamp
-    if (event.id && (event.id.includes('-') || event.id.includes('_')) && event.id.length > 36) {
-      console.log('Event ID contains hyphens/underscores and is long, checking if it\'s a generated instance...');
+    // Check if this is a recurring event by looking for the pattern in the ID
+    const isRecurringEvent = event.id && (
+      event.id.includes('_') || 
+      (event.id.includes('-') && event.id.length > 36) ||
+      event.is_recurring === true ||
+      event.is_master === true
+    );
+    
+    console.log('Is recurring event:', isRecurringEvent);
+    console.log('Event ID pattern check:', {
+      hasUnderscore: event.id && event.id.includes('_'),
+      hasLongDash: event.id && event.id.includes('-') && event.id.length > 36,
+      isRecurringFlag: event.is_recurring === true,
+      isMasterFlag: event.is_master === true
+    });
+    
+    // Check if there are other events with the same title (indicating it's part of a recurring series)
+    const eventsWithSameTitle = events.filter(e => e.title === event.title);
+    console.log('Events with same title:', eventsWithSameTitle.length);
+    
+    if (isRecurringEvent || eventsWithSameTitle.length > 1) {
+      console.log('Recurring event detected - showing edit choice dialog');
       
-      // Try to extract the original event ID from the generated instance ID
-      // Handle both formats: originalId_timestamp and originalId-timestamp
-      let originalEventId;
-      if (event.id.includes('_')) {
-        originalEventId = event.id.split('_')[0];
-      } else if (event.id.includes('-')) {
-        // For the format like "men-s-minitry-breakfast-1752940800000" or "sunday-morning-worship-service-1746381600000-2025-07-20t18-00-00-000z"
-        // We need to find where the timestamp starts (after the original ID)
-        
-        // First try the complex timestamp format: YYYY-MM-DDTHH-MM-SS-000Z
-        const complexTimestampPattern = /\d{4}-\d{2}-\d{2}t\d{2}-\d{2}-\d{2}-\d{3}z$/i;
-        let match = event.id.match(complexTimestampPattern);
-        
-        if (match) {
-          // Remove the complex timestamp part from the end
-          originalEventId = event.id.substring(0, match.index);
-          console.log('[Events] Extracted ID from complex timestamp pattern:', originalEventId);
-        } else {
-          // Try the simple timestamp format: just a long number like 1752940800000
-          const simpleTimestampPattern = /\d{10,}/; // 10+ digits indicates a timestamp
-          match = event.id.match(simpleTimestampPattern);
-          
-          if (match) {
-            // Extract everything before the simple timestamp
-            originalEventId = event.id.substring(0, match.index);
-            console.log('[Events] Extracted ID from simple timestamp pattern:', originalEventId);
-          } else {
-            // Fallback: try to find the last numeric part that looks like a timestamp
-            const parts = event.id.split('-');
-            if (parts.length >= 2) {
-              // Look for the part that contains 't' (indicating timestamp)
-              const timestampIndex = parts.findIndex(part => part.includes('t'));
-              if (timestampIndex !== -1) {
-                originalEventId = parts.slice(0, timestampIndex).join('-');
-              } else {
-                // Remove the last part as fallback
-                originalEventId = parts.slice(0, -1).join('-');
-              }
-            }
-          }
-        }
+      // Find a suitable event to use as the "master" event for editing
+      // Prefer events with valid UUIDs and master/recurring flags
+      let masterEvent = eventsWithSameTitle.find(e => 
+        e.is_master === true && 
+        e.is_recurring === true &&
+        e.id && 
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(e.id)
+      );
+      
+      // If no master event found, try to find any event with valid UUID
+      if (!masterEvent) {
+        masterEvent = eventsWithSameTitle.find(e => 
+          e.id && 
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(e.id)
+        );
       }
       
-      console.log('Extracted original event ID:', originalEventId);
+      // If still no suitable event found, use the first event with same title
+      if (!masterEvent) {
+        masterEvent = eventsWithSameTitle[0];
+      }
       
-      if (originalEventId) {
-        console.log('[Events] Looking for master event with extracted ID:', originalEventId);
+      if (masterEvent) {
+        console.log('Found suitable event for edit choice dialog:', masterEvent);
+        console.log('Master event ID:', masterEvent.id);
+        console.log('Master event ID type:', typeof masterEvent.id);
+        console.log('Master event ID length:', masterEvent.id?.length);
         
-        // Find the original event in our events list
-        const originalEvent = events.find(e => e.id === originalEventId);
+        if (!masterEvent.id || masterEvent.id === 'null' || masterEvent.id === null) {
+          console.error('Master event has invalid ID:', masterEvent.id);
+          toast({
+            title: "Cannot Edit Event",
+            description: "The event has an invalid ID. Please try again.",
+            variant: "destructive"
+          });
+          return;
+        }
         
-        if (originalEvent) {
-          console.log('Found original event, using for editing:', originalEvent);
-          setEditingEvent(originalEvent);
-          setIsEditEventOpen(true);
-        } else {
-          console.log('Could not find original event with ID:', originalEventId);
-          console.log('Available events:', events.map(e => ({ id: e.id, title: e.title, idLength: e.id.length, is_master: e.is_master, is_recurring: e.is_recurring })));
-          
-          // Try to find the master recurring event by title and recurring properties
-          console.log('[Events] Looking for master event with criteria:', {
-            title: event.title,
-            is_master: true,
-            is_recurring: true
-          });
-          
-          // First try to find master event with UUID format
-          let masterEvent = events.find(e => 
-            e.title === event.title && 
-            e.is_master === true && 
-            e.is_recurring === true &&
-            e.id && 
-            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(e.id)
-          );
-          
-          // If no UUID master found, try to find any master event with same title
-          if (!masterEvent) {
-            console.log('[Events] No UUID master found, looking for any master event...');
-            masterEvent = events.find(e => 
-              e.title === event.title && 
-              e.is_master === true && 
-              e.is_recurring === true
-            );
-          }
-          
-          if (masterEvent) {
-            // Show confirmation dialog asking user what to edit
-            setEventToEdit(event);
-            setMasterEventToEdit(masterEvent);
-            setShowEditChoiceDialog(true);
-          } else {
-            console.log('[Events] No master event found. Checking all events with same title...');
-            
-            // Log all events with the same title to see what we have
-            const eventsWithSameTitle = events.filter(e => e.title === event.title);
-            console.log('[Events] Events with same title:', eventsWithSameTitle.map(e => ({
-              id: e.id,
-              is_master: e.is_master,
-              is_recurring: e.is_recurring,
-              isValidUUID: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(e.id)
-            })));
-            
-            // Try to find any master event with the same title (regardless of ID format)
-            const anyMasterEvent = events.find(e => 
-              e.title === event.title && 
-              e.is_master === true && 
-              e.is_recurring === true
-            );
-            
-            if (anyMasterEvent) {
-              console.log('Found master event with same title, showing edit choice dialog:', anyMasterEvent);
-              setEventToEdit(event);
-              setMasterEventToEdit(anyMasterEvent);
-              setShowEditChoiceDialog(true);
-            } else {
-              // Try to find any event with the same title that has a valid UUID
-              const similarEvent = events.find(e => 
-                e.title === event.title && 
-                e.id && 
-                /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(e.id)
-              );
-              
-              if (similarEvent) {
-                console.log('Found similar event with valid UUID, using for editing:', similarEvent);
-                setEditingEvent(similarEvent);
-                setIsEditEventOpen(true);
-              } else {
-                console.log('[Events] No suitable event found. Cannot edit this recurring event instance.');
-                console.log('[Events] Available events for this title:', eventsWithSameTitle);
-                
-                // Show a toast or alert that this event cannot be edited
-                toast({
-                  title: "Cannot Edit Event",
-                  description: "This is a recurring event instance. Please edit the master event instead.",
-                  variant: "destructive"
-                });
-              }
-            }
-          }
-        }
-              } else {
-          console.log('Could not extract original event ID, editing as regular event:', event);
-          loadEventWithReminders(event).then(eventWithReminders => {
-            setEditingEvent(eventWithReminders);
-            setIsEditEventOpen(true);
-          });
-        }
-          } else {
-        // For non-recurring events or master events, edit normally
-        console.log('Editing regular event:', event);
-        loadEventWithReminders(event).then(eventWithReminders => {
-          setEditingEvent(eventWithReminders);
-          setIsEditEventOpen(true);
+        setEventToEdit(event);
+        setMasterEventToEdit(masterEvent);
+        setShowEditChoiceDialog(true);
+      } else {
+        console.log('No suitable event found for editing');
+        toast({
+          title: "Cannot Edit Event",
+          description: "Unable to find a suitable event to edit. Please try again.",
+          variant: "destructive"
         });
       }
+    } else {
+      // Single event with this title - edit normally
+      console.log('Single event with this title - editing normally');
+      loadEventWithReminders(event).then(eventWithReminders => {
+        setEditingEvent(eventWithReminders);
+        setIsEditEventOpen(true);
+      });
+    }
   };
 
   const handleOpenDialog = async (event) => {
@@ -5317,6 +5165,12 @@ export default function Events() {
   const loadEventWithReminders = async (event) => {
     try {
       console.log('Loading reminders for event:', event.id, event.title);
+      console.log('Event object:', event);
+      
+      if (!event || !event.id) {
+        console.error('Invalid event passed to loadEventWithReminders:', event);
+        throw new Error('Invalid event: missing ID');
+      }
       
       // Load reminder configurations for this event
       const reminders = await eventReminderService.getEventReminders(event.id);
@@ -5357,6 +5211,7 @@ export default function Events() {
       };
       
       console.log('Event with reminders loaded:', eventWithReminders);
+      console.log('Final event ID:', eventWithReminders.id);
       return eventWithReminders;
     } catch (error) {
       console.error('Error loading reminder data:', error);
@@ -5364,12 +5219,7 @@ export default function Events() {
     }
   };
 
-  const handleManageReminders = (event) => {
-    console.log('handleManageReminders called with event:', event);
-    console.log('Opening reminders dialog for event:', event.title);
-    setSelectedEventForReminders(event);
-    setIsRemindersDialogOpen(true);
-  };
+
 
   const renderEventCard = useCallback((event) => {
     return (
@@ -5382,10 +5232,10 @@ export default function Events() {
         onEdit={handleEditClick}
         onDelete={handleDeleteEvent}
         onManageVolunteers={handleManageVolunteers}
-        onManageReminders={handleManageReminders}
+
       />
     );
-  }, [viewMode, handleOpenDialog, handlePotluckRSVP, handleEditClick, handleDeleteEvent, handleManageVolunteers, handleManageReminders]);
+  }, [viewMode, handleOpenDialog, handlePotluckRSVP, handleEditClick, handleDeleteEvent, handleManageVolunteers]);
 
   const processRecurringEvents = (events, customEndDate = null) => {
     const processedEvents = [];
@@ -8455,7 +8305,22 @@ export default function Events() {
               {/* Edit Master Event Option */}
               <div className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer" 
                     onClick={() => {
+                     console.log('Edit Master Event clicked');
+                     console.log('masterEventToEdit:', masterEventToEdit);
+                     console.log('masterEventToEdit.id:', masterEventToEdit?.id);
+                     
+                     if (!masterEventToEdit?.id) {
+                       console.error('masterEventToEdit has no ID');
+                       toast({
+                         title: "Error",
+                         description: "Cannot edit event: Invalid event ID",
+                         variant: "destructive"
+                       });
+                       return;
+                     }
+                     
                      loadEventWithReminders(masterEventToEdit).then(eventWithReminders => {
+                       console.log('Loaded event with reminders:', eventWithReminders);
                        setEditingEvent(eventWithReminders);
                        setIsEditEventOpen(true);
                        setShowEditChoiceDialog(false);
@@ -8493,19 +8358,7 @@ export default function Events() {
         </Dialog>
       )}
 
-      {/* Event Reminders Dialog */}
-      <EventRemindersDialog
-        event={selectedEventForReminders}
-        isOpen={isRemindersDialogOpen}
-        onClose={() => {
-          setIsRemindersDialogOpen(false);
-          setSelectedEventForReminders(null);
-        }}
-        onUpdate={() => {
-          // Refresh events if needed
-          fetchEvents();
-        }}
-      />
+
 
         </motion.div>
       )}
