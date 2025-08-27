@@ -89,7 +89,7 @@ export default function Landing() {
             </span>
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
               size="lg" 
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-10 py-4 text-lg font-bold shadow-2xl transform hover:scale-105 transition-all" 
@@ -106,8 +106,6 @@ export default function Landing() {
               Login
             </Button>
           </div>
-          
-
         </div>
       </header>
 
