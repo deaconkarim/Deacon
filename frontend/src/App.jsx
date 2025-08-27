@@ -47,7 +47,8 @@ function App() {
       <PWAUpdateNotification />
       <Routes>
         {/* Public routes */}
-        <Route path="/" element={<PublicLayout><Login /></PublicLayout>} />
+        <Route path="/" element={<PublicLayout><Landing /></PublicLayout>} />
+        <Route path="/landing" element={<PublicLayout><Landing /></PublicLayout>} />
         <Route path="/login" element={<PublicLayout><Login /></PublicLayout>} />
         <Route path="/register" element={<PublicLayout><Register /></PublicLayout>} />
         <Route path="/invite/:invitationId" element={<PublicLayout><Invite /></PublicLayout>} />
