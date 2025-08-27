@@ -107,32 +107,7 @@ export default function Landing() {
             </Button>
           </div>
           
-          {/* Logo/Brand */}
-          <div className="flex justify-center">
-            <div className="relative">
-              <div className="bg-gradient-to-br from-blue-500/20 to-purple-500/20 backdrop-blur-sm rounded-3xl p-8 border border-blue-500/30">
-                <div className="text-center">
-                  {/* Logo Icon */}
-                  <div className="mb-4 flex justify-center">
-                    <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center">
-                      <svg width="32" height="32" fill="none" viewBox="0 0 24 24" className="text-white">
-                        <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M2 17l10 5 10-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M2 12l10 5 10-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </div>
-                  </div>
-                  {/* Brand Name */}
-                  <div className="text-3xl font-black bg-gradient-to-r from-blue-300 to-purple-300 bg-clip-text text-transparent">
-                    DEACON
-                  </div>
-                  <div className="text-sm text-blue-200 font-medium">
-                    Command Center
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+
         </div>
       </header>
 
