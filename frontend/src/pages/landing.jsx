@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 export default function Landing() {
   const navigate = useNavigate();
   const [showBetaDialog, setShowBetaDialog] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   
   return (
     <div className="relative min-h-screen text-white overflow-hidden">
@@ -55,16 +56,36 @@ export default function Landing() {
               size="lg" 
               variant="outline" 
               className="px-10 py-4 text-lg font-bold border-2 border-blue-400 text-blue-400 hover:bg-blue-400/10 backdrop-blur-sm" 
-              onClick={() => document.getElementById('features').scrollIntoView({behavior: 'smooth'})}
+              onClick={() => setShowLoginModal(true)}
             >
-              See Features
+              Login
             </Button>
           </div>
           
-          {/* Logo placeholder - using text for now */}
+          {/* Logo/Brand */}
           <div className="flex justify-center">
-            <div className="text-6xl font-black text-blue-400/20">
-              DEACON
+            <div className="relative">
+              <div className="bg-gradient-to-br from-blue-500/20 to-purple-500/20 backdrop-blur-sm rounded-3xl p-8 border border-blue-500/30">
+                <div className="text-center">
+                  {/* Logo Icon */}
+                  <div className="mb-4 flex justify-center">
+                    <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center">
+                      <svg width="32" height="32" fill="none" viewBox="0 0 24 24" className="text-white">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M2 17l10 5 10-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M2 12l10 5 10-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                  </div>
+                  {/* Brand Name */}
+                  <div className="text-3xl font-black bg-gradient-to-r from-blue-300 to-purple-300 bg-clip-text text-transparent">
+                    DEACON
+                  </div>
+                  <div className="text-sm text-blue-200 font-medium">
+                    Command Center
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -461,6 +482,86 @@ export default function Landing() {
         </div>
       </footer>
       </div>
+
+      {/* Login Modal */}
+      {showLoginModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-8 rounded-3xl border border-blue-500/30 max-w-md w-full mx-4 shadow-2xl">
+            <div className="text-center mb-6">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" className="text-white">
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <polyline points="10,17 15,12 10,7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <line x1="15" y1="12" x2="3" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-2">Login to Deacon</h3>
+              <p className="text-blue-200">
+                Access your church command center
+              </p>
+            </div>
+            
+            <form className="space-y-4" onSubmit={(e) => {
+              e.preventDefault();
+              // Navigate to the actual login page
+              navigate('/login');
+              setShowLoginModal(false);
+            }}>
+              <div>
+                <label className="block text-blue-200 text-sm font-semibold mb-2">Email Address</label>
+                <input 
+                  type="email" 
+                  required
+                  className="w-full px-4 py-3 bg-slate-800/50 border border-blue-500/30 rounded-lg text-white placeholder-blue-300 focus:border-blue-400 focus:outline-none"
+                  placeholder="your.email@church.org"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-blue-200 text-sm font-semibold mb-2">Password</label>
+                <input 
+                  type="password" 
+                  required
+                  className="w-full px-4 py-3 bg-slate-800/50 border border-blue-500/30 rounded-lg text-white placeholder-blue-300 focus:border-blue-400 focus:outline-none"
+                  placeholder="••••••••"
+                />
+              </div>
+              
+              <div className="flex gap-3 pt-4">
+                <Button 
+                  type="submit"
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-3"
+                >
+                  Sign In
+                </Button>
+                <Button 
+                  type="button"
+                  variant="outline"
+                  className="px-6 border-blue-400 text-blue-400 hover:bg-blue-400/10"
+                  onClick={() => setShowLoginModal(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+            
+            <div className="text-center mt-4">
+              <p className="text-blue-300 text-sm">
+                Don't have an account? 
+                <button 
+                  className="text-blue-400 hover:text-blue-300 ml-1 underline"
+                  onClick={() => {
+                    setShowLoginModal(false);
+                    setShowBetaDialog(true);
+                  }}
+                >
+                  Apply for Beta Access
+                </button>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Beta Access Dialog */}
       {showBetaDialog && (
