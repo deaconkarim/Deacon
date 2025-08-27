@@ -95,7 +95,7 @@ export default function Landing() {
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-10 py-4 text-lg font-bold shadow-2xl transform hover:scale-105 transition-all" 
               onClick={() => setShowBetaDialog(true)}
             >
-              Get Started
+              Apply for Beta Access
             </Button>
             <Button 
               size="lg" 
@@ -123,107 +123,104 @@ export default function Landing() {
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* AI-Powered Insights */}
-            <div className="group relative bg-gradient-to-br from-blue-900/50 to-purple-900/50 backdrop-blur-sm rounded-2xl p-8 border border-blue-500/20 hover:border-blue-400/40 transition-all duration-300 hover:scale-105">
+            <div className="group relative bg-gradient-to-br from-blue-900/50 to-purple-900/50 backdrop-blur-sm rounded-2xl p-6 border border-blue-500/20 hover:border-blue-400/40 transition-all duration-300 hover:scale-105">
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
               <div className="relative z-10">
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center mb-6">
-                  <svg width="32" height="32" fill="none" viewBox="0 0 24 24" className="text-white">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center mb-4">
+                  <svg width="24" height="24" fill="none" viewBox="0 0 24 24" className="text-white">
                     <path d="M9 19c-5 0-8-3-8-8s3-8 8-8 8 3 8 8-3 8-8 8z" stroke="currentColor" strokeWidth="2"/>
                     <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                     <path d="M15 10a5 5 0 0 0-10 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                   </svg>
                 </div>
-                <h3 className="text-2xl font-bold mb-4 text-white">AI-Powered Insights</h3>
-                <p className="text-blue-200 text-lg leading-relaxed">
+                <h3 className="text-xl font-bold mb-3 text-white">AI-Powered Insights</h3>
+                <p className="text-blue-200 leading-relaxed">
                   Advanced analytics for attendance and giving trends. Predictive insights that help you make data-driven ministry decisions.
                 </p>
               </div>
             </div>
 
-            {/* Smart Event & People Management */}
-            <div className="group relative bg-gradient-to-br from-purple-900/50 to-pink-900/50 backdrop-blur-sm rounded-2xl p-8 border border-purple-500/20 hover:border-purple-400/40 transition-all duration-300 hover:scale-105">
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <div className="relative z-10">
-                <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-6">
-                  <svg width="32" height="32" fill="none" viewBox="0 0 24 24" className="text-white">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2"/>
-                    <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke="currentColor" strokeWidth="2"/>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" strokeWidth="2"/>
-                  </svg>
-                </div>
-                <h3 className="text-2xl font-bold mb-4 text-white">Smart Management</h3>
-                <p className="text-purple-200 text-lg leading-relaxed">
-                  Intelligent event and people management with lightning-fast kiosk check-ins. Everything organized automatically.
-                </p>
-              </div>
-            </div>
-
-            {/* Seamless Communication */}
-            <div className="group relative bg-gradient-to-br from-indigo-900/50 to-blue-900/50 backdrop-blur-sm rounded-2xl p-8 border border-indigo-500/20 hover:border-indigo-400/40 transition-all duration-300 hover:scale-105">
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-blue-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <div className="relative z-10">
-                <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-xl flex items-center justify-center mb-6">
-                  <svg width="32" height="32" fill="none" viewBox="0 0 24 24" className="text-white">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2"/>
-                  </svg>
-                </div>
-                <h3 className="text-2xl font-bold mb-4 text-white">Seamless Communication</h3>
-                <p className="text-indigo-200 text-lg leading-relaxed">
-                  Unified SMS and email tools that reach your congregation instantly. Smart targeting and automated follow-ups.
-                </p>
-              </div>
-            </div>
-
-            {/* Advanced Analytics */}
-            <div className="group relative bg-gradient-to-br from-emerald-900/50 to-teal-900/50 backdrop-blur-sm rounded-2xl p-8 border border-emerald-500/20 hover:border-emerald-400/40 transition-all duration-300 hover:scale-105">
+            {/* Complete Tithing & Fundraising */}
+            <div className="group relative bg-gradient-to-br from-emerald-900/50 to-teal-900/50 backdrop-blur-sm rounded-2xl p-6 border border-emerald-500/20 hover:border-emerald-400/40 transition-all duration-300 hover:scale-105">
               <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
               <div className="relative z-10">
-                <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center mb-6">
-                  <svg width="32" height="32" fill="none" viewBox="0 0 24 24" className="text-white">
-                    <path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke="currentColor" strokeWidth="2"/>
-                  </svg>
-                </div>
-                <h3 className="text-2xl font-bold mb-4 text-white">Giving Analytics</h3>
-                <p className="text-emerald-200 text-lg leading-relaxed">
-                  Donation tracking with predictive insights. Understand giving patterns and optimize stewardship campaigns.
-                </p>
-              </div>
-            </div>
-
-            {/* Advanced Automation */}
-            <div className="group relative bg-gradient-to-br from-orange-900/50 to-red-900/50 backdrop-blur-sm rounded-2xl p-8 border border-orange-500/20 hover:border-orange-400/40 transition-all duration-300 hover:scale-105">
-              <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <div className="relative z-10">
-                <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center mb-6">
-                  <svg width="32" height="32" fill="none" viewBox="0 0 24 24" className="text-white">
+                <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center mb-4">
+                  <svg width="24" height="24" fill="none" viewBox="0 0 24 24" className="text-white">
                     <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="currentColor" strokeWidth="2"/>
                   </svg>
                 </div>
-                <h3 className="text-2xl font-bold mb-4 text-white">Advanced Automation</h3>
-                <p className="text-orange-200 text-lg leading-relaxed">
-                  Set it and forget it. Automated workflows for visitor follow-up, event reminders, and task assignments.
+                <h3 className="text-xl font-bold mb-3 text-white">Complete Tithing & Fundraising</h3>
+                <p className="text-emerald-200 leading-relaxed">
+                  Full donation management with recurring giving, fundraising campaigns, and automated receipts. Integrated with modern payment processing.
                 </p>
               </div>
             </div>
 
-            {/* Unified Command Center */}
-            <div className="group relative bg-gradient-to-br from-violet-900/50 to-purple-900/50 backdrop-blur-sm rounded-2xl p-8 border border-violet-500/20 hover:border-violet-400/40 transition-all duration-300 hover:scale-105">
-              <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 to-purple-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            {/* Smart Tasking System */}
+            <div className="group relative bg-gradient-to-br from-orange-900/50 to-red-900/50 backdrop-blur-sm rounded-2xl p-6 border border-orange-500/20 hover:border-orange-400/40 transition-all duration-300 hover:scale-105">
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
               <div className="relative z-10">
-                <div className="w-16 h-16 bg-gradient-to-br from-violet-500 to-purple-500 rounded-xl flex items-center justify-center mb-6">
-                  <svg width="32" height="32" fill="none" viewBox="0 0 24 24" className="text-white">
-                    <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
-                    <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
-                    <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
-                    <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+                <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center mb-4">
+                  <svg width="24" height="24" fill="none" viewBox="0 0 24 24" className="text-white">
+                    <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c2.12 0 4.07.74 5.61 1.98" stroke="currentColor" strokeWidth="2"/>
                   </svg>
                 </div>
-                <h3 className="text-2xl font-bold mb-4 text-white">Unified Command Center</h3>
-                <p className="text-violet-200 text-lg leading-relaxed">
-                  All your ministry data unified in one powerful dashboard. Real-time insights across every aspect of church life.
+                <h3 className="text-xl font-bold mb-3 text-white">Automated Smart Tasking</h3>
+                <p className="text-orange-200 leading-relaxed">
+                  AI-driven task creation based on insights plus full manual task management. Never miss follow-ups or ministry opportunities again.
+                </p>
+              </div>
+            </div>
+
+            {/* World-Class Reporting */}
+            <div className="group relative bg-gradient-to-br from-purple-900/50 to-pink-900/50 backdrop-blur-sm rounded-2xl p-6 border border-purple-500/20 hover:border-purple-400/40 transition-all duration-300 hover:scale-105">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="relative z-10">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-4">
+                  <svg width="24" height="24" fill="none" viewBox="0 0 24 24" className="text-white">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke="currentColor" strokeWidth="2"/>
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold mb-3 text-white">World's Most Advanced Reporting</h3>
+                <p className="text-purple-200 leading-relaxed">
+                  Unparalleled analytics and reporting capabilities. Deep insights into every aspect of ministry with actionable recommendations.
+                </p>
+              </div>
+            </div>
+
+            {/* Kiosk Check-ins */}
+            <div className="group relative bg-gradient-to-br from-indigo-900/50 to-blue-900/50 backdrop-blur-sm rounded-2xl p-6 border border-indigo-500/20 hover:border-indigo-400/40 transition-all duration-300 hover:scale-105">
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-blue-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="relative z-10">
+                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-xl flex items-center justify-center mb-4">
+                  <svg width="24" height="24" fill="none" viewBox="0 0 24 24" className="text-white">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
+                    <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" strokeWidth="2"/>
+                    <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" strokeWidth="2"/>
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold mb-3 text-white">Smart Kiosk System</h3>
+                <p className="text-indigo-200 leading-relaxed">
+                  Self-service kiosks for event check-ins, new guest registration, and secure children's ministry with guardian verification.
+                </p>
+              </div>
+            </div>
+
+            {/* Unified Communication */}
+            <div className="group relative bg-gradient-to-br from-violet-900/50 to-purple-900/50 backdrop-blur-sm rounded-2xl p-6 border border-violet-500/20 hover:border-violet-400/40 transition-all duration-300 hover:scale-105">
+              <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 to-purple-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="relative z-10">
+                <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-500 rounded-xl flex items-center justify-center mb-4">
+                  <svg width="24" height="24" fill="none" viewBox="0 0 24 24" className="text-white">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2"/>
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold mb-3 text-white">Unified Command Center</h3>
+                <p className="text-violet-200 leading-relaxed">
+                  All ministry data unified in one powerful dashboard. SMS, email, events, people, and insights seamlessly integrated.
                 </p>
               </div>
             </div>
@@ -460,7 +457,7 @@ export default function Landing() {
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-12 py-6 text-xl font-bold shadow-2xl transform hover:scale-105 transition-all" 
               onClick={() => setShowBetaDialog(true)}
             >
-              Start Free Trial
+              Apply for Beta Access
             </Button>
             <Button 
               size="lg" 
@@ -472,21 +469,21 @@ export default function Landing() {
             </Button>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+                      <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
             <div className="text-center">
               <div className="text-3xl font-black text-blue-400 mb-2">✓</div>
-              <div className="text-white font-semibold">14-Day Free Trial</div>
-              <div className="text-blue-300 text-sm">No credit card required</div>
+              <div className="text-white font-semibold">Exclusive Beta Access</div>
+              <div className="text-blue-300 text-sm">Limited spots available</div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-black text-purple-400 mb-2">✓</div>
               <div className="text-white font-semibold">Full Feature Access</div>
-              <div className="text-purple-300 text-sm">Everything you see is yours</div>
+              <div className="text-purple-300 text-sm">Experience everything Deacon offers</div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-black text-indigo-400 mb-2">✓</div>
-              <div className="text-white font-semibold">Setup Support</div>
-              <div className="text-indigo-300 text-sm">We'll help you get started</div>
+              <div className="text-white font-semibold">Direct Feedback Channel</div>
+              <div className="text-indigo-300 text-sm">Shape the future of Deacon</div>
             </div>
           </div>
         </div>
