@@ -101,13 +101,73 @@ export const emailService = {
   },
 
   // Send bulk emails to multiple recipients
-  async sendBulkEmails({ recipients, subject, body, conversation_type = 'general', selectedGroups = [] }) {
+  async sendBulkEmails({ recipients, subject, body, conversation_type = 'general', selectedGroups = [], template_variables = {} }) {
     try {
+      // Get organization info for church name
+      const { data: orgData } = await supabase
+        .from('organization_users')
+        .select(`
+          organizations (
+            name
+          )
+        `)
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+        .eq('status', 'active')
+        .single();
+
+      // Prepare template variables with auto-populated data
+      const variables = {
+        church_name: orgData?.organizations?.name || 'Our Church',
+        current_year: new Date().getFullYear().toString(),
+        ...template_variables
+      };
+
+      // Use the body directly if it's already HTML, otherwise render template
+      let htmlBody;
+      if (body && (body.includes('<!DOCTYPE html>') || body.includes('<p>') || body.includes('<div>'))) {
+        // Body is already HTML, just replace variables
+        htmlBody = body;
+        Object.keys(variables).forEach(variable => {
+          const value = variables[variable];
+          if (value) {
+            // Replace both {{variable}} and {variable} patterns
+            const patterns = [
+              new RegExp(`{{${variable}}}`, 'g'),
+              new RegExp(`{${variable}}`, 'g')
+            ];
+            patterns.forEach(pattern => {
+              htmlBody = htmlBody.replace(pattern, value);
+            });
+          }
+        });
+        
+        console.log('Replaced variables in bulk email HTML body:', htmlBody.substring(0, 200) + '...');
+        console.log('Variables being replaced:', variables);
+      } else {
+        // Body is plain text, wrap with template
+        htmlBody = renderEmailTemplate('default', variables);
+      }
+
+      // Replace variables in subject as well
+      let processedSubject = subject;
+      Object.keys(variables).forEach(variable => {
+        const value = variables[variable];
+        if (value) {
+          const patterns = [
+            new RegExp(`{{${variable}}}`, 'g'),
+            new RegExp(`{${variable}}`, 'g')
+          ];
+          patterns.forEach(pattern => {
+            processedSubject = processedSubject.replace(pattern, value);
+          });
+        }
+      });
+
       const { data, error } = await supabase.functions.invoke('send-bulk-emails', {
         body: {
           recipients,
-          subject,
-          body,
+          subject: processedSubject,
+          body: htmlBody,
           conversation_type,
           selectedGroups
         }

@@ -197,5 +197,57 @@ export const renderEmailTemplate = (templateType, variables = {}) => {
   // Replace any remaining variables with empty strings
   renderedTemplate = renderedTemplate.replace(/\{[^}]+\}/g, '');
   
-  return renderedTemplate;
+  // Convert line breaks to HTML
+  renderedTemplate = renderedTemplate.replace(/\n/g, '<br>');
+  
+  // Wrap with HTML template
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${template.subject || 'Email from Deacon'}</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8fafc; line-height: 1.6;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: white;">
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 40px; text-align: center;">
+            <div style="margin-bottom: 16px;">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 17L12 22L22 17" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 12L12 17L22 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">Deacon</h1>
+            <p style="color: rgba(255, 255, 255, 0.9); margin: 8px 0 0; font-size: 14px; font-weight: 400;">Church Command Center</p>
+        </div>
+
+        <!-- Main Content -->
+        <div style="padding: 40px;">
+            <div style="color: #4a5568; font-size: 16px; line-height: 1.7;">
+                ${renderedTemplate}
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="background: #2d3748; padding: 30px; text-align: center;">
+            <div style="margin-bottom: 16px;">
+                <h3 style="color: white; margin: 0 0 6px; font-size: 16px; font-weight: 600;">Deacon</h3>
+                <p style="color: #a0aec0; margin: 0; font-size: 12px;">Church Command Center</p>
+            </div>
+            <div style="border-top: 1px solid #4a5568; padding-top: 16px;">
+                <p style="color: #a0aec0; margin: 0 0 6px; font-size: 11px;">
+                    This email was sent from your church's communication system.
+                </p>
+                <p style="color: #a0aec0; margin: 0; font-size: 11px;">
+                    Questions? Contact your church administrator for assistance.
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+  `;
 };

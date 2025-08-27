@@ -735,6 +735,7 @@ export function Messaging() {
         await emailService.sendBulkEmails({
           recipients: recipients.map(recipient => ({
             email: recipient.email,
+            id: recipient.id,
             member_id: recipient.id,
             member_name: recipient.firstname
           })),
@@ -742,7 +743,7 @@ export function Messaging() {
           body: newEmail.body,
           conversation_type: 'general',
           selectedGroups: selectedGroups,
-          template_variables
+          template_variables: template_variables
         });
         
         toast({

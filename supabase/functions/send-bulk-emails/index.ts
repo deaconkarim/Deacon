@@ -70,7 +70,7 @@ serve(async (req) => {
     for (const recipient of recipients) {
       campaignRecipients.push({
         campaign_id: campaign.id,
-        member_id: recipient.id,
+        member_id: recipient.member_id,
         email_sent: false
       })
     }
@@ -118,6 +118,9 @@ serve(async (req) => {
     // Send emails to individual recipients
     const emailPromises = recipients.map(async (recipient) => {
       try {
+        // Use the body directly since it's already processed by the frontend
+        const emailContent = body;
+
         // Send email via Resend
         const resendResponse = await fetch('https://api.resend.com/emails', {
           method: 'POST',
@@ -129,7 +132,7 @@ serve(async (req) => {
             from: Deno.env.get('ADMIN_EMAIL') || 'noreply@getdeacon.com',
             to: recipient.email,
             subject: subject,
-            html: body,
+            html: emailContent,
           }),
         });
 
@@ -146,7 +149,7 @@ serve(async (req) => {
             sent_at: new Date().toISOString()
           })
           .eq('campaign_id', campaign.id)
-          .eq('member_id', recipient.id)
+          .eq('member_id', recipient.member_id)
 
         return {
           success: true,
@@ -161,7 +164,7 @@ serve(async (req) => {
             error_message: error.message
           })
           .eq('campaign_id', campaign.id)
-          .eq('member_id', recipient.id)
+          .eq('member_id', recipient.member_id)
 
         return {
           success: false,
@@ -196,6 +199,9 @@ serve(async (req) => {
           const member = groupMember.members
           if (member && member.email) {
             try {
+              // Use the body directly since it's already processed by the frontend
+              const emailContent = body;
+
               // Send email via Resend
               const resendResponse = await fetch('https://api.resend.com/emails', {
                 method: 'POST',
@@ -207,7 +213,7 @@ serve(async (req) => {
                   from: Deno.env.get('ADMIN_EMAIL') || 'noreply@getdeacon.com',
                   to: member.email,
                   subject: subject,
-                  html: body,
+                  html: emailContent,
                 }),
               });
 
