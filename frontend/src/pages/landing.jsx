@@ -242,6 +242,30 @@ export default function Landing() {
               </div>
             </div>
 
+            {/* Ultimate Event Management */}
+            <div className="group relative bg-gradient-to-br from-amber-900/50 to-yellow-900/50 backdrop-blur-sm rounded-2xl p-6 border border-amber-500/20 hover:border-amber-400/40 transition-all duration-300 hover:scale-105">
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-yellow-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="relative z-10">
+                <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-yellow-500 rounded-xl flex items-center justify-center mb-4">
+                  <svg width="24" height="24" fill="none" viewBox="0 0 24 24" className="text-white">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" strokeWidth="2"/>
+                    <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" strokeWidth="2"/>
+                    <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M8 14h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    <path d="M12 14h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    <path d="M16 14h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    <path d="M8 18h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    <path d="M12 18h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold mb-3 text-white">Ultimate Event Management</h3>
+                <p className="text-amber-200 leading-relaxed">
+                  The most sophisticated event system ever built. Recurring events, volunteer scheduling, resource management, and seamless RSVP tracking.
+                </p>
+              </div>
+            </div>
+
             {/* Unified Command Center */}
             <div className="group relative bg-gradient-to-br from-violet-900/50 to-purple-900/50 backdrop-blur-sm rounded-2xl p-6 border border-violet-500/20 hover:border-violet-400/40 transition-all duration-300 hover:scale-105">
               <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 to-purple-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
