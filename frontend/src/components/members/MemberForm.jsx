@@ -33,46 +33,45 @@ function centerAspectCrop(mediaWidth, mediaHeight, aspect) {
   );
 }
 
-const MemberForm = ({ initialData, onSave, onCancel }) => {
+const MemberForm = ({ initialData = {}, onSave, onCancel }) => {
   const [memberData, setMemberData] = useState({
-    ...initialData,
-    firstname: initialData.firstname || '',
-    lastname: initialData.lastname || '',
-    email: initialData.email || '',
-    phone: initialData.phone || '',
-    status: initialData.status || 'active',
-    image_url: initialData.image_url || '',
-    member_type: initialData.member_type || 'adult',
-    birth_date: initialData.birth_date || '',
-    gender: initialData.gender || 'male',
-    join_date: initialData.join_date || '',
-    anniversary_date: initialData.anniversary_date || '',
-    spouse_name: initialData.spouse_name || '',
-    has_children: initialData.has_children || false,
-    marital_status: initialData.marital_status || 'single',
-    occupation: initialData.occupation || '',
-    address: initialData.address || {
+    firstname: '',
+    lastname: '',
+    email: '',
+    phone: '',
+    status: 'active',
+    image_url: '',
+    member_type: 'adult',
+    birth_date: '',
+    gender: 'male',
+    join_date: '',
+    anniversary_date: '',
+    spouse_name: '',
+    has_children: false,
+    marital_status: 'single',
+    occupation: '',
+    address: {
       street: '',
       city: '',
       state: '',
       zip: '',
       country: ''
     },
-    emergency_contact: initialData.emergency_contact || {
+    emergency_contact: {
       name: '',
       phone: '',
       relationship: ''
     },
-    notes: initialData.notes || '',
-    last_attendance_date: initialData.last_attendance_date || '',
-    attendance_frequency: initialData.attendance_frequency || 'regular',
-    ministry_involvement: initialData.ministry_involvement || [],
-    communication_preferences: initialData.communication_preferences || {
+    notes: '',
+    last_attendance_date: '',
+    attendance_frequency: 'regular',
+    ministry_involvement: [],
+    communication_preferences: {
       sms: true,
       email: true,
       mail: false
     },
-    tags: initialData.tags || []
+    tags: []
   });
   
   const [isUploading, setIsUploading] = useState(false);
@@ -89,47 +88,49 @@ const MemberForm = ({ initialData, onSave, onCancel }) => {
 
   // Update memberData when initialData changes (for edit mode)
   useEffect(() => {
-    const updatedMemberData = {
-      ...initialData,
-      firstname: initialData.firstname || '',
-      lastname: initialData.lastname || '',
-      email: initialData.email || '',
-      phone: initialData.phone || '',
-      status: initialData.status || 'active',
-      image_url: initialData.image_url || '',
-      member_type: initialData.member_type || 'adult',
-      birth_date: initialData.birth_date || '',
-      gender: initialData.gender || 'male',
-      join_date: initialData.join_date || '',
-      anniversary_date: initialData.anniversary_date || '',
-      spouse_name: initialData.spouse_name || '',
-      has_children: initialData.has_children || false,
-      marital_status: initialData.marital_status || 'single',
-      occupation: initialData.occupation || '',
-      address: initialData.address || {
-        street: '',
-        city: '',
-        state: '',
-        zip: '',
-        country: ''
-      },
-      emergency_contact: initialData.emergency_contact || {
-        name: '',
-        phone: '',
-        relationship: ''
-      },
-      notes: initialData.notes || '',
-      last_attendance_date: initialData.last_attendance_date || '',
-      attendance_frequency: initialData.attendance_frequency || 'regular',
-      ministry_involvement: initialData.ministry_involvement || [],
-      communication_preferences: initialData.communication_preferences || {
-        sms: true,
-        email: true,
-        mail: false
-      },
-      tags: initialData.tags || []
-    };
-    setMemberData(updatedMemberData);
+    if (initialData && typeof initialData === 'object') {
+      const updatedMemberData = {
+        firstname: initialData.firstname || '',
+        lastname: initialData.lastname || '',
+        email: initialData.email || '',
+        phone: initialData.phone || '',
+        status: initialData.status || 'active',
+        image_url: initialData.image_url || '',
+        member_type: initialData.member_type || 'adult',
+        birth_date: initialData.birth_date || '',
+        gender: initialData.gender || 'male',
+        join_date: initialData.join_date || '',
+        anniversary_date: initialData.anniversary_date || '',
+        spouse_name: initialData.spouse_name || '',
+        has_children: initialData.has_children || false,
+        marital_status: initialData.marital_status || 'single',
+        occupation: initialData.occupation || '',
+        address: initialData.address || {
+          street: '',
+          city: '',
+          state: '',
+          zip: '',
+          country: ''
+        },
+        emergency_contact: initialData.emergency_contact || {
+          name: '',
+          phone: '',
+          relationship: ''
+        },
+        notes: initialData.notes || '',
+        last_attendance_date: initialData.last_attendance_date || '',
+        attendance_frequency: initialData.attendance_frequency || 'regular',
+        ministry_involvement: initialData.ministry_involvement || [],
+        communication_preferences: initialData.communication_preferences || {
+          sms: true,
+          email: true,
+          mail: false
+        },
+        tags: initialData.tags || []
+      };
+      
+      setMemberData(updatedMemberData);
+    }
   }, [initialData]);
 
   // Load family addresses when member type changes to child or when member has family_id

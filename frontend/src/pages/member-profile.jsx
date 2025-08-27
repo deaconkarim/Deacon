@@ -2526,8 +2526,8 @@ export default function MemberProfile() {
           </DialogHeader>
           {member ? (
             <MemberForm
-              member={member}
-              onSubmit={handleEditMember}
+              initialData={member}
+              onSave={handleEditMember}
               onCancel={() => setIsEditDialogOpen(false)}
             />
           ) : (

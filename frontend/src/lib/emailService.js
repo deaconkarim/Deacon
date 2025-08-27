@@ -49,8 +49,8 @@ export const emailService = {
 
       // Use the body directly if it's already HTML, otherwise render template
       let htmlBody;
-      if (body && body.includes('<!DOCTYPE html>')) {
-        // Body is already complete HTML, just replace variables
+      if (body && (body.includes('<!DOCTYPE html>') || body.includes('<p>') || body.includes('<div>'))) {
+        // Body is already HTML, just replace variables
         htmlBody = body;
         Object.keys(variables).forEach(variable => {
           const value = variables[variable];
@@ -67,10 +67,20 @@ export const emailService = {
         });
         
         console.log('Replaced variables in HTML body:', htmlBody.substring(0, 200) + '...');
+        console.log('Variables being replaced:', variables);
+        console.log('Current year value:', variables.current_year);
       } else {
         // Body is plain text, wrap with template
         htmlBody = renderEmailTemplate(template_type, variables);
       }
+
+      console.log('Calling send-email function with:', {
+        to,
+        subject,
+        bodyLength: htmlBody?.length,
+        member_id,
+        conversation_type
+      });
 
       const { data, error } = await supabase.functions.invoke('send-email', {
         body: {

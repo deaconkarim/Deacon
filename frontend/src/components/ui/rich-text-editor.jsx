@@ -179,7 +179,20 @@ const RichTextEditor = ({ value, onChange, placeholder = "Start writing..." }) =
   // Update content when value prop changes
   React.useEffect(() => {
     if (editor && value !== editor.getHTML()) {
-      editor.commands.setContent(value || '');
+      let contentToSet = value || '';
+      
+      // If the content is plain text with line breaks, convert to HTML
+      if (typeof contentToSet === 'string' && contentToSet.includes('\n') && !contentToSet.includes('<')) {
+        // Convert line breaks to HTML paragraphs
+        contentToSet = contentToSet
+          .split('\n\n') // Split on double line breaks for paragraphs
+          .map(paragraph => paragraph.trim())
+          .filter(paragraph => paragraph.length > 0)
+          .map(paragraph => `<p>${paragraph.replace(/\n/g, '<br>')}</p>`)
+          .join('');
+      }
+      
+      editor.commands.setContent(contentToSet);
     }
   }, [editor, value]);
 

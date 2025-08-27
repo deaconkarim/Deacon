@@ -134,6 +134,28 @@ const cleanEmailBody = (htmlContent) => {
   return cleaned;
 };
 
+// Function to convert HTML to clean plain text with preserved line breaks
+const htmlToPlainText = (html) => {
+  if (!html) return '';
+  
+  // Create a temporary div to parse HTML
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = html;
+  
+  // Convert common HTML elements to line breaks
+  let text = html
+    .replace(/<br\s*\/?>/gi, '\n') // Convert <br> tags to line breaks
+    .replace(/<\/p>/gi, '\n\n') // Convert </p> tags to double line breaks
+    .replace(/<\/div>/gi, '\n') // Convert </div> tags to line breaks
+    .replace(/<\/h[1-6]>/gi, '\n\n') // Convert heading closes to double line breaks
+    .replace(/<[^>]*>/g, '') // Remove all remaining HTML tags
+    .replace(/&nbsp;/g, ' ') // Convert &nbsp; to regular spaces
+    .replace(/\n\s*\n\s*\n/g, '\n\n') // Normalize multiple line breaks to max 2
+    .trim();
+  
+  return text;
+};
+
 // Function to replace template variables in HTML content
 const replaceTemplateVariables = (htmlContent, variables, autoVariables = {}) => {
   let result = htmlContent;
@@ -171,6 +193,7 @@ const replaceTemplateVariables = (htmlContent, variables, autoVariables = {}) =>
   return result;
 };
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import { emailTemplates as localEmailTemplates } from '../lib/emailTemplates';
 
 // Add CSS for line clamping
 const lineClampStyles = `
@@ -198,6 +221,7 @@ export function Messaging() {
   const [isTemplateOpen, setIsTemplateOpen] = useState(false);
   const [isEditTemplateOpen, setIsEditTemplateOpen] = useState(false);
   const [isRecipientSelectionOpen, setIsRecipientSelectionOpen] = useState(false);
+  const [recipientSelectionType, setRecipientSelectionType] = useState('sms'); // 'sms' or 'email'
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [editingTemplateVariables, setEditingTemplateVariables] = useState('');
   const [newMessage, setNewMessage] = useState({
@@ -495,7 +519,6 @@ export function Messaging() {
         supabase
           .from('members')
           .select('id, firstname, lastname, phone, email, status, sms_opt_in')
-          .eq('status', 'active')
           .eq('organization_id', organizationId)
           .or('phone.not.is.null,email.not.is.null')
           .order('firstname', { ascending: true })
@@ -580,27 +603,8 @@ export function Messaging() {
         lastMonth: 0
       });
       setEmailConversations(emailConversationsData || []);
-      console.log('Loaded email templates:', emailTemplatesData);
-      setEmailTemplates(emailTemplatesData || []);
-      
-      // If no email templates exist, create a test template
-      if (!emailTemplatesData || emailTemplatesData.length === 0) {
-        console.log('No email templates found, creating a test template...');
-        try {
-          const testTemplate = await emailService.createTemplate({
-            name: 'Welcome Email',
-            description: 'A friendly welcome email for new members',
-            subject: 'Welcome to Our Church Family!',
-            body: 'Dear {{member_name}},\n\nWelcome to our church family! We\'re so excited to have you join us.\n\nWe look forward to getting to know you better and walking together in faith.\n\nBlessings,\n{{church_name}} Team'
-          });
-          console.log('Created test template:', testTemplate);
-          // Reload templates
-          const updatedTemplates = await emailService.getTemplates();
-          setEmailTemplates(updatedTemplates || []);
-        } catch (error) {
-          console.error('Failed to create test template:', error);
-        }
-      }
+      console.log('Using local email templates:', localEmailTemplates);
+      setEmailTemplates(localEmailTemplates || []);
       setEmailStats(emailStatsData || {
         totalSent: 0,
         totalDelivered: 0,
@@ -676,6 +680,7 @@ export function Messaging() {
       // Prepare template variables - combine auto-populated with user input
       const template_variables = {
         message_content: newEmail.body,
+        current_year: new Date().getFullYear().toString(),
         // Add user-provided template variables
         ...emailTemplateVariables,
         // Add more variables based on template type
@@ -700,6 +705,13 @@ export function Messaging() {
 
       if (recipients.length > 0) {
         // Send to multiple recipients
+        console.log('Sending email with data:', {
+          recipients: recipients.map(r => ({ email: r.email, name: r.firstname })),
+          subject: newEmail.subject,
+          body: newEmail.body,
+          template_id: newEmail.template_id
+        });
+        
         const emailPromises = recipients.map(recipient => 
           emailService.sendEmail({
             to: recipient.email,
@@ -727,6 +739,13 @@ export function Messaging() {
         loadData(); // Refresh data
       } else if (newEmail.to) {
         // Send to single email address
+        console.log('Sending email with data:', {
+          to: newEmail.to,
+          subject: newEmail.subject,
+          body: newEmail.body,
+          template_id: newEmail.template_id
+        });
+        
         await emailService.sendEmail({
           to: newEmail.to,
           subject: newEmail.subject,
@@ -1278,7 +1297,6 @@ export function Messaging() {
             )
           `)
           .in('group_id', selectedGroups)
-          .eq('members.status', 'active')
           .or('members.phone.not.is.null,members.email.not.is.null');
 
         if (error) {
@@ -2780,7 +2798,10 @@ export function Messaging() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setIsRecipientSelectionOpen(true)}
+                  onClick={() => {
+                    setRecipientSelectionType('sms');
+                    setIsRecipientSelectionOpen(true);
+                  }}
                 >
                   <Users className="mr-2 h-4 w-4" />
                   {getRecipientTitle()}
@@ -2954,7 +2975,10 @@ export function Messaging() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setIsRecipientSelectionOpen(true)}
+                  onClick={() => {
+                    setRecipientSelectionType('email');
+                    setIsRecipientSelectionOpen(true);
+                  }}
                 >
                   <Users className="mr-2 h-4 w-4" />
                   {getRecipientTitle()}
@@ -3001,49 +3025,17 @@ export function Messaging() {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="email_template_type">Email Design Style</Label>
-              <select
-                id="email_template_type"
-                className="w-full p-2 border border-input rounded-md bg-background"
-                value={newEmail.template_type || 'default'}
-                onChange={(e) => {
-                  setNewEmail({...newEmail, template_type: e.target.value});
-                }}
-              >
-                <option value="default">📧 General Email</option>
-                <option value="eventReminder">📅 Event Reminder</option>
-                <option value="prayerRequest">🙏 Prayer Request</option>
-                <option value="newsletter">📰 Newsletter</option>
-              </select>
-              <p className="text-xs text-muted-foreground">
-                Choose the visual style and layout for your email
-              </p>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="email_template_select">Pre-written Content (Optional)</Label>
+              <Label htmlFor="email_template_select">Email Template</Label>
               <select
                 id="email_template_select"
                 className="w-full p-2 border border-input rounded-md bg-background"
                 value={newEmail.template_id}
                 onChange={async (e) => {
-                  console.log('Template dropdown changed:', e.target.value);
-                  console.log('Available templates:', emailTemplates);
                   const templateId = e.target.value;
                   
                   if (templateId) {
                     const selectedTemplate = emailTemplates.find(t => t.id === templateId);
-                    console.log('Selected template:', selectedTemplate);
                     if (selectedTemplate) {
-                      // Use the HTML template_text directly for rich editing
-                      console.log('Setting template body:', selectedTemplate.template_text);
-                      setNewEmail({
-                        ...newEmail, 
-                        template_id: templateId,
-                        subject: selectedTemplate.subject || '',
-                        body: selectedTemplate.template_text || ''
-                      });
-                      
                       // Initialize template variables with some default values
                       if (selectedTemplate.variables) {
                         const initialVars = {};
@@ -3123,8 +3115,8 @@ export function Messaging() {
                     setNewEmail({
                       ...newEmail, 
                       template_id: '',
-                      subject: newEmail.subject,
-                      body: newEmail.body
+                      subject: '',
+                      body: ''
                     });
                   }
                 }}
@@ -3141,7 +3133,7 @@ export function Messaging() {
                 )}
               </select>
               <p className="text-xs text-muted-foreground">
-                Select pre-written content to start with, or write your own
+                Choose a template to auto-populate your email with pre-written content
               </p>
             </div>
 
@@ -3528,7 +3520,7 @@ export function Messaging() {
           <DialogHeader>
             <DialogTitle>Select Recipients</DialogTitle>
             <DialogDescription>
-              Choose individual members or groups to send your message to.
+              Choose individual members or groups to send your {recipientSelectionType === 'email' ? 'email' : 'SMS message'} to.
             </DialogDescription>
           </DialogHeader>
           
@@ -3554,7 +3546,9 @@ export function Messaging() {
               </div>
               
               <div className="grid gap-2 max-h-96 overflow-y-auto">
-                {members.map((member) => (
+                {members
+                  .filter(member => recipientSelectionType === 'email' ? member.email : member.phone)
+                  .map((member) => (
                   <div
                     key={member.id}
                     className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-muted ${
@@ -3575,7 +3569,7 @@ export function Messaging() {
                           {member.firstname || member.firstName || 'Unknown'} {member.lastname || member.lastName || 'Unknown'}
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {member.phone}
+                          {recipientSelectionType === 'email' ? member.email : member.phone}
                         </div>
                       </div>
                     </div>
