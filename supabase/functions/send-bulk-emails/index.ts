@@ -94,30 +94,30 @@ serve(async (req) => {
       }
     }
 
+    // Create a single email message record for the bulk campaign
+    const { data: message, error: messageError } = await supabaseClient
+      .from('email_messages')
+      .insert({
+        conversation_id: conversation.id,
+        subject,
+        body,
+        direction: 'outbound',
+        status: 'sent',
+        sent_at: new Date().toISOString(),
+        from_email: Deno.env.get('ADMIN_EMAIL') || 'noreply@getdeacon.com',
+        to_email: `Bulk email to ${recipients.length} recipient(s)`,
+        member_id: null
+      })
+      .select()
+      .single()
+
+    if (messageError) {
+      throw new Error(`Failed to create message record: ${messageError.message}`)
+    }
+
     // Send emails to individual recipients
     const emailPromises = recipients.map(async (recipient) => {
       try {
-        // Create email message record
-        const { data: message, error: messageError } = await supabaseClient
-          .from('email_messages')
-          .insert({
-            conversation_id: conversation.id,
-            subject,
-            body,
-            direction: 'outbound',
-            status: 'sent',
-            sent_at: new Date().toISOString(),
-            from_email: Deno.env.get('ADMIN_EMAIL') || 'noreply@getdeacon.com',
-            to_email: recipient.email,
-            member_id: recipient.id
-          })
-          .select()
-          .single()
-
-        if (messageError) {
-          throw new Error(`Failed to create message record: ${messageError.message}`)
-        }
-
         // Update campaign recipient status
         await supabaseClient
           .from('email_campaign_recipients')
@@ -130,8 +130,7 @@ serve(async (req) => {
 
         return {
           success: true,
-          recipient: recipient.email,
-          message_id: message.id
+          recipient: recipient.email
         }
       } catch (error) {
         // Update campaign recipient with error

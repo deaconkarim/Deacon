@@ -577,11 +577,30 @@ export function Messaging() {
       const enrichedGroups = await Promise.all(
         groupsData.map(async (group) => {
           // Get group members count
-          const { count: memberCount } = await supabase
+          const { count: memberCount, error } = await supabase
             .from('group_members')
             .select('*', { count: 'exact', head: true })
             .eq('group_id', group.id)
             .eq('organization_id', organizationId);
+
+          console.log(`Group ${group.name} (${group.id}):`, { memberCount, error });
+
+          // Also get actual group members to verify
+          const { data: groupMembers, error: membersError } = await supabase
+            .from('group_members')
+            .select(`
+              member_id,
+              members (
+                id,
+                firstname,
+                lastname,
+                email
+              )
+            `)
+            .eq('group_id', group.id)
+            .eq('organization_id', organizationId);
+
+          console.log(`Group ${group.name} members:`, groupMembers);
 
           return {
             ...group,
@@ -705,29 +724,25 @@ export function Messaging() {
 
       if (recipients.length > 0) {
         // Send to multiple recipients
-        console.log('Sending email with data:', {
+        console.log('Sending bulk email with data:', {
           recipients: recipients.map(r => ({ email: r.email, name: r.firstname })),
           subject: newEmail.subject,
           body: newEmail.body,
           template_id: newEmail.template_id
         });
         
-        const emailPromises = recipients.map(recipient => 
-          emailService.sendEmail({
-            to: recipient.email,
-            subject: newEmail.subject,
-            body: newEmail.body,
+        // Send bulk email using the bulk email service
+        await emailService.sendBulkEmails({
+          recipients: recipients.map(recipient => ({
+            email: recipient.email,
             member_id: recipient.id,
-            conversation_type: 'general',
-            template_type: newEmail.template_id ? null : (newEmail.template_type || 'default'),
-            template_variables: {
-              ...template_variables,
-              member_name: recipient.firstname
-            }
-          })
-        );
-
-        await Promise.all(emailPromises);
+            member_name: recipient.firstname
+          })),
+          subject: newEmail.subject,
+          body: newEmail.body,
+          conversation_type: 'general',
+          template_variables
+        });
         
         toast({
           title: 'Success',
@@ -1297,7 +1312,7 @@ export function Messaging() {
             )
           `)
           .in('group_id', selectedGroups)
-          .or('members.phone.not.is.null,members.email.not.is.null');
+          .or('phone.not.is.null,email.not.is.null');
 
         if (error) {
           console.error('Error fetching group members:', error);
