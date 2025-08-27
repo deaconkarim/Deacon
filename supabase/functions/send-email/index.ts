@@ -60,8 +60,14 @@ serve(async (req) => {
       }
     }
 
-    // Create beautiful email content
-    const emailContent = `
+    // Check if body is already complete HTML
+    let emailContent;
+    if (body && body.includes('<!DOCTYPE html>')) {
+      // Body is already complete HTML, use as-is
+      emailContent = body;
+    } else {
+      // Body is plain text, wrap with template
+      emailContent = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -72,9 +78,13 @@ serve(async (req) => {
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8fafc; line-height: 1.6;">
     <div style="max-width: 600px; margin: 0 auto; background-color: white;">
         <!-- Header -->
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px; text-align: center;">
-            <div style="width: 60px; height: 60px; background: rgba(255, 255, 255, 0.15); border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);">
-                <span style="font-size: 28px; color: white;">⛪</span>
+        <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 40px; text-align: center;">
+            <div style="margin-bottom: 16px;">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 17L12 22L22 17" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 12L12 17L22 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
             </div>
             <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">Deacon</h1>
             <p style="color: rgba(255, 255, 255, 0.9); margin: 8px 0 0; font-size: 14px; font-weight: 400;">Church Command Center</p>
@@ -105,7 +115,8 @@ serve(async (req) => {
     </div>
 </body>
 </html>
-    `
+      `;
+    }
 
     // Send email using Resend
     const emailResponse = await fetch('https://api.resend.com/emails', {

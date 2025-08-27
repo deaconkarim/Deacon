@@ -70,7 +70,7 @@ serve(async (req) => {
     for (const recipient of recipients) {
       campaignRecipients.push({
         campaign_id: campaign.id,
-        member_id: recipient.id,
+        member_id: recipient.member_id,
         email_sent: false
       })
     }
@@ -94,28 +94,51 @@ serve(async (req) => {
       }
     }
 
+    // Create a single email message record for the bulk campaign
+    const { data: message, error: messageError } = await supabaseClient
+      .from('email_messages')
+      .insert({
+        conversation_id: conversation.id,
+        subject,
+        body,
+        direction: 'outbound',
+        status: 'sent',
+        sent_at: new Date().toISOString(),
+        from_email: Deno.env.get('ADMIN_EMAIL') || 'noreply@getdeacon.com',
+        to_email: `Bulk email to ${recipients.length} recipient(s)`,
+        member_id: null
+      })
+      .select()
+      .single()
+
+    if (messageError) {
+      throw new Error(`Failed to create message record: ${messageError.message}`)
+    }
+
     // Send emails to individual recipients
     const emailPromises = recipients.map(async (recipient) => {
       try {
-        // Create email message record
-        const { data: message, error: messageError } = await supabaseClient
-          .from('email_messages')
-          .insert({
-            conversation_id: conversation.id,
-            subject,
-            body,
-            direction: 'outbound',
-            status: 'sent',
-            sent_at: new Date().toISOString(),
-            from_email: Deno.env.get('ADMIN_EMAIL') || 'noreply@getdeacon.com',
-            to_email: recipient.email,
-            member_id: recipient.id
-          })
-          .select()
-          .single()
+        // Use the body directly since it's already processed by the frontend
+        const emailContent = body;
 
-        if (messageError) {
-          throw new Error(`Failed to create message record: ${messageError.message}`)
+        // Send email via Resend
+        const resendResponse = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get('RESEND_API_KEY')}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: Deno.env.get('ADMIN_EMAIL') || 'noreply@getdeacon.com',
+            to: recipient.email,
+            subject: subject,
+            html: emailContent,
+          }),
+        });
+
+        if (!resendResponse.ok) {
+          const errorData = await resendResponse.json();
+          throw new Error(`Resend API error: ${errorData.message || resendResponse.statusText}`);
         }
 
         // Update campaign recipient status
@@ -126,12 +149,11 @@ serve(async (req) => {
             sent_at: new Date().toISOString()
           })
           .eq('campaign_id', campaign.id)
-          .eq('member_id', recipient.id)
+          .eq('member_id', recipient.member_id)
 
         return {
           success: true,
-          recipient: recipient.email,
-          message_id: message.id
+          recipient: recipient.email
         }
       } catch (error) {
         // Update campaign recipient with error
@@ -142,7 +164,7 @@ serve(async (req) => {
             error_message: error.message
           })
           .eq('campaign_id', campaign.id)
-          .eq('member_id', recipient.id)
+          .eq('member_id', recipient.member_id)
 
         return {
           success: false,
@@ -177,6 +199,29 @@ serve(async (req) => {
           const member = groupMember.members
           if (member && member.email) {
             try {
+              // Use the body directly since it's already processed by the frontend
+              const emailContent = body;
+
+              // Send email via Resend
+              const resendResponse = await fetch('https://api.resend.com/emails', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${Deno.env.get('RESEND_API_KEY')}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  from: Deno.env.get('ADMIN_EMAIL') || 'noreply@getdeacon.com',
+                  to: member.email,
+                  subject: subject,
+                  html: emailContent,
+                }),
+              });
+
+              if (!resendResponse.ok) {
+                const errorData = await resendResponse.json();
+                throw new Error(`Resend API error: ${errorData.message || resendResponse.statusText}`);
+              }
+
               // Create email message record for group member
               const { data: message, error: messageError } = await supabaseClient
                 .from('email_messages')

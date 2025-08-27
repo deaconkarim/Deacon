@@ -35,7 +35,8 @@ import {
   Copy,
   Share2,
   Star,
-  StarOff
+  StarOff,
+  Mail
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -48,9 +49,151 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { smsService } from '@/lib/smsService';
+import { emailService } from '@/lib/emailService';
 import { supabase } from '@/lib/supabaseClient';
 import { getInitials } from '@/lib/utils/formatters';
+import { emailTemplates, templateVariables } from '@/lib/emailTemplates';
+import RichTextEditor from '@/components/ui/rich-text-editor';
+import TemplateVariables from '@/components/ui/template-variables';
+
+// Function to extract plain text from HTML
+const extractPlainText = (htmlContent) => {
+  if (!htmlContent) return '';
+  
+  // Create a temporary div to parse HTML
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = htmlContent;
+  
+  // Get text content and clean it up
+  let text = tempDiv.textContent || tempDiv.innerText || '';
+  
+  // Remove extra whitespace and newlines
+  text = text.replace(/\s+/g, ' ').trim();
+  
+  // Remove template variables like {church_name}, {prayer_for}, etc.
+  text = text.replace(/\{[^}]+\}/g, '').replace(/\{\{[^}]+\}\}/g, '');
+  
+  // Clean up extra spaces after removing variables
+  text = text.replace(/\s+/g, ' ').trim();
+  
+  // Limit to first 150 characters for preview
+  if (text.length > 150) {
+    text = text.substring(0, 150) + '...';
+  }
+  
+  return text;
+};
+
+// Function to clean up email body for display
+const cleanEmailBody = (htmlContent) => {
+  if (!htmlContent) return '';
+  
+  // Replace common template variables with placeholder text
+  let cleaned = htmlContent
+    .replace(/\{church_name\}/g, 'Your Church')
+    .replace(/\{\{church_name\}\}/g, 'Your Church')
+    .replace(/\{member_name\}/g, 'Member')
+    .replace(/\{\{member_name\}\}/g, 'Member')
+    .replace(/\{current_year\}/g, new Date().getFullYear().toString())
+    .replace(/\{\{current_year\}\}/g, new Date().getFullYear().toString())
+    .replace(/\{prayer_for\}/g, 'Church Member')
+    .replace(/\{\{prayer_for\}\}/g, 'Church Member')
+    .replace(/\{prayer_request\}/g, 'Prayer request details')
+    .replace(/\{\{prayer_request\}\}/g, 'Prayer request details')
+    .replace(/\{additional_details\}/g, 'Additional details')
+    .replace(/\{\{additional_details\}\}/g, 'Additional details')
+    .replace(/\{how_to_help\}/g, 'How you can help')
+    .replace(/\{\{how_to_help\}\}/g, 'How you can help')
+    .replace(/\{event_title\}/g, 'Event Title')
+    .replace(/\{\{event_title\}\}/g, 'Event Title')
+    .replace(/\{event_date\}/g, 'Event Date')
+    .replace(/\{\{event_date\}\}/g, 'Event Date')
+    .replace(/\{event_time\}/g, 'Event Time')
+    .replace(/\{\{event_time\}\}/g, 'Event Time')
+    .replace(/\{event_location\}/g, 'Event Location')
+    .replace(/\{\{event_location\}\}/g, 'Event Location')
+    .replace(/\{event_description\}/g, 'Event description')
+    .replace(/\{\{event_description\}\}/g, 'Event description')
+    .replace(/\{alert_title\}/g, 'Alert Title')
+    .replace(/\{\{alert_title\}\}/g, 'Alert Title')
+    .replace(/\{alert_message\}/g, 'Alert message')
+    .replace(/\{\{alert_message\}\}/g, 'Alert message')
+    .replace(/\{opportunity_title\}/g, 'Opportunity Title')
+    .replace(/\{\{opportunity_title\}\}/g, 'Opportunity Title')
+    .replace(/\{opportunity_description\}/g, 'Opportunity description')
+    .replace(/\{\{opportunity_description\}\}/g, 'Opportunity description')
+    .replace(/\{newsletter_title\}/g, 'Newsletter Title')
+    .replace(/\{\{newsletter_title\}\}/g, 'Newsletter Title')
+    .replace(/\{newsletter_date\}/g, 'Newsletter Date')
+    .replace(/\{\{newsletter_date\}\}/g, 'Newsletter Date')
+    .replace(/\{newsletter_content\}/g, 'Newsletter content')
+    .replace(/\{\{newsletter_content\}\}/g, 'Newsletter content')
+    .replace(/\{message_content\}/g, 'Message content')
+    .replace(/\{\{message_content\}\}/g, 'Message content');
+  
+  return cleaned;
+};
+
+// Function to convert HTML to clean plain text with preserved line breaks
+const htmlToPlainText = (html) => {
+  if (!html) return '';
+  
+  // Create a temporary div to parse HTML
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = html;
+  
+  // Convert common HTML elements to line breaks
+  let text = html
+    .replace(/<br\s*\/?>/gi, '\n') // Convert <br> tags to line breaks
+    .replace(/<\/p>/gi, '\n\n') // Convert </p> tags to double line breaks
+    .replace(/<\/div>/gi, '\n') // Convert </div> tags to line breaks
+    .replace(/<\/h[1-6]>/gi, '\n\n') // Convert heading closes to double line breaks
+    .replace(/<[^>]*>/g, '') // Remove all remaining HTML tags
+    .replace(/&nbsp;/g, ' ') // Convert &nbsp; to regular spaces
+    .replace(/\n\s*\n\s*\n/g, '\n\n') // Normalize multiple line breaks to max 2
+    .trim();
+  
+  return text;
+};
+
+// Function to replace template variables in HTML content
+const replaceTemplateVariables = (htmlContent, variables, autoVariables = {}) => {
+  let result = htmlContent;
+  
+  // Replace all variables
+  const allVariables = { ...autoVariables, ...variables };
+  
+  console.log('replaceTemplateVariables called with:', {
+    htmlContentLength: htmlContent?.length,
+    variables,
+    autoVariables,
+    allVariables
+  });
+  
+  Object.keys(allVariables).forEach(variable => {
+    const value = allVariables[variable];
+    if (value) {
+      // Replace both {{variable}} and {variable} patterns
+      const patterns = [
+        new RegExp(`{{${variable}}}`, 'g'),
+        new RegExp(`{${variable}}`, 'g')
+      ];
+      
+      patterns.forEach(pattern => {
+        const before = result;
+        result = result.replace(pattern, value);
+        if (before !== result) {
+          console.log(`Replaced ${variable} with ${value}`);
+        }
+      });
+    }
+  });
+  
+  console.log('Final result preview:', result.substring(0, 200));
+  return result;
+};
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import { emailTemplates as localEmailTemplates } from '../lib/emailTemplates';
 
 // Add CSS for line clamping
 const lineClampStyles = `
@@ -62,7 +205,7 @@ const lineClampStyles = `
   }
 `;
 
-export function SMS() {
+export function Messaging() {
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [templates, setTemplates] = useState([]);
@@ -78,6 +221,7 @@ export function SMS() {
   const [isTemplateOpen, setIsTemplateOpen] = useState(false);
   const [isEditTemplateOpen, setIsEditTemplateOpen] = useState(false);
   const [isRecipientSelectionOpen, setIsRecipientSelectionOpen] = useState(false);
+  const [recipientSelectionType, setRecipientSelectionType] = useState('sms'); // 'sms' or 'email'
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [editingTemplateVariables, setEditingTemplateVariables] = useState('');
   const [newMessage, setNewMessage] = useState({
@@ -142,6 +286,59 @@ export function SMS() {
     status: 'all',
     direction: 'all',
     hasResponse: false
+  });
+
+  // Email-related state
+  const [emailConversations, setEmailConversations] = useState([]);
+  const [selectedEmailConversation, setSelectedEmailConversation] = useState(null);
+  const [emailTemplates, setEmailTemplates] = useState([]);
+  const [isNewEmailOpen, setIsNewEmailOpen] = useState(false);
+  const [isEmailTemplateOpen, setIsEmailTemplateOpen] = useState(false);
+  const [isEditEmailTemplateOpen, setIsEditEmailTemplateOpen] = useState(false);
+  const [editingEmailTemplate, setEditingEmailTemplate] = useState(null);
+  const [newEmail, setNewEmail] = useState({
+    to: '',
+    subject: '',
+    body: '',
+    template_id: '',
+    template_type: 'default'
+  });
+  const [emailTemplateVariables, setEmailTemplateVariables] = useState({});
+  const [newEmailTemplate, setNewEmailTemplate] = useState({
+    name: '',
+    description: '',
+    subject: '',
+    body: '',
+    variables: []
+  });
+  const [newEmailTemplateVariables, setNewEmailTemplateVariables] = useState('');
+  const [emailReplyMessage, setEmailReplyMessage] = useState({
+    subject: '',
+    body: ''
+  });
+  const [isSendingEmailReply, setIsSendingEmailReply] = useState(false);
+  const [emailStats, setEmailStats] = useState({
+    totalSent: 0,
+    totalDelivered: 0,
+    totalFailed: 0,
+    deliveryRate: 0,
+    thisMonth: 0,
+    lastMonth: 0
+  });
+  const [emailCampaigns, setEmailCampaigns] = useState([]);
+  const [isEmailCampaignOpen, setIsEmailCampaignOpen] = useState(false);
+  const [newEmailCampaign, setNewEmailCampaign] = useState({
+    name: '',
+    description: '',
+    subject: '',
+    body: '',
+    scheduledDate: '',
+    scheduledTime: '',
+    recipients: [],
+    selectedGroups: [],
+    selectedMembers: [],
+    targetType: 'all',
+    type: 'immediate'
   });
   
   const { toast } = useToast();
@@ -310,7 +507,7 @@ export function SMS() {
       const organizationId = orgData[0].organization_id;
 
       // Try to load conversations, templates, members, and groups
-      const [conversationsData, templatesData, membersData, groupsData, statsData] = await Promise.all([
+      const [conversationsData, templatesData, membersData, groupsData, statsData, emailConversationsData, emailTemplatesData, emailStatsData] = await Promise.all([
         smsService.getConversations().catch(error => {
           console.warn('Failed to load conversations:', error);
           return [];
@@ -321,10 +518,9 @@ export function SMS() {
         }),
         supabase
           .from('members')
-          .select('id, firstname, lastname, phone, status, sms_opt_in')
-          .eq('status', 'active')
+          .select('id, firstname, lastname, phone, email, status, sms_opt_in')
           .eq('organization_id', organizationId)
-          .not('phone', 'is', null)
+          .or('phone.not.is.null,email.not.is.null')
           .order('firstname', { ascending: true })
           .then(({ data, error }) => {
             if (error) {
@@ -355,6 +551,25 @@ export function SMS() {
             thisMonth: 0,
             lastMonth: 0
           };
+        }),
+        emailService.getEmailMessages().catch(error => {
+          console.warn('Failed to load email messages:', error);
+          return [];
+        }),
+        emailService.getTemplates().catch(error => {
+          console.warn('Failed to load email templates:', error);
+          return [];
+        }),
+        emailService.getEmailStats().catch(error => {
+          console.warn('Failed to load email stats:', error);
+          return {
+            totalSent: 0,
+            totalDelivered: 0,
+            totalFailed: 0,
+            deliveryRate: 0,
+            thisMonth: 0,
+            lastMonth: 0
+          };
         })
       ]);
       
@@ -362,11 +577,30 @@ export function SMS() {
       const enrichedGroups = await Promise.all(
         groupsData.map(async (group) => {
           // Get group members count
-          const { count: memberCount } = await supabase
+          const { count: memberCount, error } = await supabase
             .from('group_members')
             .select('*', { count: 'exact', head: true })
             .eq('group_id', group.id)
             .eq('organization_id', organizationId);
+
+          console.log(`Group ${group.name} (${group.id}):`, { memberCount, error });
+
+          // Also get actual group members to verify
+          const { data: groupMembers, error: membersError } = await supabase
+            .from('group_members')
+            .select(`
+              member_id,
+              members (
+                id,
+                firstname,
+                lastname,
+                email
+              )
+            `)
+            .eq('group_id', group.id)
+            .eq('organization_id', organizationId);
+
+          console.log(`Group ${group.name} members:`, groupMembers);
 
           return {
             ...group,
@@ -380,6 +614,17 @@ export function SMS() {
       setMembers(membersData || []);
       setGroups(enrichedGroups || []);
       setSmsStats(statsData || {
+        totalSent: 0,
+        totalDelivered: 0,
+        totalFailed: 0,
+        deliveryRate: 0,
+        thisMonth: 0,
+        lastMonth: 0
+      });
+      setEmailConversations(emailConversationsData || []);
+      console.log('Using local email templates:', localEmailTemplates);
+      setEmailTemplates(localEmailTemplates || []);
+      setEmailStats(emailStatsData || {
         totalSent: 0,
         totalDelivered: 0,
         totalFailed: 0,
@@ -415,6 +660,132 @@ export function SMS() {
       toast({
         title: 'Error',
         description: 'Failed to load conversation details',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const [selectedEmail, setSelectedEmail] = useState(null);
+  const [isEmailDetailOpen, setIsEmailDetailOpen] = useState(false);
+  const [showRawHtml, setShowRawHtml] = useState(false);
+
+  const handleEmailMessageClick = async (email) => {
+    setSelectedEmail(email);
+    setIsEmailDetailOpen(true);
+  };
+
+  const handleSendEmail = async () => {
+    const recipients = await getSelectedRecipients();
+    
+    if (recipients.length === 0 && !newEmail.to) {
+      toast({
+        title: 'Missing Recipients',
+        description: 'Please select recipients or enter an email address.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!newEmail.subject || !newEmail.body) {
+      toast({
+        title: 'Missing Content',
+        description: 'Please enter both subject and body for the email.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    try {
+      // Prepare template variables - combine auto-populated with user input
+      const template_variables = {
+        message_content: newEmail.body,
+        current_year: new Date().getFullYear().toString(),
+        // Add user-provided template variables
+        ...emailTemplateVariables,
+        // Add more variables based on template type
+        ...(newEmail.template_type === 'eventReminder' && {
+          event_title: newEmail.subject || 'Upcoming Event',
+          event_date: new Date().toLocaleDateString(),
+          event_time: 'TBD',
+          event_location: 'Church Campus'
+        }),
+        ...(newEmail.template_type === 'prayerRequest' && {
+          prayer_title: newEmail.subject || 'Prayer Request',
+          prayer_content: newEmail.body,
+          requested_by: 'Church Member',
+          request_date: new Date().toLocaleDateString()
+        }),
+        ...(newEmail.template_type === 'newsletter' && {
+          newsletter_title: newEmail.subject,
+          newsletter_date: new Date().toLocaleDateString(),
+          newsletter_content: newEmail.body
+        })
+      };
+
+      if (recipients.length > 0) {
+        // Send to multiple recipients
+        console.log('Sending bulk email with data:', {
+          recipients: recipients.map(r => ({ email: r.email, name: r.firstname })),
+          subject: newEmail.subject,
+          body: newEmail.body,
+          template_id: newEmail.template_id
+        });
+        
+        // Send bulk email using the bulk email service
+        await emailService.sendBulkEmails({
+          recipients: recipients.map(recipient => ({
+            email: recipient.email,
+            id: recipient.id,
+            member_id: recipient.id,
+            member_name: recipient.firstname
+          })),
+          subject: newEmail.subject,
+          body: newEmail.body,
+          conversation_type: 'general',
+          selectedGroups: selectedGroups,
+          template_variables: template_variables
+        });
+        
+        toast({
+          title: 'Success',
+          description: `Beautiful email sent to ${recipients.length} recipient(s)`,
+        });
+        
+        setIsNewEmailOpen(false);
+        setNewEmail({ to: '', subject: '', body: '', template_id: '', template_type: 'default' });
+        loadData(); // Refresh data
+      } else if (newEmail.to) {
+        // Send to single email address
+        console.log('Sending email with data:', {
+          to: newEmail.to,
+          subject: newEmail.subject,
+          body: newEmail.body,
+          template_id: newEmail.template_id
+        });
+        
+        await emailService.sendEmail({
+          to: newEmail.to,
+          subject: newEmail.subject,
+          body: newEmail.body,
+          conversation_type: 'general',
+          template_type: newEmail.template_id ? null : (newEmail.template_type || 'default'),
+          template_variables
+        });
+        
+        toast({
+          title: 'Success',
+          description: 'Beautiful email sent successfully',
+        });
+        
+        setIsNewEmailOpen(false);
+        setNewEmail({ to: '', subject: '', body: '', template_id: '', template_type: 'default' });
+        loadData(); // Refresh data
+      }
+    } catch (error) {
+      console.error('Error sending email:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to send email. Please try again.',
         variant: 'destructive'
       });
     }
@@ -674,6 +1045,36 @@ export function SMS() {
     }
   };
 
+  const handleCreateEmailTemplate = async () => {
+    if (!newEmailTemplate.name || !newEmailTemplate.subject || !newEmailTemplate.body) {
+      toast({
+        title: 'Missing Information',
+        description: 'Please fill in template name, subject, and body.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    try {
+      await emailService.createTemplate(newEmailTemplate);
+      setIsEmailTemplateOpen(false);
+      setNewEmailTemplate({ name: '', description: '', subject: '', body: '', variables: [] });
+      toast({
+        title: 'Success',
+        description: 'Email template created successfully'
+      });
+      
+      // Refresh templates
+      await loadData();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: `Failed to create email template: ${error.message}`,
+        variant: 'destructive'
+      });
+    }
+  };
+
   const handleEditTemplate = (template) => {
     setEditingTemplate(template);
     // Set variables as comma-separated string for editing
@@ -752,6 +1153,65 @@ export function SMS() {
       toast({
         title: 'Error',
         description: `Failed to delete template: ${error.message}`,
+        variant: 'destructive'
+      });
+    }
+  };
+
+  // Email template handlers
+  const handleEditEmailTemplate = (template) => {
+    setEditingEmailTemplate(template);
+    setIsEditEmailTemplateOpen(true);
+  };
+
+  const handleUpdateEmailTemplate = async () => {
+    if (!editingEmailTemplate.name || !editingEmailTemplate.subject || !editingEmailTemplate.body) {
+      toast({
+        title: 'Missing Information',
+        description: 'Please fill in template name, subject, and body.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    try {
+      await emailService.updateTemplate(editingEmailTemplate.id, editingEmailTemplate);
+      setIsEditEmailTemplateOpen(false);
+      setEditingEmailTemplate(null);
+      toast({
+        title: 'Success',
+        description: 'Email template updated successfully'
+      });
+      
+      // Refresh templates
+      await loadData();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: `Failed to update email template: ${error.message}`,
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleDeleteEmailTemplate = async (templateId) => {
+    if (!confirm('Are you sure you want to delete this email template?')) {
+      return;
+    }
+
+    try {
+      await emailService.deleteTemplate(templateId);
+      toast({
+        title: 'Success',
+        description: 'Email template deleted successfully'
+      });
+      
+      // Refresh templates
+      await loadData();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: `Failed to delete email template: ${error.message}`,
         variant: 'destructive'
       });
     }
@@ -849,18 +1309,20 @@ export function SMS() {
               firstname,
               lastname,
               phone,
+              email,
               status
             )
           `)
-          .in('group_id', selectedGroups)
-          .eq('members.status', 'active')
-          .not('members.phone', 'is', null);
+          .in('group_id', selectedGroups);
 
         if (error) {
           console.error('Error fetching group members:', error);
         } else if (groupMembers) {
+          // Filter members to only include those with phone or email
           groupMembers.forEach(gm => {
-            selectedMemberIds.add(gm.members.id);
+            if (gm.members && (gm.members.phone || gm.members.email)) {
+              selectedMemberIds.add(gm.members.id);
+            }
           });
         }
       } catch (error) {
@@ -1300,6 +1762,12 @@ export function SMS() {
     return matchesSearch && matchesType;
   });
 
+  const filteredEmailConversations = emailConversations.filter(conversation => {
+    const matchesSearch = conversation.title?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesType = selectedType === 'all' || conversation.conversation_type === selectedType;
+    return matchesSearch && matchesType;
+  });
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -1321,9 +1789,9 @@ export function SMS() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
-              SMS Management
+              Messaging Center
             </h1>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Manage conversations, templates, and campaigns</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Manage SMS and email conversations, templates, and campaigns</p>
           </div>
           <div className="flex items-center gap-2">
             <Button 
@@ -1345,12 +1813,20 @@ export function SMS() {
               Export
             </Button>
             <Button 
+              onClick={() => setIsNewEmailOpen(true)}
+              size="sm"
+              className="h-9 px-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
+            >
+              <Send className="mr-2 h-4 w-4" />
+              Send Email
+            </Button>
+            <Button 
               onClick={() => setIsNewMessageOpen(true)}
               size="sm"
               className="h-9 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
             >
               <Send className="mr-2 h-4 w-4" />
-              Send Message
+              Send SMS
             </Button>
           </div>
         </div>
@@ -1360,9 +1836,11 @@ export function SMS() {
       <div className="px-6 py-4">
 
       <Tabs defaultValue="conversations" className="space-y-4" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 rounded-lg p-1 shadow-sm">
-          <TabsTrigger value="conversations" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-sm">Conversations</TabsTrigger>
-          <TabsTrigger value="templates" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-sm">Templates</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-7 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 rounded-lg p-1 shadow-sm">
+          <TabsTrigger value="conversations" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-sm">SMS Conversations</TabsTrigger>
+          <TabsTrigger value="email-conversations" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-sm">Email Messages</TabsTrigger>
+          <TabsTrigger value="templates" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-sm">SMS Templates</TabsTrigger>
+          <TabsTrigger value="email-templates" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-sm">Email Templates</TabsTrigger>
           <TabsTrigger value="campaigns" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-sm">Campaigns</TabsTrigger>
           <TabsTrigger value="analytics" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-sm">Analytics</TabsTrigger>
           <TabsTrigger value="opt-out" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-sm">Opt-Out</TabsTrigger>
@@ -1375,7 +1853,7 @@ export function SMS() {
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input
-                  placeholder="Search conversations..."
+                  placeholder="Search SMS conversations..."
                   className="pl-10 h-9 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -1478,6 +1956,81 @@ export function SMS() {
           )}
         </TabsContent>
 
+        <TabsContent value="email-conversations" className="space-y-4">
+          {/* Compact search and filters for email messages */}
+          <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm px-4 py-3 border border-slate-200/50 dark:border-slate-700/50 rounded-lg">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Search email messages..."
+                  className="pl-10 h-9 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <select
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value)}
+                className="h-9 px-3 bg-white/80 dark:bg-slate-700/80 border-slate-200 dark:border-slate-600 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              >
+                <option value="all">All Types</option>
+                <option value="general">General</option>
+                <option value="prayer_request">Prayer Request</option>
+                <option value="event_reminder">Event Reminder</option>
+                <option value="emergency">Emergency</option>
+                <option value="pastoral_care">Pastoral Care</option>
+              </select>
+            </div>
+          </div>
+
+          {emailConversations.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="w-12 h-12 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 rounded-full flex items-center justify-center mx-auto mb-3">
+                <MessageSquare className="h-6 w-6 text-slate-400" />
+              </div>
+              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-2">No Email Messages Yet</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                {emailConversations.length === 0 
+                  ? "Start sending emails to see your message history."
+                  : "No messages match your current filters."
+                }
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-3">
+              {emailConversations.map((email) => (
+                <Card 
+                  key={email.id} 
+                  className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-slate-200/50 dark:border-slate-600/50 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
+                  onClick={() => handleEmailMessageClick(email)}
+                >
+                  <div className="p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex-1">
+                        <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{email.subject}</h4>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                          {email.direction} • {email.status} • {email.to_email}
+                        </p>
+                      </div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400">
+                        {email.sent_at ? format(new Date(email.sent_at), 'MMM d, h:mm a') : 'Recently'}
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="text-xs font-medium text-slate-700 dark:text-slate-300">Message:</div>
+                      <div className="text-sm text-slate-700 dark:text-slate-300 line-clamp-2">
+                        {extractPlainText(email.body)}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
         <TabsContent value="templates" className="space-y-4">
           <div className="flex justify-between items-center">
             <div>
@@ -1546,6 +2099,168 @@ export function SMS() {
                       <div className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Template:</div>
                       <div className="text-sm text-slate-700 dark:text-slate-300 line-clamp-2">
                         {template.template_text}
+                      </div>
+                    </div>
+                    
+                    {template.variables && template.variables.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {template.variables.map((variable, index) => (
+                          <Badge key={index} variant="outline" className="text-xs px-2 py-1">
+                            {variable}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="email-templates" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Email Templates</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Create and manage email templates</p>
+            </div>
+            <Button 
+              onClick={() => setIsEmailTemplateOpen(true)}
+              size="sm"
+              className="h-9 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Create Email Template
+            </Button>
+          </div>
+
+          <div className="grid gap-3">
+            {emailTemplates.map((template) => (
+              <Card key={template.id} className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-slate-200/50 dark:border-slate-600/50 shadow-sm hover:shadow-md transition-all duration-200">
+                <div className="p-4">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex-1">
+                      <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{template.name}</h4>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">{template.description}</p>
+                    </div>
+                    <div className="flex gap-2 ml-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditEmailTemplate(template)}
+                        className="h-7 px-3 text-xs"
+                      >
+                        <Edit className="mr-1 h-3 w-3" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteEmailTemplate(template.id)}
+                        className="h-7 px-3 text-xs text-red-600 border-red-200 hover:bg-red-50"
+                      >
+                        <Trash2 className="mr-1 h-3 w-3" />
+                        Delete
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          setNewEmail({
+                            to: '',
+                            subject: template.subject,
+                            body: template.template_text || '',
+                            template_id: template.id,
+                            template_type: 'default'
+                          });
+                          
+                          // Initialize template variables with default values
+                          if (template.variables) {
+                            const initialVars = {};
+                            template.variables.forEach(variable => {
+                              // Set some helpful default values
+                              const defaults = {
+                                'prayer_for': 'Church Member',
+                                'prayer_request': 'Please pray for our church family',
+                                'additional_details': 'We appreciate your prayers and support.',
+                                'how_to_help': 'Please keep us in your prayers and reach out if you can help.',
+                                'event_title': 'Upcoming Event',
+                                'event_date': new Date().toLocaleDateString(),
+                                'event_time': '7:00 PM',
+                                'event_location': 'Church Campus',
+                                'event_description': 'Join us for this special event!',
+                                'alert_title': 'Important Announcement',
+                                'alert_message': 'Please read this important message.',
+                                'opportunity_title': 'Volunteer Opportunity',
+                                'opportunity_description': 'We need volunteers for this important ministry.',
+                                'newsletter_title': 'Weekly Update',
+                                'newsletter_date': new Date().toLocaleDateString(),
+                                'newsletter_content': 'Here are the latest updates from our church.',
+                                'message_content': 'This is an important message for our church family.'
+                              };
+                              initialVars[variable] = defaults[variable] || '';
+                            });
+                            setEmailTemplateVariables(initialVars);
+                            
+                            // Get organization info for church name
+                            const { data: { user } } = await supabase.auth.getUser();
+                            let churchName = 'Your Church';
+                            
+                            if (user) {
+                              const { data: orgData } = await supabase
+                                .from('organization_users')
+                                .select('organizations(name)')
+                                .eq('user_id', user.id)
+                                .eq('status', 'active')
+                                .eq('approval_status', 'approved')
+                                .single();
+                              
+                              if (orgData?.organizations?.name) {
+                                churchName = orgData.organizations.name;
+                              }
+                            }
+                            
+                            // Apply initial variable replacement
+                            if (template.template_text) {
+                              const updatedBody = replaceTemplateVariables(
+                                template.template_text,
+                                initialVars,
+                                {
+                                  church_name: churchName,
+                                  current_year: new Date().getFullYear().toString()
+                                }
+                              );
+                              setNewEmail({
+                                to: '',
+                                subject: template.subject,
+                                body: updatedBody,
+                                template_id: template.id,
+                                template_type: 'default'
+                              });
+                            }
+                          }
+                          
+                          setIsNewEmailOpen(true);
+                        }}
+                        className="h-7 px-3 text-xs text-blue-600 border-blue-200 hover:bg-blue-50"
+                      >
+                        <Send className="mr-1 h-3 w-3" />
+                        Use
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-md">
+                      <div className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Subject:</div>
+                      <div className="text-sm text-slate-700 dark:text-slate-300 line-clamp-1">
+                        {template.subject}
+                      </div>
+                    </div>
+                    <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-md">
+                      <div className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Body:</div>
+                      <div className="text-sm text-slate-700 dark:text-slate-300 line-clamp-2">
+                        {template.body}
                       </div>
                     </div>
                     
@@ -2102,7 +2817,10 @@ export function SMS() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setIsRecipientSelectionOpen(true)}
+                  onClick={() => {
+                    setRecipientSelectionType('sms');
+                    setIsRecipientSelectionOpen(true);
+                  }}
                 >
                   <Users className="mr-2 h-4 w-4" />
                   {getRecipientTitle()}
@@ -2259,6 +2977,275 @@ export function SMS() {
         </DialogContent>
       </Dialog>
 
+      {/* New Email Dialog */}
+      <Dialog open={isNewEmailOpen} onOpenChange={setIsNewEmailOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Send New Email</DialogTitle>
+            <DialogDescription>
+              Send a new email to selected members, groups, or a specific email address.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Recipient Selection */}
+            <div className="space-y-2">
+              <Label>Recipients</Label>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setRecipientSelectionType('email');
+                    setIsRecipientSelectionOpen(true);
+                  }}
+                >
+                  <Users className="mr-2 h-4 w-4" />
+                  {getRecipientTitle()}
+                </Button>
+                {getRecipientCount() > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearRecipientSelection}
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
+              {getRecipientCount() > 0 && selectedGroups.length === 0 && (
+                <div className="text-sm text-muted-foreground">
+                  {getRecipientCount()} recipient{getRecipientCount() > 1 ? 's' : ''} selected
+                </div>
+              )}
+            </div>
+
+            {/* Email Address (fallback) */}
+            <div className="space-y-2">
+              <Label htmlFor="to_email">Or Enter Email Address</Label>
+              <Input
+                id="to_email"
+                type="email"
+                value={newEmail.to}
+                onChange={(e) => setNewEmail({...newEmail, to: e.target.value})}
+                placeholder="recipient@example.com (optional if recipients selected)"
+              />
+            </div>
+
+            {/* Subject */}
+            <div className="space-y-2">
+              <Label htmlFor="email_subject">Subject *</Label>
+              <Input
+                id="email_subject"
+                value={newEmail.subject}
+                onChange={(e) => setNewEmail({...newEmail, subject: e.target.value})}
+                placeholder="Enter email subject"
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="email_template_select">Email Template</Label>
+              <select
+                id="email_template_select"
+                className="w-full p-2 border border-input rounded-md bg-background"
+                value={newEmail.template_id}
+                onChange={async (e) => {
+                  const templateId = e.target.value;
+                  
+                  if (templateId) {
+                    const selectedTemplate = emailTemplates.find(t => t.id === templateId);
+                    if (selectedTemplate) {
+                      // Initialize template variables with some default values
+                      if (selectedTemplate.variables) {
+                        const initialVars = {};
+                        selectedTemplate.variables.forEach(variable => {
+                          // Set some helpful default values
+                          const defaults = {
+                            'prayer_for': 'Church Member',
+                            'prayer_request': 'Please pray for our church family',
+                            'additional_details': 'We appreciate your prayers and support.',
+                            'how_to_help': 'Please keep us in your prayers and reach out if you can help.',
+                            'event_title': 'Upcoming Event',
+                            'event_date': new Date().toLocaleDateString(),
+                            'event_time': '7:00 PM',
+                            'event_location': 'Church Campus',
+                            'event_description': 'Join us for this special event!',
+                            'alert_title': 'Important Announcement',
+                            'alert_message': 'Please read this important message.',
+                            'opportunity_title': 'Volunteer Opportunity',
+                            'opportunity_description': 'We need volunteers for this important ministry.',
+                            'newsletter_title': 'Weekly Update',
+                            'newsletter_date': new Date().toLocaleDateString(),
+                            'newsletter_content': 'Here are the latest updates from our church.',
+                            'message_content': 'This is an important message for our church family.'
+                          };
+                          initialVars[variable] = defaults[variable] || '';
+                        });
+                        setEmailTemplateVariables(initialVars);
+                        
+                        // Get organization info for church name
+                        const { data: { user } } = await supabase.auth.getUser();
+                        let churchName = 'Your Church';
+                        
+                        if (user) {
+                          const { data: orgData } = await supabase
+                            .from('organization_users')
+                            .select('organizations(name)')
+                            .eq('user_id', user.id)
+                            .eq('status', 'active')
+                            .eq('approval_status', 'approved')
+                            .single();
+                          
+                          if (orgData?.organizations?.name) {
+                            churchName = orgData.organizations.name;
+                          }
+                        }
+                        
+                        // Apply initial variable replacement
+                        if (selectedTemplate.template_text) {
+                          const updatedBody = replaceTemplateVariables(
+                            selectedTemplate.template_text,
+                            { ...initialVars, church_name: churchName },
+                            {
+                              current_year: new Date().getFullYear().toString()
+                            }
+                          );
+                          
+                          // Also replace variables in the subject line
+                          const updatedSubject = replaceTemplateVariables(
+                            selectedTemplate.subject || '',
+                            { ...initialVars, church_name: churchName },
+                            {
+                              current_year: new Date().getFullYear().toString()
+                            }
+                          );
+                          
+                          setNewEmail({
+                            ...newEmail,
+                            template_id: templateId,
+                            subject: updatedSubject,
+                            body: updatedBody
+                          });
+                        }
+                      }
+                    }
+                  } else {
+                    // Clear template selection
+                    setNewEmail({
+                      ...newEmail, 
+                      template_id: '',
+                      subject: '',
+                      body: ''
+                    });
+                  }
+                }}
+              >
+                <option value="">Start with blank email...</option>
+                {emailTemplates && emailTemplates.length > 0 ? (
+                  emailTemplates.map((template) => (
+                    <option key={template.id} value={template.id}>
+                      {template.name}
+                    </option>
+                  ))
+                ) : (
+                  <option value="" disabled>No templates available</option>
+                )}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Choose a template to auto-populate your email with pre-written content
+              </p>
+            </div>
+
+            {/* Template Variables */}
+            {newEmail.template_id && (
+              <TemplateVariables
+                template={emailTemplates.find(t => t.id === newEmail.template_id)}
+                variables={emailTemplateVariables}
+                onVariablesChange={async (newVariables) => {
+                  setEmailTemplateVariables(newVariables);
+                  
+                  // Get the original template content
+                  const selectedTemplate = emailTemplates.find(t => t.id === newEmail.template_id);
+                  if (selectedTemplate && selectedTemplate.template_text) {
+                    // Get organization info for church name
+                    const { data: { user } } = await supabase.auth.getUser();
+                    let churchName = 'Your Church';
+                    
+                    if (user) {
+                      const { data: orgData } = await supabase
+                        .from('organization_users')
+                        .select('organizations(name)')
+                        .eq('user_id', user.id)
+                        .eq('status', 'active')
+                        .eq('approval_status', 'approved')
+                        .single();
+                      
+                      if (orgData?.organizations?.name) {
+                        churchName = orgData.organizations.name;
+                      }
+                    }
+                    
+                    // Replace variables in real-time
+                    console.log('Replacing variables with:', { church_name: churchName, ...newVariables });
+                    const updatedBody = replaceTemplateVariables(
+                      selectedTemplate.template_text,
+                      { ...newVariables, church_name: churchName },
+                      {
+                        current_year: new Date().getFullYear().toString()
+                      }
+                    );
+                    
+                    // Also replace variables in the subject line
+                    const updatedSubject = replaceTemplateVariables(
+                      selectedTemplate.subject || '',
+                      { ...newVariables, church_name: churchName },
+                      {
+                        current_year: new Date().getFullYear().toString()
+                      }
+                    );
+                    
+                    console.log('Updated body preview:', updatedBody.substring(0, 300));
+                    console.log('Updated subject:', updatedSubject);
+                    
+                    // Update the body and subject with replaced variables
+                    setNewEmail({
+                      ...newEmail,
+                      subject: updatedSubject,
+                      body: updatedBody
+                    });
+                  }
+                }}
+                className="mb-4"
+              />
+            )}
+
+            {/* Email Body */}
+            <div className="space-y-2">
+              <Label htmlFor="email_body">Message Body *</Label>
+              <RichTextEditor
+                value={newEmail.body || ''}
+                onChange={(html) => setNewEmail({...newEmail, body: html})}
+                placeholder="Enter your email message"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setIsNewEmailOpen(false);
+              setNewEmail({ to: '', subject: '', body: '', template_id: '' });
+              setEmailTemplateVariables({});
+              clearRecipientSelection();
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleSendEmail}>
+              <Send className="mr-2 h-4 w-4" />
+              Send Email
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* New Template Dialog */}
       <Dialog open={isTemplateOpen} onOpenChange={setIsTemplateOpen}>
         <DialogContent>
@@ -2322,6 +3309,84 @@ export function SMS() {
             <Button onClick={handleCreateTemplate}>
               <FileText className="mr-2 h-4 w-4" />
               Create Template
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Email Template Dialog */}
+      <Dialog open={isEmailTemplateOpen} onOpenChange={setIsEmailTemplateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Email Template</DialogTitle>
+            <DialogDescription>
+              Create a new email template with variables.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email_template_name">Template Name *</Label>
+              <Input
+                id="email_template_name"
+                value={newEmailTemplate.name}
+                onChange={(e) => setNewEmailTemplate({...newEmailTemplate, name: e.target.value})}
+                placeholder="Event Reminder"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email_template_description">Description</Label>
+              <Input
+                id="email_template_description"
+                value={newEmailTemplate.description}
+                onChange={(e) => setNewEmailTemplate({...newEmailTemplate, description: e.target.value})}
+                placeholder="Template for event reminders"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email_template_subject">Subject *</Label>
+              <Input
+                id="email_template_subject"
+                value={newEmailTemplate.subject}
+                onChange={(e) => setNewEmailTemplate({...newEmailTemplate, subject: e.target.value})}
+                placeholder="Reminder: {event_title} on {event_date}"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email_template_body">Body *</Label>
+              <Textarea
+                id="email_template_body"
+                value={newEmailTemplate.body}
+                onChange={(e) => setNewEmailTemplate({...newEmailTemplate, body: e.target.value})}
+                placeholder="Hello {member_name}, this is a reminder about {event_title} on {event_date} at {event_time}."
+                rows={6}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Use {'{variable_name}'} for dynamic content. {'{church_name}'} is automatically available.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email_template_variables">Additional Variables (Optional)</Label>
+              <Input
+                id="email_template_variables"
+                value={newEmailTemplateVariables}
+                onChange={(e) => setNewEmailTemplateVariables(e.target.value)}
+                placeholder="variable1, variable2, variable3"
+              />
+              <p className="text-xs text-muted-foreground">
+                Enter additional variables separated by commas (variables from template text are automatically included)
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEmailTemplateOpen(false)}>
+              Cancel
+              </Button>
+            <Button onClick={handleCreateEmailTemplate}>
+              <FileText className="mr-2 h-4 w-4" />
+              Create Email Template
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2399,13 +3464,82 @@ export function SMS() {
         </DialogContent>
       </Dialog>
 
+      {/* Edit Email Template Dialog */}
+      <Dialog open={isEditEmailTemplateOpen} onOpenChange={setIsEditEmailTemplateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Email Template</DialogTitle>
+            <DialogDescription>
+              Update the email template and its variables.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit_email_template_name">Template Name *</Label>
+              <Input
+                id="edit_email_template_name"
+                value={editingEmailTemplate?.name || ''}
+                onChange={(e) => setEditingEmailTemplate({...editingEmailTemplate, name: e.target.value})}
+                placeholder="Event Reminder"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit_email_template_description">Description</Label>
+              <Input
+                id="edit_email_template_description"
+                value={editingEmailTemplate?.description || ''}
+                onChange={(e) => setEditingEmailTemplate({...editingEmailTemplate, description: e.target.value})}
+                placeholder="Template for event reminders"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit_email_template_subject">Subject *</Label>
+              <Input
+                id="edit_email_template_subject"
+                value={editingEmailTemplate?.subject || ''}
+                onChange={(e) => setEditingEmailTemplate({...editingEmailTemplate, subject: e.target.value})}
+                placeholder="Reminder: {event_title} on {event_date}"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit_email_template_body">Body *</Label>
+              <Textarea
+                id="edit_email_template_body"
+                value={editingEmailTemplate?.body || ''}
+                onChange={(e) => setEditingEmailTemplate({...editingEmailTemplate, body: e.target.value})}
+                placeholder="Hello {member_name}, this is a reminder about {event_title} on {event_date} at {event_time}."
+                rows={6}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Use {'{variable_name}'} for dynamic content. {'{church_name}'} is automatically available.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setIsEditEmailTemplateOpen(false);
+              setEditingEmailTemplate(null);
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateEmailTemplate}>
+              <Edit className="mr-2 h-4 w-4" />
+              Update Email Template
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Recipient Selection Dialog */}
       <Dialog open={isRecipientSelectionOpen} onOpenChange={setIsRecipientSelectionOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Select Recipients</DialogTitle>
             <DialogDescription>
-              Choose individual members or groups to send your message to.
+              Choose individual members or groups to send your {recipientSelectionType === 'email' ? 'email' : 'SMS message'} to.
             </DialogDescription>
           </DialogHeader>
           
@@ -2431,7 +3565,9 @@ export function SMS() {
               </div>
               
               <div className="grid gap-2 max-h-96 overflow-y-auto">
-                {members.map((member) => (
+                {members
+                  .filter(member => recipientSelectionType === 'email' ? member.email : member.phone)
+                  .map((member) => (
                   <div
                     key={member.id}
                     className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-muted ${
@@ -2452,7 +3588,7 @@ export function SMS() {
                           {member.firstname || member.firstName || 'Unknown'} {member.lastname || member.lastName || 'Unknown'}
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {member.phone}
+                          {recipientSelectionType === 'email' ? member.email : member.phone}
                         </div>
                       </div>
                     </div>
@@ -3030,6 +4166,108 @@ export function SMS() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsOptOutOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Detail Dialog */}
+      <Dialog open={isEmailDetailOpen} onOpenChange={setIsEmailDetailOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Email Details
+            </DialogTitle>
+            <DialogDescription>
+              View the complete email content and details
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedEmail && (
+            <div className="space-y-6">
+              {/* Email Header */}
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-slate-700 dark:text-slate-300">From:</span>
+                    <span className="ml-2 text-slate-600 dark:text-slate-400">{selectedEmail.from_email}</span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-slate-700 dark:text-slate-300">To:</span>
+                    <span className="ml-2 text-slate-600 dark:text-slate-400">{selectedEmail.to_email}</span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-slate-700 dark:text-slate-300">Subject:</span>
+                    <span className="ml-2 text-slate-600 dark:text-slate-400">{selectedEmail.subject}</span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-slate-700 dark:text-slate-300">Sent:</span>
+                    <span className="ml-2 text-slate-600 dark:text-slate-400">
+                      {selectedEmail.sent_at ? format(new Date(selectedEmail.sent_at), 'MMM d, yyyy h:mm a') : 'Recently'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-slate-700 dark:text-slate-300">Status:</span>
+                    <Badge 
+                      variant={selectedEmail.status === 'sent' ? 'default' : 'secondary'}
+                      className="ml-2"
+                    >
+                      {selectedEmail.status}
+                    </Badge>
+                  </div>
+                  <div>
+                    <span className="font-medium text-slate-700 dark:text-slate-300">Direction:</span>
+                    <Badge 
+                      variant={selectedEmail.direction === 'outbound' ? 'default' : 'secondary'}
+                      className="ml-2"
+                    >
+                      {selectedEmail.direction}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              {/* Email Content */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Email Content</h3>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowRawHtml(!showRawHtml)}
+                    className="text-xs"
+                  >
+                    {showRawHtml ? 'Show Rendered' : 'Show Raw HTML'}
+                  </Button>
+                </div>
+                
+                {showRawHtml ? (
+                  <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 rounded-lg p-4">
+                    <pre className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap overflow-x-auto">
+                      {selectedEmail.body}
+                    </pre>
+                  </div>
+                ) : (
+                  <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+                    <div 
+                      className="max-w-none"
+                      dangerouslySetInnerHTML={{ __html: cleanEmailBody(selectedEmail.body) }}
+                      style={{
+                        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                        fontSize: '14px',
+                        lineHeight: '1.6'
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEmailDetailOpen(false)}>
               Close
             </Button>
           </DialogFooter>
