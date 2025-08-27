@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useToast } from '@/components/ui/use-toast';
+import { emailService } from '../lib/emailService';
 
 export default function Landing() {
   const navigate = useNavigate();
@@ -12,6 +13,15 @@ export default function Landing() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [betaSignupData, setBetaSignupData] = useState({
+    churchName: '',
+    contactName: '',
+    email: '',
+    phone: '',
+    churchSize: '',
+    needs: ''
+  });
+  const [betaSignupLoading, setBetaSignupLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -50,6 +60,75 @@ export default function Landing() {
     setEmail('');
     setPassword('');
     setLoading(false);
+  };
+
+  const handleBetaSignup = async (e) => {
+    e.preventDefault();
+    setBetaSignupLoading(true);
+    
+    try {
+      // Save beta signup data to Supabase
+      const { data, error } = await supabase
+        .from('beta_signups')
+        .insert([{
+          church_name: betaSignupData.churchName,
+          contact_name: betaSignupData.contactName,
+          email: betaSignupData.email,
+          phone: betaSignupData.phone || null,
+          church_size: betaSignupData.churchSize,
+          needs: betaSignupData.needs
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      // Send notification email to admin
+      try {
+        await emailService.sendEmail({
+          to: 'admin@getdeacon.com',
+          subject: 'New Beta Access Application - Deacon',
+          body: `
+            <h2>New Beta Access Application</h2>
+            <p><strong>Church Name:</strong> ${betaSignupData.churchName}</p>
+            <p><strong>Contact Name:</strong> ${betaSignupData.contactName}</p>
+            <p><strong>Email:</strong> ${betaSignupData.email}</p>
+            <p><strong>Phone:</strong> ${betaSignupData.phone || 'Not provided'}</p>
+            <p><strong>Church Size:</strong> ${betaSignupData.churchSize}</p>
+            <p><strong>Needs:</strong> ${betaSignupData.needs}</p>
+            <p><strong>Application Time:</strong> ${new Date().toLocaleString()}</p>
+          `,
+          template_type: 'default'
+        });
+      } catch (emailError) {
+        console.warn('Failed to send notification email:', emailError);
+        // Don't fail the whole process if email fails
+      }
+      
+      toast({
+        title: "Application Submitted!",
+        description: "Thank you for your interest in Deacon. We'll review your application and get back to you within 48 hours.",
+      });
+      
+      setShowBetaDialog(false);
+      setBetaSignupData({
+        churchName: '',
+        contactName: '',
+        email: '',
+        phone: '',
+        churchSize: '',
+        needs: ''
+      });
+    } catch (error) {
+      console.error('Error submitting beta signup:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit application. Please try again or contact us directly.",
+        variant: "destructive",
+      });
+    } finally {
+      setBetaSignupLoading(false);
+    }
   };
   
   return (
@@ -667,17 +746,14 @@ export default function Landing() {
               </p>
             </div>
             
-            <form className="space-y-4" onSubmit={(e) => {
-              e.preventDefault();
-              // Here you would handle the form submission
-              alert('Thank you for your interest! We\'ll be in touch soon.');
-              setShowBetaDialog(false);
-            }}>
+            <form className="space-y-4" onSubmit={handleBetaSignup}>
               <div>
                 <label className="block text-blue-200 text-sm font-semibold mb-2">Church Name</label>
                 <input 
                   type="text" 
                   required
+                  value={betaSignupData.churchName}
+                  onChange={(e) => setBetaSignupData(prev => ({ ...prev, churchName: e.target.value }))}
                   className="w-full px-4 py-3 bg-slate-800/50 border border-blue-500/30 rounded-lg text-white placeholder-blue-300 focus:border-blue-400 focus:outline-none"
                   placeholder="Your Church Name"
                 />
@@ -688,6 +764,8 @@ export default function Landing() {
                 <input 
                   type="text" 
                   required
+                  value={betaSignupData.contactName}
+                  onChange={(e) => setBetaSignupData(prev => ({ ...prev, contactName: e.target.value }))}
                   className="w-full px-4 py-3 bg-slate-800/50 border border-blue-500/30 rounded-lg text-white placeholder-blue-300 focus:border-blue-400 focus:outline-none"
                   placeholder="Pastor/Leader Name"
                 />
@@ -698,8 +776,21 @@ export default function Landing() {
                 <input 
                   type="email" 
                   required
+                  value={betaSignupData.email}
+                  onChange={(e) => setBetaSignupData(prev => ({ ...prev, email: e.target.value }))}
                   className="w-full px-4 py-3 bg-slate-800/50 border border-blue-500/30 rounded-lg text-white placeholder-blue-300 focus:border-blue-400 focus:outline-none"
                   placeholder="your.email@church.org"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-blue-200 text-sm font-semibold mb-2">Phone (Optional)</label>
+                <input 
+                  type="tel" 
+                  value={betaSignupData.phone}
+                  onChange={(e) => setBetaSignupData(prev => ({ ...prev, phone: e.target.value }))}
+                  className="w-full px-4 py-3 bg-slate-800/50 border border-blue-500/30 rounded-lg text-white placeholder-blue-300 focus:border-blue-400 focus:outline-none"
+                  placeholder="(555) 123-4567"
                 />
               </div>
               
@@ -707,6 +798,8 @@ export default function Landing() {
                 <label className="block text-blue-200 text-sm font-semibold mb-2">Church Size</label>
                 <select 
                   required
+                  value={betaSignupData.churchSize}
+                  onChange={(e) => setBetaSignupData(prev => ({ ...prev, churchSize: e.target.value }))}
                   className="w-full px-4 py-3 bg-slate-800/50 border border-blue-500/30 rounded-lg text-white focus:border-blue-400 focus:outline-none"
                 >
                   <option value="">Select church size</option>
@@ -718,12 +811,25 @@ export default function Landing() {
                 </select>
               </div>
               
+              <div>
+                <label className="block text-blue-200 text-sm font-semibold mb-2">What challenges is your church facing?</label>
+                <textarea 
+                  required
+                  value={betaSignupData.needs}
+                  onChange={(e) => setBetaSignupData(prev => ({ ...prev, needs: e.target.value }))}
+                  className="w-full px-4 py-3 bg-slate-800/50 border border-blue-500/30 rounded-lg text-white placeholder-blue-300 focus:border-blue-400 focus:outline-none"
+                  placeholder="Tell us about your current challenges and what you hope to achieve with Deacon..."
+                  rows="3"
+                />
+              </div>
+              
               <div className="flex gap-3 pt-4">
                 <Button 
                   type="submit"
-                  className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-3"
+                  disabled={betaSignupLoading}
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-3 disabled:opacity-50"
                 >
-                  Apply for Beta
+                  {betaSignupLoading ? 'Submitting...' : 'Apply for Beta'}
                 </Button>
                 <Button 
                   type="button"
