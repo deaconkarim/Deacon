@@ -348,65 +348,82 @@ export default function Landing() {
           </div>
           
           <div className="grid md:grid-cols-3 gap-8 mb-16">
-            {/* Growth Story 1 */}
+            {/* Capability 1 - Smart Insights */}
             <div className="bg-gradient-to-br from-blue-900/50 to-purple-900/50 backdrop-blur-sm rounded-2xl p-8 border border-blue-500/20">
               <div className="text-center mb-6">
-                <div className="text-4xl font-black text-blue-400 mb-2">40%</div>
-                <div className="text-white text-lg font-semibold">Attendance Growth</div>
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <svg width="32" height="32" fill="none" viewBox="0 0 24 24" className="text-white">
+                    <path d="M9 19c-5 0-8-3-8-8s3-8 8-8 8 3 8 8-3 8-8 8z" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    <path d="M15 10a5 5 0 0 0-10 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                </div>
+                <div className="text-2xl font-black text-blue-400 mb-2">Smart Insights</div>
               </div>
-              <blockquote className="text-blue-200 text-lg italic mb-4">
-                "Deacon's smart insights helped us identify attendance patterns we never saw before. 
-                We've grown 40% in just 8 months by following up with the right people at the right time."
-              </blockquote>
-              <div className="text-blue-300 font-semibold">— Pastor Sarah, Community Life Church</div>
+              <p className="text-blue-200 text-lg leading-relaxed text-center">
+                Automatically identifies at-risk members based on attendance, giving, and engagement patterns. 
+                Get AI-powered recommendations for follow-up and re-engagement strategies.
+              </p>
             </div>
 
-            {/* Growth Story 2 */}
+            {/* Capability 2 - Kiosk System */}
             <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 backdrop-blur-sm rounded-2xl p-8 border border-purple-500/20">
               <div className="text-center mb-6">
-                <div className="text-4xl font-black text-purple-400 mb-2">60%</div>
-                <div className="text-white text-lg font-semibold">Volunteer Engagement</div>
+                <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <svg width="32" height="32" fill="none" viewBox="0 0 24 24" className="text-white">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
+                    <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" strokeWidth="2"/>
+                    <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" strokeWidth="2"/>
+                  </svg>
+                </div>
+                <div className="text-2xl font-black text-purple-400 mb-2">Kiosk Check-Ins</div>
               </div>
-              <blockquote className="text-purple-200 text-lg italic mb-4">
-                "The task management and automated reminders transformed our volunteer coordination. 
-                Our teams are more engaged and nothing falls through the cracks anymore."
-              </blockquote>
-              <div className="text-purple-300 font-semibold">— Mark, Grace Fellowship</div>
+              <p className="text-purple-200 text-lg leading-relaxed text-center">
+                Self-service kiosks for event check-ins, new guest registration, and children's ministry. 
+                Secure child check-in with guardian verification and digital pickup codes.
+              </p>
             </div>
 
-            {/* Growth Story 3 */}
+            {/* Capability 3 - Unified Communication */}
             <div className="bg-gradient-to-br from-indigo-900/50 to-blue-900/50 backdrop-blur-sm rounded-2xl p-8 border border-indigo-500/20">
               <div className="text-center mb-6">
-                <div className="text-4xl font-black text-indigo-400 mb-2">25%</div>
-                <div className="text-white text-lg font-semibold">Giving Increase</div>
+                <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <svg width="32" height="32" fill="none" viewBox="0 0 24 24" className="text-white">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M14 9h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    <path d="M10 9h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    <path d="M6 9h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                </div>
+                <div className="text-2xl font-black text-indigo-400 mb-2">Smart Communication</div>
               </div>
-              <blockquote className="text-indigo-200 text-lg italic mb-4">
-                "Deacon's giving analytics revealed opportunities we missed. 
-                Our stewardship campaigns are now data-driven and incredibly effective."
-              </blockquote>
-              <div className="text-indigo-300 font-semibold">— Pastor David, New Hope Church</div>
+              <p className="text-indigo-200 text-lg leading-relaxed text-center">
+                Unified SMS and email system with automated event reminders, task assignments, and targeted messaging. 
+                Track delivery, responses, and engagement across all communications.
+              </p>
             </div>
           </div>
           
           <div className="bg-gradient-to-r from-blue-900/50 to-purple-900/50 backdrop-blur-sm rounded-3xl p-12 border border-blue-500/20 text-center">
             <h3 className="text-3xl md:text-4xl font-bold text-white mb-6">
-              "Deacon gave us our weekends back. What used to take hours now happens automatically."
+              Built by Ministry Leaders, for Ministry Leaders
             </h3>
-            <p className="text-xl text-blue-200 mb-6">
-              — Pastor Jennifer, Riverside Church (2,500 members)
+            <p className="text-xl text-blue-200 mb-8">
+              Every feature designed by people who understand real church challenges. 
+              No more wrestling with software that doesn't get ministry.
             </p>
             <div className="flex flex-wrap justify-center gap-8 text-center">
               <div className="text-white">
-                <div className="text-2xl font-bold text-blue-400">5 hours</div>
-                <div className="text-sm text-blue-200">Weekly time saved</div>
+                <div className="text-2xl font-bold text-blue-400">All-in-One</div>
+                <div className="text-sm text-blue-200">Command Center</div>
               </div>
               <div className="text-white">
-                <div className="text-2xl font-bold text-purple-400">100%</div>
-                <div className="text-sm text-purple-200">Automated follow-ups</div>
+                <div className="text-2xl font-bold text-purple-400">Real-Time</div>
+                <div className="text-sm text-purple-200">Dashboard & Reports</div>
               </div>
               <div className="text-white">
-                <div className="text-2xl font-bold text-indigo-400">Zero</div>
-                <div className="text-sm text-indigo-200">Missed visitors</div>
+                <div className="text-2xl font-bold text-indigo-400">Mobile-First</div>
+                <div className="text-sm text-indigo-200">Design & Kiosks</div>
               </div>
             </div>
           </div>
