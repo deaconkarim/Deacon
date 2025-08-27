@@ -142,6 +142,41 @@ export default function Landing() {
               </div>
             </div>
 
+            {/* Smart Event & People Management */}
+            <div className="group relative bg-gradient-to-br from-purple-900/50 to-pink-900/50 backdrop-blur-sm rounded-2xl p-6 border border-purple-500/20 hover:border-purple-400/40 transition-all duration-300 hover:scale-105">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="relative z-10">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-4">
+                  <svg width="24" height="24" fill="none" viewBox="0 0 24 24" className="text-white">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2"/>
+                    <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" strokeWidth="2"/>
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold mb-3 text-white">Smart Management</h3>
+                <p className="text-purple-200 leading-relaxed">
+                  Intelligent event and people management with lightning-fast kiosk check-ins. Everything organized automatically.
+                </p>
+              </div>
+            </div>
+
+            {/* Seamless Communication */}
+            <div className="group relative bg-gradient-to-br from-indigo-900/50 to-blue-900/50 backdrop-blur-sm rounded-2xl p-6 border border-indigo-500/20 hover:border-indigo-400/40 transition-all duration-300 hover:scale-105">
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-blue-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="relative z-10">
+                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-xl flex items-center justify-center mb-4">
+                  <svg width="24" height="24" fill="none" viewBox="0 0 24 24" className="text-white">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2"/>
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold mb-3 text-white">Seamless Communication</h3>
+                <p className="text-indigo-200 leading-relaxed">
+                  Unified SMS and email tools that reach your congregation instantly. Smart targeting and automated follow-ups.
+                </p>
+              </div>
+            </div>
+
             {/* Complete Tithing & Fundraising */}
             <div className="group relative bg-gradient-to-br from-emerald-900/50 to-teal-900/50 backdrop-blur-sm rounded-2xl p-6 border border-emerald-500/20 hover:border-emerald-400/40 transition-all duration-300 hover:scale-105">
               <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -158,7 +193,7 @@ export default function Landing() {
               </div>
             </div>
 
-            {/* Smart Tasking System */}
+            {/* Automated Smart Tasking */}
             <div className="group relative bg-gradient-to-br from-orange-900/50 to-red-900/50 backdrop-blur-sm rounded-2xl p-6 border border-orange-500/20 hover:border-orange-400/40 transition-all duration-300 hover:scale-105">
               <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
               <div className="relative z-10">
@@ -175,52 +210,53 @@ export default function Landing() {
               </div>
             </div>
 
-            {/* World-Class Reporting */}
-            <div className="group relative bg-gradient-to-br from-purple-900/50 to-pink-900/50 backdrop-blur-sm rounded-2xl p-6 border border-purple-500/20 hover:border-purple-400/40 transition-all duration-300 hover:scale-105">
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            {/* World's Most Advanced Reporting */}
+            <div className="group relative bg-gradient-to-br from-rose-900/50 to-pink-900/50 backdrop-blur-sm rounded-2xl p-6 border border-rose-500/20 hover:border-rose-400/40 transition-all duration-300 hover:scale-105">
+              <div className="absolute inset-0 bg-gradient-to-br from-rose-500/10 to-pink-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
               <div className="relative z-10">
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-rose-500 to-pink-500 rounded-xl flex items-center justify-center mb-4">
                   <svg width="24" height="24" fill="none" viewBox="0 0 24 24" className="text-white">
                     <path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke="currentColor" strokeWidth="2"/>
                   </svg>
                 </div>
                 <h3 className="text-xl font-bold mb-3 text-white">World's Most Advanced Reporting</h3>
-                <p className="text-purple-200 leading-relaxed">
+                <p className="text-rose-200 leading-relaxed">
                   Unparalleled analytics and reporting capabilities. Deep insights into every aspect of ministry with actionable recommendations.
                 </p>
               </div>
             </div>
 
-            {/* Kiosk Check-ins */}
-            <div className="group relative bg-gradient-to-br from-indigo-900/50 to-blue-900/50 backdrop-blur-sm rounded-2xl p-6 border border-indigo-500/20 hover:border-indigo-400/40 transition-all duration-300 hover:scale-105">
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-blue-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            {/* Advanced Automation */}
+            <div className="group relative bg-gradient-to-br from-cyan-900/50 to-blue-900/50 backdrop-blur-sm rounded-2xl p-6 border border-cyan-500/20 hover:border-cyan-400/40 transition-all duration-300 hover:scale-105">
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
               <div className="relative z-10">
-                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-xl flex items-center justify-center mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl flex items-center justify-center mb-4">
                   <svg width="24" height="24" fill="none" viewBox="0 0 24 24" className="text-white">
-                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
-                    <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" strokeWidth="2"/>
-                    <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" stroke="currentColor" strokeWidth="2"/>
                   </svg>
                 </div>
-                <h3 className="text-xl font-bold mb-3 text-white">Smart Kiosk System</h3>
-                <p className="text-indigo-200 leading-relaxed">
-                  Self-service kiosks for event check-ins, new guest registration, and secure children's ministry with guardian verification.
+                <h3 className="text-xl font-bold mb-3 text-white">Advanced Automation</h3>
+                <p className="text-cyan-200 leading-relaxed">
+                  Set it and forget it. Automated workflows for visitor follow-up, event reminders, and task assignments.
                 </p>
               </div>
             </div>
 
-            {/* Unified Communication */}
+            {/* Unified Command Center */}
             <div className="group relative bg-gradient-to-br from-violet-900/50 to-purple-900/50 backdrop-blur-sm rounded-2xl p-6 border border-violet-500/20 hover:border-violet-400/40 transition-all duration-300 hover:scale-105">
               <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 to-purple-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
               <div className="relative z-10">
                 <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-500 rounded-xl flex items-center justify-center mb-4">
                   <svg width="24" height="24" fill="none" viewBox="0 0 24 24" className="text-white">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2"/>
+                    <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+                    <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+                    <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+                    <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
                   </svg>
                 </div>
                 <h3 className="text-xl font-bold mb-3 text-white">Unified Command Center</h3>
                 <p className="text-violet-200 leading-relaxed">
-                  All ministry data unified in one powerful dashboard. SMS, email, events, people, and insights seamlessly integrated.
+                  All your ministry data unified in one powerful dashboard. Real-time insights across every aspect of church life.
                 </p>
               </div>
             </div>
