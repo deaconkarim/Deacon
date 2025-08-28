@@ -483,60 +483,67 @@ export default function Landing() {
             </p>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-8 mb-16">
-            {/* Capability 1 - Smart Insights */}
-            <div className="bg-gradient-to-br from-blue-900/50 to-purple-900/50 backdrop-blur-sm rounded-2xl p-8 border border-blue-500/20">
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center mx-auto mb-4">
-                  <svg width="32" height="32" fill="none" viewBox="0 0 24 24" className="text-white">
-                    <path d="M9 19c-5 0-8-3-8-8s3-8 8-8 8 3 8 8-3 8-8 8z" stroke="currentColor" strokeWidth="2"/>
-                    <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                    <path d="M15 10a5 5 0 0 0-10 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
+          <div className="grid md:grid-cols-2 gap-12 mb-16">
+            {/* Stats Section */}
+            <div className="bg-gradient-to-br from-blue-900/30 to-purple-900/30 backdrop-blur-sm rounded-3xl p-8 border border-blue-500/20">
+              <h3 className="text-3xl font-bold text-white mb-8 text-center">Built for Scale & Security</h3>
+              <div className="grid grid-cols-2 gap-6">
+                <div className="text-center">
+                  <div className="text-4xl font-black text-blue-400 mb-2">99.9%</div>
+                  <div className="text-blue-200 text-sm">Uptime Guarantee</div>
                 </div>
-                <div className="text-2xl font-black text-blue-400 mb-2">Smart Insights</div>
+                <div className="text-center">
+                  <div className="text-4xl font-black text-purple-400 mb-2">256-bit</div>
+                  <div className="text-purple-200 text-sm">SSL Encryption</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-4xl font-black text-indigo-400 mb-2">SOC 2</div>
+                  <div className="text-indigo-200 text-sm">Compliant</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-4xl font-black text-violet-400 mb-2">24/7</div>
+                  <div className="text-violet-200 text-sm">Support</div>
+                </div>
               </div>
-              <p className="text-blue-200 text-lg leading-relaxed text-center">
-                Automatically identifies at-risk members based on attendance, giving, and engagement patterns. 
-                Get AI-powered recommendations for follow-up and re-engagement strategies.
-              </p>
             </div>
 
-            {/* Capability 2 - Kiosk System */}
-            <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 backdrop-blur-sm rounded-2xl p-8 border border-purple-500/20">
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mx-auto mb-4">
-                  <svg width="32" height="32" fill="none" viewBox="0 0 24 24" className="text-white">
-                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
-                    <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" strokeWidth="2"/>
-                    <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" strokeWidth="2"/>
-                  </svg>
+            {/* Integration Section */}
+            <div className="bg-gradient-to-br from-emerald-900/30 to-teal-900/30 backdrop-blur-sm rounded-3xl p-8 border border-emerald-500/20">
+              <h3 className="text-3xl font-bold text-white mb-8 text-center">Seamless Integrations</h3>
+              <div className="space-y-4">
+                <div className="flex items-center gap-4 p-3 bg-emerald-900/20 rounded-lg">
+                  <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" className="text-white">
+                      <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                  <span className="text-emerald-200">Payment Processors (Stripe, Square)</span>
                 </div>
-                <div className="text-2xl font-black text-purple-400 mb-2">Kiosk Check-Ins</div>
-              </div>
-              <p className="text-purple-200 text-lg leading-relaxed text-center">
-                Self-service kiosks for event check-ins, new guest registration, and children's ministry. 
-                Secure child check-in with guardian verification and digital pickup codes.
-              </p>
-            </div>
-
-            {/* Capability 3 - Unified Communication */}
-            <div className="bg-gradient-to-br from-indigo-900/50 to-blue-900/50 backdrop-blur-sm rounded-2xl p-8 border border-indigo-500/20">
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-xl flex items-center justify-center mx-auto mb-4">
-                  <svg width="32" height="32" fill="none" viewBox="0 0 24 24" className="text-white">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2"/>
-                    <path d="M14 9h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                    <path d="M10 9h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                    <path d="M6 9h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
+                <div className="flex items-center gap-4 p-3 bg-emerald-900/20 rounded-lg">
+                  <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" className="text-white">
+                      <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                  <span className="text-emerald-200">Email Platforms (Mailgun, SendGrid)</span>
                 </div>
-                <div className="text-2xl font-black text-indigo-400 mb-2">Smart Communication</div>
+                <div className="flex items-center gap-4 p-3 bg-emerald-900/20 rounded-lg">
+                  <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" className="text-white">
+                      <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                  <span className="text-emerald-200">SMS Services (Twilio)</span>
+                </div>
+                <div className="flex items-center gap-4 p-3 bg-emerald-900/20 rounded-lg">
+                  <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" className="text-white">
+                      <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                  <span className="text-emerald-200">Calendar Systems (Google, Outlook)</span>
+                </div>
               </div>
-              <p className="text-indigo-200 text-lg leading-relaxed text-center">
-                Unified SMS and email system with automated event reminders, task assignments, and targeted messaging. 
-                Track delivery, responses, and engagement across all communications.
-              </p>
             </div>
           </div>
           
