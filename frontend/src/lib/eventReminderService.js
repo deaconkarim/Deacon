@@ -11,27 +11,65 @@ export const eventReminderService = {
   // Get all reminder configurations for an event
   async getEventReminders(eventId) {
     try {
+      console.log('getEventReminders called with eventId:', eventId);
       const organizationId = await getCurrentUserOrganizationId();
       if (!organizationId) {
         throw new Error('User not associated with any organization');
       }
+      console.log('Organization ID:', organizationId);
 
-      const { data, error } = await supabase
+      console.log('Querying event_reminder_configs with:', {
+        event_id: eventId,
+        organization_id: organizationId
+      });
+      
+      // First, let's test if the table exists and has any data
+      console.log('Testing table access...');
+      const testQuery = await supabase
         .from('event_reminder_configs')
-        .select(`
-          *,
-          event:events (
-            id,
-            title,
-            start_date,
-            end_date,
-            location
-          )
-        `)
+        .select('count')
+        .limit(1);
+      console.log('Table test result:', testQuery);
+      
+      // Try the complex query first (with new schema)
+      let { data, error } = await supabase
+        .from('event_reminder_configs')
+        .select('*')
         .eq('event_id', eventId)
         .eq('organization_id', organizationId)
-        .order('timing_hours', { ascending: true });
+        .eq('is_active', true)
+        .order('reminder_order', { ascending: true });
+      
+      // If the complex query succeeds, filter by is_enabled if the column exists
+      if (!error && data) {
+        data = data.filter(reminder => reminder.is_enabled !== false);
+      }
+      
+      // If the complex query fails, try a simpler one
+      if (error) {
+        console.log('Complex query failed, trying simple query:', error);
+        const simpleResult = await supabase
+          .from('event_reminder_configs')
+          .select('*')
+          .eq('event_id', eventId)
+          .eq('organization_id', organizationId);
+        
+        if (simpleResult.error) {
+          console.log('Simple query also failed:', simpleResult.error);
+          throw simpleResult.error;
+        }
+        
+        data = simpleResult.data;
+        error = null;
+        
+        // For the simple query, sort by timing_hours as fallback
+        if (data) {
+          data.sort((a, b) => (a.timing_hours || 0) - (b.timing_hours || 0));
+        }
+      }
 
+      console.log('Database query result:', { data, error });
+      
       if (error) throw error;
       return data || [];
     } catch (error) {
@@ -335,6 +373,15 @@ export const eventReminderService = {
 
       if (eventError) throw eventError;
 
+      // Get organization timezone for proper time formatting
+      const { data: organization } = await supabase
+        .from('organizations')
+        .select('timezone')
+        .eq('id', event.organization_id)
+        .single();
+      
+      const organizationTimezone = organization?.timezone || 'UTC';
+
       let previewText = template;
       const hoursUntilEvent = Math.ceil((new Date(event.start_date) - new Date()) / (1000 * 60 * 60));
       
@@ -343,9 +390,12 @@ export const eventReminderService = {
         .replace(/{event_time}/g, new Date(event.start_date).toLocaleTimeString('en-US', { 
           hour: 'numeric', 
           minute: '2-digit',
-          hour12: true 
+          hour12: true,
+          timeZone: organizationTimezone
         }))
-        .replace(/{event_date}/g, new Date(event.start_date).toLocaleDateString())
+        .replace(/{event_date}/g, new Date(event.start_date).toLocaleDateString('en-US', {
+          timeZone: organizationTimezone
+        }))
         .replace(/{event_location}/g, event.location || 'TBD')
         .replace(/{hours_until_event}/g, hoursUntilEvent.toString())
         .replace(/{member_name}/g, 'John Doe');

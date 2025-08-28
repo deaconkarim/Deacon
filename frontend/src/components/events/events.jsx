@@ -607,10 +607,6 @@ export function Events() {
     fetchEvents();
   }, [fetchEvents]);
 
-  // Add this debug log
-  useEffect(() => {
-    console.log('Current events:', events);
-  }, [events]);
 
   const getStatusColor = (status) => {
     switch (status) {

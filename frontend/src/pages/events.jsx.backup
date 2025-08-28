@@ -2679,8 +2679,7 @@ export default function Events() {
           console.log('[Events] Time filter:', timeWindowFilter);
           console.log('[Events] Filter end date:', format(filterEndDate, 'yyyy-MM-dd'));
           
-          // Don't generate instances on frontend - use database instances as-is
-          processedEvents = eventsWithAttendance;
+          processedEvents = processRecurringEvents(eventsWithAttendance, filterEndDate);
         } else {
           // For calendar view, use the events as-is (calendar handles recurring events separately)
           processedEvents = eventsWithAttendance;
@@ -2836,8 +2835,8 @@ export default function Events() {
       
       console.log('[Events] Unique events after deduplication:', uniqueEvents.length);
 
-      // Don't generate instances on frontend - use database instances as-is
-      const eventsWithRecurring = uniqueEvents;
+      // Process recurring events to generate instances for the month
+      const eventsWithRecurring = processRecurringEventsForMonth(uniqueEvents, month, processedEvents);
 
       // Helper function to normalize event titles for better deduplication
       const normalizeTitle = (title) => {
@@ -5309,9 +5308,6 @@ export default function Events() {
     // Just return the events as-is - the database should have the actual instances
     return events;
   };
-
-  // COMMENTED OUT: Old broken recurring event logic
-  /*
             if (targetWeek === 5) {
               // For last week, start from the end of the month
               currentDate.setMonth(currentDate.getMonth() + 1);
@@ -5359,9 +5355,7 @@ export default function Events() {
     return processedEvents;
   };
 
-  */
-
-  // SIMPLIFIED: Don't generate instances on frontend - use database instances
+  // Function to process recurring events for a specific month
   const processRecurringEventsForMonth = (events, month, originalData = []) => {
     const processedEvents = [];
     const startOfMonthDate = startOfMonth(month);

@@ -66,6 +66,14 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
   const { toast } = useToast();
 
   useEffect(() => {
+    console.log('=== EventForm useEffect START ===');
+    console.log('EventForm useEffect - initialData:', initialData);
+    console.log('EventForm useEffect - initialData.reminders:', initialData.reminders);
+    console.log('EventForm useEffect - initialData.enable_reminders:', initialData.enable_reminders);
+    console.log('EventForm useEffect - initialData.reminders type:', typeof initialData.reminders);
+    console.log('EventForm useEffect - initialData.reminders is array:', Array.isArray(initialData.reminders));
+    console.log('EventForm useEffect - initialData.reminders length:', initialData.reminders?.length || 0);
+    
     setEventData({
       ...initialData,
       title: initialData.title || '',
@@ -130,6 +138,13 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
         }
       ]
     });
+    
+    console.log('EventForm useEffect - final eventData:', {
+      enable_reminders: initialData.enable_reminders || false,
+      reminders: initialData.reminders || [],
+      remindersLength: (initialData.reminders || []).length
+    });
+    console.log('=== EventForm useEffect END ===');
   }, [initialData]);
 
   // Load organization timezone and initialize form data
@@ -285,12 +300,22 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
 
       // Get all events at this location and check for conflicts manually
       // When editing, exclude the current event by ID, and also check by title and time to avoid false conflicts
-      const { data: events, error } = await supabase
+      
+      // Check if initialData.id is a valid UUID before using it in the query
+      const isValidUUID = initialData.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(initialData.id);
+      
+      let query = supabase
         .from('events')
         .select('id, title, start_date, end_date, parent_event_id')
         .eq('organization_id', organizationId)
-        .eq('location_id', eventData.location_id)
-        .neq('id', initialData.id || ''); // Exclude current event if editing
+        .eq('location_id', eventData.location_id);
+      
+      // Only exclude by ID if it's a valid UUID (exists in database)
+      if (isValidUUID) {
+        query = query.neq('id', initialData.id);
+      }
+      
+      const { data: events, error } = await query;
 
       if (error) {
         console.error('Error fetching events for conflict check:', error);
@@ -945,6 +970,7 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
           </div>
         </div>
         
+        {console.log('Rendering reminder section - enable_reminders:', eventData.enable_reminders, 'reminders:', eventData.reminders)}
         {eventData.enable_reminders && (
           <div className="space-y-4 pl-6">
             {/* Reminders List */}
@@ -977,7 +1003,10 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
                 </Button>
               </div>
               
-              {(eventData.reminders || []).map((reminder, index) => (
+              {console.log('About to map reminders:', eventData.reminders)}
+              {(eventData.reminders || []).map((reminder, index) => {
+                console.log('Rendering reminder:', reminder, 'at index:', index);
+                return (
                 <div key={index} className="border rounded-lg p-4 space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
@@ -1169,7 +1198,7 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
                     </div>
                   )}
                 </div>
-              ))}
+              )})}
             </div>
           </div>
         )}
