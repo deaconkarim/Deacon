@@ -17,10 +17,12 @@ module.exports = {
 		},
 		extend: {
 			screens: {
+				'xs': '475px', // Extra small devices (better mobile breakpoint)
 				'tablet': '768px',
 				'tablet-lg': '1024px',
 				'tablet-portrait': { 'raw': '(min-width: 768px) and (max-width: 1024px) and (orientation: portrait)' },
 				'tablet-landscape': { 'raw': '(min-width: 768px) and (max-width: 1024px) and (orientation: landscape)' },
+				'mobile-lg': { 'raw': '(min-width: 428px) and (max-width: 767px)' }, // Large mobile devices
 			},
 			colors: {
 				border: 'hsl(var(--border))',

@@ -6295,7 +6295,7 @@ export default function Events() {
                               
                               {/* Desktop Grid Layout */}
                               <div className="hidden md:block">
-                                <div className="grid grid-cols-2 gap-4 lg:gap-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
                                   {suggestedMembers
                                     .filter(member => 
                                       member.firstname?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||

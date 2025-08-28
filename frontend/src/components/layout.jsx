@@ -520,7 +520,7 @@ export function Layout() {
         </header>
         )}
         {/* Main Content Area */}
-        <main className={cn("flex-1", isKioskMode ? "p-0" : "p-4 sm:p-6 md:p-8 pb-20 md:pb-8")}>
+        <main className={cn("flex-1", isKioskMode ? "p-0" : "p-3 sm:p-4 md:p-6 lg:p-8 pb-20 md:pb-8")}>
           <Outlet />
         </main>
         {/* Footer */}

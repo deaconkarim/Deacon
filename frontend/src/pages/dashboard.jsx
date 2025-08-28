@@ -864,7 +864,7 @@ export function Dashboard() {
       initial="hidden"
       animate="visible"
     >
-      <div className="w-full max-w-7xl mx-auto min-w-0 px-2 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8 overflow-x-hidden">
+      <div className="w-full max-w-7xl mx-auto min-w-0 px-1 sm:px-2 md:px-4 lg:px-6 py-3 sm:py-4 md:py-6 lg:py-8 overflow-x-hidden">
         {/* Header - Compact Design */}
         <motion.div className="mb-3 sm:mb-4 relative" variants={itemVariants}>
           <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-indigo-600/5 blur-3xl rounded-3xl"></div>
