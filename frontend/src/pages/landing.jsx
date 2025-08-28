@@ -507,41 +507,49 @@ export default function Landing() {
               </div>
             </div>
 
-            {/* Integration Section */}
+            {/* Payment Processing Section */}
             <div className="bg-gradient-to-br from-emerald-900/30 to-teal-900/30 backdrop-blur-sm rounded-3xl p-8 border border-emerald-500/20">
-              <h3 className="text-3xl font-bold text-white mb-8 text-center">Seamless Integrations</h3>
+              <h3 className="text-3xl font-bold text-white mb-6 text-center">Revolutionary Payment Processing</h3>
+              <div className="text-center mb-6">
+                <div className="text-2xl font-bold text-emerald-400 mb-2">Accept Payments in Minutes</div>
+                <div className="text-emerald-200 text-lg">Custom donation forms. Zero fees to Deacon. Maximum impact.</div>
+              </div>
+              
               <div className="space-y-4">
                 <div className="flex items-center gap-4 p-3 bg-emerald-900/20 rounded-lg">
                   <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
                     <svg width="16" height="16" fill="none" viewBox="0 0 24 24" className="text-white">
-                      <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="currentColor" strokeWidth="2"/>
                     </svg>
                   </div>
-                  <span className="text-emerald-200">Payment Processors (Stripe, Square)</span>
+                  <span className="text-emerald-200 font-semibold">Tithing, Campaigns & Custom Funds</span>
                 </div>
                 <div className="flex items-center gap-4 p-3 bg-emerald-900/20 rounded-lg">
                   <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
                     <svg width="16" height="16" fill="none" viewBox="0 0 24 24" className="text-white">
-                      <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <rect x="1" y="4" width="22" height="16" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
+                      <line x1="1" y1="10" x2="23" y2="10" stroke="currentColor" strokeWidth="2"/>
                     </svg>
                   </div>
-                  <span className="text-emerald-200">Email Platforms (Mailgun, SendGrid)</span>
+                  <span className="text-emerald-200 font-semibold">Credit Cards & Bank Accounts</span>
                 </div>
                 <div className="flex items-center gap-4 p-3 bg-emerald-900/20 rounded-lg">
                   <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
                     <svg width="16" height="16" fill="none" viewBox="0 0 24 24" className="text-white">
-                      <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M12 2v20M2 12h20" stroke="currentColor" strokeWidth="2"/>
                     </svg>
                   </div>
-                  <span className="text-emerald-200">SMS Services (Twilio)</span>
+                  <span className="text-emerald-200 font-semibold">Recurring Payments & Subscriptions</span>
                 </div>
-                <div className="flex items-center gap-4 p-3 bg-emerald-900/20 rounded-lg">
-                  <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+                <div className="flex items-center gap-4 p-3 bg-gradient-to-r from-emerald-800/40 to-teal-800/40 rounded-lg border border-emerald-400/30">
+                  <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-teal-400 rounded-lg flex items-center justify-center">
                     <svg width="16" height="16" fill="none" viewBox="0 0 24 24" className="text-white">
-                      <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" strokeWidth="2"/>
+                      <path d="M2 17l10 5 10-5" stroke="currentColor" strokeWidth="2"/>
+                      <path d="M2 12l10 5 10-5" stroke="currentColor" strokeWidth="2"/>
                     </svg>
                   </div>
-                  <span className="text-emerald-200">Calendar Systems (Google, Outlook)</span>
+                  <span className="text-emerald-100 font-bold">Zero Fees to Deacon - Keep 100%</span>
                 </div>
               </div>
             </div>
