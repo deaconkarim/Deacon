@@ -630,14 +630,7 @@ export default function Landing() {
             >
               Apply for Beta Access
             </Button>
-            <Button 
-              size="lg" 
-              variant="outline" 
-              className="px-12 py-6 text-xl font-bold border-2 border-blue-400 text-blue-400 hover:bg-blue-400/10 backdrop-blur-sm" 
-              onClick={() => navigate('/login')}
-            >
-              Schedule a Demo
-            </Button>
+
           </div>
           
                       <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
