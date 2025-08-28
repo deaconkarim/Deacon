@@ -1833,17 +1833,29 @@ export function Messaging() {
       </div>
 
       {/* Content area with compact spacing */}
-      <div className="px-6 py-4">
+      <div className="px-3 sm:px-4 md:px-6 py-4">
 
       <Tabs defaultValue="conversations" className="space-y-4" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-7 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 rounded-lg p-1 shadow-sm">
-          <TabsTrigger value="conversations" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-sm">SMS Conversations</TabsTrigger>
-          <TabsTrigger value="email-conversations" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-sm">Email Messages</TabsTrigger>
-          <TabsTrigger value="templates" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-sm">SMS Templates</TabsTrigger>
-          <TabsTrigger value="email-templates" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-sm">Email Templates</TabsTrigger>
-          <TabsTrigger value="campaigns" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-sm">Campaigns</TabsTrigger>
-          <TabsTrigger value="analytics" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-sm">Analytics</TabsTrigger>
-          <TabsTrigger value="opt-out" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-sm">Opt-Out</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 rounded-lg p-1 shadow-sm">
+          <TabsTrigger value="conversations" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-xs sm:text-sm">
+            <span className="hidden sm:inline">SMS Conversations</span>
+            <span className="sm:hidden">SMS</span>
+          </TabsTrigger>
+          <TabsTrigger value="email-conversations" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-xs sm:text-sm">
+            <span className="hidden sm:inline">Email Messages</span>
+            <span className="sm:hidden">Email</span>
+          </TabsTrigger>
+          <TabsTrigger value="templates" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-xs sm:text-sm">
+            <span className="hidden lg:inline">SMS Templates</span>
+            <span className="lg:hidden">Templates</span>
+          </TabsTrigger>
+          <TabsTrigger value="email-templates" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-xs sm:text-sm">
+            <span className="hidden lg:inline">Email Templates</span>
+            <span className="lg:hidden">E-Templates</span>
+          </TabsTrigger>
+          <TabsTrigger value="campaigns" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-xs sm:text-sm">Campaigns</TabsTrigger>
+          <TabsTrigger value="analytics" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-xs sm:text-sm">Analytics</TabsTrigger>
+          <TabsTrigger value="opt-out" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-xs sm:text-sm">Opt-Out</TabsTrigger>
         </TabsList>
 
         <TabsContent value="conversations" className="space-y-4">

@@ -916,7 +916,7 @@ export function Donations() {
             </div>
             
             {/* Quick Stats */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <div className="text-center">
                 <div className="text-lg font-bold">{donationSummary.donationCount}</div>
                 <div className="text-xs text-blue-100">Donations</div>
@@ -1426,7 +1426,7 @@ export function Donations() {
               return (
                 <>
                   {/* Compact Analysis Grid */}
-                  <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-6">
+                  <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6">
                     {/* Amount Statistics */}
                     <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 rounded-xl p-3 border border-blue-200 dark:border-blue-800">
                       <div className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">Highest</div>
@@ -1542,7 +1542,7 @@ export function Donations() {
                   {/* Monthly Breakdown */}
                   <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
                     <h4 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Monthly Breakdown (Last 90 Days)</h4>
-                    <div className="grid gap-2 grid-cols-3 md:grid-cols-6 lg:grid-cols-12">
+                    <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-6 lg:grid-cols-12">
                       {(() => {
                         const monthlyData = {};
                         recentDonations.forEach(d => {
@@ -1566,7 +1566,7 @@ export function Donations() {
                   {/* Weekly Breakdown */}
                   <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
                     <h4 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Weekly Breakdown (Last 12 Weeks)</h4>
-                    <div className="grid gap-2 grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-12">
+                    <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-12">
                       {(() => {
                         const weeklyData = {};
                         const now = new Date();
@@ -2513,7 +2513,7 @@ export function Donations() {
           </DialogHeader>
           <form onSubmit={selectedDonation ? handleUpdateDonation : handleAddDonation}>
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                   <div className="space-y-2">
                   <Label htmlFor="donor">Donor</Label>
                   <div className="relative donor-dropdown-container">
@@ -2589,7 +2589,7 @@ export function Donations() {
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="date">Date *</Label>
                   <Input
@@ -2622,7 +2622,7 @@ export function Donations() {
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="payment-method">Payment Method</Label>
                   <Select 
@@ -2657,7 +2657,7 @@ export function Donations() {
               
 
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="campaign">Campaign (Optional)</Label>
                   <Select 
