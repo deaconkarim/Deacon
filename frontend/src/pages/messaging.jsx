@@ -208,7 +208,7 @@ const lineClampStyles = `
 export function Messaging() {
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
-  const [templates, setTemplates] = useState([]);
+
   const [members, setMembers] = useState([]);
   const [groups, setGroups] = useState([]);
   const [selectedMembers, setSelectedMembers] = useState([]);
@@ -218,24 +218,18 @@ export function Messaging() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState('all');
   const [isNewMessageOpen, setIsNewMessageOpen] = useState(false);
-  const [isTemplateOpen, setIsTemplateOpen] = useState(false);
-  const [isEditTemplateOpen, setIsEditTemplateOpen] = useState(false);
+
+
   const [isRecipientSelectionOpen, setIsRecipientSelectionOpen] = useState(false);
   const [recipientSelectionType, setRecipientSelectionType] = useState('sms'); // 'sms' or 'email'
-  const [editingTemplate, setEditingTemplate] = useState(null);
-  const [editingTemplateVariables, setEditingTemplateVariables] = useState('');
+
+
   const [newMessage, setNewMessage] = useState({
     to_number: '',
-    body: '',
-    template_id: ''
+    body: ''
   });
-  const [newTemplate, setNewTemplate] = useState({
-    name: '',
-    description: '',
-    template_text: '',
-    variables: []
-  });
-  const [newTemplateVariables, setNewTemplateVariables] = useState('');
+
+
   const [replyMessage, setReplyMessage] = useState('');
   const [isSendingReply, setIsSendingReply] = useState(false);
   
@@ -507,13 +501,9 @@ export function Messaging() {
       const organizationId = orgData[0].organization_id;
 
       // Try to load conversations, templates, members, and groups
-      const [conversationsData, templatesData, membersData, groupsData, statsData, emailConversationsData, emailTemplatesData, emailStatsData] = await Promise.all([
+      const [conversationsData, membersData, groupsData, statsData, emailConversationsData, emailTemplatesData, emailStatsData] = await Promise.all([
         smsService.getConversations().catch(error => {
           console.warn('Failed to load conversations:', error);
-          return [];
-        }),
-        smsService.getTemplates().catch(error => {
-          console.warn('Failed to load templates:', error);
           return [];
         }),
         supabase
@@ -610,7 +600,7 @@ export function Messaging() {
       );
       
       setConversations(conversationsData || []);
-      setTemplates(templatesData || []);
+
       setMembers(membersData || []);
       setGroups(enrichedGroups || []);
       setSmsStats(statsData || {
@@ -644,7 +634,7 @@ export function Messaging() {
       });
       // Set empty arrays to prevent further errors
       setConversations([]);
-      setTemplates([]);
+
       setMembers([]);
       setGroups([]);
     } finally {
@@ -812,22 +802,7 @@ export function Messaging() {
       return;
     }
 
-    // Collect variable values if using a template
-    let variables = {};
-    if (newMessage.template_id) {
-      const selectedTemplate = templates.find(t => t.id === newMessage.template_id);
-      if (selectedTemplate) {
-        const templateVariables = selectedTemplate.variables || [];
-        const userEditableVariables = templateVariables.filter(v => v !== 'church_name');
-        
-        userEditableVariables.forEach(variable => {
-          const input = document.getElementById(`var_${variable}`);
-          if (input) {
-            variables[variable] = input.value;
-          }
-        });
-      }
-    }
+
 
     try {
       if (recipients.length > 0) {
@@ -843,8 +818,6 @@ export function Messaging() {
             to_number: recipients[0].phone,
             body: newMessage.body,
             member_id: recipients[0].id,
-            template_id: newMessage.template_id,
-            variables: variables,
             group_id: groupId
           });
           
@@ -855,8 +828,6 @@ export function Messaging() {
                 to_number: recipient.phone,
                 body: newMessage.body,
                 member_id: recipient.id,
-                template_id: newMessage.template_id,
-                variables: variables,
                 conversation_id: firstMessage.conversation_id // Reuse the conversation ID
               })
             );
@@ -871,8 +842,6 @@ export function Messaging() {
               to_number: recipients[0].phone,
               body: newMessage.body,
               member_id: recipients[0].id,
-              template_id: newMessage.template_id,
-              variables: variables,
               multiple_recipients: true // Flag to indicate this is a multi-recipient message
             });
             
@@ -882,8 +851,6 @@ export function Messaging() {
                 to_number: recipient.phone,
                 body: newMessage.body,
                 member_id: recipient.id,
-                template_id: newMessage.template_id,
-                variables: variables,
                 conversation_id: firstMessage.conversation_id // Reuse the conversation ID
               })
             );
@@ -894,9 +861,7 @@ export function Messaging() {
             await smsService.sendMessage({
               to_number: recipients[0].phone,
               body: newMessage.body,
-              member_id: recipients[0].id,
-              template_id: newMessage.template_id,
-              variables: variables
+              member_id: recipients[0].id
             });
           }
         }
@@ -909,9 +874,7 @@ export function Messaging() {
         // Send to single phone number
         await smsService.sendMessage({
           to_number: newMessage.to_number,
-          body: newMessage.body,
-          template_id: newMessage.template_id,
-          variables: variables
+          body: newMessage.body
         });
 
         toast({
@@ -921,7 +884,7 @@ export function Messaging() {
       }
 
       setIsNewMessageOpen(false);
-      setNewMessage({ to_number: '', body: '', template_id: '' });
+      setNewMessage({ to_number: '', body: '' });
       clearRecipientSelection();
       
       // Refresh conversations
@@ -966,9 +929,7 @@ export function Messaging() {
         conversation_id: selectedConversation.id,
         to_number: inboundMessage.from_number,
         body: replyMessage,
-        member_id: inboundMessage.member_id,
-        template_id: null, // Replies don't use templates
-        variables: {}
+        member_id: inboundMessage.member_id
       });
 
       toast({
@@ -995,55 +956,7 @@ export function Messaging() {
     }
   };
 
-  const handleCreateTemplate = async () => {
-    if (!newTemplate.name || !newTemplate.template_text) {
-      toast({
-        title: 'Missing Information',
-        description: 'Please fill in template name and text.',
-        variant: 'destructive'
-      });
-      return;
-    }
 
-    // Extract variables from template text and combine with manually entered variables
-    const extractedVariables = (newTemplate.template_text.match(/\{([^}]+)\}/g) || [])
-      .map(v => v.replace(/[{}]/g, ''));
-    
-    const manualVariables = newTemplateVariables
-      .split(',')
-      .map(v => v.trim())
-      .filter(v => v.length > 0);
-    
-    const allVariables = [...new Set([...extractedVariables, ...manualVariables])];
-    
-    // Filter out system variables that shouldn't be stored as user variables
-    const userVariables = allVariables.filter(v => v !== 'church_name');
-
-    const templateData = {
-      ...newTemplate,
-      variables: userVariables
-    };
-
-    try {
-      await smsService.createTemplate(templateData);
-      setIsTemplateOpen(false);
-      setNewTemplate({ name: '', description: '', template_text: '', variables: [] });
-      setNewTemplateVariables('');
-      toast({
-        title: 'Success',
-        description: 'Template created successfully'
-      });
-      
-      // Refresh templates
-      await loadData();
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: `Failed to create template: ${error.message}`,
-        variant: 'destructive'
-      });
-    }
-  };
 
   const handleCreateEmailTemplate = async () => {
     if (!newEmailTemplate.name || !newEmailTemplate.subject || !newEmailTemplate.body) {
@@ -1075,88 +988,11 @@ export function Messaging() {
     }
   };
 
-  const handleEditTemplate = (template) => {
-    setEditingTemplate(template);
-    // Set variables as comma-separated string for editing
-    const variablesString = Array.isArray(template.variables) 
-      ? template.variables.join(', ')
-      : '';
-    setEditingTemplateVariables(variablesString);
-    setIsEditTemplateOpen(true);
-  };
 
-  const handleUpdateTemplate = async () => {
-    if (!editingTemplate.name || !editingTemplate.template_text) {
-      toast({
-        title: 'Missing Information',
-        description: 'Please fill in template name and text.',
-        variant: 'destructive'
-      });
-      return;
-    }
 
-    // Extract variables from template text and combine with manually entered variables
-    const extractedVariables = (editingTemplate.template_text.match(/\{([^}]+)\}/g) || [])
-      .map(v => v.replace(/[{}]/g, ''));
-    
-    const manualVariables = editingTemplateVariables
-      .split(',')
-      .map(v => v.trim())
-      .filter(v => v.length > 0);
-    
-    const allVariables = [...new Set([...extractedVariables, ...manualVariables])];
-    
-    // Filter out system variables that shouldn't be stored as user variables
-    const userVariables = allVariables.filter(v => v !== 'church_name');
 
-    const templateData = {
-      ...editingTemplate,
-      variables: userVariables
-    };
 
-    try {
-      await smsService.updateTemplate(editingTemplate.id, templateData);
-      setIsEditTemplateOpen(false);
-      setEditingTemplate(null);
-      setEditingTemplateVariables('');
-      toast({
-        title: 'Success',
-        description: 'Template updated successfully'
-      });
-      
-      // Refresh templates
-      await loadData();
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: `Failed to update template: ${error.message}`,
-        variant: 'destructive'
-      });
-    }
-  };
 
-  const handleDeleteTemplate = async (templateId) => {
-    if (!confirm('Are you sure you want to delete this template?')) {
-      return;
-    }
-
-    try {
-      await smsService.deleteTemplate(templateId);
-      toast({
-        title: 'Success',
-        description: 'Template deleted successfully'
-      });
-      
-      // Refresh templates
-      await loadData();
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: `Failed to delete template: ${error.message}`,
-        variant: 'destructive'
-      });
-    }
-  };
 
   // Email template handlers
   const handleEditEmailTemplate = (template) => {
@@ -1836,10 +1672,9 @@ export function Messaging() {
       <div className="px-6 py-4">
 
       <Tabs defaultValue="conversations" className="space-y-4" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-7 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 rounded-lg p-1 shadow-sm">
+        <TabsList className="grid w-full grid-cols-6 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 rounded-lg p-1 shadow-sm">
           <TabsTrigger value="conversations" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-sm">SMS Conversations</TabsTrigger>
           <TabsTrigger value="email-conversations" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-sm">Email Messages</TabsTrigger>
-          <TabsTrigger value="templates" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-sm">SMS Templates</TabsTrigger>
           <TabsTrigger value="email-templates" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-sm">Email Templates</TabsTrigger>
           <TabsTrigger value="campaigns" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-sm">Campaigns</TabsTrigger>
           <TabsTrigger value="analytics" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all duration-200 text-sm">Analytics</TabsTrigger>
@@ -2031,92 +1866,7 @@ export function Messaging() {
           )}
         </TabsContent>
 
-        <TabsContent value="templates" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">SMS Templates</h3>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Create and manage message templates</p>
-            </div>
-            <Button 
-              onClick={() => setIsTemplateOpen(true)}
-              size="sm"
-              className="h-9 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Create Template
-            </Button>
-          </div>
 
-          <div className="grid gap-3">
-            {templates.map((template) => (
-              <Card key={template.id} className="bg-white/80 dark:bg-slate-800/80 backdrop-sm border-slate-200/50 dark:border-slate-600/50 shadow-sm hover:shadow-md transition-all duration-200">
-                <div className="p-4">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex-1">
-                      <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{template.name}</h4>
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">{template.description}</p>
-                    </div>
-                    <div className="flex gap-2 ml-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditTemplate(template)}
-                        className="h-7 px-3 text-xs"
-                      >
-                        <Edit className="mr-1 h-3 w-3" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeleteTemplate(template.id)}
-                        className="h-7 px-3 text-xs text-red-600 border-red-200 hover:bg-red-50"
-                      >
-                        <Trash2 className="mr-1 h-3 w-3" />
-                        Delete
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setNewMessage({
-                            to_number: '',
-                            body: template.template_text,
-                            template_id: template.id
-                          });
-                          setIsNewMessageOpen(true);
-                        }}
-                        className="h-7 px-3 text-xs text-blue-600 border-blue-200 hover:bg-blue-50"
-                      >
-                        <Send className="mr-1 h-3 w-3" />
-                        Use
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-md">
-                      <div className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Template:</div>
-                      <div className="text-sm text-slate-700 dark:text-slate-300 line-clamp-2">
-                        {template.template_text}
-                      </div>
-                    </div>
-                    
-                    {template.variables && template.variables.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {template.variables.map((variable, index) => (
-                          <Badge key={index} variant="outline" className="text-xs px-2 py-1">
-                            {variable}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
 
         <TabsContent value="email-templates" className="space-y-4">
           <div className="flex justify-between items-center">
@@ -2853,94 +2603,7 @@ export function Messaging() {
               />
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="template_select">Use Template (Optional)</Label>
-              <select
-                id="template_select"
-                className="w-full p-2 border border-input rounded-md bg-background"
-                value={newMessage.template_id}
-                onChange={(e) => {
-                  const templateId = e.target.value;
-                  setNewMessage({...newMessage, template_id: templateId});
-                  
-                  if (templateId) {
-                    const selectedTemplate = templates.find(t => t.id === templateId);
-                    if (selectedTemplate) {
-                      setNewMessage({
-                        ...newMessage, 
-                        template_id: templateId,
-                        body: selectedTemplate.template_text
-                      });
-                    }
-                  }
-                }}
-              >
-                <option value="">Select a template...</option>
-                {templates.map((template) => (
-                  <option key={template.id} value={template.id}>
-                    {template.name}
-                  </option>
-                ))}
-              </select>
-            </div>
 
-            {newMessage.template_id && (() => {
-              const selectedTemplate = templates.find(t => t.id === newMessage.template_id);
-              
-              // Get variables from template, ensuring they're clean (no curly braces)
-              let variables = selectedTemplate?.variables || [];
-              if (variables.length === 0) {
-                // Fallback: extract from template text
-                variables = (selectedTemplate?.template_text?.match(/\{([^}]+)\}/g) || [])
-                  .map(v => v.replace(/[{}]/g, ''));
-              }
-              
-              // Clean any variables that might still have curly braces
-              variables = variables.map(v => v.replace(/[{}]/g, ''));
-              
-              // Filter out system variables and duplicates
-              const userEditableVariables = [...new Set(variables.filter(v => v !== 'church_name'))];
-              
-              return selectedTemplate && userEditableVariables.length > 0 ? (
-                                    <div className="space-y-2">
-                      <Label>Template Variables</Label>
-                      <div className="space-y-2">
-                        {userEditableVariables.map((variable) => (
-                      <div key={variable} className="flex items-center space-x-2">
-                        <Label htmlFor={`var_${variable}`} className="text-sm min-w-[100px]">
-                          {variable.replace(/_/g, ' ')}:
-                        </Label>
-                        <Input
-                          id={`var_${variable}`}
-                          placeholder={`Enter ${variable.replace(/_/g, ' ')}`}
-                          onChange={(e) => {
-                            // Get all current variable values
-                            const variableValues = {};
-                            userEditableVariables.forEach(v => {
-                              const input = document.getElementById(`var_${v}`);
-                              if (input) {
-                                variableValues[v] = input.value;
-                              }
-                            });
-                            
-                            // Replace all variables at once
-                            let renderedText = selectedTemplate.template_text;
-                            Object.entries(variableValues).forEach(([varName, value]) => {
-                              renderedText = renderedText.replace(
-                                new RegExp(`\\{${varName}\\}`, 'g'),
-                                value
-                              );
-                            });
-                            
-                            setNewMessage({...newMessage, body: renderedText});
-                          }}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null;
-            })()}
 
             <div className="space-y-2">
               <Label htmlFor="body">Message *</Label>
@@ -2964,7 +2627,7 @@ export function Messaging() {
           <DialogFooter>
             <Button variant="outline" onClick={() => {
               setIsNewMessageOpen(false);
-              setNewMessage({ to_number: '', body: '', template_id: '' });
+              setNewMessage({ to_number: '', body: '' });
               clearRecipientSelection();
             }}>
               Cancel
@@ -3246,73 +2909,7 @@ export function Messaging() {
         </DialogContent>
       </Dialog>
 
-      {/* New Template Dialog */}
-      <Dialog open={isTemplateOpen} onOpenChange={setIsTemplateOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create SMS Template</DialogTitle>
-            <DialogDescription>
-              Create a new SMS template with variables.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="template_name">Template Name *</Label>
-              <Input
-                id="template_name"
-                value={newTemplate.name}
-                onChange={(e) => setNewTemplate({...newTemplate, name: e.target.value})}
-                placeholder="Event Reminder"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="template_description">Description</Label>
-              <Input
-                id="template_description"
-                value={newTemplate.description}
-                onChange={(e) => setNewTemplate({...newTemplate, description: e.target.value})}
-                placeholder="Template for event reminders"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="template_text">Template Text *</Label>
-              <Textarea
-                id="template_text"
-                value={newTemplate.template_text}
-                onChange={(e) => setNewTemplate({...newTemplate, template_text: e.target.value})}
-                placeholder="Reminder: {event_title} on {event_date} at {event_time}."
-                rows={4}
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                Use {'{variable_name}'} for dynamic content. {'{church_name}'} is automatically available.
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="template_variables">Additional Variables (Optional)</Label>
-              <Input
-                id="template_variables"
-                value={newTemplateVariables}
-                onChange={(e) => setNewTemplateVariables(e.target.value)}
-                placeholder="variable1, variable2, variable3"
-              />
-              <p className="text-xs text-muted-foreground">
-                Enter additional variables separated by commas (variables from template text are automatically included)
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsTemplateOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateTemplate}>
-              <FileText className="mr-2 h-4 w-4" />
-              Create Template
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
 
       {/* New Email Template Dialog */}
       <Dialog open={isEmailTemplateOpen} onOpenChange={setIsEmailTemplateOpen}>
@@ -3392,77 +2989,7 @@ export function Messaging() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Template Dialog */}
-      <Dialog open={isEditTemplateOpen} onOpenChange={setIsEditTemplateOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit SMS Template</DialogTitle>
-            <DialogDescription>
-              Update the SMS template and its variables.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit_template_name">Template Name *</Label>
-              <Input
-                id="edit_template_name"
-                value={editingTemplate?.name || ''}
-                onChange={(e) => setEditingTemplate({...editingTemplate, name: e.target.value})}
-                placeholder="Event Reminder"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit_template_description">Description</Label>
-              <Input
-                id="edit_template_description"
-                value={editingTemplate?.description || ''}
-                onChange={(e) => setEditingTemplate({...editingTemplate, description: e.target.value})}
-                placeholder="Template for event reminders"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit_template_text">Template Text *</Label>
-              <Textarea
-                id="edit_template_text"
-                value={editingTemplate?.template_text || ''}
-                onChange={(e) => setEditingTemplate({...editingTemplate, template_text: e.target.value})}
-                placeholder="Reminder: {event_title} on {event_date} at {event_time}."
-                rows={4}
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                Use {'{variable_name}'} for dynamic content. {'{church_name}'} is automatically available.
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit_template_variables">Additional Variables (Optional)</Label>
-              <Input
-                id="edit_template_variables"
-                value={editingTemplateVariables}
-                onChange={(e) => setEditingTemplateVariables(e.target.value)}
-                placeholder="variable1, variable2, variable3"
-              />
-              <p className="text-xs text-muted-foreground">
-                Enter additional variables separated by commas (variables from template text are automatically included)
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setIsEditTemplateOpen(false);
-              setEditingTemplate(null);
-              setEditingTemplateVariables('');
-            }}>
-              Cancel
-            </Button>
-            <Button onClick={handleUpdateTemplate}>
-              <Edit className="mr-2 h-4 w-4" />
-              Update Template
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
 
       {/* Edit Email Template Dialog */}
       <Dialog open={isEditEmailTemplateOpen} onOpenChange={setIsEditEmailTemplateOpen}>
