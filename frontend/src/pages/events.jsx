@@ -4704,7 +4704,7 @@ export default function Events() {
     }
   };
 
-  const handleEditClick = (event) => {
+  const handleEditClick = async (event) => {
     console.log('handleEditClick called with event:', event);
     console.log('Event ID:', event.id);
     console.log('Event title:', event.title);
@@ -4718,6 +4718,14 @@ export default function Events() {
       event.is_master === true
     );
     
+    // More precise check: if this is an instance, it should have a parent_event_id
+    const isInstance = event.parent_event_id && !event.is_master;
+    const isMaster = event.is_master === true;
+    
+    // Only show edit choice dialog if this is actually part of a recurring series
+    const shouldShowEditChoice = (isRecurringEvent || eventsWithSameTitle.length > 1) && 
+                                (isInstance || isMaster);
+    
     console.log('Is recurring event:', isRecurringEvent);
     console.log('Event ID pattern check:', {
       hasUnderscore: event.id && event.id.includes('_'),
@@ -4725,35 +4733,78 @@ export default function Events() {
       isRecurringFlag: event.is_recurring === true,
       isMasterFlag: event.is_master === true
     });
+    console.log('Is instance:', isInstance);
+    console.log('Is master:', isMaster);
+    console.log('Should show edit choice:', shouldShowEditChoice);
     
     // Check if there are other events with the same title (indicating it's part of a recurring series)
     const eventsWithSameTitle = events.filter(e => e.title === event.title);
     console.log('Events with same title:', eventsWithSameTitle.length);
     
-    if (isRecurringEvent || eventsWithSameTitle.length > 1) {
+    if (shouldShowEditChoice) {
       console.log('Recurring event detected - showing edit choice dialog');
       
-      // Find a suitable event to use as the "master" event for editing
-      // Prefer events with valid UUIDs and master/recurring flags
+      // Find the actual master event for editing
       let masterEvent = eventsWithSameTitle.find(e => 
         e.is_master === true && 
-        e.is_recurring === true &&
-        e.id && 
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(e.id)
+        e.is_recurring === true
       );
       
-      // If no master event found, try to find any event with valid UUID
-      if (!masterEvent) {
-        masterEvent = eventsWithSameTitle.find(e => 
-          e.id && 
-          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(e.id)
-        );
+      console.log('🔍 Events with same title:', eventsWithSameTitle.map(e => ({ id: e.id, is_master: e.is_master, is_recurring: e.is_recurring })));
+      console.log('🔍 Looking for master event in same title group...');
+      
+      // If no master event found in the same title group, try to get it from parent_event_id
+      if (!masterEvent && event.parent_event_id) {
+        console.log('🔍 No master event found in title group, looking for parent_event_id:', event.parent_event_id);
+        console.log('🔍 All events in events array:', events.map(e => ({ id: e.id, title: e.title, is_master: e.is_master })));
+        
+        masterEvent = events.find(e => e.id === event.parent_event_id);
+        
+        if (masterEvent) {
+          console.log('🔍 Found master event via parent_event_id:', masterEvent);
+        } else {
+          console.log('🔍 Master event not found in events array with ID:', event.parent_event_id);
+        }
       }
       
-      // If still no suitable event found, use the first event with same title
-      if (!masterEvent) {
-        masterEvent = eventsWithSameTitle[0];
+      // If still no master event found, try to fetch it directly from the database
+      if (!masterEvent && event.parent_event_id) {
+        console.log('🔍 Attempting to fetch master event directly from database:', event.parent_event_id);
+        try {
+          const { data: fetchedMasterEvent, error: fetchError } = await supabase
+            .from('events')
+            .select('*')
+            .eq('id', event.parent_event_id)
+            .single();
+          
+          if (fetchError) {
+            console.error('Error fetching master event from database:', fetchError);
+          } else if (fetchedMasterEvent) {
+            console.log('🔍 Successfully fetched master event from database:', fetchedMasterEvent);
+            masterEvent = fetchedMasterEvent;
+          }
+        } catch (dbError) {
+          console.error('Exception fetching master event from database:', dbError);
+        }
       }
+      
+      // If still no master event found, this is a problem
+      if (!masterEvent) {
+        console.error('No master event found for recurring series:', event.title);
+        console.error('Event parent_event_id:', event.parent_event_id);
+        console.error('Events with same title count:', eventsWithSameTitle.length);
+        console.error('Total events count:', events.length);
+        toast({
+          title: "Cannot Edit Event",
+          description: "No master event found for this recurring series.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      console.log('🔍 Found master event:', masterEvent);
+      console.log('🔍 Master event ID:', masterEvent.id);
+      console.log('🔍 Master event is_master:', masterEvent.is_master);
       
       if (masterEvent) {
         console.log('Found suitable event for edit choice dialog:', masterEvent);
@@ -4770,6 +4821,14 @@ export default function Events() {
           });
           return;
         }
+        
+        console.log('🔍 Setting up edit choice dialog:');
+        console.log('  eventToEdit:', event);
+        console.log('  masterEventToEdit:', masterEvent);
+        console.log('  eventToEdit.id:', event?.id);
+        console.log('  masterEventToEdit.id:', masterEvent?.id);
+        console.log('  eventToEdit.is_master:', event?.is_master);
+        console.log('  masterEventToEdit.is_master:', masterEvent?.is_master);
         
         setEventToEdit(event);
         setMasterEventToEdit(masterEvent);
@@ -7614,14 +7673,14 @@ export default function Events() {
 
       {/* Create/Edit Event Dialog */}
       <Dialog open={isCreateEventOpen} onOpenChange={setIsCreateEventOpen}>
-        <DialogContent className="w-full max-w-full h-full md:h-auto md:max-w-3xl p-0">
+        <DialogContent className="w-full max-w-full h-[90vh] md:h-auto md:max-w-4xl p-0">
           <DialogHeader className="p-3 md:p-6 border-b">
             <DialogTitle className="text-2xl md:text-3xl">
               {editingEvent ? 'Edit Event' : 'Create New Event'}
             </DialogTitle>
           </DialogHeader>
 
-          <div className="p-3 md:p-6">
+          <div className="p-3 md:p-6 max-h-[80vh] overflow-y-auto">
             <EventForm
               initialData={{
                 title: '',
@@ -7639,7 +7698,7 @@ export default function Events() {
               onSave={handleCreateEvent}
               onCancel={() => setIsCreateEventOpen(false)}
             />
-                </div>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -7955,7 +8014,7 @@ export default function Events() {
 
       {/* Edit Event Dialog */}
       <Dialog open={isEditEventOpen} onOpenChange={setIsEditEventOpen}>
-        <DialogContent className="w-full max-w-full h-full md:h-auto md:max-w-3xl p-0">
+        <DialogContent className="w-full max-w-full h-[90vh] md:h-auto md:max-w-4xl p-0">
           <DialogHeader className="p-3 md:p-6 border-b">
             <DialogTitle className="text-2xl md:text-3xl">
               Edit {editingEvent?.is_recurring ? 'Recurring Event Series' : 'Event'}
@@ -7969,7 +8028,7 @@ export default function Events() {
           </DialogHeader>
           {editingEvent && (
             <>
-              <div className="p-3 md:p-6">
+              <div className="p-3 md:p-6 max-h-[80vh] overflow-y-auto">
                 {/* EventForm for editing - uses editingEvent data */}
                 <EventForm
                   initialData={{
@@ -8323,8 +8382,29 @@ export default function Events() {
                        return;
                      }
                      
+                     // Verify this is actually the master event
+                     if (!masterEventToEdit.is_master) {
+                       console.error('masterEventToEdit is not a master event:', masterEventToEdit);
+                       toast({
+                         title: "Error",
+                         description: "Cannot edit event: Not a master event",
+                         variant: "destructive"
+                       });
+                       return;
+                     }
+                     
+                     console.log('🔍 Verified masterEventToEdit is master:', masterEventToEdit.is_master);
+                     
+                     console.log('🔍 About to load master event with reminders:');
+                     console.log('  masterEventToEdit object:', masterEventToEdit);
+                     console.log('  masterEventToEdit.id:', masterEventToEdit.id);
+                     console.log('  masterEventToEdit.is_master:', masterEventToEdit.is_master);
+                     
                      loadEventWithReminders(masterEventToEdit).then(eventWithReminders => {
-                       console.log('Loaded event with reminders:', eventWithReminders);
+                       console.log('🔍 Loaded master event with reminders:', eventWithReminders);
+                       console.log('  Final event ID:', eventWithReminders.id);
+                       console.log('  Final event is_master:', eventWithReminders.is_master);
+                       
                        setEditingEvent(eventWithReminders);
                        setIsEditEventOpen(true);
                        setShowEditChoiceDialog(false);

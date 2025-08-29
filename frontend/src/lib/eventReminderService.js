@@ -16,6 +16,68 @@ export const eventReminderService = {
         throw new Error('User not associated with any organization');
       }
 
+      console.log('🔍 [EventReminderService] Searching for reminders with:', {
+        eventId,
+        organizationId
+      });
+
+      // First, let's see what reminders exist for this organization
+      const { data: allReminders, error: allError } = await supabase
+        .from('event_reminder_configs')
+        .select('event_id, name, is_active')
+        .eq('organization_id', organizationId);
+
+      if (allError) {
+        console.error('Error fetching all reminders:', allError);
+      } else {
+        console.log('🔍 [EventReminderService] All reminders in organization:', allReminders);
+        
+        // Let's also check if any reminders have event_ids that contain our search term
+        const baseEventName = eventId.split('-')[0];
+        console.log('🔍 [EventReminderService] Looking for reminders with base event name:', baseEventName);
+        
+        const matchingReminders = allReminders.filter(r => 
+          r.event_id && r.event_id.includes(baseEventName) // Check if event_id contains the base name
+        );
+        console.log('🔍 [EventReminderService] Reminders with similar event IDs:', matchingReminders);
+        
+        // Let's also check for partial matches to see what we're actually finding
+        const partialMatches = allReminders.filter(r => 
+          r.event_id && (
+            r.event_id.includes('wednesday') || 
+            r.event_id.includes('bible') || 
+            r.event_id.includes('study')
+          )
+        );
+        console.log('🔍 [EventReminderService] Partial text matches:', partialMatches);
+        
+        // Let's see the full details of all reminders to understand the event_id format
+        console.log('🔍 [EventReminderService] Full reminder details:', allReminders.map(r => ({
+          id: r.id,
+          event_id: r.event_id,
+          name: r.name,
+          is_active: r.is_active
+        })));
+        
+        // Let's also check what the actual event_id values are in the reminders
+        console.log('🔍 [EventReminderService] All event_ids in reminders:', allReminders.map(r => r.event_id));
+        
+        // Let's check if any reminders have event_ids that are close to what we're looking for
+        const searchEventId = eventId;
+        console.log('🔍 [EventReminderService] Searching for event ID:', searchEventId);
+        
+        allReminders.forEach((reminder, index) => {
+          console.log(`🔍 [EventReminderService] Reminder ${index + 1}:`, {
+            reminder_id: reminder.id,
+            event_id: reminder.event_id,
+            name: reminder.name,
+            is_active: reminder.is_active,
+            matches_exact: reminder.event_id === searchEventId,
+            contains_search: reminder.event_id && reminder.event_id.includes(searchEventId.split('-')[0])
+          });
+        });
+      }
+
       const { data, error } = await supabase
         .from('event_reminder_configs')
         .select(`
@@ -33,6 +95,8 @@ export const eventReminderService = {
         .order('timing_hours', { ascending: true });
 
       if (error) throw error;
+      
+      console.log('🔍 [EventReminderService] Found reminders for event:', data);
       return data || [];
     } catch (error) {
       console.error('Error getting event reminders:', error);

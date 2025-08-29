@@ -627,7 +627,7 @@ export const addEvent = async (event) => {
             const reminder = event.reminders[i];
             if (reminder.is_enabled) {
               await eventReminderService.createEventReminder({
-                event_id: masterEventId, // Use master event ID for recurring events
+                event_id: instance.id, // Use instance ID for per-instance reminders
                 name: `Reminder ${i + 1} for ${event.title}`,
                 description: `Automatic reminder ${i + 1} for ${event.title}`,
                 reminder_type: reminder.reminder_type || 'sms',
@@ -799,8 +799,8 @@ export const updateEvent = async (id, updates) => {
     // Update reminder configurations if reminder settings changed
     if (updates.enable_reminders !== undefined || updates.reminders !== undefined) {
       try {
-        // For recurring events, use the master event ID for reminders
-        const reminderEventId = originalEvent.parent_event_id || originalEvent.id;
+        // For recurring events, use the current event ID for per-instance reminders
+        const reminderEventId = originalEvent.id;
         console.log('Updating reminders for event ID:', reminderEventId);
         
         // Get existing reminder configurations
@@ -1036,10 +1036,10 @@ const generateRecurringInstances = (event) => {
     
     const occurrenceEndDate = new Date(currentDate.getTime() + duration);
     
-    // Generate a shorter, more reliable instance ID
+    // Generate a unique instance ID without the master- prefix
     const dateStr = currentDate.toISOString().split('T')[0].replace(/-/g, '');
     const timeStr = currentDate.toISOString().split('T')[1].split('.')[0].replace(/:/g, '');
-    const instanceId = `${event.id}-${dateStr}-${timeStr}`;
+    const instanceId = `${event.title.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${dateStr}-${timeStr}`;
     
     instances.push({
       ...event,
@@ -1194,7 +1194,7 @@ export const ensureRecurringEventInstances = async (masterEventId) => {
         const occurrenceEndDate = new Date(currentDate.getTime() + duration);
         const dateStr = currentDate.toISOString().split('T')[0].replace(/-/g, '');
         const timeStr = currentDate.toISOString().split('T')[1].split('.')[0].replace(/:/g, '');
-        const instanceId = `${masterEventId}-${dateStr}-${timeStr}`;
+        const instanceId = `${masterEvent.title.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${dateStr}-${timeStr}`;
 
         newInstances.push({
           id: instanceId,

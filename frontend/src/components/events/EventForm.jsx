@@ -43,8 +43,8 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
     needs_volunteers: initialData.needs_volunteers || false,
     volunteer_roles: parseVolunteerRoles(initialData.volunteer_roles),
     
-    // Reminder settings
-    enable_reminders: initialData.enable_reminders || false,
+    // Reminder settings - only enable by default for new events, not existing ones
+    enable_reminders: initialData.id ? false : true, // Only enable by default for new events
     reminders: initialData.reminders || [
       {
         id: null,
@@ -63,6 +63,7 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
   const [locationConflict, setLocationConflict] = useState(null);
   const [isCheckingConflict, setIsCheckingConflict] = useState(false);
   const [groups, setGroups] = useState([]);
+  const [isLoadingReminders, setIsLoadingReminders] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -115,8 +116,8 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
       needs_volunteers: initialData.needs_volunteers || false,
       volunteer_roles: parseVolunteerRoles(initialData.volunteer_roles),
       
-      // Reminder settings
-      enable_reminders: initialData.enable_reminders || false,
+      // Reminder settings - only enable by default for new events, not existing ones
+      enable_reminders: initialData.id ? false : true, // Only enable by default for new events
       reminders: initialData.reminders || [
         {
           id: null,
@@ -208,14 +209,71 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
           if (initialData.id) {
             console.log('=== LOADING EXISTING REMINDERS ===');
             console.log('Event ID:', initialData.id);
+            console.log('Master ID:', initialData.master_id);
+            console.log('Event data:', {
+              id: initialData.id,
+              title: initialData.title,
+              is_recurring: initialData.is_recurring,
+              parent_event_id: initialData.parent_event_id,
+              is_master: initialData.is_master
+            });
             
+            setIsLoadingReminders(true);
             try {
-              // For virtual instances, use the master_id to load reminders
-              const eventIdForReminders = initialData.master_id || initialData.id;
+              // Use the event's own ID to find reminders - each event manages its own reminders
+              const eventIdForReminders = initialData.id;
+              console.log('🔍 Using event\'s own ID for reminders:', eventIdForReminders);
+              console.log('Event type:', initialData.is_master ? 'master' : 'instance', 'parent_event_id:', initialData.parent_event_id, 'master_id:', initialData.master_id);
+              console.log('🔍 Full event data for debugging:', {
+                id: initialData.id,
+                title: initialData.title,
+                start_date: initialData.startDate,
+                is_recurring: initialData.is_recurring,
+                is_master: initialData.is_master,
+                parent_event_id: initialData.parent_event_id,
+                master_id: initialData.master_id
+              });
+              
               console.log('Loading reminders for event ID:', eventIdForReminders);
+              console.log('Event type:', initialData.is_master ? 'master' : 'instance', 'parent_event_id:', initialData.parent_event_id, 'master_id:', initialData.master_id);
+              
+              // Let's also check what events exist in the database to see the ID format
+              try {
+                const { data: eventsCheck, error: eventsError } = await supabase
+                  .from('events')
+                  .select('id, title, is_recurring, parent_event_id, is_master')
+                  .eq('title', initialData.title)
+                  .limit(5);
+                
+                if (eventsError) {
+                  console.error('Error checking events:', eventsError);
+                } else {
+                  console.log('🔍 Events with same title:', eventsCheck);
+                }
+              } catch (checkError) {
+                console.error('Error checking events:', checkError);
+              }
               
               const existingReminders = await eventReminderService.getEventReminders(eventIdForReminders);
-              console.log('Loaded existing reminders:', existingReminders);
+              console.log('Raw reminders data from service:', existingReminders);
+              console.log('🔍 Searched for reminders with event ID:', eventIdForReminders);
+              console.log('🔍 Found reminders count:', existingReminders?.length || 0);
+              
+              // Let's also do a direct database query to see what's actually stored
+              try {
+                const { data: directQuery, error: directError } = await supabase
+                  .from('event_reminder_configs')
+                  .select('*')
+                  .eq('event_id', eventIdForReminders);
+                
+                if (directError) {
+                  console.error('Direct query error:', directError);
+                } else {
+                  console.log('🔍 Direct database query result:', directQuery);
+                }
+              } catch (directQueryError) {
+                console.error('Direct query exception:', directQueryError);
+              }
               
               if (existingReminders && existingReminders.length > 0) {
                 // Convert database reminders to form format
@@ -230,17 +288,43 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
                   is_enabled: reminder.is_active
                 }));
                 
-                console.log('Formatted reminders:', formattedReminders);
+                console.log('✅ Found existing reminders:', formattedReminders);
+                console.log('Setting enable_reminders to TRUE and loading existing reminders');
                 
                 setEventData(prev => ({
                   ...prev,
                   enable_reminders: true,
                   reminders: formattedReminders
                 }));
+              } else {
+                // No existing reminders found, disable reminders for this event
+                console.log('No existing reminders found, disabling reminders');
+                console.log('Setting enable_reminders to FALSE');
+                
+                setEventData(prev => ({
+                  ...prev,
+                  enable_reminders: false,
+                  reminders: [{
+                    id: null,
+                    reminder_type: 'sms',
+                    timing_unit: 'hours',
+                    timing_value: 24,
+                    message_template: 'Reminder: {event_title} on {event_date} at {event_time}. {event_location}',
+                    target_type: 'all',
+                    target_groups: [],
+                    is_enabled: true
+                  }]
+                }));
               }
             } catch (reminderError) {
               console.error('Error loading existing reminders:', reminderError);
+              console.error('Reminder error details:', {
+                message: reminderError.message,
+                stack: reminderError.stack
+              });
               // Don't fail the form initialization if reminders can't be loaded
+            } finally {
+              setIsLoadingReminders(false);
             }
           }
         }
@@ -271,6 +355,15 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
       loadAvailableLocations();
     }
   }, [eventData.startDate, eventData.endDate]);
+
+  // Debug effect to monitor reminder state changes
+  useEffect(() => {
+    console.log('Reminder state changed:', {
+      enable_reminders: eventData.enable_reminders,
+      reminders_count: eventData.reminders?.length || 0,
+      reminders: eventData.reminders
+    });
+  }, [eventData.enable_reminders, eventData.reminders]);
 
   const loadLocations = async () => {
     try {
@@ -589,6 +682,8 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
 
     console.log('=== FINAL FORMATTED DATA ===');
     console.log('Formatted data being sent to onSave:', JSON.stringify(formattedData, null, 2));
+    console.log('Reminders enabled:', formattedData.enable_reminders);
+    console.log('Reminders count:', formattedData.reminders?.length || 0);
     console.log('=== EVENT FORM SUBMIT END ===');
 
     onSave(formattedData);
@@ -968,10 +1063,11 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
       )}
       
       {/* Multiple Reminders Configuration Section */}
-      <div className="space-y-4 pt-4 border-t">
+      <div className="space-y-4 pt-6 border-t-2 border-blue-200 bg-blue-50 p-4 rounded-lg">
+        {console.log('Rendering reminders section, enable_reminders:', eventData.enable_reminders, 'reminders count:', eventData.reminders?.length)}
         <div className="flex items-center space-x-2">
-          <Bell className="h-5 w-5 text-blue-600" />
-          <h3 className="text-lg font-semibold">Event Reminders</h3>
+          <Bell className="h-6 w-6 text-blue-600" />
+          <h3 className="text-xl font-semibold text-blue-800">Event Reminders</h3>
         </div>
         
         <div className="space-y-2">
@@ -980,9 +1076,16 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
               id="enable_reminders"
               checked={eventData.enable_reminders}
               onCheckedChange={(checked) => setEventData(prev => ({ ...prev, enable_reminders: checked }))}
+              disabled={isLoadingReminders}
             />
-            <Label htmlFor="enable_reminders">Enable automatic reminders for this event</Label>
+            <Label htmlFor="enable_reminders" className="text-blue-800 font-medium">
+              Enable automatic reminders for this event
+              {isLoadingReminders && <span className="ml-2 text-sm text-gray-500">(Loading...)</span>}
+            </Label>
           </div>
+          <p className="text-sm text-blue-700 ml-6">
+            Send SMS or email reminders to members before the event starts. You can configure multiple reminders with different timing.
+          </p>
         </div>
         
         {eventData.enable_reminders && (
@@ -1198,7 +1301,14 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
                           <p className="font-medium">Preview: {reminder.message_template
                             .replace(/{event_title}/g, eventData.title || 'Event')
                             .replace(/{event_date}/g, eventData.startDate ? format(new Date(eventData.startDate), 'MM/dd/yyyy') : 'Date')
-                            .replace(/{event_time}/g, eventData.startTime || 'Time')
+                            .replace(/{event_time}/g, eventData.startTime ? (() => {
+                              // Convert 24-hour time to 12-hour format
+                              const [hours, minutes] = eventData.startTime.split(':');
+                              const hour = parseInt(hours);
+                              const ampm = hour >= 12 ? 'PM' : 'AM';
+                              const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+                              return `${displayHour}:${minutes} ${ampm}`;
+                            })() : 'Time')
                             .replace(/{event_location}/g, eventData.location || 'Location')
                             .replace(/{hours_until_event}/g, reminder.timing_value.toString())
                             .replace(/{member_name}/g, 'John Doe')
@@ -1216,6 +1326,14 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
       </div>
       
       <div className="flex justify-end space-x-2 pt-4">
+        <div className="flex-1 text-sm text-gray-600">
+          {eventData.enable_reminders && (
+            <span className="flex items-center space-x-2">
+              <Bell className="h-4 w-4 text-blue-600" />
+              <span>Reminder settings will be saved with this event</span>
+            </span>
+          )}
+        </div>
         <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
         <Button type="submit">Save Event</Button>
       </div>
