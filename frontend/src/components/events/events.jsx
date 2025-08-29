@@ -302,119 +302,28 @@ export function Events() {
         dates: events.map(e => e.start_date)
       })));
 
-      // For each group, process all instances
-      const processedEvents = Object.values(eventGroups).map(group => {
-        // Sort all instances by date
-        const sortedInstances = group.sort((a, b) => a.start_date.localeCompare(b.start_date));
+      // CRITICAL FIX: Instead of grouping and showing only one instance,
+      // show ALL actual database instances so users can edit specific ones
+      const processedEvents = [];
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Process all events and show future ones
+      events.forEach(event => {
+        const eventDate = new Date(event.start_date);
+        eventDate.setHours(0, 0, 0, 0);
         
-        console.log('4. Processing group:', {
-          title: group[0].title,
-          sorted_dates: sortedInstances.map(e => e.start_date)
-        });
-
-        // If it's not a recurring event, return it as is
-        if (!group[0].is_recurring) {
-          const isPotluck = group[0].title.toLowerCase().includes('potluck');
-          return {
-            ...group[0],
+        // Only show future events (today and later)
+        if (eventDate >= today) {
+          const isPotluck = event.title.toLowerCase().includes('potluck');
+          processedEvents.push({
+            ...event,
             attendance: isPotluck 
-              ? group[0].potluck_rsvps?.length || 0
-              : group[0].event_attendance?.length || 0
-          };
+              ? event.potluck_rsvps?.length || 0
+              : event.event_attendance?.length || 0
+          });
         }
-
-        // For recurring events, find the next occurrence
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        // Find the next occurrence that is today or in the future
-        const nextInstance = sortedInstances.find(instance => {
-          const instanceDate = new Date(instance.start_date);
-          instanceDate.setHours(0, 0, 0, 0);
-          return instanceDate >= today;
-        });
-
-        // If no future instance found, use the master event as a placeholder
-        // but mark it clearly as needing instance creation
-        if (!nextInstance) {
-          const masterEvent = sortedInstances.find(e => e.is_master) || sortedInstances[0];
-          const lastInstance = sortedInstances[sortedInstances.length - 1];
-          const nextDate = new Date(lastInstance.start_date);
-          const duration = new Date(lastInstance.end_date) - nextDate;
-          
-          // Calculate next occurrence based on recurrence pattern
-          switch (lastInstance.recurrence_pattern) {
-            case 'daily':
-              nextDate.setDate(nextDate.getDate() + 1);
-              break;
-            case 'weekly':
-              nextDate.setDate(nextDate.getDate() + 7);
-              break;
-            case 'biweekly':
-              nextDate.setDate(nextDate.getDate() + 14);
-              break;
-            case 'monthly':
-              nextDate.setMonth(nextDate.getMonth() + 1);
-              break;
-            case 'monthly_weekday':
-              // Get the next month
-              nextDate.setMonth(nextDate.getMonth() + 1);
-              // Set to first day of the month
-              nextDate.setDate(1);
-              
-              // Get the target weekday (0-6, where 0 is Sunday)
-              const targetWeekday = parseInt(lastInstance.monthly_weekday);
-              // Get the target week (1-5, where 5 means last week)
-              const targetWeek = parseInt(lastInstance.monthly_week);
-              
-              // Find the target date
-              if (targetWeek === 5) {
-                // For last week, start from the end of the month
-                nextDate.setMonth(nextDate.getMonth() + 1);
-                nextDate.setDate(0); // Last day of the month
-                // Go backwards to find the target weekday
-                while (nextDate.getDay() !== targetWeekday) {
-                  nextDate.setDate(nextDate.getDate() - 1);
-                }
-              } else {
-                // For other weeks, find the first occurrence of the target weekday
-                while (nextDate.getDay() !== targetWeekday) {
-                  nextDate.setDate(nextDate.getDate() + 1);
-                }
-                // Add weeks to get to the target week
-                nextDate.setDate(nextDate.getDate() + (targetWeek - 1) * 7);
-              }
-              break;
-            default:
-              return null; // Skip unknown patterns
-          }
-
-          const nextEndDate = new Date(nextDate.getTime() + duration);
-          const isPotluck = lastInstance.title.toLowerCase().includes('potluck');
-          
-          // CRITICAL FIX: Use the master event ID and mark as virtual instance
-          return {
-            ...lastInstance,
-            id: masterEvent.id, // Use master event ID for editing
-            master_id: masterEvent.id, // Keep reference to master
-            start_date: nextDate.toISOString(),
-            end_date: nextEndDate.toISOString(),
-            is_virtual_instance: true, // Mark as virtual for frontend logic
-            attendance: isPotluck 
-              ? lastInstance.potluck_rsvps?.length || 0
-              : lastInstance.event_attendance?.length || 0
-          };
-        }
-
-        // Return the next instance
-        const isPotluck = nextInstance.title.toLowerCase().includes('potluck');
-        return {
-          ...nextInstance,
-          attendance: isPotluck 
-            ? nextInstance.potluck_rsvps?.length || 0
-            : nextInstance.event_attendance?.length || 0
-        };
-      }).filter(Boolean); // Remove any null entries
+      });
 
       console.log('8. Final processed events:', processedEvents.map(e => ({
         title: e.title,
@@ -1082,21 +991,8 @@ export function Events() {
       console.log('Editing event:', editingEvent);
       console.log('Event data:', eventData);
       
-      // Determine if we're editing an instance or the master
-      const isVirtualInstance = editingEvent.is_virtual_instance;
-      const isMasterEvent = editingEvent.is_master;
-      const hasParent = editingEvent.parent_event_id;
-      
-      console.log('Edit context:', {
-        isVirtualInstance,
-        isMasterEvent, 
-        hasParent,
-        eventId: editingEvent.id
-      });
-      
-      // For virtual instances (computed future occurrences), use the master ID
-      // For real instances or master events, use the actual ID
-      const eventId = isVirtualInstance ? editingEvent.master_id || editingEvent.id : editingEvent.id;
+      // Use the actual event ID from the database
+      const eventId = editingEvent.id;
       
       const updates = {
         ...eventData,
@@ -1147,15 +1043,21 @@ export function Events() {
 
   const handleEditClick = (event) => {
     console.log('Edit click for event:', event);
+    console.log('Event details:', {
+      id: event.id,
+      is_recurring: event.is_recurring,
+      is_master: event.is_master,
+      parent_event_id: event.parent_event_id
+    });
     
-    // If it's a recurring event, show the choice dialog
-    if (event.is_recurring && !event.is_virtual_instance) {
-      console.log('Showing recurring edit dialog for event:', event.title);
+    // If it's a master event (not an instance), show the choice dialog
+    if (event.is_recurring && event.is_master && !event.parent_event_id) {
+      console.log('This is a master event - showing recurring edit dialog');
       setPendingEditEvent(event);
       setShowRecurringEditDialog(true);
     } else {
-      // For non-recurring events or virtual instances, edit directly
-      console.log('Editing event directly:', event.title);
+      // For specific instances or non-recurring events, edit directly
+      console.log('Editing specific event/instance directly:', event.title);
       setEditingEvent(event);
       setIsEditEventOpen(true);
     }
