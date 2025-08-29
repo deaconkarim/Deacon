@@ -425,11 +425,7 @@ export const getEvents = async () => {
         return group[0];
       }
 
-      // For recurring events, ensure we have enough future instances
-      if (group[0].is_master) {
-        // This is a master event, ensure it has enough instances
-        ensureRecurringEventInstances(group[0].id);
-      }
+      // For recurring events, we'll just use the existing instances from the database
 
       // Find the next occurrence from today
       const today = new Date();
