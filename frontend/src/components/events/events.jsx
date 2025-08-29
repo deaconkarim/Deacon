@@ -1165,11 +1165,17 @@ export function Events() {
     console.log('Recurring edit choice:', editType);
     
     if (editType === 'instance') {
-      // Edit this instance only - mark as virtual instance for proper handling
+      // Edit this instance only - create a synthetic instance event
+      // Use the master event data but mark it as a virtual instance
       const instanceEvent = {
         ...pendingEditEvent,
+        // Generate a unique synthetic ID that includes the date
+        id: `${pendingEditEvent.id}_${pendingEditEvent.start_date}`,
         is_virtual_instance: true,
-        master_id: pendingEditEvent.id
+        master_id: pendingEditEvent.id,
+        // Keep the original dates for this specific instance
+        original_start_date: pendingEditEvent.start_date,
+        original_end_date: pendingEditEvent.end_date
       };
       console.log('Editing instance:', instanceEvent);
       setEditingEvent(instanceEvent);
