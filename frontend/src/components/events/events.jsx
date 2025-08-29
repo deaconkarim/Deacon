@@ -239,6 +239,8 @@ export function Events() {
   const [dialogErrorMessage, setDialogErrorMessage] = useState('');
   const [dialogSectionTitle, setDialogSectionTitle] = useState('');
   const [dialogSectionDescription, setDialogSectionDescription] = useState('');
+  const [showRecurringEditDialog, setShowRecurringEditDialog] = useState(false);
+  const [pendingEditEvent, setPendingEditEvent] = useState(null);
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -332,8 +334,10 @@ export function Events() {
           return instanceDate >= today;
         });
 
-        // If no future instance found, calculate the next one
+        // If no future instance found, use the master event as a placeholder
+        // but mark it clearly as needing instance creation
         if (!nextInstance) {
+          const masterEvent = sortedInstances.find(e => e.is_master) || sortedInstances[0];
           const lastInstance = sortedInstances[sortedInstances.length - 1];
           const nextDate = new Date(lastInstance.start_date);
           const duration = new Date(lastInstance.end_date) - nextDate;
@@ -388,11 +392,14 @@ export function Events() {
           const nextEndDate = new Date(nextDate.getTime() + duration);
           const isPotluck = lastInstance.title.toLowerCase().includes('potluck');
           
+          // CRITICAL FIX: Use the master event ID and mark as virtual instance
           return {
             ...lastInstance,
-            id: `${lastInstance.id}-${nextDate.toISOString()}`,
+            id: masterEvent.id, // Use master event ID for editing
+            master_id: masterEvent.id, // Keep reference to master
             start_date: nextDate.toISOString(),
             end_date: nextEndDate.toISOString(),
+            is_virtual_instance: true, // Mark as virtual for frontend logic
             attendance: isPotluck 
               ? lastInstance.potluck_rsvps?.length || 0
               : lastInstance.event_attendance?.length || 0
@@ -1071,14 +1078,34 @@ export function Events() {
 
   const handleEditEvent = async (eventData) => {
     try {
-      // For recurring events, we need to handle the master event ID
-      const eventId = editingEvent.master_id || editingEvent.id;
+      console.log('=== HANDLE EDIT EVENT ===');
+      console.log('Editing event:', editingEvent);
+      console.log('Event data:', eventData);
+      
+      // Determine if we're editing an instance or the master
+      const isVirtualInstance = editingEvent.is_virtual_instance;
+      const isMasterEvent = editingEvent.is_master;
+      const hasParent = editingEvent.parent_event_id;
+      
+      console.log('Edit context:', {
+        isVirtualInstance,
+        isMasterEvent, 
+        hasParent,
+        eventId: editingEvent.id
+      });
+      
+      // For virtual instances (computed future occurrences), use the master ID
+      // For real instances or master events, use the actual ID
+      const eventId = isVirtualInstance ? editingEvent.master_id || editingEvent.id : editingEvent.id;
       
       const updates = {
         ...eventData,
         startDate: new Date(eventData.startDate).toISOString(),
         endDate: new Date(eventData.endDate).toISOString()
       };
+
+      console.log('Updating event with ID:', eventId);
+      console.log('Updates:', updates);
 
       await updateEvent(eventId, updates);
       setIsEditEventOpen(false);
@@ -1119,7 +1146,41 @@ export function Events() {
   };
 
   const handleEditClick = (event) => {
-    setEditingEvent(event);
+    console.log('Edit click for event:', event);
+    
+    // If it's a recurring event, show the choice dialog
+    if (event.is_recurring && !event.is_virtual_instance) {
+      console.log('Showing recurring edit dialog for event:', event.title);
+      setPendingEditEvent(event);
+      setShowRecurringEditDialog(true);
+    } else {
+      // For non-recurring events or virtual instances, edit directly
+      console.log('Editing event directly:', event.title);
+      setEditingEvent(event);
+      setIsEditEventOpen(true);
+    }
+  };
+
+  const handleRecurringEditChoice = (editType) => {
+    console.log('Recurring edit choice:', editType);
+    
+    if (editType === 'instance') {
+      // Edit this instance only - mark as virtual instance for proper handling
+      const instanceEvent = {
+        ...pendingEditEvent,
+        is_virtual_instance: true,
+        master_id: pendingEditEvent.id
+      };
+      console.log('Editing instance:', instanceEvent);
+      setEditingEvent(instanceEvent);
+    } else if (editType === 'series') {
+      // Edit the entire series - use the master event
+      console.log('Editing series:', pendingEditEvent);
+      setEditingEvent(pendingEditEvent);
+    }
+    
+    setShowRecurringEditDialog(false);
+    setPendingEditEvent(null);
     setIsEditEventOpen(true);
   };
 
@@ -1691,6 +1752,51 @@ export function Events() {
         event={selectedPotluckEvent}
         onRSVP={handlePotluckRSVPUpdate}
       />
+
+      {/* Recurring Event Edit Choice Dialog */}
+      <Dialog open={showRecurringEditDialog} onOpenChange={setShowRecurringEditDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit Recurring Event</DialogTitle>
+            <DialogDescription>
+              This is a recurring event. What would you like to edit?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-3">
+              <Button
+                variant="outline"
+                className="w-full justify-start p-4 h-auto"
+                onClick={() => handleRecurringEditChoice('instance')}
+              >
+                <div className="text-left">
+                  <div className="font-medium">Edit This Instance Only</div>
+                  <div className="text-sm text-muted-foreground">
+                    Changes will only apply to this specific occurrence on {pendingEditEvent ? format(new Date(pendingEditEvent.start_date), 'MMM d, yyyy') : ''}
+                  </div>
+                </div>
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start p-4 h-auto"
+                onClick={() => handleRecurringEditChoice('series')}
+              >
+                <div className="text-left">
+                  <div className="font-medium">Edit Entire Series</div>
+                  <div className="text-sm text-muted-foreground">
+                    Changes will apply to all future occurrences of this recurring event
+                  </div>
+                </div>
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRecurringEditDialog(false)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

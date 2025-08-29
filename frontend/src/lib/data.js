@@ -873,11 +873,17 @@ export const updateEvent = async (id, updates) => {
         if (updates.startDate || updates.endDate) {
           console.warn('⚠️ WARNING: Attempting to change dates on an instance. This should only update the specific instance.');
         }
-        // If editing an instance, only update that specific instance
-        // Don't change the dates of other instances
+        // CRITICAL FIX: For instance edits, we need to create a new specific instance in the DB
+        // since the frontend generates synthetic IDs that don't exist in the database
+        
+        console.log('🔧 FIXING INSTANCE UPDATE: Creating new instance for specific date');
+        
+        // Create a new instance for the specific date being edited
         const instanceData = {
           title: updates.title,
           description: updates.description,
+          start_date: updates.startDate,
+          end_date: updates.endDate,
           location: updates.location,
           location_id: updates.location_id || null,
           url: updates.url,
@@ -885,19 +891,50 @@ export const updateEvent = async (id, updates) => {
           allow_rsvp: updates.allow_rsvp !== undefined ? updates.allow_rsvp : true,
           attendance_type: updates.attendance_type || 'rsvp',
           needs_volunteers: updates.needs_volunteers || false,
-          volunteer_roles: updates.volunteer_roles ? JSON.stringify(updates.volunteer_roles) : null
+          volunteer_roles: updates.volunteer_roles ? JSON.stringify(updates.volunteer_roles) : null,
+          is_recurring: false, // Individual instances are not recurring
+          recurrence_pattern: null,
+          parent_event_id: masterId, // Link to the master event
+          is_master: false,
+          organization_id: organizationId
         };
         
-        // Update only the specific instance
-        const { data: updatedInstance, error: instanceError } = await supabase
+        // Check if an instance already exists for this specific date
+        const { data: existingInstance, error: existingError } = await supabase
           .from('events')
-          .update(instanceData)
-          .eq('id', originalEvent.id)
+          .select('*')
+          .eq('parent_event_id', masterId)
+          .eq('start_date', updates.startDate)
           .eq('organization_id', organizationId)
-          .select()
-          .single();
+          .maybeSingle();
         
-        if (instanceError) throw instanceError;
+        let updatedInstance;
+        
+        if (existingInstance) {
+          // Update the existing instance
+          console.log('📝 Updating existing instance:', existingInstance.id);
+          const { data, error: updateError } = await supabase
+            .from('events')
+            .update(instanceData)
+            .eq('id', existingInstance.id)
+            .eq('organization_id', organizationId)
+            .select()
+            .single();
+          
+          if (updateError) throw updateError;
+          updatedInstance = data;
+        } else {
+          // Create a new instance
+          console.log('✨ Creating new instance for date:', updates.startDate);
+          const { data, error: createError } = await supabase
+            .from('events')
+            .insert(instanceData)
+            .select()
+            .single();
+          
+          if (createError) throw createError;
+          updatedInstance = data;
+        }
         
         // Update the master event with metadata changes (but not dates)
         const masterUpdateData = {
@@ -1062,57 +1099,6 @@ export const updateEvent = async (id, updates) => {
         
         return updatedMasterEvent;
       }
-      
-      // Update reminder configurations for recurring events if reminder settings changed
-      if (updates.enable_reminders !== undefined || updates.reminders !== undefined) {
-        try {
-          // Get existing reminder configurations for the master event
-          const existingReminders = await eventReminderService.getEventReminders(masterId);
-          
-          if (updates.enable_reminders && updates.reminders && updates.reminders.length > 0) {
-            // Delete all existing reminders first
-            for (const reminder of existingReminders) {
-              await eventReminderService.deleteEventReminder(reminder.id);
-            }
-            
-            // Create new reminder configurations for the master event
-            for (let i = 0; i < updates.reminders.length; i++) {
-              const reminder = updates.reminders[i];
-              if (reminder.is_enabled) {
-                await eventReminderService.createEventReminder({
-                  event_id: masterId, // Use master event ID for recurring events
-                  name: `Reminder ${i + 1} for ${updates.title}`,
-                  description: `Automatic reminder ${i + 1} for ${updates.title}`,
-                  reminder_type: reminder.reminder_type || 'sms',
-                  timing_unit: reminder.timing_unit || 'hours',
-                  timing_value: reminder.timing_value || 24,
-                  timing_hours: reminder.timing_unit === 'hours' ? reminder.timing_value : 
-                               reminder.timing_unit === 'minutes' ? Math.round(reminder.timing_value / 60) :
-                               reminder.timing_unit === 'days' ? reminder.timing_value * 24 :
-                               reminder.timing_unit === 'weeks' ? reminder.timing_value * 168 : 24,
-                  message_template: reminder.message_template || 'Reminder: {event_title} on {event_date} at {event_time}. {event_location}',
-                  target_type: reminder.target_type || 'all',
-                  target_groups: reminder.target_groups || [],
-                  is_active: true,
-                  is_enabled: reminder.is_enabled,
-                  reminder_order: i + 1
-                });
-              }
-            }
-            console.log(`Updated ${updates.reminders.filter(r => r.is_enabled).length} reminder configurations for recurring event:`, masterId);
-          } else if (!updates.enable_reminders) {
-            // Disable reminders - deactivate existing ones
-            for (const reminder of existingReminders) {
-              await eventReminderService.updateEventReminder(reminder.id, { is_active: false });
-            }
-          }
-        } catch (reminderError) {
-          console.error('Error updating reminder configurations for recurring event:', reminderError);
-          // Don't throw error here - event was updated successfully
-        }
-      }
-      
-      return masterData;
     } else {
       // For non-recurring events, just update the single event
       const { data, error } = await supabase
