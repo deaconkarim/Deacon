@@ -203,6 +203,46 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
               endTime: endTimeStr
             }));
           }
+          
+          // CRITICAL FIX: Load existing reminders for editing
+          if (initialData.id) {
+            console.log('=== LOADING EXISTING REMINDERS ===');
+            console.log('Event ID:', initialData.id);
+            
+            try {
+              // For virtual instances, use the master_id to load reminders
+              const eventIdForReminders = initialData.master_id || initialData.id;
+              console.log('Loading reminders for event ID:', eventIdForReminders);
+              
+              const existingReminders = await eventReminderService.getEventReminders(eventIdForReminders);
+              console.log('Loaded existing reminders:', existingReminders);
+              
+              if (existingReminders && existingReminders.length > 0) {
+                // Convert database reminders to form format
+                const formattedReminders = existingReminders.map(reminder => ({
+                  id: reminder.id,
+                  reminder_type: reminder.reminder_type,
+                  timing_unit: reminder.timing_unit,
+                  timing_value: reminder.timing_value,
+                  message_template: reminder.message_template,
+                  target_type: reminder.target_type,
+                  target_groups: reminder.target_groups || [],
+                  is_enabled: reminder.is_active
+                }));
+                
+                console.log('Formatted reminders:', formattedReminders);
+                
+                setEventData(prev => ({
+                  ...prev,
+                  enable_reminders: true,
+                  reminders: formattedReminders
+                }));
+              }
+            } catch (reminderError) {
+              console.error('Error loading existing reminders:', reminderError);
+              // Don't fail the form initialization if reminders can't be loaded
+            }
+          }
         }
       } catch (error) {
         console.error('Error initializing form with timezone:', error);

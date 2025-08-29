@@ -2680,7 +2680,11 @@ export default function Events() {
           console.log('[Events] Time filter:', timeWindowFilter);
           console.log('[Events] Filter end date:', format(filterEndDate, 'yyyy-MM-dd'));
           
-          processedEvents = processRecurringEvents(eventsWithAttendance, filterEndDate);
+          // CRITICAL FIX: Instead of generating synthetic IDs, show all actual database instances
+          processedEvents = eventsWithAttendance.filter(event => {
+            const eventDate = new Date(event.start_date);
+            return eventDate >= new Date(); // Only show future events
+          });
         } else {
           // For calendar view, use the events as-is (calendar handles recurring events separately)
           processedEvents = eventsWithAttendance;
@@ -2836,8 +2840,8 @@ export default function Events() {
       
       console.log('[Events] Unique events after deduplication:', uniqueEvents.length);
 
-      // Process recurring events to generate instances for the month
-      const eventsWithRecurring = processRecurringEventsForMonth(uniqueEvents, month, processedEvents);
+      // CRITICAL FIX: Use actual database events instead of generating synthetic instances
+      const eventsWithRecurring = uniqueEvents;
 
       // Helper function to normalize event titles for better deduplication
       const normalizeTitle = (title) => {

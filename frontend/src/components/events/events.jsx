@@ -239,6 +239,8 @@ export function Events() {
   const [dialogErrorMessage, setDialogErrorMessage] = useState('');
   const [dialogSectionTitle, setDialogSectionTitle] = useState('');
   const [dialogSectionDescription, setDialogSectionDescription] = useState('');
+  const [showRecurringEditDialog, setShowRecurringEditDialog] = useState(false);
+  const [pendingEditEvent, setPendingEditEvent] = useState(null);
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -300,114 +302,28 @@ export function Events() {
         dates: events.map(e => e.start_date)
       })));
 
-      // For each group, process all instances
-      const processedEvents = Object.values(eventGroups).map(group => {
-        // Sort all instances by date
-        const sortedInstances = group.sort((a, b) => a.start_date.localeCompare(b.start_date));
+      // CRITICAL FIX: Instead of grouping and showing only one instance,
+      // show ALL actual database instances so users can edit specific ones
+      const processedEvents = [];
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Process all events and show future ones
+      events.forEach(event => {
+        const eventDate = new Date(event.start_date);
+        eventDate.setHours(0, 0, 0, 0);
         
-        console.log('4. Processing group:', {
-          title: group[0].title,
-          sorted_dates: sortedInstances.map(e => e.start_date)
-        });
-
-        // If it's not a recurring event, return it as is
-        if (!group[0].is_recurring) {
-          const isPotluck = group[0].title.toLowerCase().includes('potluck');
-          return {
-            ...group[0],
+        // Only show future events (today and later)
+        if (eventDate >= today) {
+          const isPotluck = event.title.toLowerCase().includes('potluck');
+          processedEvents.push({
+            ...event,
             attendance: isPotluck 
-              ? group[0].potluck_rsvps?.length || 0
-              : group[0].event_attendance?.length || 0
-          };
+              ? event.potluck_rsvps?.length || 0
+              : event.event_attendance?.length || 0
+          });
         }
-
-        // For recurring events, find the next occurrence
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        // Find the next occurrence that is today or in the future
-        const nextInstance = sortedInstances.find(instance => {
-          const instanceDate = new Date(instance.start_date);
-          instanceDate.setHours(0, 0, 0, 0);
-          return instanceDate >= today;
-        });
-
-        // If no future instance found, calculate the next one
-        if (!nextInstance) {
-          const lastInstance = sortedInstances[sortedInstances.length - 1];
-          const nextDate = new Date(lastInstance.start_date);
-          const duration = new Date(lastInstance.end_date) - nextDate;
-          
-          // Calculate next occurrence based on recurrence pattern
-          switch (lastInstance.recurrence_pattern) {
-            case 'daily':
-              nextDate.setDate(nextDate.getDate() + 1);
-              break;
-            case 'weekly':
-              nextDate.setDate(nextDate.getDate() + 7);
-              break;
-            case 'biweekly':
-              nextDate.setDate(nextDate.getDate() + 14);
-              break;
-            case 'monthly':
-              nextDate.setMonth(nextDate.getMonth() + 1);
-              break;
-            case 'monthly_weekday':
-              // Get the next month
-              nextDate.setMonth(nextDate.getMonth() + 1);
-              // Set to first day of the month
-              nextDate.setDate(1);
-              
-              // Get the target weekday (0-6, where 0 is Sunday)
-              const targetWeekday = parseInt(lastInstance.monthly_weekday);
-              // Get the target week (1-5, where 5 means last week)
-              const targetWeek = parseInt(lastInstance.monthly_week);
-              
-              // Find the target date
-              if (targetWeek === 5) {
-                // For last week, start from the end of the month
-                nextDate.setMonth(nextDate.getMonth() + 1);
-                nextDate.setDate(0); // Last day of the month
-                // Go backwards to find the target weekday
-                while (nextDate.getDay() !== targetWeekday) {
-                  nextDate.setDate(nextDate.getDate() - 1);
-                }
-              } else {
-                // For other weeks, find the first occurrence of the target weekday
-                while (nextDate.getDay() !== targetWeekday) {
-                  nextDate.setDate(nextDate.getDate() + 1);
-                }
-                // Add weeks to get to the target week
-                nextDate.setDate(nextDate.getDate() + (targetWeek - 1) * 7);
-              }
-              break;
-            default:
-              return null; // Skip unknown patterns
-          }
-
-          const nextEndDate = new Date(nextDate.getTime() + duration);
-          const isPotluck = lastInstance.title.toLowerCase().includes('potluck');
-          
-          return {
-            ...lastInstance,
-            id: `${lastInstance.id}-${nextDate.toISOString()}`,
-            start_date: nextDate.toISOString(),
-            end_date: nextEndDate.toISOString(),
-            attendance: isPotluck 
-              ? lastInstance.potluck_rsvps?.length || 0
-              : lastInstance.event_attendance?.length || 0
-          };
-        }
-
-        // Return the next instance
-        const isPotluck = nextInstance.title.toLowerCase().includes('potluck');
-        return {
-          ...nextInstance,
-          attendance: isPotluck 
-            ? nextInstance.potluck_rsvps?.length || 0
-            : nextInstance.event_attendance?.length || 0
-        };
-      }).filter(Boolean); // Remove any null entries
+      });
 
       console.log('8. Final processed events:', processedEvents.map(e => ({
         title: e.title,
@@ -474,103 +390,7 @@ export function Events() {
     setFilteredEvents(filtered);
   }, [events, searchQuery, attendanceFilter]);
 
-  const generateNextInstance = (event) => {
-    if (!event.is_recurring) return null;
-
-    const lastDate = new Date(event.start_date);
-    const duration = new Date(event.end_date) - lastDate;
-    let nextDate;
-
-    switch (event.recurrence_pattern) {
-      case 'weekly':
-        nextDate = new Date(lastDate);
-        nextDate.setDate(nextDate.getDate() + 7);
-        break;
-      case 'biweekly':
-        nextDate = new Date(lastDate);
-        nextDate.setDate(nextDate.getDate() + 14);
-        break;
-      case 'monthly':
-        nextDate = new Date(lastDate);
-        nextDate.setMonth(nextDate.getMonth() + 1);
-        break;
-      case 'monthly_weekday':
-        nextDate = new Date(lastDate);
-        nextDate.setMonth(nextDate.getMonth() + 1);
-        // Adjust to the correct week and weekday
-        const week = parseInt(event.monthly_week);
-        const weekday = parseInt(event.monthly_weekday);
-        nextDate.setDate(1); // Start from the first day of the month
-        while (nextDate.getDay() !== weekday) {
-          nextDate.setDate(nextDate.getDate() + 1);
-        }
-        nextDate.setDate(nextDate.getDate() + (week - 1) * 7);
-        break;
-      default:
-        return null;
-    }
-
-    const nextEndDate = new Date(nextDate.getTime() + duration);
-
-    return {
-      ...event,
-      id: `${event.id}-${nextDate.toISOString()}`,
-      start_date: nextDate.toISOString(),
-      end_date: nextEndDate.toISOString(),
-      is_instance: true,
-      parent_event_id: event.id
-    };
-  };
-
-  // Helper function to generate recurring events
-  const generateRecurringEvents = (event) => {
-    const occurrences = [];
-    const startDate = new Date(event.start_date);
-    const endDate = new Date(event.end_date);
-    const duration = endDate.getTime() - startDate.getTime();
-    
-    // Only generate the next occurrence
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    let currentDate = new Date(startDate);
-    
-    // Find the next occurrence from today
-    while (currentDate < today) {
-      switch (event.recurrence_pattern) {
-        case 'daily':
-          currentDate.setDate(currentDate.getDate() + 1);
-          break;
-        case 'weekly':
-          currentDate.setDate(currentDate.getDate() + 7);
-          break;
-        case 'biweekly':
-          currentDate.setDate(currentDate.getDate() + 14);
-          break;
-        case 'monthly':
-          currentDate.setMonth(currentDate.getMonth() + 1);
-          break;
-        default:
-          currentDate.setDate(currentDate.getDate() + 7); // Default to weekly
-      }
-    }
-    
-    // Only add the next occurrence
-    const occurrenceEndDate = new Date(currentDate.getTime() + duration);
-    const instanceId = `${event.id}-${currentDate.toISOString()}`;
-    
-    occurrences.push({
-      ...event,
-      id: instanceId,
-      start_date: currentDate.toISOString(),
-      end_date: occurrenceEndDate.toISOString(),
-      attendance: event.event_attendance?.length || 0,
-      is_instance: true,
-      parent_event_id: event.id
-    });
-    
-    return occurrences;
-  };
+  // These functions are no longer needed since we use real database IDs
 
   const fetchEventsFromWebsite = async () => {
     try {
@@ -1071,14 +891,21 @@ export function Events() {
 
   const handleEditEvent = async (eventData) => {
     try {
-      // For recurring events, we need to handle the master event ID
-      const eventId = editingEvent.master_id || editingEvent.id;
+      console.log('=== HANDLE EDIT EVENT ===');
+      console.log('Editing event:', editingEvent);
+      console.log('Event data:', eventData);
+      
+      // Use the actual event ID from the database
+      const eventId = editingEvent.id;
       
       const updates = {
         ...eventData,
         startDate: new Date(eventData.startDate).toISOString(),
         endDate: new Date(eventData.endDate).toISOString()
       };
+
+      console.log('Updating event with ID:', eventId);
+      console.log('Updates:', updates);
 
       await updateEvent(eventId, updates);
       setIsEditEventOpen(false);
@@ -1119,7 +946,50 @@ export function Events() {
   };
 
   const handleEditClick = (event) => {
-    setEditingEvent(event);
+    console.log('Edit click for event:', event);
+    console.log('Event details:', {
+      id: event.id,
+      is_recurring: event.is_recurring,
+      is_master: event.is_master,
+      parent_event_id: event.parent_event_id
+    });
+    
+    // If it's a master event (not an instance), show the choice dialog
+    if (event.is_recurring && event.is_master && !event.parent_event_id) {
+      console.log('This is a master event - showing recurring edit dialog');
+      setPendingEditEvent(event);
+      setShowRecurringEditDialog(true);
+    } else {
+      // For specific instances or non-recurring events, edit directly
+      console.log('Editing specific event/instance directly:', event.title);
+      setEditingEvent(event);
+      setIsEditEventOpen(true);
+    }
+  };
+
+  const handleRecurringEditChoice = (editType) => {
+    console.log('Recurring edit choice:', editType);
+    
+    if (editType === 'instance') {
+      // For instance editing, we should be editing a real database instance
+      // This dialog should only appear for master events, not instances
+      console.log('Creating new instance for specific date');
+      // Use the master event data but mark it for instance creation
+      const instanceEvent = {
+        ...pendingEditEvent,
+        is_creating_instance: true,
+        master_id: pendingEditEvent.id
+      };
+      console.log('Creating instance from master:', instanceEvent);
+      setEditingEvent(instanceEvent);
+    } else if (editType === 'series') {
+      // Edit the entire series - use the master event
+      console.log('Editing series:', pendingEditEvent);
+      setEditingEvent(pendingEditEvent);
+    }
+    
+    setShowRecurringEditDialog(false);
+    setPendingEditEvent(null);
     setIsEditEventOpen(true);
   };
 
@@ -1234,86 +1104,7 @@ export function Events() {
     );
   }, [handleOpenDialog, handlePotluckRSVP, handleEditClick, handleDeleteEvent]);
 
-  const processRecurringEvents = (events) => {
-    const processedEvents = [];
-    const now = new Date();
-    const endDate = new Date();
-    endDate.setMonth(endDate.getMonth() + 3); // Show events for next 3 months
-
-    events.forEach(event => {
-      if (!event.is_recurring) {
-        processedEvents.push(event);
-        return;
-      }
-
-      const startDate = new Date(event.start_date);
-      const endTime = new Date(event.end_date);
-      const duration = endTime - startDate;
-
-      let currentDate = new Date(startDate);
-      while (currentDate <= endDate) {
-        if (currentDate >= now) {
-          const eventInstance = {
-            ...event,
-            id: `${event.id}_${currentDate.toISOString()}`,
-            start_date: new Date(currentDate),
-            end_date: new Date(currentDate.getTime() + duration),
-            is_instance: true
-          };
-          processedEvents.push(eventInstance);
-        }
-
-        // Calculate next occurrence based on recurrence pattern
-        switch (event.recurrence_pattern) {
-          case 'daily':
-            currentDate.setDate(currentDate.getDate() + 1);
-            break;
-          case 'weekly':
-            currentDate.setDate(currentDate.getDate() + 7);
-            break;
-          case 'biweekly':
-            currentDate.setDate(currentDate.getDate() + 14);
-            break;
-          case 'monthly':
-            currentDate.setMonth(currentDate.getMonth() + 1);
-            break;
-          case 'monthly_weekday':
-            // Get the next month
-            currentDate.setMonth(currentDate.getMonth() + 1);
-            // Set to first day of the month
-            currentDate.setDate(1);
-            
-            // Get the target weekday (0-6, where 0 is Sunday)
-            const targetWeekday = parseInt(event.monthly_weekday);
-            // Get the target week (1-5, where 5 means last week)
-            const targetWeek = parseInt(event.monthly_week);
-            
-            // Find the target date
-            if (targetWeek === 5) {
-              // For last week, start from the end of the month
-              currentDate.setMonth(currentDate.getMonth() + 1);
-              currentDate.setDate(0); // Last day of the month
-              // Go backwards to find the target weekday
-              while (currentDate.getDay() !== targetWeekday) {
-                currentDate.setDate(currentDate.getDate() - 1);
-              }
-            } else {
-              // For other weeks, find the first occurrence of the target weekday
-              while (currentDate.getDay() !== targetWeekday) {
-                currentDate.setDate(currentDate.getDate() + 1);
-              }
-              // Add weeks to get to the target week
-              currentDate.setDate(currentDate.getDate() + (targetWeek - 1) * 7);
-            }
-            break;
-          default:
-            currentDate = endDate; // Stop processing for unknown patterns
-        }
-      }
-    });
-
-    return processedEvents;
-  };
+  // processRecurringEvents function removed - we now use real database IDs
 
   return (
     <div className="space-y-6">
@@ -1691,6 +1482,51 @@ export function Events() {
         event={selectedPotluckEvent}
         onRSVP={handlePotluckRSVPUpdate}
       />
+
+      {/* Recurring Event Edit Choice Dialog */}
+      <Dialog open={showRecurringEditDialog} onOpenChange={setShowRecurringEditDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit Recurring Event</DialogTitle>
+            <DialogDescription>
+              This is a recurring event. What would you like to edit?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-3">
+              <Button
+                variant="outline"
+                className="w-full justify-start p-4 h-auto"
+                onClick={() => handleRecurringEditChoice('instance')}
+              >
+                <div className="text-left">
+                  <div className="font-medium">Edit This Instance Only</div>
+                  <div className="text-sm text-muted-foreground">
+                    Changes will only apply to this specific occurrence on {pendingEditEvent ? format(new Date(pendingEditEvent.start_date), 'MMM d, yyyy') : ''}
+                  </div>
+                </div>
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start p-4 h-auto"
+                onClick={() => handleRecurringEditChoice('series')}
+              >
+                <div className="text-left">
+                  <div className="font-medium">Edit Entire Series</div>
+                  <div className="text-sm text-muted-foreground">
+                    Changes will apply to all future occurrences of this recurring event
+                  </div>
+                </div>
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRecurringEditDialog(false)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
