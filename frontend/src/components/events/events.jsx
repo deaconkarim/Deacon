@@ -390,103 +390,7 @@ export function Events() {
     setFilteredEvents(filtered);
   }, [events, searchQuery, attendanceFilter]);
 
-  const generateNextInstance = (event) => {
-    if (!event.is_recurring) return null;
-
-    const lastDate = new Date(event.start_date);
-    const duration = new Date(event.end_date) - lastDate;
-    let nextDate;
-
-    switch (event.recurrence_pattern) {
-      case 'weekly':
-        nextDate = new Date(lastDate);
-        nextDate.setDate(nextDate.getDate() + 7);
-        break;
-      case 'biweekly':
-        nextDate = new Date(lastDate);
-        nextDate.setDate(nextDate.getDate() + 14);
-        break;
-      case 'monthly':
-        nextDate = new Date(lastDate);
-        nextDate.setMonth(nextDate.getMonth() + 1);
-        break;
-      case 'monthly_weekday':
-        nextDate = new Date(lastDate);
-        nextDate.setMonth(nextDate.getMonth() + 1);
-        // Adjust to the correct week and weekday
-        const week = parseInt(event.monthly_week);
-        const weekday = parseInt(event.monthly_weekday);
-        nextDate.setDate(1); // Start from the first day of the month
-        while (nextDate.getDay() !== weekday) {
-          nextDate.setDate(nextDate.getDate() + 1);
-        }
-        nextDate.setDate(nextDate.getDate() + (week - 1) * 7);
-        break;
-      default:
-        return null;
-    }
-
-    const nextEndDate = new Date(nextDate.getTime() + duration);
-
-    return {
-      ...event,
-      id: `${event.id}-${nextDate.toISOString()}`,
-      start_date: nextDate.toISOString(),
-      end_date: nextEndDate.toISOString(),
-      is_instance: true,
-      parent_event_id: event.id
-    };
-  };
-
-  // Helper function to generate recurring events
-  const generateRecurringEvents = (event) => {
-    const occurrences = [];
-    const startDate = new Date(event.start_date);
-    const endDate = new Date(event.end_date);
-    const duration = endDate.getTime() - startDate.getTime();
-    
-    // Only generate the next occurrence
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    let currentDate = new Date(startDate);
-    
-    // Find the next occurrence from today
-    while (currentDate < today) {
-      switch (event.recurrence_pattern) {
-        case 'daily':
-          currentDate.setDate(currentDate.getDate() + 1);
-          break;
-        case 'weekly':
-          currentDate.setDate(currentDate.getDate() + 7);
-          break;
-        case 'biweekly':
-          currentDate.setDate(currentDate.getDate() + 14);
-          break;
-        case 'monthly':
-          currentDate.setMonth(currentDate.getMonth() + 1);
-          break;
-        default:
-          currentDate.setDate(currentDate.getDate() + 7); // Default to weekly
-      }
-    }
-    
-    // Only add the next occurrence
-    const occurrenceEndDate = new Date(currentDate.getTime() + duration);
-    const instanceId = `${event.id}-${currentDate.toISOString()}`;
-    
-    occurrences.push({
-      ...event,
-      id: instanceId,
-      start_date: currentDate.toISOString(),
-      end_date: occurrenceEndDate.toISOString(),
-      attendance: event.event_attendance?.length || 0,
-      is_instance: true,
-      parent_event_id: event.id
-    });
-    
-    return occurrences;
-  };
+  // These functions are no longer needed since we use real database IDs
 
   const fetchEventsFromWebsite = async () => {
     try {
@@ -1067,19 +971,16 @@ export function Events() {
     console.log('Recurring edit choice:', editType);
     
     if (editType === 'instance') {
-      // Edit this instance only - create a synthetic instance event
-      // Use the master event data but mark it as a virtual instance
+      // For instance editing, we should be editing a real database instance
+      // This dialog should only appear for master events, not instances
+      console.log('Creating new instance for specific date');
+      // Use the master event data but mark it for instance creation
       const instanceEvent = {
         ...pendingEditEvent,
-        // Generate a unique synthetic ID that includes the date
-        id: `${pendingEditEvent.id}_${pendingEditEvent.start_date}`,
-        is_virtual_instance: true,
-        master_id: pendingEditEvent.id,
-        // Keep the original dates for this specific instance
-        original_start_date: pendingEditEvent.start_date,
-        original_end_date: pendingEditEvent.end_date
+        is_creating_instance: true,
+        master_id: pendingEditEvent.id
       };
-      console.log('Editing instance:', instanceEvent);
+      console.log('Creating instance from master:', instanceEvent);
       setEditingEvent(instanceEvent);
     } else if (editType === 'series') {
       // Edit the entire series - use the master event
@@ -1203,86 +1104,7 @@ export function Events() {
     );
   }, [handleOpenDialog, handlePotluckRSVP, handleEditClick, handleDeleteEvent]);
 
-  const processRecurringEvents = (events) => {
-    const processedEvents = [];
-    const now = new Date();
-    const endDate = new Date();
-    endDate.setMonth(endDate.getMonth() + 3); // Show events for next 3 months
-
-    events.forEach(event => {
-      if (!event.is_recurring) {
-        processedEvents.push(event);
-        return;
-      }
-
-      const startDate = new Date(event.start_date);
-      const endTime = new Date(event.end_date);
-      const duration = endTime - startDate;
-
-      let currentDate = new Date(startDate);
-      while (currentDate <= endDate) {
-        if (currentDate >= now) {
-          const eventInstance = {
-            ...event,
-            id: `${event.id}_${currentDate.toISOString()}`,
-            start_date: new Date(currentDate),
-            end_date: new Date(currentDate.getTime() + duration),
-            is_instance: true
-          };
-          processedEvents.push(eventInstance);
-        }
-
-        // Calculate next occurrence based on recurrence pattern
-        switch (event.recurrence_pattern) {
-          case 'daily':
-            currentDate.setDate(currentDate.getDate() + 1);
-            break;
-          case 'weekly':
-            currentDate.setDate(currentDate.getDate() + 7);
-            break;
-          case 'biweekly':
-            currentDate.setDate(currentDate.getDate() + 14);
-            break;
-          case 'monthly':
-            currentDate.setMonth(currentDate.getMonth() + 1);
-            break;
-          case 'monthly_weekday':
-            // Get the next month
-            currentDate.setMonth(currentDate.getMonth() + 1);
-            // Set to first day of the month
-            currentDate.setDate(1);
-            
-            // Get the target weekday (0-6, where 0 is Sunday)
-            const targetWeekday = parseInt(event.monthly_weekday);
-            // Get the target week (1-5, where 5 means last week)
-            const targetWeek = parseInt(event.monthly_week);
-            
-            // Find the target date
-            if (targetWeek === 5) {
-              // For last week, start from the end of the month
-              currentDate.setMonth(currentDate.getMonth() + 1);
-              currentDate.setDate(0); // Last day of the month
-              // Go backwards to find the target weekday
-              while (currentDate.getDay() !== targetWeekday) {
-                currentDate.setDate(currentDate.getDate() - 1);
-              }
-            } else {
-              // For other weeks, find the first occurrence of the target weekday
-              while (currentDate.getDay() !== targetWeekday) {
-                currentDate.setDate(currentDate.getDate() + 1);
-              }
-              // Add weeks to get to the target week
-              currentDate.setDate(currentDate.getDate() + (targetWeek - 1) * 7);
-            }
-            break;
-          default:
-            currentDate = endDate; // Stop processing for unknown patterns
-        }
-      }
-    });
-
-    return processedEvents;
-  };
+  // processRecurringEvents function removed - we now use real database IDs
 
   return (
     <div className="space-y-6">
