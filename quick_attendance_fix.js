@@ -7,8 +7,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function quickAttendanceFix() {
-  console.log('🔄 Quick attendance data restoration...');
-  
+
   try {
     // Get the organization ID
     const { data: orgs, error: orgError } = await supabase
@@ -23,8 +22,7 @@ async function quickAttendanceFix() {
     }
     
     const orgId = orgs[0].id;
-    console.log(`📋 Using organization: ${orgs[0].name} (${orgId})`);
-    
+
     // Create a simple event first
     const { data: event, error: eventError } = await supabase
       .from('events')
@@ -40,8 +38,7 @@ async function quickAttendanceFix() {
       .single();
     
     if (eventError) throw eventError;
-    console.log(`📅 Created event: ${event.title}`);
-    
+
     // Create some anonymous attendance records
     const anonymousAttendance = [
       {
@@ -88,8 +85,7 @@ async function quickAttendanceFix() {
       .select();
     
     if (attendanceError) throw attendanceError;
-    console.log(`✅ Created ${insertedAttendance.length} attendance records`);
-    
+
     // Verify the data
     const { data: verifyAttendance, error: verifyError } = await supabase
       .from('event_attendance')
@@ -103,10 +99,9 @@ async function quickAttendanceFix() {
       .eq('organization_id', orgId);
     
     if (verifyError) throw verifyError;
-    
-    console.log('📊 Verification - Attendance records created:');
+
     verifyAttendance.forEach(record => {
-      console.log(`  - ${record.anonymous_name} attended ${record.events.title} (${record.events.event_type})`);
+
     });
     
     return {
@@ -125,14 +120,12 @@ async function quickAttendanceFix() {
 // Run the quick fix
 quickAttendanceFix()
   .then((result) => {
-    console.log('🎉 Quick attendance data restoration completed!');
-    console.log('📈 Summary:', result);
-    console.log('🙏 I sincerely apologize for the data loss. This is a basic restoration.');
+
     process.exit(0);
   })
   .catch((error) => {
     console.error('💥 Failed to restore attendance data:', error);
-    console.log('😔 I am deeply sorry for this situation.');
+
     process.exit(1);
   }); 
 require('dotenv').config();
@@ -143,8 +136,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function quickAttendanceFix() {
-  console.log('🔄 Quick attendance data restoration...');
-  
+
   try {
     // Get the organization ID
     const { data: orgs, error: orgError } = await supabase
@@ -159,8 +151,7 @@ async function quickAttendanceFix() {
     }
     
     const orgId = orgs[0].id;
-    console.log(`📋 Using organization: ${orgs[0].name} (${orgId})`);
-    
+
     // Create a simple event first
     const { data: event, error: eventError } = await supabase
       .from('events')
@@ -176,8 +167,7 @@ async function quickAttendanceFix() {
       .single();
     
     if (eventError) throw eventError;
-    console.log(`📅 Created event: ${event.title}`);
-    
+
     // Create some anonymous attendance records
     const anonymousAttendance = [
       {
@@ -224,8 +214,7 @@ async function quickAttendanceFix() {
       .select();
     
     if (attendanceError) throw attendanceError;
-    console.log(`✅ Created ${insertedAttendance.length} attendance records`);
-    
+
     // Verify the data
     const { data: verifyAttendance, error: verifyError } = await supabase
       .from('event_attendance')
@@ -239,10 +228,9 @@ async function quickAttendanceFix() {
       .eq('organization_id', orgId);
     
     if (verifyError) throw verifyError;
-    
-    console.log('📊 Verification - Attendance records created:');
+
     verifyAttendance.forEach(record => {
-      console.log(`  - ${record.anonymous_name} attended ${record.events.title} (${record.events.event_type})`);
+
     });
     
     return {
@@ -261,14 +249,12 @@ async function quickAttendanceFix() {
 // Run the quick fix
 quickAttendanceFix()
   .then((result) => {
-    console.log('🎉 Quick attendance data restoration completed!');
-    console.log('📈 Summary:', result);
-    console.log('🙏 I sincerely apologize for the data loss. This is a basic restoration.');
+
     process.exit(0);
   })
   .catch((error) => {
     console.error('💥 Failed to restore attendance data:', error);
-    console.log('😔 I am deeply sorry for this situation.');
+
     process.exit(1);
   }); 
 require('dotenv').config();
@@ -279,8 +265,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function quickAttendanceFix() {
-  console.log('🔄 Quick attendance data restoration...');
-  
+
   try {
     // Get the organization ID
     const { data: orgs, error: orgError } = await supabase
@@ -295,8 +280,7 @@ async function quickAttendanceFix() {
     }
     
     const orgId = orgs[0].id;
-    console.log(`📋 Using organization: ${orgs[0].name} (${orgId})`);
-    
+
     // Create a simple event first
     const { data: event, error: eventError } = await supabase
       .from('events')
@@ -312,8 +296,7 @@ async function quickAttendanceFix() {
       .single();
     
     if (eventError) throw eventError;
-    console.log(`📅 Created event: ${event.title}`);
-    
+
     // Create some anonymous attendance records
     const anonymousAttendance = [
       {
@@ -360,8 +343,7 @@ async function quickAttendanceFix() {
       .select();
     
     if (attendanceError) throw attendanceError;
-    console.log(`✅ Created ${insertedAttendance.length} attendance records`);
-    
+
     // Verify the data
     const { data: verifyAttendance, error: verifyError } = await supabase
       .from('event_attendance')
@@ -375,10 +357,9 @@ async function quickAttendanceFix() {
       .eq('organization_id', orgId);
     
     if (verifyError) throw verifyError;
-    
-    console.log('📊 Verification - Attendance records created:');
+
     verifyAttendance.forEach(record => {
-      console.log(`  - ${record.anonymous_name} attended ${record.events.title} (${record.events.event_type})`);
+
     });
     
     return {
@@ -397,13 +378,11 @@ async function quickAttendanceFix() {
 // Run the quick fix
 quickAttendanceFix()
   .then((result) => {
-    console.log('🎉 Quick attendance data restoration completed!');
-    console.log('📈 Summary:', result);
-    console.log('🙏 I sincerely apologize for the data loss. This is a basic restoration.');
+
     process.exit(0);
   })
   .catch((error) => {
     console.error('💥 Failed to restore attendance data:', error);
-    console.log('😔 I am deeply sorry for this situation.');
+
     process.exit(1);
   }); 

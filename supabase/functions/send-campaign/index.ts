@@ -8,11 +8,10 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  console.log('Campaign function called with method:', req.method)
-  
+
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    console.log('Handling OPTIONS request')
+
     return new Response('ok', {
       headers: corsHeaders,
       status: 200
@@ -21,17 +20,11 @@ serve(async (req) => {
 
   try {
     const { campaignId } = await req.json()
-    console.log('Received campaign request:', { campaignId })
 
     // Check environment variables
     const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID')
     const authToken = Deno.env.get('TWILIO_AUTH_TOKEN')
     const phoneNumber = Deno.env.get('TWILIO_PHONE_NUMBER')
-    
-    console.log('Environment check:')
-    console.log('- TWILIO_ACCOUNT_SID:', accountSid ? '✅ Set' : '❌ Missing')
-    console.log('- TWILIO_AUTH_TOKEN:', authToken ? '✅ Set' : '❌ Missing')
-    console.log('- TWILIO_PHONE_NUMBER:', phoneNumber ? '✅ Set' : '❌ Missing')
 
     if (!accountSid || !authToken || !phoneNumber) {
       throw new Error('Missing Twilio environment variables. Please configure TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER.')
@@ -54,8 +47,6 @@ serve(async (req) => {
       console.error('Campaign lookup error:', campaignError)
       throw new Error(`Campaign not found: ${campaignError.message}`)
     }
-
-    console.log('Campaign found:', campaign.name)
 
     // Get recipients based on campaign targeting
     let recipients = []
@@ -121,8 +112,6 @@ serve(async (req) => {
       recipients = campaign.recipients
     }
 
-    console.log(`Sending campaign to ${recipients.length} recipients`)
-
     // Send SMS via Twilio REST API
     const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`
     let sentCount = 0
@@ -147,7 +136,7 @@ serve(async (req) => {
 
         if (response.ok) {
           const twilioResponse = await response.json()
-          console.log('Message sent successfully:', twilioResponse.sid)
+
           sentCount++
           
           // Log the message in database
@@ -186,8 +175,6 @@ serve(async (req) => {
         updated_at: new Date().toISOString()
       })
       .eq('id', campaignId)
-
-    console.log(`Campaign completed: ${sentCount} sent, ${deliveredCount} delivered, ${failedCount} failed`)
 
     return new Response(JSON.stringify({
       success: true,

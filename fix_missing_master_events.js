@@ -8,8 +8,7 @@ const supabase = createClient(
 );
 
 async function fixMissingMasterEvents() {
-  console.log('🔧 Starting to fix missing master events...');
-  
+
   try {
     // Get all recurring events that don't have a master event
     const { data: recurringEvents, error: fetchError } = await supabase
@@ -24,10 +23,8 @@ async function fixMissingMasterEvents() {
       return;
     }
 
-    console.log(`📊 Found ${recurringEvents.length} recurring events without master events`);
-
     if (recurringEvents.length === 0) {
-      console.log('✅ No missing master events found!');
+
       return;
     }
 
@@ -45,9 +42,6 @@ async function fixMissingMasterEvents() {
         orphanedEvents.push(event);
       }
     });
-
-    console.log(`📋 Found ${Object.keys(eventsByParent).length} parent event IDs`);
-    console.log(`📋 Found ${orphanedEvents.length} orphaned events`);
 
     // Create master events for each group
     for (const [parentId, instances] of Object.entries(eventsByParent)) {
@@ -69,7 +63,7 @@ async function fixMissingMasterEvents() {
       }
 
       if (existingMaster) {
-        console.log(`✅ Master event already exists for ${parentId}`);
+
         continue;
       }
 
@@ -109,13 +103,11 @@ async function fixMissingMasterEvents() {
         continue;
       }
 
-      console.log(`✅ Created master event: ${createdMaster.id} - ${createdMaster.title}`);
     }
 
     // Handle orphaned events (events without parent_event_id)
     if (orphanedEvents.length > 0) {
-      console.log(`🔧 Processing ${orphanedEvents.length} orphaned events...`);
-      
+
       // Group orphaned events by title and recurrence pattern
       const orphanedGroups = {};
       
@@ -154,7 +146,7 @@ async function fixMissingMasterEvents() {
         }
 
         if (existingMaster) {
-          console.log(`✅ Master event already exists for ${masterId}`);
+
           // Update all instances to point to this master
           for (const event of events) {
             const { error: updateError } = await supabase
@@ -205,8 +197,6 @@ async function fixMissingMasterEvents() {
           continue;
         }
 
-        console.log(`✅ Created master event: ${createdMaster.id} - ${createdMaster.title}`);
-
         // Update all instances to point to this master
         for (const event of events) {
           const { error: updateError } = await supabase
@@ -217,14 +207,12 @@ async function fixMissingMasterEvents() {
           if (updateError) {
             console.error(`❌ Error updating parent_event_id for ${event.id}:`, updateError);
           } else {
-            console.log(`✅ Updated ${event.id} to point to master ${masterId}`);
+
           }
         }
       }
     }
 
-    console.log('✅ Finished fixing missing master events!');
-    
     // Verify the fix
     const { data: remainingOrphans, error: verifyError } = await supabase
       .from('events')
@@ -236,9 +224,9 @@ async function fixMissingMasterEvents() {
     if (verifyError) {
       console.error('❌ Error verifying fix:', verifyError);
     } else {
-      console.log(`📊 Remaining orphaned events: ${remainingOrphans.length}`);
+
       if (remainingOrphans.length === 0) {
-        console.log('🎉 All recurring events now have proper master events!');
+
       }
     }
 
@@ -249,8 +237,7 @@ async function fixMissingMasterEvents() {
 
 // Function to ensure event creation always creates master events
 async function ensureEventCreationCreatesMasterEvents() {
-  console.log('🔧 Ensuring event creation always creates master events...');
-  
+
   try {
     // Get all non-recurring events that might need to be converted
     const { data: nonRecurringEvents, error: fetchError } = await supabase
@@ -264,8 +251,6 @@ async function ensureEventCreationCreatesMasterEvents() {
       console.error('❌ Error fetching non-recurring events:', fetchError);
       return;
     }
-
-    console.log(`📊 Found ${nonRecurringEvents.length} non-recurring events`);
 
     // Check if any of these should actually be recurring events
     // This is a heuristic - events with similar titles and patterns
@@ -348,8 +333,6 @@ async function ensureEventCreationCreatesMasterEvents() {
         continue;
       }
 
-      console.log(`✅ Created master event for pattern: ${createdMaster.id} - ${createdMaster.title} (${recurrencePattern})`);
-
       // Update all events to point to this master
       for (const event of events) {
         const { error: updateError } = await supabase
@@ -364,15 +347,13 @@ async function ensureEventCreationCreatesMasterEvents() {
         if (updateError) {
           console.error(`❌ Error updating event ${event.id}:`, updateError);
         } else {
-          console.log(`✅ Updated ${event.id} to be recurring instance`);
+
         }
       }
       
       convertedCount++;
     }
 
-    console.log(`✅ Converted ${convertedCount} event groups to recurring events`);
-    
   } catch (error) {
     console.error('❌ Error in ensureEventCreationCreatesMasterEvents:', error);
   }
@@ -380,13 +361,11 @@ async function ensureEventCreationCreatesMasterEvents() {
 
 // Main execution
 async function main() {
-  console.log('🚀 Starting event database fix script...\n');
-  
+
   await fixMissingMasterEvents();
-  console.log('\n' + '='.repeat(50) + '\n');
+
   await ensureEventCreationCreatesMasterEvents();
-  
-  console.log('\n🎉 Event database fix script completed!');
+
 }
 
 // Run the script

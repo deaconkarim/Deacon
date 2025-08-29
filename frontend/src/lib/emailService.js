@@ -65,17 +65,12 @@ export const emailService = {
             });
           }
         });
-        
-        console.log('Replaced variables in HTML body:', htmlBody.substring(0, 200) + '...');
-        console.log('Variables being replaced:', variables);
-        console.log('Current year value:', variables.current_year);
+
       } else {
         // Body is plain text, wrap with template
         htmlBody = renderEmailTemplate(template_type, variables);
       }
 
-      console.log('Calling send-email function with:', {
-        to,
         subject,
         bodyLength: htmlBody?.length,
         member_id,
@@ -140,9 +135,7 @@ export const emailService = {
             });
           }
         });
-        
-        console.log('Replaced variables in bulk email HTML body:', htmlBody.substring(0, 200) + '...');
-        console.log('Variables being replaced:', variables);
+
       } else {
         // Body is plain text, wrap with template
         htmlBody = renderEmailTemplate('default', variables);

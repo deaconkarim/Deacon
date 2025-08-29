@@ -38,7 +38,7 @@ const getCachedData = (cacheKey) => {
     }
     return null;
   } catch (error) {
-    console.warn('Error reading cache:', error);
+
     return null;
   }
 };
@@ -52,7 +52,7 @@ const setCachedData = (cacheKey, data) => {
     };
     localStorage.setItem(cacheKey, JSON.stringify(cacheData));
   } catch (error) {
-    console.warn('Error writing cache:', error);
+
     // If localStorage is full, clear old entries
     clearOldCache();
   }
@@ -77,7 +77,7 @@ const clearOldCache = () => {
       });
     }
   } catch (error) {
-    console.warn('Error clearing old cache:', error);
+
   }
 };
 
@@ -92,7 +92,7 @@ export class SmartInsightsQueries {
    */
   static async getAtRiskMembers(organizationId) {
     if (!organizationId) {
-      console.warn('Organization ID is undefined, skipping at-risk members query');
+
       return [];
     }
 
@@ -101,12 +101,9 @@ export class SmartInsightsQueries {
     // Check cache first
     const cached = getCachedData(cacheKey);
     if (cached) {
-      console.log('📊 [AIInsights] Using cached at-risk members');
       return cached;
     }
 
-    console.log('📊 [AIInsights] Generating fresh at-risk members data');
-    
     const sixtyDaysAgo = new Date();
     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
     
@@ -172,7 +169,6 @@ export class SmartInsightsQueries {
 
     // Cache the result
     setCachedData(cacheKey, atRiskMembers);
-    console.log('📊 [AIInsights] Cached at-risk members');
 
     return atRiskMembers;
   }
@@ -208,7 +204,7 @@ export class SmartInsightsQueries {
    */
   static async getPredictiveAttendance(organizationId) {
     // TEMPORARILY DISABLED - Predictive attendance disabled to reduce API calls
-    console.log('📊 [AIInsights] Predictive attendance disabled');
+
     return null;
   }
 
@@ -217,7 +213,7 @@ export class SmartInsightsQueries {
    */
   static async getDonationInsights(organizationId) {
     // TEMPORARILY DISABLED - Donation insights disabled to reduce API calls
-    console.log('📊 [AIInsights] Donation insights disabled');
+
     return null;
   }
 
@@ -370,8 +366,6 @@ export class SmartInsightsQueries {
     });
 
     const currentMonthAmount = currentMonthDonations.reduce((sum, d) => sum + (d.amount || 0), 0);
-    
-
 
     insights.currentMonth = {
       amount: currentMonthAmount,
@@ -1006,7 +1000,7 @@ export class AIInsightsGenerator {
     if (!forceRefresh) {
       const cached = getCachedData(cacheKey);
       if (cached) {
-        console.log(`Using cached insight for ${insightType}`);
+
         return cached;
       }
     }
@@ -1053,7 +1047,7 @@ export class AIInsightsGenerator {
     if (!forceRefresh) {
       const cached = getCachedData(cacheKey);
       if (cached) {
-        console.log(`Using cached action for ${insightType}`);
+
         return cached;
       }
     }
@@ -1191,13 +1185,11 @@ export class AIInsightsService {
       if (!forceRefresh) {
         const cached = getCachedData(cacheKey);
         if (cached) {
-          console.log('📊 [AIInsights] Using cached dashboard insights');
+
           return cached;
         }
       }
 
-      console.log('📊 [AIInsights] Generating fresh dashboard insights');
-      
       const [atRisk] = await Promise.all([
         SmartInsightsQueries.getAtRiskMembers(organizationId)
         // SmartInsightsQueries.getPredictiveAttendance(organizationId) // TEMPORARILY DISABLED
@@ -1244,7 +1236,6 @@ export class AIInsightsService {
 
       // Cache the result
       setCachedData(cacheKey, result);
-      console.log('📊 [AIInsights] Cached dashboard insights');
 
       return result;
     } catch (error) {
@@ -1283,7 +1274,7 @@ export class AIInsightsService {
       if (!forceRefresh) {
         const cached = getCachedData(cacheKey);
         if (cached) {
-          console.log('Using cached weekly digest');
+
           return cached;
         }
       }
@@ -1419,7 +1410,7 @@ Format the response with proper HTML tags for nice formatting:
     if (!forceRefresh) {
       const cached = getCachedData(cacheKey);
       if (cached) {
-        console.log('Using cached enhanced predictions');
+
         return cached;
       }
     }
@@ -1516,8 +1507,7 @@ CRITICAL: Return ONLY the JSON object above. No explanations, no markdown, no ex
         return prediction;
       });
     } catch (error) {
-      console.warn('Failed to parse AI enhancement, using original predictions');
-      console.debug('AI Response:', aiAnalysis);
+
       return predictions;
     }
   }
@@ -1530,9 +1520,9 @@ CRITICAL: Return ONLY the JSON object above. No explanations, no markdown, no ex
       const keys = Object.keys(localStorage);
       const cacheKeys = keys.filter(key => key.startsWith(CACHE_PREFIX));
       cacheKeys.forEach(key => localStorage.removeItem(key));
-      console.log(`AI insights cache cleared: ${cacheKeys.length} entries removed`);
+
     } catch (error) {
-      console.warn('Error clearing cache:', error);
+
     }
   }
 
@@ -1562,7 +1552,7 @@ CRITICAL: Return ONLY the JSON object above. No explanations, no markdown, no ex
         totalSize: cacheKeys.reduce((size, key) => size + (localStorage.getItem(key)?.length || 0), 0)
     };
     } catch (error) {
-      console.warn('Error getting cache stats:', error);
+
       return { totalEntries: 0, entries: [], totalSize: 0 };
     }
   }

@@ -17,8 +17,7 @@ class WeeklyDemoMaintenance {
 
   async performWeeklyMaintenance() {
     try {
-      console.log('🔄 Starting weekly demo maintenance...')
-      
+
       const results = await Promise.all([
         this.generateUpcomingEvents(),
         this.addAttendanceToRecentEvents(),
@@ -26,9 +25,7 @@ class WeeklyDemoMaintenance {
         this.addNewVisitors(),
         this.cleanupOldData()
       ])
-      
-      console.log('✅ Weekly maintenance completed successfully!')
-      
+
       return {
         success: true,
         results: {
@@ -46,8 +43,7 @@ class WeeklyDemoMaintenance {
   }
 
   private async generateUpcomingEvents() {
-    console.log('📅 Generating upcoming events...')
-    
+
     const today = new Date()
     const nextMonth = new Date(today)
     nextMonth.setMonth(nextMonth.getMonth() + 1)
@@ -122,14 +118,12 @@ class WeeklyDemoMaintenance {
       .upsert(events, { onConflict: 'id' })
     
     if (error) throw new Error(`Events insert failed: ${error.message}`)
-    
-    console.log(`✅ Generated ${events.length} upcoming events`)
+
     return events.length
   }
 
   private async addAttendanceToRecentEvents() {
-    console.log('👥 Adding attendance to recent events...')
-    
+
     const oneWeekAgo = new Date()
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
     
@@ -146,7 +140,7 @@ class WeeklyDemoMaintenance {
     if (eventsError) throw new Error(`Failed to fetch recent events: ${eventsError.message}`)
     
     if (!recentEvents || recentEvents.length === 0) {
-      console.log('No recent events found')
+
       return 0
     }
     
@@ -194,14 +188,12 @@ class WeeklyDemoMaintenance {
       
       if (attendanceError) throw new Error(`Attendance insert failed: ${attendanceError.message}`)
     }
-    
-    console.log(`✅ Added ${attendanceRecords.length} attendance records`)
+
     return attendanceRecords.length
   }
 
   private async generateWeeklyDonations() {
-    console.log('💰 Generating weekly donations...')
-    
+
     const lastSunday = new Date()
     lastSunday.setDate(lastSunday.getDate() - lastSunday.getDay())
     
@@ -214,7 +206,7 @@ class WeeklyDemoMaintenance {
       .limit(1)
     
     if (existingDonations && existingDonations.length > 0) {
-      console.log('Donations already exist for last Sunday')
+
       return 0
     }
     
@@ -250,14 +242,12 @@ class WeeklyDemoMaintenance {
       
       if (donationsError) throw new Error(`Donations insert failed: ${donationsError.message}`)
     }
-    
-    console.log(`✅ Generated ${donations.length} donation records`)
+
     return donations.length
   }
 
   private async addNewVisitors() {
-    console.log('👋 Adding new visitors...')
-    
+
     // Add 1-3 new visitors each week
     const newVisitorCount = Math.floor(Math.random() * 3) + 1
     
@@ -295,14 +285,12 @@ class WeeklyDemoMaintenance {
       .insert(newVisitors)
     
     if (error) throw new Error(`New visitors insert failed: ${error.message}`)
-    
-    console.log(`✅ Added ${newVisitors.length} new visitors`)
+
     return newVisitors.length
   }
 
   private async cleanupOldData() {
-    console.log('🧹 Cleaning up old data...')
-    
+
     const oneYearAgo = new Date()
     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
     
@@ -323,8 +311,7 @@ class WeeklyDemoMaintenance {
       .lt('date', oneYearAgo.toISOString().split('T')[0])
     
     if (donationsError) console.warn('Failed to cleanup old donations:', donationsError.message)
-    
-    console.log('✅ Data cleanup completed')
+
     return true
   }
 

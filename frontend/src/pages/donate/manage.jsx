@@ -33,7 +33,7 @@ export default function ManageDonations() {
       }
 
       const data = await response.json();
-      console.log('📋 Subscriptions data:', data.subscriptions);
+
       setSubscriptions(data.subscriptions || []);
       
       if (data.subscriptions?.length === 0) {
@@ -51,16 +51,12 @@ export default function ManageDonations() {
       return;
     }
 
-    console.log('🔄 Canceling subscription:', subscriptionId);
-    
     try {
       const response = await fetch('/api/stripe/cancel-subscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ subscriptionId }),
       });
-
-      console.log('📥 Cancel response status:', response.status);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -69,7 +65,6 @@ export default function ManageDonations() {
       }
 
       const result = await response.json();
-      console.log('✅ Cancel success:', result);
 
       // Refresh the subscriptions list
       await findSubscriptions();

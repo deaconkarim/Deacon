@@ -262,10 +262,7 @@ export function Layout() {
                        window.navigator.standalone === true;
       setIsInstalled(standalone);
       
-      // Debug logging
-      console.log('PWA Debug Info:', {
-        isStandalone: standalone,
-        isInstalled: standalone,
+      // Debug logging removed
         protocol: window.location.protocol,
         hostname: window.location.hostname,
         isLocalhost: window.location.hostname === 'localhost',
@@ -284,14 +281,12 @@ export function Layout() {
 
     // Listen for install prompt
     const handleBeforeInstallPrompt = (e) => {
-      console.log('beforeinstallprompt event fired!');
       e.preventDefault();
       setDeferredPrompt(e);
     };
 
     // Listen for app installed
     const handleAppInstalled = () => {
-      console.log('appinstalled event fired!');
       setIsInstalled(true);
       setDeferredPrompt(null);
     };
@@ -327,14 +322,9 @@ export function Layout() {
   };
 
   const testPWAInstall = () => {
-    console.log('Testing PWA install...');
-    console.log('Deferred prompt:', deferredPrompt);
-    console.log('Is installed:', isInstalled);
-    console.log('Is standalone:', window.matchMedia('(display-mode: standalone)').matches);
-    
-    // Don't create fake events - just log the current state
+    // Test PWA installation state without logging
     if (!deferredPrompt) {
-      console.log('No deferred prompt available. PWA install prompt will show manual instructions.');
+      // No deferred prompt available. PWA install prompt will show manual instructions.
     }
   };
 

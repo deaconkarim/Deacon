@@ -7,8 +7,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function forceClearCache() {
-  console.log('🧹 Force clearing all caches...');
-  
+
   try {
     const organizationId = '550e8400-e29b-41d4-a716-446655440000';
     
@@ -20,19 +19,16 @@ async function forceClearCache() {
 
     if (eventsError) throw eventsError;
 
-    console.log(`📅 Events in database: ${events?.length || 0}`);
-    
     if (events && events.length > 0) {
-      console.log('\n📋 All events:');
+
       events.forEach((event, index) => {
-        console.log(`${index + 1}. ${event.title} - ${event.start_date} - ${event.event_type}`);
+
       });
     }
 
     // Check if there are any events with future dates
     const now = new Date();
     const futureEvents = events?.filter(e => new Date(e.start_date) > now) || [];
-    console.log(`\n🔮 Future events: ${futureEvents.length}`);
 
     // Check if there are any events this week
     const weekFromNow = new Date();
@@ -41,20 +37,12 @@ async function forceClearCache() {
       const eventDate = new Date(e.start_date);
       return eventDate >= now && eventDate <= weekFromNow;
     }) || [];
-    console.log(`📅 Events this week: ${eventsThisWeek.length}`);
 
     // Check upcoming events
     const upcomingEvents = events?.filter(e => new Date(e.start_date) >= now).slice(0, 5) || [];
-    console.log(`📅 Upcoming events: ${upcomingEvents.length}`);
 
     // Check events needing volunteers
     const eventsNeedingVolunteers = upcomingEvents.filter(e => e.needs_volunteers === true);
-    console.log(`📅 Events needing volunteers: ${eventsNeedingVolunteers.length}`);
-
-    console.log('\n🎯 Expected dashboard values:');
-    console.log(`   - Total Events: ${eventsThisWeek.length}`);
-    console.log(`   - Need Volunteers: ${eventsNeedingVolunteers.length}`);
-    console.log(`   - Upcoming: ${upcomingEvents.length}`);
 
     // Check if there are any events with the specific IDs from attendance records
     const attendanceEventIds = [
@@ -67,10 +55,9 @@ async function forceClearCache() {
       'men-s-ministry-breakfast-1747497600000'
     ];
 
-    console.log('\n🔍 Checking for events referenced in attendance records:');
     attendanceEventIds.forEach(eventId => {
       const found = events?.find(e => e.id === eventId);
-      console.log(`   - ${eventId}: ${found ? 'EXISTS' : 'MISSING'}`);
+
     });
 
     return {
@@ -89,8 +76,7 @@ async function forceClearCache() {
 // Run the force clear
 forceClearCache()
   .then((result) => {
-    console.log('\n🎉 Force clear completed!');
-    console.log('📈 Final result:', result);
+
     process.exit(0);
   })
   .catch((error) => {

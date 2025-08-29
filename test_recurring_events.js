@@ -49,14 +49,11 @@ const testEvents = [
 ];
 
 async function testRecurringEvents() {
-  console.log('🧪 Testing recurring event creation...\n');
 
   try {
     // Test each event type
     for (const event of testEvents) {
-      console.log(`📅 Testing: ${event.title}`);
-      console.log(`   Pattern: ${event.recurrence_pattern}`);
-      
+
       // Create the event
       const { data: createdEvent, error } = await supabase
         .from('events')
@@ -88,8 +85,6 @@ async function testRecurringEvents() {
         continue;
       }
 
-      console.log(`   ✅ Created master event: ${createdEvent.id}`);
-
       // Check if instances were created
       const { data: instances, error: instancesError } = await supabase
         .from('events')
@@ -100,8 +95,7 @@ async function testRecurringEvents() {
       if (instancesError) {
         console.error(`   ❌ Error fetching instances:`, instancesError);
       } else {
-        console.log(`   📋 Created ${instances.length} instances`);
-        
+
         // Show first few instances
         instances.slice(0, 3).forEach((instance, index) => {
           const date = new Date(instance.start_date);
@@ -109,14 +103,11 @@ async function testRecurringEvents() {
         });
         
         if (instances.length > 3) {
-          console.log(`      ... and ${instances.length - 3} more`);
+
         }
       }
 
-      console.log('');
     }
-
-    console.log('✅ Recurring event tests completed!');
 
   } catch (error) {
     console.error('❌ Test failed:', error);
@@ -175,14 +166,11 @@ const testEvents = [
 ];
 
 async function testRecurringEvents() {
-  console.log('🧪 Testing recurring event creation...\n');
 
   try {
     // Test each event type
     for (const event of testEvents) {
-      console.log(`📅 Testing: ${event.title}`);
-      console.log(`   Pattern: ${event.recurrence_pattern}`);
-      
+
       // Create the event
       const { data: createdEvent, error } = await supabase
         .from('events')
@@ -214,8 +202,6 @@ async function testRecurringEvents() {
         continue;
       }
 
-      console.log(`   ✅ Created master event: ${createdEvent.id}`);
-
       // Check if instances were created
       const { data: instances, error: instancesError } = await supabase
         .from('events')
@@ -226,8 +212,7 @@ async function testRecurringEvents() {
       if (instancesError) {
         console.error(`   ❌ Error fetching instances:`, instancesError);
       } else {
-        console.log(`   📋 Created ${instances.length} instances`);
-        
+
         // Show first few instances
         instances.slice(0, 3).forEach((instance, index) => {
           const date = new Date(instance.start_date);
@@ -235,14 +220,11 @@ async function testRecurringEvents() {
         });
         
         if (instances.length > 3) {
-          console.log(`      ... and ${instances.length - 3} more`);
+
         }
       }
 
-      console.log('');
     }
-
-    console.log('✅ Recurring event tests completed!');
 
   } catch (error) {
     console.error('❌ Test failed:', error);
@@ -301,14 +283,11 @@ const testEvents = [
 ];
 
 async function testRecurringEvents() {
-  console.log('🧪 Testing recurring event creation...\n');
 
   try {
     // Test each event type
     for (const event of testEvents) {
-      console.log(`📅 Testing: ${event.title}`);
-      console.log(`   Pattern: ${event.recurrence_pattern}`);
-      
+
       // Create the event
       const { data: createdEvent, error } = await supabase
         .from('events')
@@ -340,8 +319,6 @@ async function testRecurringEvents() {
         continue;
       }
 
-      console.log(`   ✅ Created master event: ${createdEvent.id}`);
-
       // Check if instances were created
       const { data: instances, error: instancesError } = await supabase
         .from('events')
@@ -352,8 +329,7 @@ async function testRecurringEvents() {
       if (instancesError) {
         console.error(`   ❌ Error fetching instances:`, instancesError);
       } else {
-        console.log(`   📋 Created ${instances.length} instances`);
-        
+
         // Show first few instances
         instances.slice(0, 3).forEach((instance, index) => {
           const date = new Date(instance.start_date);
@@ -361,14 +337,11 @@ async function testRecurringEvents() {
         });
         
         if (instances.length > 3) {
-          console.log(`      ... and ${instances.length - 3} more`);
+
         }
       }
 
-      console.log('');
     }
-
-    console.log('✅ Recurring event tests completed!');
 
   } catch (error) {
     console.error('❌ Test failed:', error);

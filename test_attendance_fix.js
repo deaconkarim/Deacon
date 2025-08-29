@@ -182,12 +182,10 @@ const unifiedAttendanceService = {
 };
 
 async function testAttendanceConsistency() {
-  console.log('🧪 Testing attendance calculation consistency with 30-day window...\n');
 
   try {
     // Test 1: Get a specific member's attendance count (30 days)
-    console.log('📊 Test 1: Member attendance count (30 days)');
-    
+
     // First, get a member from the database
     const { data: members, error: membersError } = await supabase
       .from('members')
@@ -195,12 +193,11 @@ async function testAttendanceConsistency() {
       .limit(1);
 
     if (membersError || !members || members.length === 0) {
-      console.log('❌ No members found in database');
+
       return;
     }
 
     const testMember = members[0];
-    console.log(`   Testing member: ${testMember.firstname} ${testMember.lastname} (${testMember.id})`);
 
     // Get attendance count using unified service (30 days)
     const memberAttendance30Days = await unifiedAttendanceService.getMemberAttendanceCount(testMember.id, {
@@ -209,12 +206,8 @@ async function testAttendanceConsistency() {
       includeDeclined: false
     });
 
-    console.log(`   ✅ Member attendance count (30 days): ${memberAttendance30Days.totalCount}`);
-    console.log(`   ✅ Event type breakdown (30 days):`, memberAttendance30Days.eventTypeBreakdown);
-
     // Test 2: Get top attendees (30 days)
-    console.log('\n📊 Test 2: Top attendees (30 days)');
-    
+
     const topAttendees30Days = await unifiedAttendanceService.getTopAttendees({
       limit: 5,
       useLast30Days: true,
@@ -222,14 +215,12 @@ async function testAttendanceConsistency() {
       includeDeclined: false
     });
 
-    console.log(`   ✅ Top attendees found (30 days): ${topAttendees30Days.length}`);
     topAttendees30Days.forEach((attendee, index) => {
-      console.log(`      ${index + 1}. ${attendee.name}: ${attendee.count} events`);
+
     });
 
     // Test 3: Compare with all-time data
-    console.log('\n📊 Test 3: All-time vs 30-day comparison');
-    
+
     // Get all-time attendance count
     const memberAttendanceAllTime = await unifiedAttendanceService.getMemberAttendanceCount(testMember.id, {
       useLast30Days: false,
@@ -237,13 +228,8 @@ async function testAttendanceConsistency() {
       includeDeclined: false
     });
 
-    console.log(`   ✅ Member attendance count (all-time): ${memberAttendanceAllTime.totalCount}`);
-    console.log(`   ✅ Member attendance count (30 days): ${memberAttendance30Days.totalCount}`);
-    console.log(`   ✅ Difference: ${memberAttendanceAllTime.totalCount - memberAttendance30Days.totalCount} events`);
-
     // Test 4: Direct database query for 30 days
-    console.log('\n📊 Test 4: Direct database query (30 days)');
-    
+
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
     const today = new Date(); // Re-declare today to ensure it's the correct date for the query
@@ -275,24 +261,15 @@ async function testAttendanceConsistency() {
       .lt('events.start_date', today.toISOString());
 
     if (directError) {
-      console.log('❌ Error in direct query:', directError);
+
     } else {
-      console.log(`   ✅ Direct query attendance records (30 days): ${directAttendance30Days.length}`);
-      
+
       if (directAttendance30Days.length === memberAttendance30Days.totalCount) {
-        console.log('   ✅ Counts match!');
+
       } else {
-        console.log('   ❌ Counts do not match!');
-        console.log(`      Direct query: ${directAttendance30Days.length}`);
-        console.log(`      Unified service: ${memberAttendance30Days.totalCount}`);
+
       }
     }
-
-    console.log('\n✅ Attendance consistency tests completed!');
-    console.log('\n📋 Summary:');
-    console.log('   - All pages now use 30-day window for consistency');
-    console.log('   - Member profile, dashboard, and events page should show same numbers');
-    console.log('   - Anthony Grose should have consistent attendance across all pages');
 
   } catch (error) {
     console.error('❌ Test failed:', error);
@@ -484,12 +461,10 @@ const unifiedAttendanceService = {
 };
 
 async function testAttendanceConsistency() {
-  console.log('🧪 Testing attendance calculation consistency with 30-day window...\n');
 
   try {
     // Test 1: Get a specific member's attendance count (30 days)
-    console.log('📊 Test 1: Member attendance count (30 days)');
-    
+
     // First, get a member from the database
     const { data: members, error: membersError } = await supabase
       .from('members')
@@ -497,12 +472,11 @@ async function testAttendanceConsistency() {
       .limit(1);
 
     if (membersError || !members || members.length === 0) {
-      console.log('❌ No members found in database');
+
       return;
     }
 
     const testMember = members[0];
-    console.log(`   Testing member: ${testMember.firstname} ${testMember.lastname} (${testMember.id})`);
 
     // Get attendance count using unified service (30 days)
     const memberAttendance30Days = await unifiedAttendanceService.getMemberAttendanceCount(testMember.id, {
@@ -511,12 +485,8 @@ async function testAttendanceConsistency() {
       includeDeclined: false
     });
 
-    console.log(`   ✅ Member attendance count (30 days): ${memberAttendance30Days.totalCount}`);
-    console.log(`   ✅ Event type breakdown (30 days):`, memberAttendance30Days.eventTypeBreakdown);
-
     // Test 2: Get top attendees (30 days)
-    console.log('\n📊 Test 2: Top attendees (30 days)');
-    
+
     const topAttendees30Days = await unifiedAttendanceService.getTopAttendees({
       limit: 5,
       useLast30Days: true,
@@ -524,14 +494,12 @@ async function testAttendanceConsistency() {
       includeDeclined: false
     });
 
-    console.log(`   ✅ Top attendees found (30 days): ${topAttendees30Days.length}`);
     topAttendees30Days.forEach((attendee, index) => {
-      console.log(`      ${index + 1}. ${attendee.name}: ${attendee.count} events`);
+
     });
 
     // Test 3: Compare with all-time data
-    console.log('\n📊 Test 3: All-time vs 30-day comparison');
-    
+
     // Get all-time attendance count
     const memberAttendanceAllTime = await unifiedAttendanceService.getMemberAttendanceCount(testMember.id, {
       useLast30Days: false,
@@ -539,13 +507,8 @@ async function testAttendanceConsistency() {
       includeDeclined: false
     });
 
-    console.log(`   ✅ Member attendance count (all-time): ${memberAttendanceAllTime.totalCount}`);
-    console.log(`   ✅ Member attendance count (30 days): ${memberAttendance30Days.totalCount}`);
-    console.log(`   ✅ Difference: ${memberAttendanceAllTime.totalCount - memberAttendance30Days.totalCount} events`);
-
     // Test 4: Direct database query for 30 days
-    console.log('\n📊 Test 4: Direct database query (30 days)');
-    
+
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
     const today = new Date(); // Re-declare today to ensure it's the correct date for the query
@@ -577,24 +540,15 @@ async function testAttendanceConsistency() {
       .lt('events.start_date', today.toISOString());
 
     if (directError) {
-      console.log('❌ Error in direct query:', directError);
+
     } else {
-      console.log(`   ✅ Direct query attendance records (30 days): ${directAttendance30Days.length}`);
-      
+
       if (directAttendance30Days.length === memberAttendance30Days.totalCount) {
-        console.log('   ✅ Counts match!');
+
       } else {
-        console.log('   ❌ Counts do not match!');
-        console.log(`      Direct query: ${directAttendance30Days.length}`);
-        console.log(`      Unified service: ${memberAttendance30Days.totalCount}`);
+
       }
     }
-
-    console.log('\n✅ Attendance consistency tests completed!');
-    console.log('\n📋 Summary:');
-    console.log('   - All pages now use 30-day window for consistency');
-    console.log('   - Member profile, dashboard, and events page should show same numbers');
-    console.log('   - Anthony Grose should have consistent attendance across all pages');
 
   } catch (error) {
     console.error('❌ Test failed:', error);
@@ -786,12 +740,10 @@ const unifiedAttendanceService = {
 };
 
 async function testAttendanceConsistency() {
-  console.log('🧪 Testing attendance calculation consistency with 30-day window...\n');
 
   try {
     // Test 1: Get a specific member's attendance count (30 days)
-    console.log('📊 Test 1: Member attendance count (30 days)');
-    
+
     // First, get a member from the database
     const { data: members, error: membersError } = await supabase
       .from('members')
@@ -799,12 +751,11 @@ async function testAttendanceConsistency() {
       .limit(1);
 
     if (membersError || !members || members.length === 0) {
-      console.log('❌ No members found in database');
+
       return;
     }
 
     const testMember = members[0];
-    console.log(`   Testing member: ${testMember.firstname} ${testMember.lastname} (${testMember.id})`);
 
     // Get attendance count using unified service (30 days)
     const memberAttendance30Days = await unifiedAttendanceService.getMemberAttendanceCount(testMember.id, {
@@ -813,12 +764,8 @@ async function testAttendanceConsistency() {
       includeDeclined: false
     });
 
-    console.log(`   ✅ Member attendance count (30 days): ${memberAttendance30Days.totalCount}`);
-    console.log(`   ✅ Event type breakdown (30 days):`, memberAttendance30Days.eventTypeBreakdown);
-
     // Test 2: Get top attendees (30 days)
-    console.log('\n📊 Test 2: Top attendees (30 days)');
-    
+
     const topAttendees30Days = await unifiedAttendanceService.getTopAttendees({
       limit: 5,
       useLast30Days: true,
@@ -826,14 +773,12 @@ async function testAttendanceConsistency() {
       includeDeclined: false
     });
 
-    console.log(`   ✅ Top attendees found (30 days): ${topAttendees30Days.length}`);
     topAttendees30Days.forEach((attendee, index) => {
-      console.log(`      ${index + 1}. ${attendee.name}: ${attendee.count} events`);
+
     });
 
     // Test 3: Compare with all-time data
-    console.log('\n📊 Test 3: All-time vs 30-day comparison');
-    
+
     // Get all-time attendance count
     const memberAttendanceAllTime = await unifiedAttendanceService.getMemberAttendanceCount(testMember.id, {
       useLast30Days: false,
@@ -841,13 +786,8 @@ async function testAttendanceConsistency() {
       includeDeclined: false
     });
 
-    console.log(`   ✅ Member attendance count (all-time): ${memberAttendanceAllTime.totalCount}`);
-    console.log(`   ✅ Member attendance count (30 days): ${memberAttendance30Days.totalCount}`);
-    console.log(`   ✅ Difference: ${memberAttendanceAllTime.totalCount - memberAttendance30Days.totalCount} events`);
-
     // Test 4: Direct database query for 30 days
-    console.log('\n📊 Test 4: Direct database query (30 days)');
-    
+
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
     const today = new Date(); // Re-declare today to ensure it's the correct date for the query
@@ -879,24 +819,15 @@ async function testAttendanceConsistency() {
       .lt('events.start_date', today.toISOString());
 
     if (directError) {
-      console.log('❌ Error in direct query:', directError);
+
     } else {
-      console.log(`   ✅ Direct query attendance records (30 days): ${directAttendance30Days.length}`);
-      
+
       if (directAttendance30Days.length === memberAttendance30Days.totalCount) {
-        console.log('   ✅ Counts match!');
+
       } else {
-        console.log('   ❌ Counts do not match!');
-        console.log(`      Direct query: ${directAttendance30Days.length}`);
-        console.log(`      Unified service: ${memberAttendance30Days.totalCount}`);
+
       }
     }
-
-    console.log('\n✅ Attendance consistency tests completed!');
-    console.log('\n📋 Summary:');
-    console.log('   - All pages now use 30-day window for consistency');
-    console.log('   - Member profile, dashboard, and events page should show same numbers');
-    console.log('   - Anthony Grose should have consistent attendance across all pages');
 
   } catch (error) {
     console.error('❌ Test failed:', error);

@@ -7,10 +7,9 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 
 async function deleteAllEvents() {
   try {
-    console.log('Starting to delete all events...')
-    
+
     // First delete all event attendance records
-    console.log('Deleting event attendance records...')
+
     const { error: attendanceError } = await supabase
       .from('event_attendance')
       .delete()
@@ -19,11 +18,11 @@ async function deleteAllEvents() {
     if (attendanceError && attendanceError.code !== '42P01') {
       console.error('Error deleting event attendance:', attendanceError)
     } else {
-      console.log('✅ Event attendance records deleted')
+
     }
     
     // Then delete all events
-    console.log('Deleting all events...')
+
     const { error: eventsError } = await supabase
       .from('events')
       .delete()
@@ -33,10 +32,7 @@ async function deleteAllEvents() {
       console.error('Error deleting events:', eventsError)
       throw eventsError
     }
-    
-    console.log('✅ All events deleted successfully!')
-    console.log('🎉 Database cleanup complete!')
-    
+
   } catch (error) {
     console.error('❌ Failed to delete events:', error)
   }

@@ -7,8 +7,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function checkAttendanceEvents() {
-  console.log('🔍 Checking attendance records and their referenced events...');
-  
+
   try {
     // Get all attendance records
     const { data: attendance, error: attendanceError } = await supabase
@@ -16,12 +15,9 @@ async function checkAttendanceEvents() {
       .select('*');
 
     if (attendanceError) throw attendanceError;
-    
-    console.log(`📊 Total attendance records: ${attendance?.length || 0}`);
 
     // Get unique event IDs from attendance
     const uniqueEventIds = [...new Set(attendance.map(a => a.event_id))];
-    console.log(`📅 Unique event IDs referenced: ${uniqueEventIds.length}`);
 
     // Check which events exist
     const { data: existingEvents, error: eventsError } = await supabase
@@ -31,25 +27,21 @@ async function checkAttendanceEvents() {
 
     if (eventsError) throw eventsError;
 
-    console.log(`✅ Events that exist: ${existingEvents?.length || 0}`);
-    console.log(`❌ Events that don't exist: ${uniqueEventIds.length - (existingEvents?.length || 0)}`);
-
     // Show missing events
     const existingEventIds = existingEvents?.map(e => e.id) || [];
     const missingEventIds = uniqueEventIds.filter(id => !existingEventIds.includes(id));
 
-    console.log('\n📋 Missing events:');
     missingEventIds.forEach(id => {
       const attendanceForEvent = attendance.filter(a => a.event_id === id);
-      console.log(`   ${id}: ${attendanceForEvent.length} attendance records`);
+
     });
 
     // Show existing events
     if (existingEvents && existingEvents.length > 0) {
-      console.log('\n📋 Existing events:');
+
       existingEvents.forEach(event => {
         const attendanceForEvent = attendance.filter(a => a.event_id === event.id);
-        console.log(`   ${event.title} (${event.start_date}): ${attendanceForEvent.length} attendance records`);
+
       });
     }
 
@@ -62,11 +54,10 @@ async function checkAttendanceEvents() {
 
     if (allEventsError) throw allEventsError;
 
-    console.log(`\n📅 Total events in database: ${allEvents?.length || 0}`);
     if (allEvents && allEvents.length > 0) {
-      console.log('\n📋 Recent events in database:');
+
       allEvents.forEach(event => {
-        console.log(`   ${event.title} (${event.start_date})`);
+
       });
     }
 
@@ -87,8 +78,7 @@ async function checkAttendanceEvents() {
 // Run the check
 checkAttendanceEvents()
   .then((result) => {
-    console.log('\n✅ Attendance events check completed!');
-    console.log('📈 Summary:', result);
+
     process.exit(0);
   })
   .catch((error) => {

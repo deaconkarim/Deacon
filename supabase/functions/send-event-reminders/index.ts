@@ -8,11 +8,10 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  console.log('Event Reminders Function called with method:', req.method)
-  
+
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    console.log('Handling OPTIONS request')
+
     return new Response('ok', {
       headers: corsHeaders,
       status: 200
@@ -54,8 +53,6 @@ serve(async (req) => {
       console.error('Error fetching reminder configs:', configError);
       throw configError;
     }
-
-    console.log(`Found ${reminderConfigs?.length || 0} active reminder configurations`);
 
     const results = [];
     const now = new Date();
@@ -108,8 +105,7 @@ serve(async (req) => {
         } else {
           timingDescription = `${config.timing_hours}h before`;
         }
-        console.log(`Processing reminder for event: ${event.title} (${timingDescription}) - ${wasMissed ? 'MISSED' : 'ON TIME'}`);
-        
+
         // Check if reminder was already sent recently (within last 2 hours) to avoid duplicates
         const twoHoursAgo = new Date(now.getTime() - (2 * 60 * 60 * 1000));
         const { data: recentLogs } = await supabaseClient
@@ -120,7 +116,7 @@ serve(async (req) => {
           .limit(1);
         
         if (recentLogs && recentLogs.length > 0) {
-          console.log(`Skipping ${event.title} - reminder already sent recently`);
+
           continue;
         }
         
@@ -218,8 +214,6 @@ serve(async (req) => {
               recipients = declined?.map(a => a.member).filter(Boolean) || [];
               break;
           }
-
-          console.log(`Found ${recipients.length} recipients for event ${event.title}`);
 
           // Send reminders to each recipient
           let sentCount = 0;
@@ -331,7 +325,7 @@ serve(async (req) => {
                   });
                 
                 sentCount++;
-                console.log(`Sent ${wasMissed ? 'LATE ' : ''}reminder to ${recipient.firstname} ${recipient.lastname} at ${recipient.phone}`);
+
               } else {
                 // Update SMS message status to failed
                 await supabaseClient
@@ -381,8 +375,6 @@ serve(async (req) => {
             wasMissed: wasMissed
           });
 
-          console.log(`Completed reminder for ${event.title}: ${sentCount} sent, ${failedCount} failed (${wasMissed ? 'MISSED' : 'ON TIME'})`);
-
         } catch (configError) {
           console.error(`Error processing reminder config ${config.id}:`, configError);
           results.push({
@@ -399,7 +391,7 @@ serve(async (req) => {
         } else {
           timingDescription = `${config.timing_hours}h before`;
         }
-        console.log(`Skipping reminder for ${event.title} - not time yet (${timingDescription})`);
+
       }
     }
 

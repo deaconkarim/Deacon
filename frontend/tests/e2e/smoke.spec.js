@@ -55,7 +55,6 @@ test.describe('Smoke Tests', () => {
     
     // Log errors for debugging but don't fail the test
     if (errors.length > 0) {
-      console.log('Console errors found:', errors);
     }
   });
 
@@ -73,7 +72,6 @@ test.describe('Smoke Tests', () => {
     
     // Log errors for debugging but don't fail the test
     if (errors.length > 0) {
-      console.log('Page errors found:', errors);
     }
   });
 }); 

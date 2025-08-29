@@ -959,8 +959,7 @@ class DemoDataGenerator {
   // Main generation method
   async generateDemoData() {
     try {
-      console.log('🚀 Starting demo data generation...')
-      
+
       // Generate core data
       const members = this.generateMembers()
       const events = this.generateEvents()
@@ -976,23 +975,7 @@ class DemoDataGenerator {
       const smsTemplates = this.generateSMSTemplates()
       const smsConversations = this.generateSMSConversations(members, groups)
       const smsMessages = this.generateSMSMessages(smsConversations, members)
-      
-      console.log(`📊 Generated:`)
-      console.log(`  - ${members.length} members`)
-      console.log(`  - ${events.length} events`)
-      console.log(`  - ${attendance.length} attendance records`)
-      console.log(`  - ${donations.length} donations`)
-      console.log(`  - ${batches.length} donation batches`)
-      console.log(`  - ${groups.length} groups`)
-      console.log(`  - ${groupMembers.length} group members`)
-      console.log(`  - ${families.length} families`)
-      console.log(`  - ${tasks.length} tasks`)
-      console.log(`  - ${guardians.length} guardian relationships`)
-      console.log(`  - ${childrenCheckIns.length} children check-ins`)
-      console.log(`  - ${smsTemplates.length} SMS templates`)
-      console.log(`  - ${smsConversations.length} SMS conversations`)
-      console.log(`  - ${smsMessages.length} SMS messages`)
-      
+
       // Insert members first (without family_id to avoid foreign key constraint)
       const { error: membersError } = await this.supabase
         .from('members')
@@ -1114,9 +1097,7 @@ class DemoDataGenerator {
         .upsert(smsMessages, { onConflict: 'id' })
       
       if (smsMessagesError) throw new Error(`SMS messages insert failed: ${smsMessagesError.message}`)
-      
-      console.log('✅ Demo data generation completed successfully!')
-      
+
       return {
         success: true,
         stats: {

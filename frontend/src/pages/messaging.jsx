@@ -162,14 +162,7 @@ const replaceTemplateVariables = (htmlContent, variables, autoVariables = {}) =>
   
   // Replace all variables
   const allVariables = { ...autoVariables, ...variables };
-  
-  console.log('replaceTemplateVariables called with:', {
-    htmlContentLength: htmlContent?.length,
-    variables,
-    autoVariables,
-    allVariables
-  });
-  
+
   Object.keys(allVariables).forEach(variable => {
     const value = allVariables[variable];
     if (value) {
@@ -183,13 +176,12 @@ const replaceTemplateVariables = (htmlContent, variables, autoVariables = {}) =>
         const before = result;
         result = result.replace(pattern, value);
         if (before !== result) {
-          console.log(`Replaced ${variable} with ${value}`);
+
         }
       });
     }
   });
   
-  console.log('Final result preview:', result.substring(0, 200));
   return result;
 };
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
@@ -509,11 +501,11 @@ export function Messaging() {
       // Try to load conversations, templates, members, and groups
       const [conversationsData, templatesData, membersData, groupsData, statsData, emailConversationsData, emailTemplatesData, emailStatsData] = await Promise.all([
         smsService.getConversations().catch(error => {
-          console.warn('Failed to load conversations:', error);
+
           return [];
         }),
         smsService.getTemplates().catch(error => {
-          console.warn('Failed to load templates:', error);
+
           return [];
         }),
         supabase
@@ -524,7 +516,7 @@ export function Messaging() {
           .order('firstname', { ascending: true })
           .then(({ data, error }) => {
             if (error) {
-              console.warn('Failed to load members:', error);
+
               return [];
             }
             return data || [];
@@ -536,13 +528,13 @@ export function Messaging() {
           .order('name', { ascending: true })
           .then(({ data, error }) => {
             if (error) {
-              console.warn('Failed to load groups:', error);
+
               return [];
             }
             return data || [];
           }),
         smsService.getSMSStats().catch(error => {
-          console.warn('Failed to load SMS stats:', error);
+
           return {
             totalSent: 0,
             totalDelivered: 0,
@@ -553,15 +545,15 @@ export function Messaging() {
           };
         }),
         emailService.getEmailMessages().catch(error => {
-          console.warn('Failed to load email messages:', error);
+
           return [];
         }),
         emailService.getTemplates().catch(error => {
-          console.warn('Failed to load email templates:', error);
+
           return [];
         }),
         emailService.getEmailStats().catch(error => {
-          console.warn('Failed to load email stats:', error);
+
           return {
             totalSent: 0,
             totalDelivered: 0,
@@ -583,7 +575,6 @@ export function Messaging() {
             .eq('group_id', group.id)
             .eq('organization_id', organizationId);
 
-          console.log(`Group ${group.name} (${group.id}):`, { memberCount, error });
 
           // Also get actual group members to verify
           const { data: groupMembers, error: membersError } = await supabase
@@ -599,8 +590,6 @@ export function Messaging() {
             `)
             .eq('group_id', group.id)
             .eq('organization_id', organizationId);
-
-          console.log(`Group ${group.name} members:`, groupMembers);
 
           return {
             ...group,
@@ -622,7 +611,7 @@ export function Messaging() {
         lastMonth: 0
       });
       setEmailConversations(emailConversationsData || []);
-      console.log('Using local email templates:', localEmailTemplates);
+
       setEmailTemplates(localEmailTemplates || []);
       setEmailStats(emailStatsData || {
         totalSent: 0,
@@ -724,7 +713,6 @@ export function Messaging() {
 
       if (recipients.length > 0) {
         // Send to multiple recipients
-        console.log('Sending bulk email with data:', {
           recipients: recipients.map(r => ({ email: r.email, name: r.firstname })),
           subject: newEmail.subject,
           body: newEmail.body,
@@ -756,13 +744,7 @@ export function Messaging() {
         loadData(); // Refresh data
       } else if (newEmail.to) {
         // Send to single email address
-        console.log('Sending email with data:', {
-          to: newEmail.to,
-          subject: newEmail.subject,
-          body: newEmail.body,
-          template_id: newEmail.template_id
-        });
-        
+
         await emailService.sendEmail({
           to: newEmail.to,
           subject: newEmail.subject,
@@ -3186,7 +3168,7 @@ export function Messaging() {
                     }
                     
                     // Replace variables in real-time
-                    console.log('Replacing variables with:', { church_name: churchName, ...newVariables });
+
                     const updatedBody = replaceTemplateVariables(
                       selectedTemplate.template_text,
                       { ...newVariables, church_name: churchName },
@@ -3204,9 +3186,7 @@ export function Messaging() {
                       }
                     );
                     
-                    console.log('Updated body preview:', updatedBody.substring(0, 300));
-                    console.log('Updated subject:', updatedSubject);
-                    
+
                     // Update the body and subject with replaced variables
                     setNewEmail({
                       ...newEmail,

@@ -265,7 +265,7 @@ export const familyReportService = {
               formattedDate = format(giftDate, 'yyyy-MM-dd');
             }
           } catch (error) {
-            console.warn('Invalid date format:', family.lastGift);
+
           }
         }
 

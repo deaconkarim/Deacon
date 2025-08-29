@@ -30,13 +30,11 @@ test.describe('Recurring Event Edit', () => {
         try {
           await expect(editChoiceDialog).toBeVisible({ timeout: 3000 });
           foundRecurringEvent = true;
-          console.log('Found recurring event with edit choice dialog');
           break;
         } catch (error) {
           // If edit choice dialog doesn't appear, check if regular edit dialog appears
           const regularEditDialog = page.locator('text="Edit Event", text="Edit Recurring Event Series"');
           if (await regularEditDialog.count() > 0) {
-            console.log('Found regular event with edit dialog');
             // Close the dialog and continue looking
             const closeButton = page.locator('button[aria-label="Close"], button:has-text("Cancel")');
             if (await closeButton.count() > 0) {
@@ -51,7 +49,6 @@ test.describe('Recurring Event Edit', () => {
     // If we found a recurring event, the test passes
     // If not, we'll just log that no recurring events were found
     if (!foundRecurringEvent) {
-      console.log('No recurring events found to test edit choice dialog');
     }
   });
 
@@ -74,7 +71,6 @@ test.describe('Recurring Event Edit', () => {
         
         try {
           await expect(errorMessage).not.toBeVisible({ timeout: 2000 });
-          console.log('No error message found for event edit');
         } catch (error) {
           // If error message appears, fail the test
           throw new Error('Error message "Cannot Edit Event" appeared when it should not have');

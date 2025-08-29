@@ -199,8 +199,6 @@ export function Events() {
   const { user } = useAuth();
   
   // Debug user context
-  console.log('🔍 Events component - User context:', user);
-  console.log('🔍 Events component - User organization_id:', user?.organization_id);
   const [events, setEvents] = useState([]);
   const [filteredEvents, setFilteredEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -277,9 +275,6 @@ export function Events() {
 
       if (error) throw error;
 
-      console.log('=== DEBUG: Event Processing ===');
-      console.log('1. Raw events from DB:', events.map(e => ({
-        id: e.id,
         title: e.title,
         date: e.start_date,
         parent_id: e.parent_event_id
@@ -295,7 +290,6 @@ export function Events() {
         return groups;
       }, {});
 
-      console.log('3. Event groups:', Object.entries(eventGroups).map(([key, events]) => ({
         group_id: key,
         title: events[0].title,
         instance_count: events.length,
@@ -325,7 +319,6 @@ export function Events() {
         }
       });
 
-      console.log('8. Final processed events:', processedEvents.map(e => ({
         title: e.title,
         date: e.start_date,
         attendance: e.attendance
@@ -386,7 +379,6 @@ export function Events() {
       });
     }
 
-    console.log('Filtered events:', filtered);
     setFilteredEvents(filtered);
   }, [events, searchQuery, attendanceFilter]);
 
@@ -429,7 +421,7 @@ export function Events() {
 
   // Add this debug log
   useEffect(() => {
-    console.log('Current events:', events);
+
   }, [events]);
 
   const getStatusColor = (status) => {
@@ -891,10 +883,7 @@ export function Events() {
 
   const handleEditEvent = async (eventData) => {
     try {
-      console.log('=== HANDLE EDIT EVENT ===');
-      console.log('Editing event:', editingEvent);
-      console.log('Event data:', eventData);
-      
+
       // Use the actual event ID from the database
       const eventId = editingEvent.id;
       
@@ -903,9 +892,6 @@ export function Events() {
         startDate: new Date(eventData.startDate).toISOString(),
         endDate: new Date(eventData.endDate).toISOString()
       };
-
-      console.log('Updating event with ID:', eventId);
-      console.log('Updates:', updates);
 
       await updateEvent(eventId, updates);
       setIsEditEventOpen(false);
@@ -946,45 +932,37 @@ export function Events() {
   };
 
   const handleEditClick = (event) => {
-    console.log('Edit click for event:', event);
-    console.log('Event details:', {
-      id: event.id,
-      is_recurring: event.is_recurring,
-      is_master: event.is_master,
-      parent_event_id: event.parent_event_id
-    });
-    
+
     // If it's a master event (not an instance), show the choice dialog
     if (event.is_recurring && event.is_master && !event.parent_event_id) {
-      console.log('This is a master event - showing recurring edit dialog');
+
       setPendingEditEvent(event);
       setShowRecurringEditDialog(true);
     } else {
       // For specific instances or non-recurring events, edit directly
-      console.log('Editing specific event/instance directly:', event.title);
+
       setEditingEvent(event);
       setIsEditEventOpen(true);
     }
   };
 
   const handleRecurringEditChoice = (editType) => {
-    console.log('Recurring edit choice:', editType);
-    
+
     if (editType === 'instance') {
       // For instance editing, we should be editing a real database instance
       // This dialog should only appear for master events, not instances
-      console.log('Creating new instance for specific date');
+
       // Use the master event data but mark it for instance creation
       const instanceEvent = {
         ...pendingEditEvent,
         is_creating_instance: true,
         master_id: pendingEditEvent.id
       };
-      console.log('Creating instance from master:', instanceEvent);
+
       setEditingEvent(instanceEvent);
     } else if (editType === 'series') {
       // Edit the entire series - use the master event
-      console.log('Editing series:', pendingEditEvent);
+
       setEditingEvent(pendingEditEvent);
     }
     
@@ -1166,8 +1144,7 @@ export function Events() {
                     key={member.id}
                     className="flex items-center space-x-2 p-2 rounded-md cursor-pointer hover:bg-gray-100"
                     onClick={async () => {
-                      console.log('🖱️ Member clicked:', member.firstname, member.lastname);
-                      console.log('🖱️ Selected event:', selectedEvent);
+
                       try {
                         // Add member to event attendance
                         const { data: attendanceData, error } = await supabase
@@ -1183,11 +1160,7 @@ export function Events() {
                         if (error) throw error;
 
                         // Trigger automation for event attendance
-                        console.log('🔍 Checking if automation should trigger...');
-                        console.log('👤 User organization_id:', user?.organization_id);
-                        console.log('👤 Member status:', member.status);
-                        console.log('🎯 Event type:', selectedEvent.event_type);
-                        
+
                         if (user?.organization_id) {
                           try {
                             const triggerData = {
@@ -1203,11 +1176,7 @@ export function Events() {
                               lastname: member.lastname,
                               phone: member.phone
                             };
-                            
-                            console.log('🎯 Event data:', selectedEvent);
-                            console.log('👤 Member data:', member);
-                            console.log('🚀 Triggering automation with data:', triggerData);
-                            
+
                             await automationService.triggerAutomation(
                               'event_attendance',
                               triggerData,
@@ -1218,7 +1187,7 @@ export function Events() {
                             // Don't fail the main operation if automation fails
                           }
                         } else {
-                          console.log('❌ No organization_id found, skipping automation');
+
                         }
 
                         // Move member to Already RSVP'd list

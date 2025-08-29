@@ -55,7 +55,7 @@ const PWAInstallPrompt = () => {
 
   const handleInstall = async () => {
     if (!deferredPrompt || typeof deferredPrompt.prompt !== 'function') {
-      console.warn('Invalid deferred prompt - showing manual instructions');
+
       setShowManualPrompt(true);
       setShowPrompt(false);
       return;

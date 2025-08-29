@@ -101,7 +101,7 @@ export default function Landing() {
           template_type: 'default'
         });
       } catch (emailError) {
-        console.warn('Failed to send notification email:', emailError);
+
         // Don't fail the whole process if email fails
       }
       

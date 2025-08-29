@@ -106,13 +106,12 @@ export function TaskCreationModal({
 
   useEffect(() => {
     if (isOpen) {
-      console.log('TaskCreationModal: Opening modal, fetching users...');
+
       fetchMembers();
       fetchUsers();
       // Pre-populate with suggestion data if provided
       if (suggestion) {
-        console.log('TaskCreationModal: Pre-populating with suggestion:', suggestion);
-        
+
         // Build enhanced description with member information
         let enhancedDescription = suggestion.description || suggestion.content || '';
         
@@ -181,13 +180,7 @@ export function TaskCreationModal({
         });
         
         // Log the enhanced task details for debugging
-        console.log('TaskCreationModal: Enhanced task details:', {
-          title: suggestion.title || suggestion.content,
-          description: enhancedDescription,
-          priority: suggestion.priority || 'medium',
-          category: suggestion.category || '',
-          memberCount: suggestion.relatedMembers?.length || 0
-        });
+
       } else {
         // Reset form when opening without suggestion
         setNewTask({
@@ -223,10 +216,10 @@ export function TaskCreationModal({
   // Fetch users for task assignment
   const fetchUsers = async () => {
     try {
-      console.log('TaskCreationModal: Starting fetchUsers...');
+
       // Get the current user's organization ID (including impersonation)
       const organizationId = await getCurrentUserOrganizationId();
-      console.log('TaskCreationModal: Organization ID:', organizationId);
+
       if (!organizationId) throw new Error('User not associated with any organization');
 
       // Get organization users with member data
@@ -247,9 +240,6 @@ export function TaskCreationModal({
 
       if (orgUsersResult.error) throw orgUsersResult.error;
       if (membersResult.error) throw membersResult.error;
-
-      console.log('TaskCreationModal: Organization users:', orgUsersResult.data);
-      console.log('TaskCreationModal: Members:', membersResult.data);
 
       // Create a map of user_id to member data
       const membersMap = new Map();
@@ -274,7 +264,6 @@ export function TaskCreationModal({
         }
       });
 
-      console.log('TaskCreationModal: Users loaded for tasks:', userList);
       setUsers(userList);
     } catch (error) {
       console.error('TaskCreationModal: Error loading users:', error);
@@ -298,11 +287,10 @@ export function TaskCreationModal({
 
     try {
       setIsLoading(true);
-      console.log('TaskCreationModal: Starting task creation with data:', newTask);
-      
+
       // Get the current user's organization ID (including impersonation)
       const organizationId = await getCurrentUserOrganizationId();
-      console.log('TaskCreationModal: Organization ID:', organizationId);
+
       if (!organizationId) throw new Error('User not associated with any organization');
 
       // Filter out undefined values and ensure required fields are present
@@ -327,11 +315,9 @@ export function TaskCreationModal({
         // Check if organization_id column exists by trying to add it
         taskData.organization_id = organizationId;
       } catch (error) {
-        console.log('TaskCreationModal: organization_id column may not exist, continuing without it');
+
         delete taskData.organization_id;
       }
-      
-      console.log('TaskCreationModal: Task data to insert:', taskData);
 
       const { data, error } = await supabase
         .from('tasks')
@@ -343,8 +329,6 @@ export function TaskCreationModal({
         console.error('TaskCreationModal: Supabase error:', error);
         throw error;
       }
-
-      console.log('TaskCreationModal: Task created successfully:', data);
 
       toast({
         title: "Success",
@@ -383,8 +367,6 @@ export function TaskCreationModal({
       setIsLoading(false);
     }
   };
-
-
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

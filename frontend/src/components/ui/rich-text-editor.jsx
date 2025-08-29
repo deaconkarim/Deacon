@@ -157,7 +157,7 @@ const MenuBar = ({ editor }) => {
 };
 
 const RichTextEditor = ({ value, onChange, placeholder = "Start writing..." }) => {
-  console.log('RichTextEditor received value:', value);
+
   const editor = useEditor({
     extensions: [
       StarterKit,

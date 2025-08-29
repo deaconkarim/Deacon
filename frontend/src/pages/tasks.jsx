@@ -250,7 +250,6 @@ export function Tasks() {
         }
       });
 
-      console.log('Users loaded for tasks:', userList);
       setUsers(userList);
     } catch (error) {
       console.error('Error loading users:', error);

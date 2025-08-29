@@ -373,8 +373,6 @@ export const deleteMember = async (id) => {
       // Continue execution even if this fails
     }
 
-
-
     // Finally delete the member (only if they belong to the same organization)
     const { error: memberError } = await supabase
       .from('members')
@@ -586,17 +584,13 @@ export const addEvent = async (event) => {
         throw masterError;
       }
 
-      console.log('Created master event:', masterEventId);
-
       // Generate instances with parent_event_id pointing to master event
       const instances = generateRecurringInstances({
         ...eventData,
         id: masterEventId,
         parent_event_id: masterEventId
       });
-      
-      console.log(`Generated ${instances.length} instances for recurring event:`, {
-        masterEventId,
+
         title: event.title,
         recurrence_pattern: event.recurrence_pattern,
         start_date: event.startDate,
@@ -615,8 +609,6 @@ export const addEvent = async (event) => {
           // If instances fail, we should still return the master event
           // but log the error for debugging
         } else {
-          console.log(`Successfully created ${instances.length} instances for master event ${masterEventId}`);
-          console.log('Instance IDs:', instancesData?.map(i => i.id) || []);
         }
       }
       
@@ -646,7 +638,6 @@ export const addEvent = async (event) => {
               });
             }
           }
-          console.log(`Created ${event.reminders.filter(r => r.is_enabled).length} reminder configurations for recurring event:`, masterEventId);
         } catch (reminderError) {
           console.error('Error creating reminder configurations for recurring event:', reminderError);
           // Don't throw error here - event was created successfully
@@ -670,7 +661,6 @@ export const addEvent = async (event) => {
       }
 
       if (existingEvent && existingEvent.length > 0) {
-        console.log('Event already exists, returning existing event:', existingEvent[0].id);
         return existingEvent[0];
       }
 
@@ -709,7 +699,6 @@ export const addEvent = async (event) => {
               });
             }
           }
-          console.log(`Created ${event.reminders.filter(r => r.is_enabled).length} reminder configurations for event:`, data.id);
         } catch (reminderError) {
           console.error('Error creating reminder configurations:', reminderError);
           // Don't throw error here - event was created successfully
@@ -726,7 +715,6 @@ export const addEvent = async (event) => {
 
 export const updateEvent = async (id, updates) => {
   try {
-    console.log('updateEvent called with id:', id, 'updates:', updates);
     
     // Validate the ID parameter
     if (!id || id === 'null' || id === null) {
@@ -751,8 +739,6 @@ export const updateEvent = async (id, updates) => {
       throw new Error(`Event not found with ID: ${id}`);
     }
 
-    console.log('Found event to update:', {
-      id: originalEvent.id,
       title: originalEvent.title,
       is_master: originalEvent.is_master,
       parent_event_id: originalEvent.parent_event_id,
@@ -779,7 +765,6 @@ export const updateEvent = async (id, updates) => {
     };
 
     // Simple update logic - just update the event directly
-    console.log('Updating event directly with data:', eventData);
     
     const { data, error } = await supabase
       .from('events')
@@ -793,16 +778,13 @@ export const updateEvent = async (id, updates) => {
       console.error('Update error:', error);
       throw error;
     }
-    
-    console.log('✅ Event updated successfully:', data);
-    
+
     // Update reminder configurations if reminder settings changed
     if (updates.enable_reminders !== undefined || updates.reminders !== undefined) {
       try {
         // For recurring events, use the master event ID for reminders
         const reminderEventId = originalEvent.parent_event_id || originalEvent.id;
-        console.log('Updating reminders for event ID:', reminderEventId);
-        
+
         // Get existing reminder configurations
         const existingReminders = await eventReminderService.getEventReminders(reminderEventId);
         
@@ -836,7 +818,6 @@ export const updateEvent = async (id, updates) => {
               });
             }
           }
-          console.log(`Updated ${updates.reminders.filter(r => r.is_enabled).length} reminder configurations`);
         } else if (!updates.enable_reminders) {
           // Disable reminders - deactivate existing ones
           for (const reminder of existingReminders) {
@@ -874,8 +855,7 @@ export const deleteEvent = async (id) => {
       console.error('Error fetching event for deletion:', fetchError);
       // If we can't find the event, try to delete it directly
       // This handles cases where the ID might be malformed but still exists
-      console.log('Attempting direct deletion of event:', id);
-      
+
       const { error: directDeleteError } = await supabase
         .from('events')
         .delete()
@@ -954,15 +934,7 @@ const getNthWeekdayOfMonth = (year, month, week, weekday) => {
 
 // Helper function to generate recurring event instances
 const generateRecurringInstances = (event) => {
-  console.log('=== GENERATE RECURRING INSTANCES START ===');
-  console.log('Event data:', {
-    id: event.id,
-    title: event.title,
-    start_date: event.start_date,
-    end_date: event.end_date,
-    recurrence_pattern: event.recurrence_pattern
-  });
-  
+
   const instances = [];
   const startDate = new Date(event.start_date);
   const endDate = new Date(event.end_date);
@@ -972,7 +944,6 @@ const generateRecurringInstances = (event) => {
   const maxDate = new Date();
   maxDate.setMonth(maxDate.getMonth() + 6);
   
-  console.log('Date range:', {
     startDate: startDate.toISOString(),
     endDate: endDate.toISOString(),
     maxDate: maxDate.toISOString(),
@@ -1095,14 +1066,9 @@ const generateRecurringInstances = (event) => {
   }
   
   if (instanceCount >= maxInstances) {
-    console.warn(`Safety limit reached for recurring event ${event.title}. Generated ${instanceCount} instances.`);
+
   }
-  
-  console.log(`=== GENERATE RECURRING INSTANCES END ===`);
-  console.log(`Generated ${instances.length} instances for event: ${event.title}`);
-  console.log('Instance count:', instanceCount);
-  console.log('Max instances:', maxInstances);
-  
+
   return instances;
 };
 
@@ -1262,7 +1228,7 @@ export const ensureRecurringEventInstances = async (masterEventId) => {
         if (insertError) {
           console.error('Error creating additional instances:', insertError);
         } else {
-          console.log(`Created ${newInstances.length} additional instances for master event ${masterEventId}`);
+
         }
       }
     }
@@ -2030,8 +1996,7 @@ export const updateCurrentUserMember = async (updates) => {
       if (error) {
         // If there's a duplicate email error, try to find and update the member with that email
         if (error.code === '23505' && error.details?.includes('email')) {
-          console.log('Duplicate email detected, trying to update existing member with that email');
-          
+
           // Find the member with the duplicate email
           const { data: duplicateMember, error: duplicateError } = await supabase
             .from('members')
@@ -2265,13 +2230,6 @@ export const getAttendanceStats = async () => {
     const activeMemberIds = members.map(m => m.id);
     const activeCount = activeMemberIds.length;
 
-    console.log('=== ATTENDANCE DEBUG ===');
-    console.log('Active members count:', activeCount);
-    console.log('Active member IDs:', activeMemberIds);
-    console.log('Total attendance records:', attendance.length);
-    console.log('Events count:', events.length);
-    console.log('Sample attendance records:', attendance.slice(0, 5));
-    console.log('Attendance member IDs:', attendance.map(a => a.member_id).filter(id => id));
 
     // Helper: categorize event type
     const categorize = (event) => {
@@ -2328,15 +2286,6 @@ export const getAttendanceStats = async () => {
       const filtered = Array.from(uniqueSet).filter(id => activeMemberIds.includes(id));
       return Math.round((filtered.length / activeCount) * 100);
     };
-
-    console.log('Breakdown:', breakdown);
-    console.log('Sunday Service unique recent:', breakdown.sundayService.recentUnique.size);
-    console.log('Sunday Service unique week:', breakdown.sundayService.thisWeekUnique.size);
-    console.log('Bible Study unique recent:', breakdown.bibleStudy.recentUnique.size);
-    console.log('Bible Study unique week:', breakdown.bibleStudy.thisWeekUnique.size);
-    console.log('Fellowship unique recent:', breakdown.fellowship.recentUnique.size);
-    console.log('Fellowship unique week:', breakdown.fellowship.thisWeekUnique.size);
-    console.log('=== END ATTENDANCE DEBUG ===');
 
     // Return in dashboard format
     return {

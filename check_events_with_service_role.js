@@ -7,8 +7,7 @@ const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXB
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 async function checkEventsWithServiceRole() {
-  console.log('🔍 Checking events with service role key...');
-  
+
   try {
     // Check all events in the database with service role
     const { data: allEvents, error: eventsError } = await supabase
@@ -18,8 +17,6 @@ async function checkEventsWithServiceRole() {
 
     if (eventsError) throw eventsError;
 
-    console.log(`📊 Total events in database (service role): ${allEvents?.length || 0}`);
-
     // Check for Men's Ministry Breakfast specifically
     const mensEvents = allEvents?.filter(event => 
       event.title && event.title.toLowerCase().includes('men') && 
@@ -27,17 +24,10 @@ async function checkEventsWithServiceRole() {
       event.title.toLowerCase().includes('breakfast')
     ) || [];
 
-    console.log(`📋 Men's Ministry Breakfast events found: ${mensEvents.length}`);
-
     if (mensEvents.length > 0) {
-      console.log('\n📋 All Men\'s Ministry Breakfast events:');
+
       mensEvents.forEach((event, index) => {
-        console.log(`${index + 1}. ${event.title}`);
-        console.log(`   ID: ${event.id}`);
-        console.log(`   Date: ${event.start_date}`);
-        console.log(`   Type: ${event.event_type}`);
-        console.log(`   Organization: ${event.organization_id}`);
-        console.log('   ---');
+
       });
     }
 
@@ -50,12 +40,10 @@ async function checkEventsWithServiceRole() {
       event.start_date >= thirtyDaysAgoStr
     ) || [];
 
-    console.log(`\n📊 Events from last 30 days: ${recentEvents.length}`);
-
     if (recentEvents.length > 0) {
-      console.log('\n📋 Recent events:');
+
       recentEvents.forEach((event, index) => {
-        console.log(`${index + 1}. ${event.title} (${event.start_date})`);
+
       });
     }
 
@@ -66,24 +54,20 @@ async function checkEventsWithServiceRole() {
 
     if (attendanceError) throw attendanceError;
 
-    console.log(`\n📊 Total attendance records: ${allAttendance?.length || 0}`);
-
     // Check which events have attendance
     const eventIdsWithAttendance = [...new Set(allAttendance.map(a => a.event_id))];
     const eventsWithAttendance = allEvents?.filter(event => 
       eventIdsWithAttendance.includes(event.id)
     ) || [];
 
-    console.log(`📊 Events with attendance: ${eventsWithAttendance.length}`);
-
     if (eventsWithAttendance.length > 0) {
-      console.log('\n📋 Events with attendance:');
+
       eventsWithAttendance.forEach((event, index) => {
         const eventAttendance = allAttendance.filter(a => a.event_id === event.id);
         const attendingCount = eventAttendance.filter(a => 
           a.status === 'attending' || a.status === 'checked-in'
         ).length;
-        console.log(`${index + 1}. ${event.title} (${event.start_date}): ${attendingCount} attendees`);
+
       });
     }
 
@@ -94,13 +78,12 @@ async function checkEventsWithServiceRole() {
     );
 
     if (duplicateTitles.length > 0) {
-      console.log(`\n⚠️  Duplicate event titles found: ${duplicateTitles.length}`);
-      console.log('📋 Duplicate titles:');
+
       [...new Set(duplicateTitles)].forEach(title => {
         const duplicates = allEvents?.filter(e => e.title === title) || [];
-        console.log(`   "${title}": ${duplicates.length} instances`);
+
         duplicates.forEach((event, index) => {
-          console.log(`     ${index + 1}. ${event.start_date} (ID: ${event.id})`);
+
         });
       });
     }
@@ -122,8 +105,7 @@ async function checkEventsWithServiceRole() {
 // Run the check
 checkEventsWithServiceRole()
   .then((result) => {
-    console.log('\n✅ Events check with service role completed!');
-    console.log('📈 Summary:', result);
+
     process.exit(0);
   })
   .catch((error) => {

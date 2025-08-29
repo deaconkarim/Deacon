@@ -7,8 +7,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function checkMensBreakfastDuplicates() {
-  console.log('🔍 Checking Men\'s Ministry Breakfast duplicates...');
-  
+
   try {
     // Find all Men's Ministry Breakfast events
     const { data: mensEvents, error: eventsError } = await supabase
@@ -19,24 +18,16 @@ async function checkMensBreakfastDuplicates() {
 
     if (eventsError) throw eventsError;
 
-    console.log(`📊 Found ${mensEvents?.length || 0} Men's Ministry Breakfast events`);
-
     if (mensEvents && mensEvents.length > 0) {
-      console.log('\n📋 All Men\'s Ministry Breakfast events:');
+
       mensEvents.forEach((event, index) => {
-        console.log(`${index + 1}. ${event.title}`);
-        console.log(`   ID: ${event.id}`);
-        console.log(`   Date: ${event.start_date}`);
-        console.log(`   Type: ${event.event_type}`);
-        console.log(`   Organization: ${event.organization_id}`);
-        console.log('   ---');
+
       });
     }
 
     // Check attendance for each event
     if (mensEvents && mensEvents.length > 0) {
-      console.log('\n📊 Attendance for each event:');
-      
+
       for (const event of mensEvents) {
         const { data: attendance, error: attendanceError } = await supabase
           .from('event_attendance')
@@ -44,13 +35,12 @@ async function checkMensBreakfastDuplicates() {
           .eq('event_id', event.id);
 
         if (attendanceError) {
-          console.log(`❌ Error getting attendance for ${event.id}:`, attendanceError);
+
         } else {
           const attendingCount = attendance?.filter(a => 
             a.status === 'attending' || a.status === 'checked-in'
           ).length || 0;
-          
-          console.log(`   ${event.title} (${event.start_date}): ${attendingCount} attendees`);
+
         }
       }
     }
@@ -64,12 +54,10 @@ async function checkMensBreakfastDuplicates() {
 
     if (similarError) throw similarError;
 
-    console.log(`\n📊 Found ${similarEvents?.length || 0} events with similar titles (breakfast/men/ministry)`);
-
     if (similarEvents && similarEvents.length > 0) {
-      console.log('\n📋 Similar events:');
+
       similarEvents.forEach((event, index) => {
-        console.log(`${index + 1}. ${event.title} (${event.start_date})`);
+
       });
     }
 
@@ -87,12 +75,10 @@ async function checkMensBreakfastDuplicates() {
 
     if (yesterdayError) throw yesterdayError;
 
-    console.log(`\n📅 Events from yesterday (${yesterdayStr}): ${yesterdayEvents?.length || 0}`);
-
     if (yesterdayEvents && yesterdayEvents.length > 0) {
-      console.log('\n📋 Yesterday\'s events:');
+
       yesterdayEvents.forEach((event, index) => {
-        console.log(`${index + 1}. ${event.title} (${event.start_date})`);
+
       });
     }
 
@@ -111,8 +97,7 @@ async function checkMensBreakfastDuplicates() {
 // Run the check
 checkMensBreakfastDuplicates()
   .then((result) => {
-    console.log('\n✅ Men\'s Ministry Breakfast check completed!');
-    console.log('📈 Summary:', result);
+
     process.exit(0);
   })
   .catch((error) => {

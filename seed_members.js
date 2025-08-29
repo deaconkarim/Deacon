@@ -7,8 +7,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function seedMembers() {
-  console.log('🔄 Seeding members data...');
-  
+
   try {
     // Get the organization ID
     const { data: orgs, error: orgError } = await supabase
@@ -23,8 +22,7 @@ async function seedMembers() {
     }
     
     const orgId = orgs[0].id;
-    console.log(`📋 Using organization: ${orgs[0].name} (${orgId})`);
-    
+
     // Insert members with organization_id
     const members = [
       { firstname: 'JONATHAN', lastname: 'BAKER', email: null, phone: null, address: { street: '169 EVENINGSTAR CT', city: 'PITTSBURG', state: 'CA', zip: '94565-3616' }, role: 'member', status: 'active', notes: 'Additional member: LAURA BAKER', join_date: new Date().toISOString(), organization_id: orgId },
@@ -92,8 +90,7 @@ async function seedMembers() {
       .select();
     
     if (membersError) throw membersError;
-    console.log(`✅ Successfully seeded ${insertedMembers.length} members`);
-    
+
     // Verify the data
     const { data: verifyMembers, error: verifyError } = await supabase
       .from('members')
@@ -101,10 +98,9 @@ async function seedMembers() {
       .eq('organization_id', orgId);
     
     if (verifyError) throw verifyError;
-    
-    console.log('📊 Verification - Members created:');
+
     verifyMembers.forEach(member => {
-      console.log(`  - ${member.firstname} ${member.lastname} (${member.email || 'no email'})`);
+
     });
     
     return {
@@ -122,8 +118,7 @@ async function seedMembers() {
 // Run the seeding
 seedMembers()
   .then((result) => {
-    console.log('🎉 Members seeded successfully!');
-    console.log('📈 Summary:', result);
+
     process.exit(0);
   })
   .catch((error) => {
@@ -138,8 +133,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function seedMembers() {
-  console.log('🔄 Seeding members data...');
-  
+
   try {
     // Get the organization ID
     const { data: orgs, error: orgError } = await supabase
@@ -154,8 +148,7 @@ async function seedMembers() {
     }
     
     const orgId = orgs[0].id;
-    console.log(`📋 Using organization: ${orgs[0].name} (${orgId})`);
-    
+
     // Insert members with organization_id
     const members = [
       { firstname: 'JONATHAN', lastname: 'BAKER', email: null, phone: null, address: { street: '169 EVENINGSTAR CT', city: 'PITTSBURG', state: 'CA', zip: '94565-3616' }, role: 'member', status: 'active', notes: 'Additional member: LAURA BAKER', join_date: new Date().toISOString(), organization_id: orgId },
@@ -223,8 +216,7 @@ async function seedMembers() {
       .select();
     
     if (membersError) throw membersError;
-    console.log(`✅ Successfully seeded ${insertedMembers.length} members`);
-    
+
     // Verify the data
     const { data: verifyMembers, error: verifyError } = await supabase
       .from('members')
@@ -232,10 +224,9 @@ async function seedMembers() {
       .eq('organization_id', orgId);
     
     if (verifyError) throw verifyError;
-    
-    console.log('📊 Verification - Members created:');
+
     verifyMembers.forEach(member => {
-      console.log(`  - ${member.firstname} ${member.lastname} (${member.email || 'no email'})`);
+
     });
     
     return {
@@ -253,8 +244,7 @@ async function seedMembers() {
 // Run the seeding
 seedMembers()
   .then((result) => {
-    console.log('🎉 Members seeded successfully!');
-    console.log('📈 Summary:', result);
+
     process.exit(0);
   })
   .catch((error) => {
@@ -269,8 +259,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function seedMembers() {
-  console.log('🔄 Seeding members data...');
-  
+
   try {
     // Get the organization ID
     const { data: orgs, error: orgError } = await supabase
@@ -285,8 +274,7 @@ async function seedMembers() {
     }
     
     const orgId = orgs[0].id;
-    console.log(`📋 Using organization: ${orgs[0].name} (${orgId})`);
-    
+
     // Insert members with organization_id
     const members = [
       { firstname: 'JONATHAN', lastname: 'BAKER', email: null, phone: null, address: { street: '169 EVENINGSTAR CT', city: 'PITTSBURG', state: 'CA', zip: '94565-3616' }, role: 'member', status: 'active', notes: 'Additional member: LAURA BAKER', join_date: new Date().toISOString(), organization_id: orgId },
@@ -354,8 +342,7 @@ async function seedMembers() {
       .select();
     
     if (membersError) throw membersError;
-    console.log(`✅ Successfully seeded ${insertedMembers.length} members`);
-    
+
     // Verify the data
     const { data: verifyMembers, error: verifyError } = await supabase
       .from('members')
@@ -363,10 +350,9 @@ async function seedMembers() {
       .eq('organization_id', orgId);
     
     if (verifyError) throw verifyError;
-    
-    console.log('📊 Verification - Members created:');
+
     verifyMembers.forEach(member => {
-      console.log(`  - ${member.firstname} ${member.lastname} (${member.email || 'no email'})`);
+
     });
     
     return {
@@ -384,8 +370,7 @@ async function seedMembers() {
 // Run the seeding
 seedMembers()
   .then((result) => {
-    console.log('🎉 Members seeded successfully!');
-    console.log('📈 Summary:', result);
+
     process.exit(0);
   })
   .catch((error) => {

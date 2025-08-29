@@ -7,8 +7,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function checkEventsSchema() {
-  console.log('🔍 Checking events table schema...');
-  
+
   try {
     // Try to get a single record to see the structure
     const { data: sampleEvent, error: sampleError } = await supabase
@@ -17,21 +16,18 @@ async function checkEventsSchema() {
       .limit(1);
 
     if (sampleError) {
-      console.log('❌ Error accessing events table:', sampleError);
-      
+
       // Try to get table info differently
       const { data: tableInfo, error: tableError } = await supabase
         .from('events')
         .select('*');
 
       if (tableError) {
-        console.log('❌ Table access error:', tableError);
+
         return;
       }
     }
 
-    console.log('✅ Events table is accessible');
-    
     // Try to insert a minimal test event to see what columns are required
     const testEvent = {
       id: 'test-event-' + Date.now(),
@@ -40,31 +36,25 @@ async function checkEventsSchema() {
       organization_id: 'your-org-id' // You'll need to replace this with actual org ID
     };
 
-    console.log('🧪 Testing event insertion with minimal fields...');
-    console.log('Test event data:', testEvent);
-
     const { data: insertedEvent, error: insertError } = await supabase
       .from('events')
       .insert(testEvent)
       .select();
 
     if (insertError) {
-      console.log('❌ Insert error:', insertError);
-      
+
       // Try to get more info about the table structure
       const { data: allEvents, error: allError } = await supabase
         .from('events')
         .select('*');
 
       if (allError) {
-        console.log('❌ Cannot access events table:', allError);
+
       } else {
-        console.log(`📊 Events table has ${allEvents?.length || 0} records`);
+
       }
     } else {
-      console.log('✅ Test event inserted successfully');
-      console.log('Inserted event:', insertedEvent);
-      
+
       // Clean up test event
       const { error: deleteError } = await supabase
         .from('events')
@@ -72,9 +62,9 @@ async function checkEventsSchema() {
         .eq('id', testEvent.id);
       
       if (deleteError) {
-        console.log('⚠️ Could not clean up test event:', deleteError);
+
       } else {
-        console.log('✅ Test event cleaned up');
+
       }
     }
 
@@ -86,7 +76,7 @@ async function checkEventsSchema() {
 // Run the check
 checkEventsSchema()
   .then(() => {
-    console.log('\n✅ Events schema check completed!');
+
     process.exit(0);
   })
   .catch((error) => {

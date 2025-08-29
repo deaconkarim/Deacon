@@ -21,7 +21,6 @@ const DemoSystemSettings = () => {
   useEffect(() => {
     const initializeComponent = async () => {
       const orgId = await getCurrentUserOrganizationId();
-      console.log('🔍 [DemoSystem] Initializing with organization ID:', orgId);
       
       if (orgId) {
         setOrganizationId(orgId);
@@ -40,9 +39,7 @@ const DemoSystemSettings = () => {
       console.error('No organization ID provided for loadDemoStats');
       return;
     }
-    
 
-    
     try {
       const { data: members } = await supabase
         .from('members')
@@ -111,8 +108,6 @@ const DemoSystemSettings = () => {
       return;
     }
 
-    console.log('🔍 [DemoSystem] Generating demo data for organization:', organizationId);
-    
     setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-demo-data', {
@@ -124,8 +119,6 @@ const DemoSystemSettings = () => {
       });
 
       if (error) throw error;
-
-      console.log('✅ [DemoSystem] Demo data generated successfully:', data);
 
       toast({
         title: 'Success!',
@@ -197,8 +190,7 @@ const DemoSystemSettings = () => {
         supabase.from('sms_conversations').select('*', { count: 'exact', head: true }),
         supabase.from('sms_templates').select('*', { count: 'exact', head: true })
       ]);
-      
-      console.log(`Before reset - SMS Messages: ${smsMessagesCount.count}, Conversations: ${smsConversationsCount.count}, Templates: ${smsTemplatesCount.count}`);
+
       // Delete data in the correct order to avoid foreign key constraints
       // Start with dependent tables first, then core tables
       
@@ -208,27 +200,21 @@ const DemoSystemSettings = () => {
         .delete()
         .eq('organization_id', organizationId)
         .select('*', { count: 'exact', head: true });
-      
-      console.log(`Deleted ${smsMessagesDeleted} SMS messages`);
-      
+
       // 2. Delete SMS conversations (depends on organization)
       const { count: smsConversationsDeleted } = await supabase
         .from('sms_conversations')
         .delete()
         .eq('organization_id', organizationId)
         .select('*', { count: 'exact', head: true });
-      
-      console.log(`Deleted ${smsConversationsDeleted} SMS conversations`);
-      
+
       // 3. Delete SMS templates (no organization_id column, delete all demo templates)
       const { count: smsTemplatesDeleted } = await supabase
         .from('sms_templates')
         .delete()
         .like('name', 'Demo%')
         .select('*', { count: 'exact', head: true });
-      
-      console.log(`Deleted ${smsTemplatesDeleted} SMS templates`);
-      
+
       // 3b. Fallback: Delete any SMS messages/conversations that might not have organization_id
       // This handles cases where SMS data was created before organization_id was properly set
       const { count: smsMessagesFallbackDeleted } = await supabase
@@ -238,7 +224,7 @@ const DemoSystemSettings = () => {
         .select('*', { count: 'exact', head: true });
       
       if (smsMessagesFallbackDeleted > 0) {
-        console.log(`Deleted ${smsMessagesFallbackDeleted} SMS messages without organization_id`);
+
       }
       
       const { count: smsConversationsFallbackDeleted } = await supabase
@@ -248,7 +234,7 @@ const DemoSystemSettings = () => {
         .select('*', { count: 'exact', head: true });
       
       if (smsConversationsFallbackDeleted > 0) {
-        console.log(`Deleted ${smsConversationsFallbackDeleted} SMS conversations without organization_id`);
+
       }
       
       // 4. Delete child check-in logs (no organization_id column, delete all)
@@ -299,8 +285,6 @@ const DemoSystemSettings = () => {
         supabase.from('sms_conversations').select('*', { count: 'exact', head: true }),
         supabase.from('sms_templates').select('*', { count: 'exact', head: true })
       ]);
-      
-      console.log(`After reset - SMS Messages: ${smsMessagesAfter.count}, Conversations: ${smsConversationsAfter.count}, Templates: ${smsTemplatesAfter.count}`);
 
       toast({
         title: 'Demo Data Reset',

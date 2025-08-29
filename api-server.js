@@ -82,8 +82,6 @@ app.post('/api/ai/generate-insight', async (req, res) => {
 
     const response = completion.choices[0]?.message?.content || 'Unable to generate insight';
 
-    console.log(`AI Insight generated - Model: ${model}, Tokens: ${completion.usage?.total_tokens || 'unknown'}`);
-
     res.status(200).json({
       choices: [{
         message: {
@@ -148,8 +146,6 @@ app.post('/api/ai/generate-action', async (req, res) => {
     });
 
     const response = completion.choices[0]?.message?.content || 'Unable to generate action suggestions';
-
-    console.log(`AI Action generated - Model: ${model}, Tokens: ${completion.usage?.total_tokens || 'unknown'}`);
 
     res.status(200).json({
       choices: [{
@@ -216,8 +212,6 @@ app.post('/api/ai/generate-digest', async (req, res) => {
 
     const response = completion.choices[0]?.message?.content || 'Unable to generate digest';
 
-    console.log(`AI Digest generated - Model: ${model}, Tokens: ${completion.usage?.total_tokens || 'unknown'}`);
-
     res.status(200).json({
       choices: [{
         message: {
@@ -283,8 +277,6 @@ app.post('/api/ai/generate-prediction', async (req, res) => {
 
     const response = completion.choices[0]?.message?.content || 'Unable to generate prediction';
 
-    console.log(`AI Prediction generated - Model: ${model}, Tokens: ${completion.usage?.total_tokens || 'unknown'}`);
-
     res.status(200).json({
       choices: [{
         message: {
@@ -310,6 +302,5 @@ app.post('/api/ai/generate-prediction', async (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`API server running on http://localhost:${port}`);
-  console.log(`OpenAI API Key: ${process.env.OPENAI_API_KEY ? 'SET' : 'NOT SET'}`);
+
 }); 

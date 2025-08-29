@@ -409,7 +409,6 @@ export default function MemberProfile() {
       
       // If we have data, let's see what columns are available
       if (donationsData && donationsData.length > 0) {
-        console.log('Donations table columns:', Object.keys(donationsData[0]));
       }
       
       // Try different possible column names for member relationship
@@ -427,7 +426,7 @@ export default function MemberProfile() {
           familyDonationsData = data;
         }
       } catch (e) {
-        console.log('donor_id column not found, trying other options...');
+
       }
       
       // If no data found with donor_id, try 'user_id'
@@ -443,7 +442,7 @@ export default function MemberProfile() {
             familyDonationsData = data;
           }
         } catch (e) {
-          console.log('user_id column not found, trying other options...');
+
         }
       }
       
@@ -460,7 +459,7 @@ export default function MemberProfile() {
             familyDonationsData = data;
           }
         } catch (e) {
-          console.log('member_id column not found');
+
         }
       }
       
@@ -472,8 +471,7 @@ export default function MemberProfile() {
           .limit(5);
         
         if (!allError && allDonations && allDonations.length > 0) {
-          console.log('Sample donation record:', allDonations[0]);
-          console.log('Available columns:', Object.keys(allDonations[0]));
+
         }
       }
       

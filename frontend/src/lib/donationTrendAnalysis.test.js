@@ -53,15 +53,12 @@ describe('Donation Trend Analysis', () => {
 
 // Manual test function for development
 export const manualTest = async () => {
-  console.log('🧪 Testing donation trend analysis...');
-  
+
   try {
     const trendResult = await calculateDonationTrend();
-    console.log('📊 Trend analysis result:', trendResult);
-    
+
     const breakdownResult = await getWeeklyDonationBreakdown();
-    console.log('📈 Weekly breakdown result:', breakdownResult);
-    
+
     return { success: true, trendResult, breakdownResult };
   } catch (error) {
     console.error('❌ Test failed:', error);

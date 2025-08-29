@@ -7,12 +7,10 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function finalRestoreEvents() {
-  console.log('🔄 Final attempt to restore missing events...');
-  
+
   try {
     // Use the organization ID we found
     const organizationId = '550e8400-e29b-41d4-a716-446655440000';
-    console.log(`📋 Using organization_id: ${organizationId}`);
 
     // Events that need to be restored (based on attendance records)
     const missingEvents = [
@@ -58,8 +56,6 @@ async function finalRestoreEvents() {
       }
     ];
 
-    console.log(`📅 Attempting to restore ${missingEvents.length} missing events...`);
-
     // Check which events already exist
     const existingEventIds = missingEvents.map(e => e.id);
     const { data: existingEvents, error: existingError } = await supabase
@@ -72,11 +68,8 @@ async function finalRestoreEvents() {
     const existingIds = existingEvents?.map(e => e.id) || [];
     const eventsToCreate = missingEvents.filter(e => !existingIds.includes(e.id));
 
-    console.log(`📊 Found ${existingIds.length} events already exist`);
-    console.log(`📊 Need to create ${eventsToCreate.length} new events`);
-
     if (eventsToCreate.length === 0) {
-      console.log('✅ All events already exist!');
+
     } else {
       // Try to create events one by one to handle RLS issues
       let createdCount = 0;
@@ -89,17 +82,16 @@ async function finalRestoreEvents() {
             .select();
 
           if (createError) {
-            console.log(`❌ Failed to create event ${event.title}:`, createError.message);
+
           } else {
-            console.log(`✅ Created event: ${event.title}`);
+
             createdCount++;
           }
         } catch (error) {
-          console.log(`❌ Error creating event ${event.title}:`, error.message);
+
         }
       }
 
-      console.log(`✅ Successfully created ${createdCount} events`);
     }
 
     // Verify the events exist now
@@ -108,8 +100,6 @@ async function finalRestoreEvents() {
       .select('*');
 
     if (verifyError) throw verifyError;
-
-    console.log(`📊 Total events in database: ${allEvents?.length || 0}`);
 
     // Check if attendance records now have matching events
     const { data: attendanceWithEvents, error: attendanceError } = await supabase
@@ -126,13 +116,12 @@ async function finalRestoreEvents() {
     if (attendanceError) throw attendanceError;
 
     const validAttendance = attendanceWithEvents?.filter(a => a.events !== null) || [];
-    console.log(`📊 Attendance records with valid events: ${validAttendance.length}`);
 
     // Show some sample data
     if (validAttendance.length > 0) {
-      console.log('\n📋 Sample attendance with events:');
+
       validAttendance.slice(0, 3).forEach(attendance => {
-        console.log(`   ${attendance.events.title} (${attendance.events.start_date}): ${attendance.status}`);
+
       });
     }
 
@@ -151,13 +140,7 @@ async function finalRestoreEvents() {
 // Run the final restore
 finalRestoreEvents()
   .then((result) => {
-    console.log('\n🎉 Final events restoration completed!');
-    console.log('📈 Summary:', result);
-    console.log('\n🔄 Next steps:');
-    console.log('   1. Hard refresh your browser (Ctrl+F5 or Cmd+Shift+R)');
-    console.log('   2. Clear browser cache if needed');
-    console.log('   3. Check the dashboard again');
-    console.log('   4. If still no data, the RLS policy may be blocking inserts');
+
     process.exit(0);
   })
   .catch((error) => {

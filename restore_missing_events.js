@@ -7,8 +7,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function restoreMissingEvents() {
-  console.log('🔄 Restoring missing events...');
-  
+
   try {
     const organizationId = '550e8400-e29b-41d4-a716-446655440000';
     
@@ -142,8 +141,6 @@ async function restoreMissingEvents() {
       }
     ];
 
-    console.log(`📅 Attempting to restore ${missingEvents.length} missing events...`);
-
     // Check which events already exist
     const existingEventIds = missingEvents.map(e => e.id);
     const { data: existingEvents, error: checkError } = await supabase
@@ -156,13 +153,10 @@ async function restoreMissingEvents() {
     const existingIds = existingEvents?.map(e => e.id) || [];
     const eventsToCreate = missingEvents.filter(e => !existingIds.includes(e.id));
 
-    console.log(`📊 Found ${existingEvents?.length || 0} events already exist`);
-    console.log(`📊 Need to create ${eventsToCreate.length} new events`);
-
     if (eventsToCreate.length > 0) {
-      console.log('\n📋 Events to create:');
+
       eventsToCreate.forEach((event, index) => {
-        console.log(`${index + 1}. ${event.title} - ${event.start_date}`);
+
       });
 
       // Insert the missing events
@@ -176,9 +170,8 @@ async function restoreMissingEvents() {
         throw insertError;
       }
 
-      console.log(`✅ Successfully created ${createdEvents?.length || 0} events`);
     } else {
-      console.log('✅ All events already exist');
+
     }
 
     // Verify the events now exist
@@ -190,12 +183,10 @@ async function restoreMissingEvents() {
 
     if (verifyError) throw verifyError;
 
-    console.log(`\n📊 Total events in database: ${allEvents?.length || 0}`);
-
     if (allEvents && allEvents.length > 0) {
-      console.log('\n📋 All events:');
+
       allEvents.forEach((event, index) => {
-        console.log(`${index + 1}. ${event.title} - ${event.start_date} - ${event.event_type}`);
+
       });
     }
 
@@ -214,12 +205,7 @@ async function restoreMissingEvents() {
 // Run the restoration
 restoreMissingEvents()
   .then((result) => {
-    console.log('\n🎉 Event restoration completed!');
-    console.log('📈 Summary:', result);
-    console.log('\n🔄 Next steps:');
-    console.log('   1. Run the attendance restoration script');
-    console.log('   2. Refresh the dashboard page');
-    console.log('   3. The attendance data should now work correctly');
+
     process.exit(0);
   })
   .catch((error) => {

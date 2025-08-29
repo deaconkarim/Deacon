@@ -970,10 +970,6 @@ const EventCard = ({ event, onRSVP, onPotluckRSVP, onEdit, onDelete, onManageVol
 
 // Calendar View Component
 const CalendarView = ({ events, onEventClick, currentMonth, onMonthChange }) => {
-  console.log('[CalendarView] Received events:', events.length);
-  console.log('[CalendarView] Current month:', format(currentMonth, 'MMMM yyyy'));
-  console.log('[CalendarView] First day of month:', format(startOfMonth(currentMonth), 'EEEE, MMMM d, yyyy'));
-  console.log('[CalendarView] First day weekday:', startOfMonth(currentMonth).getDay());
   
   const days = useMemo(() => {
     const start = startOfMonth(currentMonth);
@@ -1001,12 +997,7 @@ const CalendarView = ({ events, onEventClick, currentMonth, onMonthChange }) => 
       }
     });
     
-    console.log('[CalendarView] Events by date:', Object.keys(eventsMap).length, 'days with events');
-    
-    // Debug: Show which events are on which dates
-    Object.entries(eventsMap).forEach(([date, dayEvents]) => {
-      console.log(`[CalendarView] ${date} (${format(new Date(date), 'EEEE')}):`, dayEvents.map(e => e.title));
-    });
+    // Debug: Events mapped by date
     
     return eventsMap;
   }, [events, currentMonth]);
@@ -1047,7 +1038,7 @@ const CalendarView = ({ events, onEventClick, currentMonth, onMonthChange }) => 
           {(() => {
             const firstDayOfMonth = startOfMonth(currentMonth);
             const startOffset = firstDayOfMonth.getDay();
-            console.log('[CalendarView] Adding', startOffset, 'empty cells at start');
+
             return Array.from({ length: startOffset }, (_, i) => (
               <div key={`empty-start-${i}`} className="min-h-[100px] p-1 border border-gray-200 bg-gray-50"></div>
             ));
@@ -1059,7 +1050,6 @@ const CalendarView = ({ events, onEventClick, currentMonth, onMonthChange }) => 
             const isToday = isSameDay(day, new Date());
             const isPast = day < new Date();
             
-            console.log(`[CalendarView] Rendering day ${format(day, 'd')} (${format(day, 'EEEE')}) - ${dayEvents.length} events`);
             
             return (
               <div
@@ -1351,7 +1341,6 @@ const EventAnalytics = ({ events, pastEvents }) => {
           event_attendance: attendanceByEvent[event.id] || []
         }));
 
-        console.log('📊 Analytics: Found', eventsWithAttendance.length, 'past events with attendance');
         setAllPastEventsWithAttendance(eventsWithAttendance);
       } catch (error) {
         console.error('Error fetching all past events with attendance:', error);
@@ -1383,10 +1372,7 @@ const EventAnalytics = ({ events, pastEvents }) => {
         });
       }
     });
-    
-    console.log('📊 Analytics: Processed attendance data from ALL past events');
-    console.log('📊 Events with attendance:', Object.keys(attendanceByEvent).length);
-    console.log('📊 Total attendance records:', Object.values(attendanceByEvent).reduce((sum, records) => sum + records.length, 0));
+
     
     return { attendanceByEvent, membersById };
   }, [allPastEventsWithAttendance]);
@@ -1489,7 +1475,6 @@ const EventAnalytics = ({ events, pastEvents }) => {
       const eventAttendance = attendanceData.attendanceByEvent[event.id] || [];
       const actualAttendance = eventAttendance.length;
       
-      console.log(`📅 Event ${event.id} (${event.title}) has ${actualAttendance} attendance records`);
       
       // Debug: Log what statuses we have
       const statusCounts = {};
@@ -1497,7 +1482,7 @@ const EventAnalytics = ({ events, pastEvents }) => {
         statusCounts[record.status] = (statusCounts[record.status] || 0) + 1;
       });
       if (Object.keys(statusCounts).length > 0) {
-        console.log(`📊 Event ${event.id} status breakdown:`, statusCounts);
+
       }
       
       // Calculate attendance stats by event type
@@ -1544,7 +1529,6 @@ const EventAnalytics = ({ events, pastEvents }) => {
       eventTypes[type].attendance += actualAttendance;
       
       // Debug: Log event type detection
-      console.log(`📊 Event "${event.title}" (${event.id}) classified as: ${type} (original event_type: "${event.event_type}")`);
       
       // Calculate overall attendance stats
       attendanceStats.total += actualAttendance;
@@ -1592,13 +1576,8 @@ const EventAnalytics = ({ events, pastEvents }) => {
     attendanceStats.min = attendanceStats.min === Infinity ? 0 : attendanceStats.min;
     
     // Debug: Log final analytics summary
-    console.log('📊 Final Analytics Summary:');
-    console.log('  - Total events with attendance:', totalEvents);
-    console.log('  - Total attendance records:', attendanceStats.total);
-    console.log('  - Average attendance per event:', attendanceStats.average);
-    console.log('  - Event types found:', Object.keys(eventTypes));
-    console.log('  - Event type breakdown:', eventTypes);
-    
+
+
     // Top locations by attendance
     const topLocations = Object.entries(locationStats)
       .sort(([,a], [,b]) => b.attendance - a.attendance)
@@ -1765,9 +1744,7 @@ const EventAnalytics = ({ events, pastEvents }) => {
 
   // Debug: Show if we have any attendance data
   const totalAttendanceRecords = Object.values(attendanceData.attendanceByEvent).reduce((sum, records) => sum + records.length, 0);
-  console.log(`🎯 Total attendance records found: ${totalAttendanceRecords}`);
-  console.log(`📊 Events with attendance data: ${Object.keys(attendanceData.attendanceByEvent).length}`);
-  console.log(`📊 Past events with attendance: ${analytics.totalEvents}`);
+
 
   return (
     <div className="space-y-6">
@@ -2109,7 +2086,6 @@ const EventAnalytics = ({ events, pastEvents }) => {
         </CardContent>
       </Card>
 
-
     </div>
   );
 };
@@ -2224,7 +2200,6 @@ export default function Events() {
   const [anonymousName, setAnonymousName] = useState('');
   const [isAutoSwitchingFilter, setIsAutoSwitchingFilter] = useState(false);
 
-
   // Kiosk mode detection
   const isKioskMode = location.pathname === '/events' && location.search.includes('kiosk=true');
 
@@ -2262,7 +2237,7 @@ export default function Events() {
 
     // Add global function to force close modals (for debugging)
     window.forceCloseModals = () => {
-      console.log('Force closing all modals...');
+
       handleCloseDialog();
     };
 
@@ -2271,7 +2246,7 @@ export default function Events() {
       // Only add timeout if dialog is stuck for too long (10 minutes)
       const timeoutId = setTimeout(() => {
         if (isMemberDialogOpen) {
-          console.log('Kiosk mode modal timeout - forcing close');
+
           handleCloseDialog();
         }
       }, 600000); // 10 minutes
@@ -2311,9 +2286,6 @@ export default function Events() {
       // Get current user's organization ID (including impersonation)
       const organizationId = await getCurrentUserOrganizationId();
       if (!organizationId) throw new Error('Unable to determine organization');
-      
-      console.log('[Events] Using organization_id:', organizationId);
-      console.log('[Events] User authenticated:', user.email);
 
       // Debug: Check all organizations and events in the database
       const { data: allOrgs, error: orgsError } = await supabase
@@ -2327,15 +2299,14 @@ export default function Events() {
       if (orgsError) {
         console.error('[Events] Error fetching organizations:', orgsError);
       } else {
-        console.log('[Events] All organizations:', allOrgs);
+
       }
 
       if (allEventsInDBError) {
         console.error('[Events] Error fetching all events:', allEventsInDBError);
       } else {
-        console.log('[Events] All events in database:', allEventsInDB.length);
+
         if (allEventsInDB.length > 0) {
-          console.log('[Events] Sample events:', allEventsInDB.slice(0, 3));
         }
       }
 
@@ -2348,15 +2319,14 @@ export default function Events() {
       if (allEventsError) {
         console.error('[Events] Error fetching all events:', allEventsError);
       } else {
-        console.log('[Events] Total events for organization:', allEvents.length);
+
         if (allEvents.length > 0) {
-          console.log('[Events] Sample events:', allEvents.slice(0, 3));
         }
       }
 
       // For calendar view, fetch ALL events without time filtering
       if (viewMode === 'calendar') {
-        console.log('[Events] Calendar view - fetching ALL events without time filtering');
+
         const { data: calendarEvents, error: calendarError } = await supabase
           .from('events')
           .select(`
@@ -2375,10 +2345,7 @@ export default function Events() {
           throw calendarError;
         }
 
-        console.log('[Events] Calendar events fetched:', calendarEvents.length);
-        
         // Log all event IDs to see what we're working with
-        console.log('[Events] All calendar event IDs:', calendarEvents.map(e => ({ 
           id: e.id, 
           title: e.title, 
           idLength: e.id?.length,
@@ -2389,7 +2356,6 @@ export default function Events() {
         
         // Also log master events specifically
         const masterEvents = calendarEvents.filter(e => e.is_master === true);
-        console.log('[Events] Master events found:', masterEvents.map(e => ({ 
           id: e.id, 
           title: e.title, 
           is_recurring: e.is_recurring 
@@ -2397,9 +2363,7 @@ export default function Events() {
         
         // For now, include all events in calendar view (we'll handle malformed IDs in the edit function)
         const validCalendarEvents = calendarEvents;
-        
-        console.log('[Events] Calendar events to display:', validCalendarEvents.length);
-        
+
         // Store raw events for calendar view
         setRawEvents(validCalendarEvents);
         
@@ -2423,7 +2387,6 @@ export default function Events() {
         // For month filter, get events for the entire current month
         startDate = new Date(today.getFullYear(), today.getMonth(), 1);
         endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
-        console.log('[Events] Month filter - Date range:', startDate.toISOString(), 'to', endDate.toISOString());
       } else if (timeWindowFilter === 'week') {
         // For week filter, get events for the current week
         const weekStart = new Date(today);
@@ -2433,28 +2396,22 @@ export default function Events() {
         weekEnd.setDate(weekStart.getDate() + 6); // End of week (Saturday)
         weekEnd.setHours(23, 59, 59, 999);
         endDate = weekEnd;
-        console.log('[Events] Week filter - Date range:', startDate.toISOString(), 'to', endDate.toISOString());
       } else if (timeWindowFilter === 'quarter') {
         // For quarter filter, get events for the current quarter
         const quarter = Math.floor(today.getMonth() / 3);
         startDate = new Date(today.getFullYear(), quarter * 3, 1);
         endDate = new Date(today.getFullYear(), (quarter + 1) * 3, 0, 23, 59, 59, 999);
-        console.log('[Events] Quarter filter - Date range:', startDate.toISOString(), 'to', endDate.toISOString());
       } else if (timeWindowFilter === 'next30days') {
         // For next 30 days filter, get events for the next 30 days
         startDate = new Date(today);
         endDate = new Date(today);
         endDate.setDate(today.getDate() + 30);
         endDate.setHours(23, 59, 59, 999);
-        console.log('[Events] Next 30 days filter - Date range:', startDate.toISOString(), 'to', endDate.toISOString());
-        console.log('[Events] Next 30 days filter - Today is:', today.toISOString(), 'Adding 30 days to:', endDate.toISOString());
       } else if (timeWindowFilter === 'year') {
         // For year filter, get events for the current year
         startDate = new Date(today.getFullYear(), 0, 1);
         endDate = new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999);
-        console.log('[Events] Year filter - Date range:', startDate.toISOString(), 'to', endDate.toISOString());
       } else {
-        console.log('[Events] Default filter - Date range: from', startDate.toISOString(), 'onwards');
       }
       // For 'all' and 'today', keep the original logic (from today onwards)
 
@@ -2506,9 +2463,7 @@ export default function Events() {
         // Combine the results
         data = [...(mainResult.data || []), ...(recurringResult.data || [])];
         error = null;
-        console.log('[Events] Main events:', mainResult.data?.length || 0);
-        console.log('[Events] Recurring events from before filter period:', recurringResult.data?.length || 0);
-        console.log('[Events] Combined events:', data.length);
+
       } else {
         const result = await Promise.race([eventsPromise, timeoutPromise]);
         data = result.data;
@@ -2516,10 +2471,7 @@ export default function Events() {
       }
 
       if (error) throw error;
-      console.log('[Events] Fetched events count:', data.length);
-      console.log('[Events] Time filter used:', timeWindowFilter);
-      console.log('[Events] View mode:', viewMode);
-      console.log('[Events] Raw events data:', data.map(e => ({
+
         id: e.id,
         title: e.title,
         start_date: e.start_date,
@@ -2563,7 +2515,6 @@ export default function Events() {
           filterEndDate = new Date(today);
           filterEndDate.setDate(today.getDate() + 30);
           filterEndDate.setHours(23, 59, 59, 999);
-          console.log('[Events] Next 30 days filter - Today:', today.toISOString(), 'End date:', filterEndDate.toISOString());
         } else if (timeWindowFilter === 'year') {
           filterEndDate = new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999);
         } else if (timeWindowFilter === 'today') {
@@ -2581,7 +2532,6 @@ export default function Events() {
           const eventDate = new Date(event.start_date);
           const isInRange = eventDate <= filterEndDate;
           if (timeWindowFilter === 'next30days') {
-            console.log('[Events] Event:', event.title, 'Date:', event.start_date, 'Parsed:', eventDate.toISOString(), 'In range:', isInRange);
           }
           return isInRange;
         });
@@ -2617,13 +2567,8 @@ export default function Events() {
           }
           return acc;
         }, []);
-        
-        console.log('[Events] Kiosk view processing:');
-        console.log('[Events] - Time filter:', timeWindowFilter);
-        console.log('[Events] - Filter end date:', format(filterEndDate, 'yyyy-MM-dd'));
-        console.log('[Events] - Future events count:', futureEvents.length);
-        console.log('[Events] - Time filtered events count:', timeFilteredEvents.length);
-        console.log('[Events] - Final processed events count:', processedEvents.length);
+
+
       } else {
         // For admin and calendar views, show all future events within the time filter
         // Filter out past events first
@@ -2670,15 +2615,12 @@ export default function Events() {
             filterEndDate = new Date(today);
             filterEndDate.setDate(today.getDate() + 30);
             filterEndDate.setHours(23, 59, 59, 999);
-            console.log('[Events] Next 30 days filter - Today:', today.toISOString(), 'End date:', filterEndDate.toISOString());
           } else {
             // For 'all', use 3 months as default
             filterEndDate = new Date();
             filterEndDate.setMonth(filterEndDate.getMonth() + 3);
           }
-          
-          console.log('[Events] Time filter:', timeWindowFilter);
-          console.log('[Events] Filter end date:', format(filterEndDate, 'yyyy-MM-dd'));
+
           
           // CRITICAL FIX: Instead of generating synthetic IDs, show all actual database instances
           processedEvents = eventsWithAttendance.filter(event => {
@@ -2691,12 +2633,8 @@ export default function Events() {
         }
       }
 
-      console.log('[Events] Processed events count:', processedEvents.length);
-      console.log('[Events] View mode processing:', viewMode);
-      
       // Debug: Show some sample events
       if (processedEvents.length > 0) {
-        console.log('[Events] Sample processed events:', processedEvents.slice(0, 3).map(e => ({
           title: e.title,
           date: e.start_date,
           recurring: !!e.recurrence_pattern,
@@ -2716,10 +2654,8 @@ export default function Events() {
         return eventDate.getTime() === todayDate.getTime();
       });
       
-      console.log('[Events] Today\'s date:', format(todayDate, 'yyyy-MM-dd'));
-      console.log('[Events] Events for today:', todaysEvents.length);
+
       if (todaysEvents.length > 0) {
-        console.log('[Events] Today\'s events:', todaysEvents.map(e => ({
           title: e.title,
           date: e.start_date,
           recurring: !!e.recurrence_pattern,
@@ -2732,7 +2668,7 @@ export default function Events() {
 
       // Auto-switch to next 30 days if no events in current month and we're on month filter
       if (timeWindowFilter === 'month' && processedEvents.length === 0 && !isAutoSwitchingFilter) {
-        console.log('[Events] No events found for current month, switching to next 30 days filter');
+
         setIsAutoSwitchingFilter(true);
         setTimeWindowFilter('next30days');
       } else if (isAutoSwitchingFilter) {
@@ -2768,10 +2704,6 @@ export default function Events() {
       const startOfMonthDate = startOfMonth(month);
       const endOfMonthDate = endOfMonth(month);
       
-      console.log('[Events] Fetching events for month:', format(month, 'MMMM yyyy'));
-      console.log('[Events] Date range:', format(startOfMonthDate, 'yyyy-MM-dd'), 'to', format(endOfMonthDate, 'yyyy-MM-dd'));
-      console.log('[Events] User authenticated:', user.email);
-      console.log('[Events] Organization ID:', organizationId);
 
       let data = [];
 
@@ -2807,8 +2739,7 @@ export default function Events() {
         data = [...data, ...(recurringEvents || [])];
 
       } catch (complexQueryError) {
-        console.warn('[Events] Complex query failed, trying simpler approach:', complexQueryError);
-        
+
         // Fallback: Just get events for the month without attendance data
         const { data: simpleEvents, error: simpleError } = await supabase
           .from('events')
@@ -2825,8 +2756,6 @@ export default function Events() {
         data = simpleEvents || [];
       }
 
-      console.log('[Events] Month events count:', data.length);
-
       // Process events and add attendance count
       const processedEvents = data.map(event => ({
         ...event,
@@ -2837,8 +2766,6 @@ export default function Events() {
       const uniqueEvents = processedEvents.filter((event, index, self) => 
         index === self.findIndex(e => e.id === event.id)
       );
-      
-      console.log('[Events] Unique events after deduplication:', uniqueEvents.length);
 
       // CRITICAL FIX: Use actual database events instead of generating synthetic instances
       const eventsWithRecurring = uniqueEvents;
@@ -2863,14 +2790,10 @@ export default function Events() {
         });
       });
 
-      console.log('[Events] Final events after all deduplication:', finalEvents.length);
-      
       // Debug: Show the final events and their dates
       finalEvents.forEach(event => {
-        console.log(`[Events] Final event: ${event.title} on ${format(new Date(event.start_date), 'EEEE, MMMM d, yyyy')}`);
       });
 
-      console.log('[Events] fetchMonthEvents completed successfully');
       return finalEvents;
     } catch (error) {
       console.error('Error fetching month events:', error);
@@ -2904,7 +2827,7 @@ export default function Events() {
   // Fetch calendar events when view mode changes to calendar
   useEffect(() => {
     if (viewMode === 'calendar') {
-      console.log('[Calendar] Switching to calendar view, fetching events...');
+
       // Reset to current month when switching to calendar view
       setCurrentMonth(new Date());
       fetchEvents();
@@ -2949,8 +2872,6 @@ export default function Events() {
       const organizationId = await getCurrentUserOrganizationId();
       if (!organizationId) throw new Error('Unable to determine organization');
       
-      console.log('[Events] Using organization_id (past):', organizationId);
-      console.log('[Events] Past events date range:', startDate.toISOString(), 'to', today.toISOString());
 
       const { data, error } = await supabase
         .from('events')
@@ -2961,7 +2882,6 @@ export default function Events() {
         .order('start_date', { ascending: false });
 
       if (error) throw error;
-      console.log('[Events] Past events count:', data.length);
 
       // Process past events and add attendance count
       const processedPastEvents = data.map(event => ({
@@ -3226,7 +3146,7 @@ export default function Events() {
 
   // Add this debug log
   useEffect(() => {
-    // console.log('Current events:', events);
+    // Effect for events updates
   }, [events]);
 
   const getStatusColor = (status) => {
@@ -3407,8 +3327,6 @@ export default function Events() {
       
       // Get the actual event ID for database operations
       const actualEventId = getActualEventId(event.id);
-      
-
 
       // Fetch last event attendance
       await fetchLastEventAttendance(actualEventId);
@@ -3561,7 +3479,7 @@ export default function Events() {
       if (selectedEvent.is_instance && selectedEvent.id.includes('_')) {
         // Extract the base event ID from the instance ID
         const baseEventId = selectedEvent.id.split('_')[0];
-        console.log('🔍 Using base event ID for adding attendance:', baseEventId);
+
         actualEventId = baseEventId;
       }
       
@@ -3579,15 +3497,13 @@ export default function Events() {
       if (error) throw error;
 
       // Trigger automation for event attendance
-      console.log('🔍 User object for event attendance:', user);
-      
+
       // Get organization_id (including impersonation)
       const organizationId = await getCurrentUserOrganizationId();
       
       if (organizationId) {
         try {
-          console.log('🚀 Triggering event_attendance automation for member:', member);
-          console.log('🎯 Event data:', selectedEvent);
+
           const triggerData = {
             id: attendanceData.id,
             event_id: actualEventId,
@@ -3602,7 +3518,7 @@ export default function Events() {
             lastname: member.lastname,
             phone: member.phone
           };
-          console.log('📊 Trigger data:', triggerData);
+
           await automationService.triggerAutomation(
             'event_attendance',
             triggerData,
@@ -3613,7 +3529,7 @@ export default function Events() {
           // Don't fail the main operation if automation fails
         }
       } else {
-        console.log('❌ No organization_id found for event attendance, skipping automation');
+
       }
 
       // Update local state
@@ -3795,15 +3711,13 @@ export default function Events() {
       if (error) throw error;
 
       // Trigger automation for anonymous event attendance
-      console.log('🔍 User object for anonymous event attendance:', user);
-      
+
       // Get organization_id (including impersonation)
       const organizationId = await getCurrentUserOrganizationId();
       
       if (organizationId) {
         try {
-          console.log('🚀 Triggering event_attendance automation for anonymous attendee');
-          console.log('🎯 Event data:', selectedEvent);
+
           const triggerData = {
             id: attendanceData.id,
             event_id: actualEventId,
@@ -3819,7 +3733,7 @@ export default function Events() {
             lastname: '',
             phone: null
           };
-          console.log('📊 Trigger data:', triggerData);
+
           await automationService.triggerAutomation(
             'event_attendance',
             triggerData,
@@ -3830,7 +3744,7 @@ export default function Events() {
           // Don't fail the main operation if automation fails
         }
       } else {
-        console.log('❌ No organization_id found for anonymous event attendance, skipping automation');
+
       }
 
       // Update local state
@@ -4248,12 +4162,10 @@ export default function Events() {
       await handleMemberClick(data);
 
       // Trigger automation for new visitor creation
-      console.log('🔍 User object:', user);
-      console.log('🔍 Automation service:', automationService);
-      
+
       if (currentOrgId) {
         try {
-          console.log('🚀 Triggering member_created automation for new visitor:', data);
+
           await automationService.triggerAutomation(
             'member_created',
             {
@@ -4273,7 +4185,7 @@ export default function Events() {
           // Don't fail the main operation if automation fails
         }
       } else {
-        console.log('❌ No organization_id found, skipping automation');
+
       }
 
       // Reset form and close dialog
@@ -4379,18 +4291,14 @@ export default function Events() {
 
   const handleEditEvent = async (eventData) => {
     try {
-      console.log('handleEditEvent called with editingEvent:', editingEvent);
-      console.log('editingEvent.id:', editingEvent?.id);
-      
+
       // Use the editingEvent ID directly - no complex ID extraction needed
       const eventIdToUpdate = editingEvent.id;
       
       if (!eventIdToUpdate) {
         throw new Error('No valid event ID found for updating');
       }
-      
-      console.log('Using event ID to update:', eventIdToUpdate);
-      
+
       await updateEvent(eventIdToUpdate, eventData);
       setIsEditEventOpen(false);
       setEditingEvent(null);
@@ -4564,7 +4472,7 @@ export default function Events() {
             });
           } else {
             // For old events, just delete the event as-is instead of showing an error
-            console.log('Could not find original event to delete, deleting event as-is:', eventId);
+
       await deleteEvent(eventId);
       toast({
         title: "Success",
@@ -4601,8 +4509,7 @@ export default function Events() {
 
   // Helper function to find and edit master events directly
   const handleEditMasterEvent = (eventTitle) => {
-    console.log('[Events] Looking for master event with title:', eventTitle);
-    
+
     // First try to find master event with UUID format
     let masterEvent = events.find(e => 
       e.title === eventTitle && 
@@ -4614,7 +4521,7 @@ export default function Events() {
     
     // If no UUID master found, try to find any master event with same title
     if (!masterEvent) {
-      console.log('[Events] No UUID master found, looking for any master event...');
+
       masterEvent = events.find(e => 
         e.title === eventTitle && 
         e.is_master === true && 
@@ -4623,12 +4530,11 @@ export default function Events() {
     }
     
     if (masterEvent) {
-      console.log('[Events] Found master event, opening edit dialog:', masterEvent);
+
       setEditingEvent(masterEvent);
       setIsEditEventOpen(true);
     } else {
-      console.log('[Events] No master event found for title:', eventTitle);
-      
+
       // Check if we have recurring instances that could become master events
       const recurringInstances = events.filter(e => 
         e.title === eventTitle && 
@@ -4637,7 +4543,7 @@ export default function Events() {
       );
       
       if (recurringInstances.length > 0) {
-        console.log('[Events] Found recurring instances that could become master events:', recurringInstances);
+
         toast({
           title: "No Master Event Found",
           description: `"${eventTitle}" has recurring instances but no master event. Use the admin view to create a master event.`,
@@ -4655,8 +4561,7 @@ export default function Events() {
 
   // Helper function to create a master event from an existing instance
   const handleCreateMasterEvent = async (eventTitle) => {
-    console.log('[Events] Attempting to create master event for:', eventTitle);
-    
+
     // Find the first recurring instance to use as a template
     const templateInstance = events.find(e => 
       e.title === eventTitle && 
@@ -4683,9 +4588,7 @@ export default function Events() {
       start_date: templateInstance.start_date,
       end_date: templateInstance.end_date
     };
-    
-    console.log('[Events] Creating new master event:', newMasterEvent);
-    
+
     try {
       // This would need to be implemented in your backend
       // For now, just show what we would create
@@ -4705,11 +4608,7 @@ export default function Events() {
   };
 
   const handleEditClick = (event) => {
-    console.log('handleEditClick called with event:', event);
-    console.log('Event ID:', event.id);
-    console.log('Event title:', event.title);
-    console.log('All events:', events.length);
-    
+
     // Check if this is a recurring event by looking for the pattern in the ID
     const isRecurringEvent = event.id && (
       event.id.includes('_') || 
@@ -4717,9 +4616,7 @@ export default function Events() {
       event.is_recurring === true ||
       event.is_master === true
     );
-    
-    console.log('Is recurring event:', isRecurringEvent);
-    console.log('Event ID pattern check:', {
+
       hasUnderscore: event.id && event.id.includes('_'),
       hasLongDash: event.id && event.id.includes('-') && event.id.length > 36,
       isRecurringFlag: event.is_recurring === true,
@@ -4728,11 +4625,9 @@ export default function Events() {
     
     // Check if there are other events with the same title (indicating it's part of a recurring series)
     const eventsWithSameTitle = events.filter(e => e.title === event.title);
-    console.log('Events with same title:', eventsWithSameTitle.length);
-    
+
     if (isRecurringEvent || eventsWithSameTitle.length > 1) {
-      console.log('Recurring event detected - showing edit choice dialog');
-      
+
       // Find a suitable event to use as the "master" event for editing
       // Prefer events with valid UUIDs and master/recurring flags
       let masterEvent = eventsWithSameTitle.find(e => 
@@ -4756,11 +4651,7 @@ export default function Events() {
       }
       
       if (masterEvent) {
-        console.log('Found suitable event for edit choice dialog:', masterEvent);
-        console.log('Master event ID:', masterEvent.id);
-        console.log('Master event ID type:', typeof masterEvent.id);
-        console.log('Master event ID length:', masterEvent.id?.length);
-        
+
         if (!masterEvent.id || masterEvent.id === 'null' || masterEvent.id === null) {
           console.error('Master event has invalid ID:', masterEvent.id);
           toast({
@@ -4775,7 +4666,7 @@ export default function Events() {
         setMasterEventToEdit(masterEvent);
         setShowEditChoiceDialog(true);
       } else {
-        console.log('No suitable event found for editing');
+
         toast({
           title: "Cannot Edit Event",
           description: "Unable to find a suitable event to edit. Please try again.",
@@ -4784,7 +4675,7 @@ export default function Events() {
       }
     } else {
       // Single event with this title - edit normally
-      console.log('Single event with this title - editing normally');
+
       loadEventWithReminders(event).then(eventWithReminders => {
         setEditingEvent(eventWithReminders);
         setIsEditEventOpen(true);
@@ -4844,7 +4735,7 @@ export default function Events() {
           actualEventId = originalEventId; // Use the original event ID for database queries
         } else {
           // For old events, just use the event as-is instead of showing an error
-          console.log('Could not find original event, using event as-is:', event.id);
+
         }
       }
     }
@@ -4856,7 +4747,7 @@ export default function Events() {
     setMemberSearchQuery('');
     
     // Open the dialog immediately
-    console.log('Opening dialog for event:', eventToUse.title);
+
     setIsMemberDialogOpen(true);
     
     // Check if this is a past event
@@ -4876,15 +4767,13 @@ export default function Events() {
       if (membersError) throw membersError;
 
       // Use the actual event ID for database operations
-      console.log('🔍 Using actualEventId for database query:', actualEventId);
-      console.log('🔍 Original event.id:', event.id);
-      
+
       // For recurring events, we need to use the base event ID (without timestamp)
       let eventIdForQuery = actualEventId;
       if (event.is_instance && event.id.includes('_')) {
         // Extract the base event ID from the instance ID
         const baseEventId = event.id.split('_')[0];
-        console.log('🔍 Using base event ID for query:', baseEventId);
+
         eventIdForQuery = baseEventId;
       }
       
@@ -4906,9 +4795,6 @@ export default function Events() {
         .eq('event_id', eventIdForQuery);
 
       if (attendanceError) throw attendanceError;
-      
-      console.log('🔍 Attendance data found:', attendanceData?.length || 0, 'records');
-      console.log('🔍 Attendance data:', attendanceData);
 
       // Get IDs of members who have already RSVP'd/checked in
       const attendingMemberIds = attendanceData
@@ -4992,9 +4878,6 @@ export default function Events() {
         ...availableMembers.filter(member => !suggestedMembers.find(s => s.id === member.id))
       ];
 
-      console.log('🔍 Setting alreadyRSVPMembers:', allAttendingMembers?.length || 0, 'members');
-      console.log('🔍 Already attending members:', allAttendingMembers);
-      
       setMembers(sortedAvailableMembers);
       setSuggestedMembers(suggestedMembers);
       setMemberAttendanceCount(attendanceCounts);
@@ -5021,7 +4904,7 @@ export default function Events() {
 
   const handleCloseDialog = () => {
     try {
-      console.log('Closing dialog');
+
       // Reset all modal states to ensure nothing is stuck open
       setIsMemberDialogOpen(false);
       setSelectedEvent(null);
@@ -5157,7 +5040,7 @@ export default function Events() {
           eventToUse = originalEvent;
         } else {
           // For old events, just use the event as-is instead of showing an error
-          console.log('Could not find original event for volunteers, using event as-is:', event.id);
+
         }
       }
     }
@@ -5168,9 +5051,7 @@ export default function Events() {
 
   const loadEventWithReminders = async (event) => {
     try {
-      console.log('Loading reminders for event:', event.id, event.title);
-      console.log('Event object:', event);
-      
+
       if (!event || !event.id) {
         console.error('Invalid event passed to loadEventWithReminders:', event);
         throw new Error('Invalid event: missing ID');
@@ -5178,8 +5059,7 @@ export default function Events() {
       
       // Load reminder configurations for this event
       const reminders = await eventReminderService.getEventReminders(event.id);
-      console.log('Found reminders:', reminders);
-      
+
       // Convert database reminders to the new format
       const formattedReminders = reminders
         .filter(r => r.is_active)
@@ -5194,9 +5074,7 @@ export default function Events() {
           target_groups: reminder.target_groups || [],
           is_enabled: reminder.is_enabled !== false
         }));
-      
-      console.log('Formatted reminders:', formattedReminders);
-      
+
       const eventWithReminders = {
         ...event,
         enable_reminders: formattedReminders.length > 0,
@@ -5213,17 +5091,13 @@ export default function Events() {
           }
         ]
       };
-      
-      console.log('Event with reminders loaded:', eventWithReminders);
-      console.log('Final event ID:', eventWithReminders.id);
+
       return eventWithReminders;
     } catch (error) {
       console.error('Error loading reminder data:', error);
       return event;
     }
   };
-
-
 
   const renderEventCard = useCallback((event) => {
     return (
@@ -5249,7 +5123,6 @@ export default function Events() {
       endDate.setMonth(endDate.getMonth() + 3); // Default: Show events for next 3 months
     }
     
-    console.log('[processRecurringEvents] Processing with end date:', format(endDate, 'yyyy-MM-dd'));
     const seenEventKeys = new Set(); // Track seen events to avoid duplicates
 
     // Helper function to normalize event titles for better deduplication
@@ -5269,14 +5142,6 @@ export default function Events() {
         return;
       }
 
-      console.log('[processRecurringEvents] Processing recurring event:', {
-        title: event.title,
-        pattern: event.recurrence_pattern,
-        startDate: event.start_date,
-        monthly_week: event.monthly_week,
-        monthly_weekday: event.monthly_weekday
-      });
-
       const startDate = new Date(event.start_date);
       const endTime = new Date(event.end_date);
       const duration = endTime - startDate;
@@ -5294,7 +5159,6 @@ export default function Events() {
         
         // Check if this instance is within our date range
         if (currentDateDay >= nowDay && currentDate <= endDate) {
-          console.log('[processRecurringEvents] Processing instance:', {
             title: event.title,
             currentDate: format(currentDate, 'yyyy-MM-dd'),
             endDate: format(endDate, 'yyyy-MM-dd'),
@@ -5317,21 +5181,18 @@ export default function Events() {
             seenEventKeys.add(eventKey);
             instanceCount++;
             
-            console.log('[processRecurringEvents] Created instance:', {
               title: event.title,
               date: format(currentDate, 'yyyy-MM-dd'),
               key: eventKey,
               instanceCount
             });
           } else {
-            console.log('[processRecurringEvents] Skipped duplicate:', {
               title: event.title,
               date: format(currentDate, 'yyyy-MM-dd'),
               key: eventKey
             });
           }
         } else if (currentDate > endDate) {
-          console.log('[processRecurringEvents] Skipping instance beyond end date:', {
             title: event.title,
             date: format(currentDate, 'yyyy-MM-dd'),
             endDate: format(endDate, 'yyyy-MM-dd')
@@ -5396,7 +5257,6 @@ export default function Events() {
         
         // Check if we've exceeded the end date after calculating next occurrence
         if (currentDate > endDate) {
-          console.log('[processRecurringEvents] Next occurrence exceeds end date, stopping:', {
             title: event.title,
             nextDate: format(currentDate, 'yyyy-MM-dd'),
             endDate: format(endDate, 'yyyy-MM-dd')
@@ -5406,19 +5266,12 @@ export default function Events() {
         
         // Additional safety check - if we've generated too many instances, stop
         if (instanceCount >= maxInstances) {
-          console.log('[processRecurringEvents] Max instances reached, stopping:', {
-            title: event.title,
-            instanceCount,
-            maxInstances
-          });
+
           break;
         }
       }
     });
 
-    console.log('[processRecurringEvents] Processed events:', processedEvents.length);
-    console.log('[processRecurringEvents] Unique event keys:', seenEventKeys.size);
-    console.log('[processRecurringEvents] Time range:', format(now, 'yyyy-MM-dd'), 'to', format(endDate, 'yyyy-MM-dd'));
     
     return processedEvents;
   };
@@ -5452,15 +5305,12 @@ export default function Events() {
       
       // Debug logging for duplicate detection
       if (eventGroups[key].length > 1) {
-        console.log(`[processRecurringEventsForMonth] Found potential duplicates for key "${key}":`, 
           eventGroups[key].map(e => e.title));
-        console.log(`[processRecurringEventsForMonth] Original titles:`, eventGroups[key].map(e => e.title));
-        console.log(`[processRecurringEventsForMonth] Normalized title: "${normalizedTitle}"`);
+
       }
     });
 
     // Debug: Check what's in originalData
-    console.log('[processRecurringEventsForMonth] originalData sample:', originalData.slice(0, 3).map(e => ({
       title: e.title,
       date: e.start_date,
       attendance: e.attendance,
@@ -5545,7 +5395,6 @@ export default function Events() {
               };
             processedEvents.push(eventInstance);
             seenEvents.add(eventKey);
-            console.log(`[processRecurringEventsForMonth] Generated: ${event.title} on ${format(currentDate, 'EEEE, MMMM d, yyyy')}`);
           }
           
           // Move to next week
@@ -5554,7 +5403,7 @@ export default function Events() {
         }
         
         if (weekCount >= maxWeeks) {
-          console.warn(`[processRecurringEventsForMonth] Safety limit reached for event: ${event.title}`);
+
         }
       } else {
         // For other recurrence patterns, use the original logic
@@ -5604,7 +5453,6 @@ export default function Events() {
               };
               processedEvents.push(eventInstance);
               seenEvents.add(eventKey);
-              console.log(`[processRecurringEventsForMonth] Generated: ${event.title} on ${format(currentDate, 'EEEE, MMMM d, yyyy')}`);
             }
           }
 
@@ -5656,16 +5504,11 @@ export default function Events() {
         }
         
         if (instanceCount >= maxInstances) {
-          console.warn(`[processRecurringEventsForMonth] Safety limit reached for event: ${event.title}`);
+
         }
       }
     });
 
-    console.log('[processRecurringEventsForMonth] Input events:', events.length);
-    console.log('[processRecurringEventsForMonth] Output events:', processedEvents.length);
-    console.log('[processRecurringEventsForMonth] Unique events:', seenEvents.size);
-    console.log('[processRecurringEventsForMonth] Event groups:', Object.keys(eventGroups).length);
-    console.log('[processRecurringEventsForMonth] Function completed successfully');
 
     return processedEvents;
   };
@@ -5782,7 +5625,7 @@ export default function Events() {
                  onOpenChange={(open) => {
                    // Don't allow closing if modals are open
                    if (!open && (isCreateMemberOpen || isAnonymousCheckinOpen)) {
-                     console.log('🔍 Preventing main dialog close because modals are open');
+
                      return;
                    }
                    setIsMemberDialogOpen(open);
@@ -6029,7 +5872,6 @@ export default function Events() {
                 backgroundColor: 'rgba(0, 0, 0, 0.8)'
               }}
             >
-              {console.log('🔍 Kiosk Create New Member Modal rendering')}
               <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
                 <div className="p-4 border-b bg-blue-50 flex-shrink-0">
                   <h2 className="text-xl font-bold">Create New Person</h2>
@@ -6134,7 +5976,6 @@ export default function Events() {
                 backgroundColor: 'rgba(0, 0, 0, 0.8)'
               }}
             >
-              {console.log('🔍 Kiosk Anonymous Check-in Modal rendering')}
               <div className="bg-white rounded-lg w-full max-w-md p-6">
                 <div className="text-center space-y-4">
                   <div className="flex items-center justify-center w-16 h-16 mx-auto bg-orange-100 rounded-full">
@@ -6604,8 +6445,7 @@ export default function Events() {
                           const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
                           return eventDateOnly >= startOfMonth && eventDateOnly <= endOfMonth;
                         }).length;
-                        
-                        console.log('[Events] This month events count:', count, 'from', rawEvents.length, 'raw events');
+
                         return count;
                       })()}
                     </p>
@@ -6642,7 +6482,6 @@ export default function Events() {
                           const isInWeek = eventDateOnly >= startOfWeekOnly && eventDateOnly <= endOfWeekOnly;
                           
                           if (e.title.includes('Bible Study') || e.title.includes('Worship')) {
-                            console.log('[Events] Event check:', {
                               title: e.title,
                               start_date: e.start_date,
                               parsed: eventDateOnly.toISOString(),
@@ -6654,8 +6493,7 @@ export default function Events() {
                           
                           return isInWeek;
                         }).length;
-                        
-                        console.log('[Events] This week events count:', count, 'from', rawEvents.length, 'raw events');
+
                         return count;
                       })()}
                     </p>
@@ -6686,8 +6524,7 @@ export default function Events() {
                           const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
                           return eventDateOnly >= lastMonth && eventDateOnly <= endOfLastMonth;
                         }).length;
-                        
-                        console.log('[Events] Last month events count:', count, 'from', rawEvents.length, 'raw events');
+
                         return count;
                       })()}
                     </p>
@@ -6723,8 +6560,7 @@ export default function Events() {
                           
                           return eventDateOnly >= lastWeekStartOnly && eventDateOnly <= lastWeekEndOnly;
                         }).length;
-                        
-                        console.log('[Events] Last week events count:', count, 'from', rawEvents.length, 'raw events');
+
                         return count;
                       })()}
                     </p>
@@ -6771,8 +6607,7 @@ export default function Events() {
                       const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
                       return eventDateOnly >= startOfMonth && eventDateOnly <= endOfMonth;
                     }).length;
-                    
-                    console.log('[Events] Mobile - This month events count:', count, 'from', rawEvents.length, 'raw events');
+
                     return count;
                   })()}
                 </div>
@@ -6804,8 +6639,7 @@ export default function Events() {
                       
                       return eventDateOnly >= startOfWeekOnly && eventDateOnly <= endOfWeekOnly;
                     }).length;
-                    
-                    console.log('[Events] Mobile - This week events count:', count, 'from', rawEvents.length, 'raw events');
+
                     return count;
                   })()}
                 </div>
@@ -6832,8 +6666,7 @@ export default function Events() {
                       const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
                       return eventDateOnly >= lastMonth && eventDateOnly <= endOfLastMonth;
                     }).length;
-                    
-                    console.log('[Events] Mobile - Last month events count:', count, 'from', rawEvents.length, 'raw events');
+
                     return count;
                   })()}
                 </div>
@@ -6865,8 +6698,7 @@ export default function Events() {
                       
                       return eventDateOnly >= lastWeekStartOnly && eventDateOnly <= lastWeekEndOnly;
                     }).length;
-                    
-                    console.log('[Events] Mobile - Last week events count:', count, 'from', rawEvents.length, 'raw events');
+
                     return count;
                   })()}
                 </div>
@@ -7408,7 +7240,7 @@ export default function Events() {
                               eventToDuplicate = originalEvent;
                             } else {
                               // For old events, just use the event as-is instead of showing an error
-                              console.log('Could not find original event to duplicate, using event as-is:', lastEvent.id);
+
                               eventToDuplicate = lastEvent;
                             }
                           } else {
@@ -7538,8 +7370,6 @@ export default function Events() {
               )
             )}
           </TabsContent>
-
-
 
         {/* Past Events Tab */}
         <TabsContent value="past" className="space-y-4">
@@ -7873,7 +7703,6 @@ export default function Events() {
       {/* Create New Member Dialog */}
       <Dialog open={isCreateMemberOpen} onOpenChange={setIsCreateMemberOpen}>
         <DialogContent className="w-[95vw] max-w-full h-[90vh] md:h-auto md:max-w-3xl p-0" style={{ zIndex: 999999 }}>
-          {console.log('🔍 Create New Member Dialog rendering, isCreateMemberOpen:', isCreateMemberOpen)}
           <DialogHeader className="p-3 md:p-6 border-b">
             <DialogTitle className="text-lg md:text-2xl lg:text-3xl">Create New Person</DialogTitle>
             <DialogDescription className="text-sm md:text-lg mt-2">
@@ -8084,7 +7913,6 @@ export default function Events() {
       {/* Anonymous Check-in Dialog */}
       <Dialog open={isAnonymousCheckinOpen} onOpenChange={setIsAnonymousCheckinOpen}>
         <DialogContent className="w-[95vw] max-w-full h-[90vh] md:h-auto md:max-w-2xl p-0" style={{ zIndex: 999999 }}>
-          {console.log('🔍 Anonymous Check-in Dialog rendering, isAnonymousCheckinOpen:', isAnonymousCheckinOpen)}
           <DialogHeader className="p-3 md:p-6 border-b">
             <DialogTitle className="text-lg md:text-2xl lg:text-3xl">Anonymous Check-in</DialogTitle>
             <DialogDescription className="text-sm md:text-lg mt-2">
@@ -8309,10 +8137,7 @@ export default function Events() {
               {/* Edit Master Event Option */}
               <div className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer" 
                     onClick={() => {
-                     console.log('Edit Master Event clicked');
-                     console.log('masterEventToEdit:', masterEventToEdit);
-                     console.log('masterEventToEdit.id:', masterEventToEdit?.id);
-                     
+
                      if (!masterEventToEdit?.id) {
                        console.error('masterEventToEdit has no ID');
                        toast({
@@ -8324,7 +8149,7 @@ export default function Events() {
                      }
                      
                      loadEventWithReminders(masterEventToEdit).then(eventWithReminders => {
-                       console.log('Loaded event with reminders:', eventWithReminders);
+
                        setEditingEvent(eventWithReminders);
                        setIsEditEventOpen(true);
                        setShowEditChoiceDialog(false);
@@ -8361,8 +8186,6 @@ export default function Events() {
           </DialogContent>
         </Dialog>
       )}
-
-
 
         </motion.div>
       )}

@@ -7,7 +7,6 @@ const supabase = createClient(
 );
 
 async function backfillSMSOrganizationId() {
-  console.log('🔄 Starting SMS organization_id backfill...');
 
   try {
     // Get all conversations without organization_id
@@ -20,8 +19,6 @@ async function backfillSMSOrganizationId() {
       console.error('❌ Error fetching conversations:', convError);
       return;
     }
-
-    console.log(`📝 Found ${conversations?.length || 0} conversations without organization_id`);
 
     // Process each conversation
     for (const conversation of conversations || []) {
@@ -37,7 +34,7 @@ async function backfillSMSOrganizationId() {
 
         if (group?.organization_id) {
           organizationId = group.organization_id;
-          console.log(`✅ Found organization_id from group for conversation ${conversation.id}: ${organizationId}`);
+
         }
       }
 
@@ -54,7 +51,7 @@ async function backfillSMSOrganizationId() {
           const message = messages[0];
           if (message.organization_users && message.organization_users.length > 0) {
             organizationId = message.organization_users[0].organization_id;
-            console.log(`✅ Found organization_id from member for conversation ${conversation.id}: ${organizationId}`);
+
           }
         }
       }
@@ -69,10 +66,10 @@ async function backfillSMSOrganizationId() {
         if (updateError) {
           console.error(`❌ Error updating conversation ${conversation.id}:`, updateError);
         } else {
-          console.log(`✅ Updated conversation ${conversation.id} with organization_id: ${organizationId}`);
+
         }
       } else {
-        console.log(`⚠️ Could not determine organization_id for conversation ${conversation.id}`);
+
       }
     }
 
@@ -86,8 +83,6 @@ async function backfillSMSOrganizationId() {
       console.error('❌ Error fetching messages:', msgError);
       return;
     }
-
-    console.log(`📱 Found ${messages?.length || 0} messages without organization_id`);
 
     // Process each message
     for (const message of messages || []) {
@@ -103,7 +98,7 @@ async function backfillSMSOrganizationId() {
 
         if (conversation?.organization_id) {
           organizationId = conversation.organization_id;
-          console.log(`✅ Found organization_id from conversation for message ${message.id}: ${organizationId}`);
+
         }
       }
 
@@ -117,7 +112,7 @@ async function backfillSMSOrganizationId() {
 
         if (member?.organization_users && member.organization_users.length > 0) {
           organizationId = member.organization_users[0].organization_id;
-          console.log(`✅ Found organization_id from member for message ${message.id}: ${organizationId}`);
+
         }
       }
 
@@ -131,14 +126,12 @@ async function backfillSMSOrganizationId() {
         if (updateError) {
           console.error(`❌ Error updating message ${message.id}:`, updateError);
         } else {
-          console.log(`✅ Updated message ${message.id} with organization_id: ${organizationId}`);
+
         }
       } else {
-        console.log(`⚠️ Could not determine organization_id for message ${message.id}`);
+
       }
     }
-
-    console.log('✅ SMS organization_id backfill completed!');
 
   } catch (error) {
     console.error('❌ Backfill error:', error);

@@ -7,8 +7,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function fixRestoreEvents() {
-  console.log('🔄 Fixing and restoring missing events...');
-  
+
   try {
     // First, let's get the organization_id from existing data
     const { data: members, error: membersError } = await supabase
@@ -20,11 +19,9 @@ async function fixRestoreEvents() {
 
     const organizationId = members?.[0]?.organization_id;
     if (!organizationId) {
-      console.log('❌ No organization_id found in members table');
+
       return;
     }
-
-    console.log(`📋 Using organization_id: ${organizationId}`);
 
     // Events that need to be restored (based on attendance records)
     const missingEvents = [
@@ -70,8 +67,6 @@ async function fixRestoreEvents() {
       }
     ];
 
-    console.log(`📅 Attempting to restore ${missingEvents.length} missing events...`);
-
     // Check which events already exist
     const existingEventIds = missingEvents.map(e => e.id);
     const { data: existingEvents, error: existingError } = await supabase
@@ -84,11 +79,8 @@ async function fixRestoreEvents() {
     const existingIds = existingEvents?.map(e => e.id) || [];
     const eventsToCreate = missingEvents.filter(e => !existingIds.includes(e.id));
 
-    console.log(`📊 Found ${existingIds.length} events already exist`);
-    console.log(`📊 Need to create ${eventsToCreate.length} new events`);
-
     if (eventsToCreate.length === 0) {
-      console.log('✅ All events already exist!');
+
       return;
     }
 
@@ -103,16 +95,12 @@ async function fixRestoreEvents() {
       throw createError;
     }
 
-    console.log(`✅ Successfully created ${createdEvents?.length || 0} events`);
-
     // Verify the events exist now
     const { data: allEvents, error: verifyError } = await supabase
       .from('events')
       .select('*');
 
     if (verifyError) throw verifyError;
-
-    console.log(`📊 Total events in database: ${allEvents?.length || 0}`);
 
     // Check if attendance records now have matching events
     const { data: attendanceWithEvents, error: attendanceError } = await supabase
@@ -129,7 +117,6 @@ async function fixRestoreEvents() {
     if (attendanceError) throw attendanceError;
 
     const validAttendance = attendanceWithEvents?.filter(a => a.events !== null) || [];
-    console.log(`📊 Attendance records with valid events: ${validAttendance.length}`);
 
     return {
       createdEvents: createdEvents?.length || 0,
@@ -146,12 +133,7 @@ async function fixRestoreEvents() {
 // Run the fix
 fixRestoreEvents()
   .then((result) => {
-    console.log('\n🎉 Events restoration completed!');
-    console.log('📈 Summary:', result);
-    console.log('\n🔄 Next steps:');
-    console.log('   1. Refresh the dashboard page');
-    console.log('   2. The attendance data should now show correctly');
-    console.log('   3. Check that events show proper attendance counts');
+
     process.exit(0);
   })
   .catch((error) => {

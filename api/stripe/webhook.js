@@ -10,20 +10,10 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-console.log(`🔧 Webhook Mode: ${isTestMode ? 'TEST' : 'LIVE'}`);
-
 // Log environment variables for debugging (without exposing secrets)
-console.log('🔧 Environment check:', {
-  hasStripeKey: !!process.env.STRIPE_SECRET_KEY,
-  hasWebhookSecret: !!process.env.STRIPE_WEBHOOK_SECRET,
-  hasSupabaseUrl: !!process.env.SUPABASE_URL,
-  hasSupabaseKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY
-});
 
 export default async (req, res) => {
-  console.log('🔔 Webhook received:', req.method, req.url);
-  console.log('📋 Headers:', Object.keys(req.headers));
-  
+
   // For Vercel, we need to handle the body parsing issue
   // Since Vercel automatically parses JSON, we need to work around this
   let rawBody;
@@ -31,22 +21,17 @@ export default async (req, res) => {
   // Try to get the raw body from Vercel's internal properties
   if (req.body && typeof req.body === 'string') {
     rawBody = req.body;
-    console.log('📦 Using body as string');
+
   } else if (req.body && typeof req.body === 'object') {
     // If body is parsed as object, we can't verify signature
     // This is a limitation of Vercel's automatic JSON parsing
-    console.log('❌ Body is parsed as object - cannot verify signature');
-    console.log('📦 Body type:', typeof req.body);
-    console.log('📦 Body keys:', Object.keys(req.body || {}));
-    
+
     // For now, let's try to process the event without verification
     // This is not ideal but allows the webhook to work
     const event = req.body;
-    console.log('⚠️  Processing webhook without signature verification');
-    
+
          if (event.type === 'checkout.session.completed') {
-       console.log('💰 Processing checkout.session.completed event (unverified)');
-       
+
        try {
          const session = event.data.object;
          const metadata = session.metadata || {};
@@ -64,10 +49,6 @@ export default async (req, res) => {
          const cover_fees = metadata.cover_fees === 'true';
          const is_recurring = metadata.is_recurring === 'true';
 
-         console.log(`📊 Processing donation for church ID: ${organization_id}, Amount: $${amount}, Email: ${donor_email}`);
-         console.log(`💸 Fee details - Original: $${original_amount}, Fee: $${fee_amount}, Cover fees: ${cover_fees}`);
-         console.log(`🔄 Recurring details - Is recurring: ${is_recurring}, Subscription: ${session.subscription}, Mode: ${session.mode}`);
-
          // Get church name for logging
          const { data: org } = await supabase
            .from('organizations')
@@ -76,7 +57,7 @@ export default async (req, res) => {
            .single();
 
          if (org) {
-           console.log(`🏛️  Donation for church: ${org.name}`);
+
          }
 
          // Optionally, look up donor/member by email
@@ -90,12 +71,12 @@ export default async (req, res) => {
              .single();
            if (!memberError && member) {
              donor_id = member.id;
-             console.log(`👤 Found existing member: ${donor_id}`);
+
            }
          }
 
          // Insert donation record
-         console.log('💾 Inserting donation record...');
+
          const donationData = {
            organization_id,
            donor_id,
@@ -121,27 +102,19 @@ export default async (req, res) => {
              subscription_id: is_recurring ? session.subscription : null
            },
          };
-         
-         console.log('📋 Donation data to insert:', {
-           is_recurring: donationData.is_recurring,
-           subscription_id: donationData.subscription_id,
-           recurring_interval: donationData.recurring_interval,
-           type: donationData.type
-         });
-         
+
          const { error: insertError } = await supabase.from('donations').insert(donationData);
 
          if (insertError) {
            console.error('❌ Error inserting donation:', insertError);
            throw new Error(`Database error: ${insertError.message}`);
          } else {
-           console.log(`✅ Successfully recorded donation for church: ${org?.name || organization_id}`);
-           console.log(`💰 Church receives: $${original_amount}, Donor paid: $${amount}`);
+
          }
 
          // For recurring payments, update member record with subscription info
          if (is_recurring && session.subscription && donor_id) {
-           console.log('📅 Updating member with subscription info...');
+
            const { error: updateError } = await supabase
              .from('members')
              .update({
@@ -155,7 +128,7 @@ export default async (req, res) => {
            if (updateError) {
              console.error('❌ Error updating member subscription:', updateError);
            } else {
-             console.log(`✅ Successfully updated member subscription info`);
+
            }
          }
        } catch (error) {
@@ -163,23 +136,16 @@ export default async (req, res) => {
          return res.status(500).json({ error: 'Failed to process donation', details: error.message });
        }
      } else if (event.type === 'invoice.payment_succeeded') {
-                console.log('🔄 Processing invoice.payment_succeeded event (unverified)');
-         
+
                   try {
            const invoice = event.data.object;
-           console.log('📋 Invoice data:', {
-             id: invoice.id,
-             subscription: invoice.subscription,
-             customer: invoice.customer,
-             amount_paid: invoice.amount_paid,
-             status: invoice.status
-           });
+
          const subscription = invoice.subscription;
          const customer = invoice.customer;
          
          // Check if this invoice is associated with a subscription
          if (!subscription) {
-           console.log('⚠️  Invoice is not associated with a subscription, skipping');
+
            return res.json({ received: true });
          }
          
@@ -199,9 +165,7 @@ export default async (req, res) => {
          const fee_amount = metadata.fee_amount ? parseFloat(metadata.fee_amount) / 100 : 0;
          const cover_fees = metadata.cover_fees === 'true';
          const is_recurring = metadata.is_recurring === 'true';
-         
-         console.log(`📊 Processing recurring donation for church ID: ${organization_id}, Amount: $${amount}`);
-         
+
          // Get church name for logging
          const { data: org } = await supabase
            .from('organizations')
@@ -220,11 +184,11 @@ export default async (req, res) => {
          
          if (!memberError && member) {
            donor_id = member.id;
-           console.log(`👤 Found existing member: ${donor_id}`);
+
          }
          
          // Insert donation record
-         console.log('💾 Inserting recurring donation record...');
+
          const { error: insertError } = await supabase.from('donations').insert({
            organization_id,
            donor_id,
@@ -253,27 +217,23 @@ export default async (req, res) => {
            console.error('❌ Error inserting recurring donation:', insertError);
            throw new Error(`Database error: ${insertError.message}`);
          } else {
-           console.log(`✅ Successfully recorded recurring donation for church: ${org?.name || organization_id}`);
-           console.log(`💰 Church receives: $${original_amount}, Donor paid: $${amount}`);
+
          }
        } catch (error) {
          console.error('💥 Error processing recurring donation:', error);
          return res.status(500).json({ error: 'Failed to process recurring donation', details: error.message });
        }
      } else if (event.type === 'customer.subscription.updated') {
-       console.log('📅 Processing customer.subscription.updated event');
-       
+
        try {
          const subscription = event.data.object;
          const metadata = subscription.metadata || {};
          const customer = subscription.customer;
          const organization_id = metadata.organization_id;
-         
-         console.log(`📅 Subscription updated for church ID: ${organization_id}, Customer: ${customer}, Status: ${subscription.status}`);
-         
+
          // Skip if no organization_id in metadata
          if (!organization_id) {
-           console.log('⚠️  Subscription missing organization_id in metadata, skipping member update');
+
            return res.json({ received: true });
          }
          
@@ -292,26 +252,23 @@ export default async (req, res) => {
          if (updateError) {
            console.error('❌ Error updating member subscription:', updateError);
          } else {
-           console.log(`✅ Successfully updated member subscription status to: ${subscription.status}`);
+
          }
        } catch (error) {
          console.error('💥 Error processing subscription update:', error);
          return res.status(500).json({ error: 'Failed to process subscription update', details: error.message });
        }
      } else if (event.type === 'customer.subscription.created') {
-       console.log('📅 Processing customer.subscription.created event (unverified)');
-       
+
        try {
          const subscription = event.data.object;
          const metadata = subscription.metadata || {};
          const customer = subscription.customer;
          const organization_id = metadata.organization_id;
-         
-         console.log(`📅 New subscription created for church ID: ${organization_id}, Customer: ${customer}`);
-         
+
          // Skip if no organization_id in metadata
          if (!organization_id) {
-           console.log('⚠️  Subscription missing organization_id in metadata, skipping member update');
+
            return res.json({ received: true });
          }
          
@@ -330,63 +287,56 @@ export default async (req, res) => {
          if (updateError) {
            console.error('❌ Error updating member subscription:', updateError);
          } else {
-           console.log(`✅ Successfully updated member subscription info`);
+
          }
        } catch (error) {
          console.error('💥 Error processing subscription creation:', error);
          return res.status(500).json({ error: 'Failed to process subscription creation', details: error.message });
        }
      }
-    
-    console.log('✅ Webhook processed (unverified)');
+
     return res.json({ received: true });
   } else {
-    console.log('❌ No body available');
+
     return res.status(400).json({ error: 'No request body' });
   }
-  
-  console.log('📏 Body length:', rawBody ? rawBody.length : 'undefined');
-  
+
   // Handle CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Stripe-Signature');
 
   if (req.method === 'OPTIONS') {
-    console.log('✅ OPTIONS request handled');
+
     return res.status(200).end();
   }
 
   if (req.method !== 'POST') {
-    console.log('❌ Invalid method:', req.method);
+
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   let event;
   try {
     const sig = req.headers['stripe-signature'];
-    console.log('🔐 Stripe signature present:', !!sig);
-    console.log('🔑 Endpoint secret configured:', !!endpointSecret);
-    console.log('📏 Request body length:', rawBody ? rawBody.length : 'undefined');
-    
+
     if (!endpointSecret) {
-      console.log('❌ No webhook secret configured');
+
       return res.status(500).json({ error: 'Webhook secret not configured' });
     }
     
     if (!sig) {
-      console.log('❌ No Stripe signature in headers');
+
       return res.status(400).json({ error: 'No Stripe signature' });
     }
     
     if (!rawBody) {
-      console.log('❌ No raw body available');
+
       return res.status(400).json({ error: 'No request body' });
     }
-    
-    console.log('🔍 Attempting to verify webhook signature...');
+
     event = stripe.webhooks.constructEvent(rawBody, sig, endpointSecret);
-    console.log('✅ Webhook signature verified, event type:', event.type);
+
   } catch (err) {
     console.error('❌ Webhook signature verification failed:', err.message);
     console.error('🔍 Error details:', {
@@ -399,8 +349,7 @@ export default async (req, res) => {
   }
 
   if (event.type === 'checkout.session.completed') {
-    console.log('💰 Processing checkout.session.completed event');
-    
+
     try {
       const session = event.data.object;
       const metadata = session.metadata || {};
@@ -417,10 +366,6 @@ export default async (req, res) => {
       const fee_amount = metadata.fee_amount ? parseFloat(metadata.fee_amount) / 100 : 0;
       const cover_fees = metadata.cover_fees === 'true';
 
-      console.log(`📊 Processing donation for church ID: ${organization_id}, Amount: $${amount}, Email: ${donor_email}`);
-      console.log(`💸 Fee details - Original: $${original_amount}, Fee: $${fee_amount}, Cover fees: ${cover_fees}`);
-      console.log('📋 Session metadata:', metadata);
-
       // Get church name for logging
       const { data: org } = await supabase
         .from('organizations')
@@ -429,7 +374,7 @@ export default async (req, res) => {
         .single();
 
       if (org) {
-        console.log(`🏛️  Donation for church: ${org.name}`);
+
       }
 
       // Optionally, look up donor/member by email
@@ -443,12 +388,12 @@ export default async (req, res) => {
           .single();
         if (!memberError && member) {
           donor_id = member.id;
-          console.log(`👤 Found existing member: ${donor_id}`);
+
         }
       }
 
       // Insert donation record
-      console.log('💾 Inserting donation record...');
+
       const { error: insertError } = await supabase.from('donations').insert({
         organization_id,
         donor_id,
@@ -472,16 +417,14 @@ export default async (req, res) => {
         console.error('❌ Error inserting donation:', insertError);
         throw new Error(`Database error: ${insertError.message}`);
       } else {
-        console.log(`✅ Successfully recorded donation for church: ${org?.name || organization_id}`);
-        console.log(`💰 Church receives: $${original_amount}, Donor paid: $${amount}`);
+
       }
     } catch (error) {
       console.error('💥 Error processing donation:', error);
       return res.status(500).json({ error: 'Failed to process donation', details: error.message });
     }
   } else if (event.type === 'invoice.payment_succeeded') {
-    console.log('🔄 Processing invoice.payment_succeeded event');
-    
+
     try {
       const invoice = event.data.object;
       const subscription = invoice.subscription;
@@ -502,9 +445,7 @@ export default async (req, res) => {
       const original_amount = metadata.original_amount ? parseFloat(metadata.original_amount) / 100 : amount;
       const fee_amount = metadata.fee_amount ? parseFloat(metadata.fee_amount) / 100 : 0;
       const cover_fees = metadata.cover_fees === 'true';
-      
-      console.log(`📊 Processing recurring donation for church ID: ${organization_id}, Amount: $${amount}`);
-      
+
       // Get church name for logging
       const { data: org } = await supabase
         .from('organizations')
@@ -523,11 +464,11 @@ export default async (req, res) => {
       
       if (!memberError && member) {
         donor_id = member.id;
-        console.log(`👤 Found existing member: ${donor_id}`);
+
       }
       
       // Insert donation record
-      console.log('💾 Inserting recurring donation record...');
+
       const { error: insertError } = await supabase.from('donations').insert({
         organization_id,
         donor_id,
@@ -555,24 +496,20 @@ export default async (req, res) => {
         console.error('❌ Error inserting recurring donation:', insertError);
         throw new Error(`Database error: ${insertError.message}`);
       } else {
-        console.log(`✅ Successfully recorded recurring donation for church: ${org?.name || organization_id}`);
-        console.log(`💰 Church receives: $${original_amount}, Donor paid: $${amount}`);
+
       }
     } catch (error) {
       console.error('💥 Error processing recurring donation:', error);
       return res.status(500).json({ error: 'Failed to process recurring donation', details: error.message });
     }
   } else if (event.type === 'customer.subscription.created') {
-    console.log('📅 Processing customer.subscription.created event');
-    
+
     try {
       const subscription = event.data.object;
       const metadata = subscription.metadata || {};
       const customer = subscription.customer;
       const organization_id = metadata.organization_id;
-      
-      console.log(`📅 New subscription created for church ID: ${organization_id}, Customer: ${customer}`);
-      
+
       // Update member record with subscription info
       const { error: updateError } = await supabase
         .from('members')
@@ -588,7 +525,7 @@ export default async (req, res) => {
       if (updateError) {
         console.error('❌ Error updating member subscription:', updateError);
       } else {
-        console.log(`✅ Successfully updated member subscription info`);
+
       }
     } catch (error) {
       console.error('💥 Error processing subscription creation:', error);
@@ -596,6 +533,5 @@ export default async (req, res) => {
     }
   }
 
-  console.log('✅ Webhook processed successfully');
   res.json({ received: true });
 };

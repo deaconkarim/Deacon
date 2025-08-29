@@ -7,8 +7,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function findOrganizationId() {
-  console.log('🔍 Finding organization ID...');
-  
+
   try {
     // Check members table structure
     const { data: members, error: membersError } = await supabase
@@ -17,9 +16,9 @@ async function findOrganizationId() {
       .limit(1);
 
     if (membersError) {
-      console.log('❌ Error accessing members table:', membersError);
+
     } else {
-      console.log('📊 Members table structure:', Object.keys(members?.[0] || {}));
+
     }
 
     // Check if there's an organizations table
@@ -29,11 +28,11 @@ async function findOrganizationId() {
       .limit(5);
 
     if (orgError) {
-      console.log('❌ Error accessing organizations table:', orgError);
+
     } else {
-      console.log(`📊 Organizations found: ${organizations?.length || 0}`);
+
       if (organizations && organizations.length > 0) {
-        console.log('📋 Sample organization:', organizations[0]);
+
       }
     }
 
@@ -44,9 +43,9 @@ async function findOrganizationId() {
       .limit(1);
 
     if (eventsError) {
-      console.log('❌ Error accessing events table:', eventsError);
+
     } else {
-      console.log('📊 Events table structure:', Object.keys(events?.[0] || {}));
+
     }
 
     // Try to find organization_id in attendance records
@@ -56,9 +55,9 @@ async function findOrganizationId() {
       .limit(1);
 
     if (attendanceError) {
-      console.log('❌ Error accessing attendance table:', attendanceError);
+
     } else {
-      console.log('📊 Attendance table structure:', Object.keys(attendance?.[0] || {}));
+
     }
 
     // Try a common organization ID pattern
@@ -68,8 +67,6 @@ async function findOrganizationId() {
       '00000000-0000-0000-0000-000000000000'  // Zero UUID
     ];
 
-    console.log('\n🧪 Testing common organization IDs...');
-    
     for (const orgId of commonOrgIds) {
       const testEvent = {
         id: 'test-event-' + Date.now(),
@@ -84,8 +81,7 @@ async function findOrganizationId() {
         .select();
 
       if (!insertError) {
-        console.log(`✅ Success with organization_id: ${orgId}`);
-        
+
         // Clean up test event
         await supabase
           .from('events')
@@ -94,11 +90,10 @@ async function findOrganizationId() {
         
         return orgId;
       } else {
-        console.log(`❌ Failed with organization_id: ${orgId} - ${insertError.message}`);
+
       }
     }
 
-    console.log('❌ No working organization_id found');
     return null;
 
   } catch (error) {
@@ -111,9 +106,9 @@ async function findOrganizationId() {
 findOrganizationId()
   .then((orgId) => {
     if (orgId) {
-      console.log(`\n✅ Found working organization_id: ${orgId}`);
+
     } else {
-      console.log('\n❌ Could not find a working organization_id');
+
     }
     process.exit(0);
   })

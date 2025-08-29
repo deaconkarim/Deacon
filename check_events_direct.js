@@ -7,8 +7,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function checkEventsDirect() {
-  console.log('🔍 Checking events directly...');
-  
+
   try {
     const organizationId = '550e8400-e29b-41d4-a716-446655440000';
     
@@ -21,17 +20,15 @@ async function checkEventsDirect() {
 
     if (error) throw error;
 
-    console.log(`📅 Total events in database: ${events?.length || 0}`);
-
     if (events && events.length > 0) {
-      console.log('\n📋 Event details:');
+
       events.forEach((event, index) => {
-        console.log(`${index + 1}. ${event.title} (${event.event_type}) - ${event.start_date}`);
+
       });
     }
 
     // Check for duplicate events specifically
-    console.log('\n🔍 Checking for duplicate events...');
+
     const eventGroups = {};
     events?.forEach(event => {
       const key = `${event.title}-${event.start_date}`;
@@ -43,15 +40,15 @@ async function checkEventsDirect() {
 
     const duplicates = Object.entries(eventGroups).filter(([key, events]) => events.length > 1);
     if (duplicates.length > 0) {
-      console.log('\n❌ Found duplicate events:');
+
       duplicates.forEach(([key, events]) => {
-        console.log(`\nDuplicate: ${key}`);
+
         events.forEach(event => {
-          console.log(`  - ID: ${event.id}, Title: ${event.title}, Date: ${event.start_date}`);
+
         });
       });
     } else {
-      console.log('\n✅ No duplicate events found');
+
     }
 
     // Calculate what the dashboard should show
@@ -74,16 +71,7 @@ async function checkEventsDirect() {
     const upcomingEvents = events?.filter(e => new Date(e.start_date) >= now).slice(0, 5) || [];
     const eventsNeedingVolunteers = upcomingEvents.filter(e => e.needs_volunteers === true);
 
-    console.log('\n📊 Dashboard calculations:');
-    console.log(`   - Events this week: ${eventsThisWeek.length}`);
-    console.log(`   - Events this month: ${eventsThisMonth.length}`);
-    console.log(`   - Upcoming events: ${upcomingEvents.length}`);
-    console.log(`   - Events needing volunteers: ${eventsNeedingVolunteers.length}`);
-
     // Check current date and time
-    console.log(`\n🕐 Current date/time: ${now.toISOString()}`);
-    console.log(`📅 Week from now: ${weekFromNow.toISOString()}`);
-    console.log(`📅 Month from now: ${monthFromNow.toISOString()}`);
 
     return {
       totalEvents: events?.length || 0,
@@ -102,8 +90,7 @@ async function checkEventsDirect() {
 // Run the check
 checkEventsDirect()
   .then((result) => {
-    console.log('\n🎉 Check completed!');
-    console.log('📈 Summary:', result);
+
     process.exit(0);
   })
   .catch((error) => {

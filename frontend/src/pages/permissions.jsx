@@ -97,7 +97,7 @@ export function Permissions() {
     try {
       setIsLoading(true);
       const orgId = await getCurrentUserOrganizationId();
-      console.log('Organization ID loaded:', orgId);
+
       setOrganizationId(orgId);
       
       if (orgId) {
@@ -110,7 +110,7 @@ export function Permissions() {
         // Load custom roles after organization ID is set
         await loadCustomRoles(orgId);
       } else {
-        console.log('No organization ID found');
+
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -135,14 +135,13 @@ export function Permissions() {
 
   const fetchMembersWithoutAccounts = async (orgId) => {
     if (!orgId) {
-      console.log('No organization ID available, skipping members without accounts fetch');
+
       setMembersWithoutAccounts([]);
       return;
     }
 
     try {
-      console.log('Fetching members without accounts for organization:', orgId);
-      
+
       // Fetch all members and organization users for this organization only
       const [membersResult, orgUsersResult] = await Promise.all([
         supabase
@@ -157,9 +156,6 @@ export function Permissions() {
           .order('created_at', { ascending: false })
       ]);
 
-      console.log('Organization members:', membersResult.data);
-      console.log('Organization users:', orgUsersResult.data);
-
       if (membersResult.error) throw membersResult.error;
       if (orgUsersResult.error) throw orgUsersResult.error;
 
@@ -172,8 +168,7 @@ export function Permissions() {
         member.email && 
         member.email.trim() !== ''
       );
-      
-      console.log('Members without accounts:', membersWithoutAccounts);
+
       setMembersWithoutAccounts(membersWithoutAccounts);
     } catch (error) {
       console.error('Error fetching members without accounts:', error);
@@ -289,8 +284,6 @@ export function Permissions() {
     }
   };
 
-
-
   // Handle bulk role updates
   const handleBulkRoleUpdate = async () => {
     if (selectedUsers.length === 0) {
@@ -355,8 +348,6 @@ export function Permissions() {
         throw new Error('User not authenticated');
       }
 
-      console.log('Current user:', user.id);
-
       // Check current user's organization membership and admin status
       const { data: userMembership, error: membershipError } = await supabase
         .from('organization_users')
@@ -410,7 +401,7 @@ export function Permissions() {
         });
 
         if (!response.ok) {
-          console.warn('Failed to send invitation email, but invitation was created');
+
         }
       } catch (emailError) {
         console.error('Error sending invitation email:', emailError);
@@ -644,8 +635,6 @@ export function Permissions() {
     }
   };
 
-
-
   // Custom role handlers
   const handleCreateRole = async () => {
     try {
@@ -719,31 +708,27 @@ export function Permissions() {
   const loadCustomRoles = async (orgId = null) => {
     const targetOrgId = orgId || organizationId;
     if (!targetOrgId) {
-      console.log('No organization ID available for loading custom roles');
+
       return;
     }
     
     try {
-      console.log('Loading custom roles for organization:', targetOrgId);
-      
+
       // Let's also check what's in the database directly
       const { data: directCheck, error: directError } = await supabase
         .from('custom_roles')
         .select('*')
         .eq('organization_id', targetOrgId);
-      
-      console.log('Direct database check for custom roles:', directCheck);
+
       if (directError) console.error('Direct check error:', directError);
       
       const roles = await CustomRolesService.getCustomRoles(targetOrgId);
-      console.log('Loaded custom roles via service:', roles);
+
       setCustomRoles(roles);
     } catch (error) {
       console.error('Error loading custom roles:', error);
     }
   };
-
-
 
   // Permission categories for display
   const permissionCategories = CustomRolesService.getPermissionCategories();
@@ -841,8 +826,7 @@ export function Permissions() {
 
         {/* Custom Roles Summary */}
         {(() => {
-          console.log('Rendering custom roles section. customRoles:', customRoles);
-          console.log('customRoles.length:', customRoles.length);
+
           return customRoles.length > 0 && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Custom Roles</h3>

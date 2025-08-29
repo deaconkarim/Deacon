@@ -170,12 +170,10 @@ const unifiedAttendanceService = {
 };
 
 async function testAttendanceConsistency() {
-  console.log('🧪 Testing attendance calculation consistency...\n');
 
   try {
     // Test 1: Get a specific member's attendance count
-    console.log('📊 Test 1: Member attendance count');
-    
+
     // First, get a member from the database
     const { data: members, error: membersError } = await supabase
       .from('members')
@@ -183,12 +181,11 @@ async function testAttendanceConsistency() {
       .limit(1);
 
     if (membersError || !members || members.length === 0) {
-      console.log('❌ No members found in database');
+
       return;
     }
 
     const testMember = members[0];
-    console.log(`   Testing member: ${testMember.firstname} ${testMember.lastname} (${testMember.id})`);
 
     // Get attendance count using unified service
     const memberAttendance = await unifiedAttendanceService.getMemberAttendanceCount(testMember.id, {
@@ -196,26 +193,20 @@ async function testAttendanceConsistency() {
       includeDeclined: false
     });
 
-    console.log(`   ✅ Member attendance count: ${memberAttendance.totalCount}`);
-    console.log(`   ✅ Event type breakdown:`, memberAttendance.eventTypeBreakdown);
-
     // Test 2: Get top attendees
-    console.log('\n📊 Test 2: Top attendees');
-    
+
     const topAttendees = await unifiedAttendanceService.getTopAttendees({
       limit: 5,
       includeFutureEvents: false,
       includeDeclined: false
     });
 
-    console.log(`   ✅ Top attendees found: ${topAttendees.length}`);
     topAttendees.forEach((attendee, index) => {
-      console.log(`      ${index + 1}. ${attendee.name}: ${attendee.count} events`);
+
     });
 
     // Test 3: Compare with direct database query
-    console.log('\n📊 Test 3: Direct database comparison');
-    
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -243,10 +234,9 @@ async function testAttendanceConsistency() {
       .lt('events.start_date', today.toISOString());
 
     if (directError) {
-      console.log('❌ Error in direct query:', directError);
+
     } else {
-      console.log(`   ✅ Direct query attendance records: ${directAttendance.length}`);
-      
+
       // Count by member
       const directMemberCount = {};
       directAttendance.forEach(record => {
@@ -254,20 +244,15 @@ async function testAttendanceConsistency() {
         directMemberCount[memberId] = (directMemberCount[memberId] || 0) + 1;
       });
 
-      console.log(`   ✅ Direct query unique members: ${Object.keys(directMemberCount).length}`);
-      
       // Compare with unified service
       const unifiedCount = topAttendees.length;
-      console.log(`   ✅ Unified service unique members: ${unifiedCount}`);
-      
+
       if (Object.keys(directMemberCount).length === unifiedCount) {
-        console.log('   ✅ Counts match!');
+
       } else {
-        console.log('   ❌ Counts do not match!');
+
       }
     }
-
-    console.log('\n✅ Attendance consistency tests completed!');
 
   } catch (error) {
     console.error('❌ Test failed:', error);
@@ -447,12 +432,10 @@ const unifiedAttendanceService = {
 };
 
 async function testAttendanceConsistency() {
-  console.log('🧪 Testing attendance calculation consistency...\n');
 
   try {
     // Test 1: Get a specific member's attendance count
-    console.log('📊 Test 1: Member attendance count');
-    
+
     // First, get a member from the database
     const { data: members, error: membersError } = await supabase
       .from('members')
@@ -460,12 +443,11 @@ async function testAttendanceConsistency() {
       .limit(1);
 
     if (membersError || !members || members.length === 0) {
-      console.log('❌ No members found in database');
+
       return;
     }
 
     const testMember = members[0];
-    console.log(`   Testing member: ${testMember.firstname} ${testMember.lastname} (${testMember.id})`);
 
     // Get attendance count using unified service
     const memberAttendance = await unifiedAttendanceService.getMemberAttendanceCount(testMember.id, {
@@ -473,26 +455,20 @@ async function testAttendanceConsistency() {
       includeDeclined: false
     });
 
-    console.log(`   ✅ Member attendance count: ${memberAttendance.totalCount}`);
-    console.log(`   ✅ Event type breakdown:`, memberAttendance.eventTypeBreakdown);
-
     // Test 2: Get top attendees
-    console.log('\n📊 Test 2: Top attendees');
-    
+
     const topAttendees = await unifiedAttendanceService.getTopAttendees({
       limit: 5,
       includeFutureEvents: false,
       includeDeclined: false
     });
 
-    console.log(`   ✅ Top attendees found: ${topAttendees.length}`);
     topAttendees.forEach((attendee, index) => {
-      console.log(`      ${index + 1}. ${attendee.name}: ${attendee.count} events`);
+
     });
 
     // Test 3: Compare with direct database query
-    console.log('\n📊 Test 3: Direct database comparison');
-    
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -520,10 +496,9 @@ async function testAttendanceConsistency() {
       .lt('events.start_date', today.toISOString());
 
     if (directError) {
-      console.log('❌ Error in direct query:', directError);
+
     } else {
-      console.log(`   ✅ Direct query attendance records: ${directAttendance.length}`);
-      
+
       // Count by member
       const directMemberCount = {};
       directAttendance.forEach(record => {
@@ -531,20 +506,15 @@ async function testAttendanceConsistency() {
         directMemberCount[memberId] = (directMemberCount[memberId] || 0) + 1;
       });
 
-      console.log(`   ✅ Direct query unique members: ${Object.keys(directMemberCount).length}`);
-      
       // Compare with unified service
       const unifiedCount = topAttendees.length;
-      console.log(`   ✅ Unified service unique members: ${unifiedCount}`);
-      
+
       if (Object.keys(directMemberCount).length === unifiedCount) {
-        console.log('   ✅ Counts match!');
+
       } else {
-        console.log('   ❌ Counts do not match!');
+
       }
     }
-
-    console.log('\n✅ Attendance consistency tests completed!');
 
   } catch (error) {
     console.error('❌ Test failed:', error);
@@ -724,12 +694,10 @@ const unifiedAttendanceService = {
 };
 
 async function testAttendanceConsistency() {
-  console.log('🧪 Testing attendance calculation consistency...\n');
 
   try {
     // Test 1: Get a specific member's attendance count
-    console.log('📊 Test 1: Member attendance count');
-    
+
     // First, get a member from the database
     const { data: members, error: membersError } = await supabase
       .from('members')
@@ -737,12 +705,11 @@ async function testAttendanceConsistency() {
       .limit(1);
 
     if (membersError || !members || members.length === 0) {
-      console.log('❌ No members found in database');
+
       return;
     }
 
     const testMember = members[0];
-    console.log(`   Testing member: ${testMember.firstname} ${testMember.lastname} (${testMember.id})`);
 
     // Get attendance count using unified service
     const memberAttendance = await unifiedAttendanceService.getMemberAttendanceCount(testMember.id, {
@@ -750,26 +717,20 @@ async function testAttendanceConsistency() {
       includeDeclined: false
     });
 
-    console.log(`   ✅ Member attendance count: ${memberAttendance.totalCount}`);
-    console.log(`   ✅ Event type breakdown:`, memberAttendance.eventTypeBreakdown);
-
     // Test 2: Get top attendees
-    console.log('\n📊 Test 2: Top attendees');
-    
+
     const topAttendees = await unifiedAttendanceService.getTopAttendees({
       limit: 5,
       includeFutureEvents: false,
       includeDeclined: false
     });
 
-    console.log(`   ✅ Top attendees found: ${topAttendees.length}`);
     topAttendees.forEach((attendee, index) => {
-      console.log(`      ${index + 1}. ${attendee.name}: ${attendee.count} events`);
+
     });
 
     // Test 3: Compare with direct database query
-    console.log('\n📊 Test 3: Direct database comparison');
-    
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -797,10 +758,9 @@ async function testAttendanceConsistency() {
       .lt('events.start_date', today.toISOString());
 
     if (directError) {
-      console.log('❌ Error in direct query:', directError);
+
     } else {
-      console.log(`   ✅ Direct query attendance records: ${directAttendance.length}`);
-      
+
       // Count by member
       const directMemberCount = {};
       directAttendance.forEach(record => {
@@ -808,20 +768,15 @@ async function testAttendanceConsistency() {
         directMemberCount[memberId] = (directMemberCount[memberId] || 0) + 1;
       });
 
-      console.log(`   ✅ Direct query unique members: ${Object.keys(directMemberCount).length}`);
-      
       // Compare with unified service
       const unifiedCount = topAttendees.length;
-      console.log(`   ✅ Unified service unique members: ${unifiedCount}`);
-      
+
       if (Object.keys(directMemberCount).length === unifiedCount) {
-        console.log('   ✅ Counts match!');
+
       } else {
-        console.log('   ❌ Counts do not match!');
+
       }
     }
-
-    console.log('\n✅ Attendance consistency tests completed!');
 
   } catch (error) {
     console.error('❌ Test failed:', error);

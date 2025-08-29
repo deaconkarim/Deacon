@@ -12,16 +12,13 @@ serve(async (req) => {
   }
 
   try {
-    console.log('📱 SMS webhook received:', req.method, req.url)
-    
+
     // Parse form data from Twilio webhook
     const formData = await req.formData()
     const from = formData.get('From') as string
     const to = formData.get('To') as string
     const body = formData.get('Body') as string
     const messageSid = formData.get('MessageSid') as string
-
-    console.log('📨 SMS data:', { from, to, body, messageSid })
 
     // Normalize phone number by removing + prefix and converting to database format
     const removePlus = (phone) => phone.startsWith('+') ? phone.substring(1) : phone
@@ -51,15 +48,6 @@ serve(async (req) => {
     const cleanFromDigits = cleanDigits(from) // Just the digits for flexible matching
     const localFromDigits = getLocalDigits(from) // Digits without country code
 
-    console.log('📱 Normalized phone numbers:', { 
-      original: from, 
-      normalized: normalizedFrom,
-      cleanDigits: cleanFromDigits,
-      localDigits: localFromDigits,
-      originalTo: to,
-      normalizedTo: normalizedTo 
-    })
-
     // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') || '',
@@ -70,8 +58,7 @@ serve(async (req) => {
     // First try exact match with normalized format
     // Try to find member by phone number - try multiple formats
     let member = null
-    console.log('🔍 Looking for member with phone:', from, 'normalized:', normalizedFrom, 'clean digits:', cleanFromDigits)
-    
+
     // First try the normalized format
     let { data: memberData, error: memberError } = await supabaseClient
       .from('members')
@@ -81,7 +68,7 @@ serve(async (req) => {
     
     // If not found, try the original format
     if (!memberData) {
-      console.log('🔍 Trying original phone format...')
+
       const { data: originalMemberData } = await supabaseClient
         .from('members')
         .select('id, firstname, lastname, phone')
@@ -90,13 +77,13 @@ serve(async (req) => {
       
       if (originalMemberData) {
         memberData = originalMemberData
-        console.log('✅ Found member with original format:', memberData.firstname, memberData.lastname)
+
       }
     }
     
     // If not found, try the clean digits format (no formatting)
     if (!memberData) {
-      console.log('🔍 Trying clean digits format...')
+
       const { data: cleanDigitsMemberData } = await supabaseClient
         .from('members')
         .select('id, firstname, lastname, phone')
@@ -105,13 +92,13 @@ serve(async (req) => {
       
       if (cleanDigitsMemberData) {
         memberData = cleanDigitsMemberData
-        console.log('✅ Found member with clean digits format:', memberData.firstname, memberData.lastname)
+
       }
     }
     
     // If not found, try the local digits format (without country code)
     if (!memberData) {
-      console.log('🔍 Trying local digits format (no country code)...')
+
       const { data: localDigitsMemberData } = await supabaseClient
         .from('members')
         .select('id, firstname, lastname, phone')
@@ -120,26 +107,26 @@ serve(async (req) => {
       
       if (localDigitsMemberData) {
         memberData = localDigitsMemberData
-        console.log('✅ Found member with local digits format:', memberData.firstname, memberData.lastname)
+
       }
     }
     
     // If still not found, try to find by matching just the digits
     if (!memberData) {
-      console.log('🔍 Trying digit matching...')
+
       const { data: members } = await supabaseClient
         .from('members')
         .select('id, firstname, lastname, phone')
         .not('phone', 'is', null)
       
       if (members) {
-        console.log('🔍 Checking', members.length, 'members for digit match')
+
         memberData = members.find(m => {
           if (!m.phone) return false
           const memberDigits = m.phone.replace(/\D/g, '')
           const matches = memberDigits === cleanFromDigits
           if (matches) {
-            console.log('🔍 Found matching member:', m.firstname, m.lastname, 'phone:', m.phone, 'digits:', memberDigits)
+
           }
           return matches
         })
@@ -151,9 +138,9 @@ serve(async (req) => {
     if (memberError) {
       console.error('❌ Member lookup error:', memberError)
     } else if (member) {
-      console.log('✅ Found member:', member.firstname, member.lastname)
+
     } else {
-      console.log('ℹ️ No member found for phone number:', from)
+
     }
 
     // Find the most recent conversation for this person/phone number
@@ -161,8 +148,7 @@ serve(async (req) => {
     
     // Strategy 1: If we have a member, find their most recent conversation
     if (member) {
-      console.log('🔍 Looking for most recent conversation for member:', member.id, member.firstname, member.lastname)
-      
+
       // Find conversations where this member has messages, ordered by most recent activity
       const { data: memberConversations } = await supabaseClient
         .from('sms_conversations')
@@ -204,15 +190,14 @@ serve(async (req) => {
         
         if (mostRecentConversation) {
           conversationId = mostRecentConversation.id
-          console.log('✅ Found most recent conversation for member:', conversationId, 'title:', mostRecentConversation.title, 'last message:', mostRecentMessageTime)
+
         }
       }
     }
     
     // Strategy 2: If no member-based conversation found, find by phone number
     if (!conversationId) {
-      console.log('🔍 Looking for most recent conversation for phone number:', from)
-      
+
       // Find conversations with messages to/from this phone number, ordered by most recent activity
       const { data: phoneConversations } = await supabaseClient
         .from('sms_conversations')
@@ -259,15 +244,14 @@ serve(async (req) => {
         
         if (mostRecentConversation) {
           conversationId = mostRecentConversation.id
-          console.log('✅ Found most recent conversation for phone number:', conversationId, 'title:', mostRecentConversation.title, 'last message:', mostRecentMessageTime)
+
         }
       }
     }
     
     // Strategy 3: If still no conversation found, try flexible digit matching
     if (!conversationId) {
-      console.log('🔍 Trying flexible digit matching for phone number...')
-      
+
       const { data: allConversations } = await supabaseClient
         .from('sms_conversations')
         .select(`
@@ -315,15 +299,15 @@ serve(async (req) => {
         
         if (mostRecentConversation) {
           conversationId = mostRecentConversation.id
-          console.log('✅ Found most recent conversation via digit matching:', conversationId, 'title:', mostRecentConversation.title, 'last message:', mostRecentMessageTime)
+
         }
       }
     }
     
     if (conversationId) {
-      console.log('✅ Found existing conversation:', conversationId)
+
     } else {
-      console.log('❌ No existing conversation found, will create new one')
+
     }
 
     // If still no conversation found, create a new one
@@ -360,7 +344,7 @@ serve(async (req) => {
           console.error('❌ Conversation creation error:', convError)
         } else {
           conversationId = newConversation?.id
-          console.log('✅ Created new conversation:', conversationId)
+
         }
       }
 
@@ -378,7 +362,7 @@ serve(async (req) => {
       
       if (orgUser) {
         organizationId = orgUser.organization_id
-        console.log('✅ Found organization_id from member:', organizationId)
+
       }
     }
     
@@ -392,7 +376,7 @@ serve(async (req) => {
       
       if (conversation?.organization_id) {
         organizationId = conversation.organization_id
-        console.log('✅ Found organization_id from conversation:', organizationId)
+
       }
     }
     
@@ -413,7 +397,7 @@ serve(async (req) => {
         
         if (group?.organization_id) {
           organizationId = group.organization_id
-          console.log('✅ Found organization_id from group:', organizationId)
+
         }
       }
     }
@@ -430,11 +414,9 @@ serve(async (req) => {
       
       if (recentConversation?.organization_id) {
         organizationId = recentConversation.organization_id
-        console.log('✅ Found organization_id from recent conversation:', organizationId)
+
       }
     }
-    
-    console.log('📝 Using organization_id for message:', organizationId)
 
     // Store incoming message
     const { data: message, error: messageError } = await supabaseClient
@@ -459,16 +441,13 @@ serve(async (req) => {
       throw messageError
     }
 
-    console.log('✅ Message stored successfully:', message.id)
-
     // Update conversation's updated_at timestamp
     if (conversationId) {
       await supabaseClient
         .from('sms_conversations')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', conversationId)
-      
-      console.log('✅ Conversation updated timestamp')
+
     }
 
     // Return empty TwiML response (no auto-reply)
@@ -476,7 +455,6 @@ serve(async (req) => {
 <Response>
 </Response>`
 
-    console.log('📤 Sending empty TwiML response (no auto-reply)')
     return new Response(twimlResponse, {
       headers: { 
         ...corsHeaders, 

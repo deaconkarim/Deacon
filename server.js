@@ -121,26 +121,20 @@ function getNextOccurrence(schedule) {
 // Endpoint to fetch events
 app.get('/api/events', async (req, res) => {
   try {
-    console.log('Fetching events from BLB Church website...');
     const response = await axios.get('https://www.blb.church/events/');
-    console.log('Response received, status:', response.status);
     
     const html = response.data;
-    console.log('HTML content length:', html.length);
     
     const $ = cheerio.load(html);
-    console.log('HTML parsed with cheerio');
-    
+
     const events = [];
     
     // Find all event sections (they're in h2 tags)
     const eventSections = $('h2');
-    console.log('Found event sections:', eventSections.length);
-    
+
     eventSections.each((i, section) => {
       const title = $(section).text().trim();
-      console.log('Processing event:', title);
-      
+
       // Skip non-event sections
       if (title.includes('Download Our Organization App') || title.includes('Watch and Listen')) {
         return;
@@ -150,8 +144,7 @@ app.get('/api/events', async (req, res) => {
       const detailsElement = $(section).next();
       if (detailsElement.length) {
         const schedule = detailsElement.text().trim();
-        console.log('Event schedule:', schedule);
-        
+
         const nextOccurrence = getNextOccurrence(schedule);
         if (nextOccurrence) {
           // Set default times based on event type
@@ -185,13 +178,11 @@ app.get('/api/events', async (req, res) => {
             end_date: endDate.toISOString(),
             recurrence: schedule
           });
-          
-          console.log('Added event:', events[events.length - 1]);
+
         }
       }
     });
-    
-    console.log('Total events found:', events.length);
+
     res.json(events);
   } catch (error) {
     console.error('Error fetching events:', error);
@@ -200,5 +191,5 @@ app.get('/api/events', async (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+
 }); 

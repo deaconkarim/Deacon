@@ -7,8 +7,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function cleanupOrphanedAttendance() {
-  console.log('🧹 Cleaning up orphaned attendance records...');
-  
+
   try {
     // Step 1: Get all attendance records
     const { data: attendanceRecords, error: attendanceError } = await supabase
@@ -17,12 +16,10 @@ async function cleanupOrphanedAttendance() {
 
     if (attendanceError) throw attendanceError;
 
-    console.log(`📊 Found ${attendanceRecords?.length || 0} attendance records`);
-
     if (attendanceRecords && attendanceRecords.length > 0) {
-      console.log('\n📋 Sample attendance records:');
+
       attendanceRecords.slice(0, 5).forEach((record, index) => {
-        console.log(`${index + 1}. Event ID: ${record.event_id}, Member ID: ${record.member_id}, Status: ${record.status}`);
+
       });
     }
 
@@ -33,27 +30,22 @@ async function cleanupOrphanedAttendance() {
 
     if (eventsError) throw eventsError;
 
-    console.log(`\n📅 Found ${events?.length || 0} events in database`);
-
     // Step 3: Find orphaned attendance records
     const eventIds = events?.map(e => e.id) || [];
     const orphanedRecords = attendanceRecords?.filter(record => !eventIds.includes(record.event_id)) || [];
 
-    console.log(`\n❌ Found ${orphanedRecords.length} orphaned attendance records`);
-
     if (orphanedRecords.length > 0) {
-      console.log('\n📋 Orphaned attendance records:');
+
       orphanedRecords.forEach((record, index) => {
-        console.log(`${index + 1}. Event ID: ${record.event_id}, Member ID: ${record.member_id}, Status: ${record.status}`);
+
       });
 
       // Step 4: Delete orphaned records
-      console.log('\n🗑️ Deleting orphaned attendance records...');
-      
+
       const orphanedEventIds = [...new Set(orphanedRecords.map(r => r.event_id))];
-      console.log(`\n📋 Unique orphaned event IDs: ${orphanedEventIds.length}`);
+
       orphanedEventIds.forEach(eventId => {
-        console.log(`   - ${eventId}`);
+
       });
 
       const { error: deleteError } = await supabase
@@ -66,9 +58,8 @@ async function cleanupOrphanedAttendance() {
         throw deleteError;
       }
 
-      console.log('✅ Successfully deleted orphaned attendance records');
     } else {
-      console.log('✅ No orphaned attendance records found');
+
     }
 
     // Step 5: Verify cleanup
@@ -78,12 +69,10 @@ async function cleanupOrphanedAttendance() {
 
     if (remainingError) throw remainingError;
 
-    console.log(`\n📊 Remaining attendance records: ${remainingRecords?.length || 0}`);
-
     if (remainingRecords && remainingRecords.length > 0) {
-      console.log('\n📋 Remaining attendance records:');
+
       remainingRecords.forEach((record, index) => {
-        console.log(`${index + 1}. Event ID: ${record.event_id}, Member ID: ${record.member_id}, Status: ${record.status}`);
+
       });
     }
 
@@ -102,12 +91,7 @@ async function cleanupOrphanedAttendance() {
 // Run the cleanup
 cleanupOrphanedAttendance()
   .then((result) => {
-    console.log('\n🎉 Cleanup completed!');
-    console.log('📈 Summary:', result);
-    console.log('\n🔄 Next steps:');
-    console.log('   1. Refresh the dashboard page');
-    console.log('   2. The duplicate events should no longer appear');
-    console.log('   3. Add new events and attendance records as needed');
+
     process.exit(0);
   })
   .catch((error) => {

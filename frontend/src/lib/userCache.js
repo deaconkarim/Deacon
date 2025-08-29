@@ -17,12 +17,12 @@ export const userCacheService = {
     
     // Check cache first
     if (userCache && userCacheTimestamp && (now - userCacheTimestamp) < USER_CACHE_DURATION) {
-      console.log('👤 [UserCache] Using cached user data');
+
       return userCache;
     }
 
     try {
-      console.log('👤 [UserCache] Fetching fresh user data');
+
       const { data: { user }, error } = await supabase.auth.getUser();
       
       if (error) throw error;
@@ -44,7 +44,7 @@ export const userCacheService = {
     
     // Check cache first
     if (organizationCache && organizationCacheTimestamp && (now - organizationCacheTimestamp) < ORG_CACHE_DURATION) {
-      console.log('🏢 [UserCache] Using cached organization data');
+
       return organizationCache;
     }
 
@@ -56,7 +56,6 @@ export const userCacheService = {
       const impersonatingUser = localStorage.getItem('impersonating_user');
       if (impersonatingUser) {
         const impersonationData = JSON.parse(impersonatingUser);
-        console.log('🔍 [UserCache] Using impersonated organization:', impersonationData.organization_id);
         organizationCache = {
           organization_id: impersonationData.organization_id,
           organization_name: impersonationData.organization_name,
@@ -70,7 +69,6 @@ export const userCacheService = {
       const impersonatingOrg = localStorage.getItem('impersonating_organization');
       if (impersonatingOrg) {
         const impersonationData = JSON.parse(impersonatingOrg);
-        console.log('🔍 [UserCache] Using impersonated organization:', impersonationData.organization_id);
         organizationCache = {
           organization_id: impersonationData.organization_id,
           organization_name: impersonationData.organization_name,
@@ -150,20 +148,20 @@ export const userCacheService = {
     userCacheTimestamp = null;
     organizationCache = null;
     organizationCacheTimestamp = null;
-    console.log('🗑️ [UserCache] All caches cleared');
+
   },
 
   // Clear user cache only
   clearUserCache() {
     userCache = null;
     userCacheTimestamp = null;
-    console.log('🗑️ [UserCache] User cache cleared');
+
   },
 
   // Clear organization cache only
   clearOrganizationCache() {
     organizationCache = null;
     organizationCacheTimestamp = null;
-    console.log('🗑️ [UserCache] Organization cache cleared');
+
   }
 }; 

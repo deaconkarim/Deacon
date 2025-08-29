@@ -368,11 +368,6 @@ const MemberForm = ({ initialData = {}, onSave, onCancel }) => {
       // Convert blob to File object
       const imageFile = new File([croppedImageBlob], fileName, { type: 'image/jpeg' });
 
-      console.log('Attempting to upload to bucket: members');
-      console.log('File name:', fileName);
-      console.log('File type:', imageFile.type);
-      console.log('File size:', imageFile.size);
-
       // Upload image to Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('members')
@@ -387,8 +382,6 @@ const MemberForm = ({ initialData = {}, onSave, onCancel }) => {
         throw uploadError;
       }
 
-      console.log('Upload successful:', uploadData);
-
       // Get public URL
       const { data: urlData, error: urlError } = await supabase.storage
         .from('members')
@@ -398,8 +391,6 @@ const MemberForm = ({ initialData = {}, onSave, onCancel }) => {
         console.error('Error getting public URL:', urlError);
         throw urlError;
       }
-
-      console.log('Got public URL:', urlData);
 
       // Update member data with new image URL
       setMemberData(prev => ({

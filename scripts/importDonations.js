@@ -29,9 +29,9 @@ const donations = [
 
 async function importDonations() {
   try {
-    console.log('Starting donation import...');
+
     const result = await addMultipleDonations(donations);
-    console.log('Successfully imported donations:', result);
+
   } catch (error) {
     console.error('Error importing donations:', error);
   }

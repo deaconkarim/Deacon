@@ -7,9 +7,7 @@ const supabase = createClient(
 
 async function checkMembers() {
   const orgId = '8e4c7ce0-c805-41ca-8201-0c11ab9ac74c';
-  
-  console.log('🔍 Checking members for organization:', orgId);
-  
+
   // Check all members for this organization
   const { data: members, error: membersError } = await supabase
     .from('members')
@@ -20,12 +18,11 @@ async function checkMembers() {
     console.error('❌ Error fetching members:', membersError);
     return;
   }
-  
-  console.log('✅ Found', members.length, 'members');
+
   if (members.length > 0) {
-    console.log('First few members:');
+
     members.slice(0, 5).forEach(member => {
-      console.log(`  - ${member.firstname} ${member.lastname} (${member.organization_id})`);
+
     });
   }
   
@@ -38,11 +35,11 @@ async function checkMembers() {
   if (nullError) {
     console.error('❌ Error fetching NULL org members:', nullError);
   } else {
-    console.log('🔍 Found', nullOrgMembers.length, 'members with NULL organization_id');
+
     if (nullOrgMembers.length > 0) {
-      console.log('First few NULL org members:');
+
       nullOrgMembers.slice(0, 5).forEach(member => {
-        console.log(`  - ${member.firstname} ${member.lastname} (${member.organization_id})`);
+
       });
     }
   }
@@ -57,9 +54,9 @@ async function checkMembers() {
   if (attendanceError) {
     console.error('❌ Error fetching attendance:', attendanceError);
   } else {
-    console.log('✅ Found', attendance.length, 'attendance records (showing first 5)');
+
     attendance.forEach(record => {
-      console.log(`  - Attendance ${record.id}: member_id=${record.member_id}, org_id=${record.organization_id}`);
+
     });
   }
   
@@ -73,9 +70,9 @@ async function checkMembers() {
   if (donationsError) {
     console.error('❌ Error fetching donations:', donationsError);
   } else {
-    console.log('✅ Found', donations.length, 'donations (showing first 5)');
+
     donations.forEach(record => {
-      console.log(`  - Donation ${record.id}: donor_id=${record.donor_id}, org_id=${record.organization_id}, amount=$${record.amount}`);
+
     });
   }
 }

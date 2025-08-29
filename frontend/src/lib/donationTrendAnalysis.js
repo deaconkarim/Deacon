@@ -76,8 +76,6 @@ export const calculateDonationTrend = async () => {
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth();
 
-    console.log('📊 [DonationTrend] Analyzing week', currentWeekOfMonth, 'of month', currentMonth + 1);
-
     // SINGLE QUERY: Get all donations for the last 4 months (enough for trend analysis)
     const fourMonthsAgo = new Date();
     fourMonthsAgo.setMonth(fourMonthsAgo.getMonth() - 4);
@@ -94,8 +92,6 @@ export const calculateDonationTrend = async () => {
       console.error('Error fetching donations for trend analysis:', error);
       throw error;
     }
-
-    console.log('📊 [DonationTrend] Fetched', donations?.length || 0, 'donations for analysis');
 
     // Process all data in memory
     let currentWeekDonations = getDonationsForWeekFromData(
@@ -199,7 +195,6 @@ export const calculateDonationTrend = async () => {
       }
     };
 
-    console.log('📊 [DonationTrend] Analysis result:', result);
     return result;
 
   } catch (error) {

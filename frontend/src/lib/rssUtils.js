@@ -24,9 +24,7 @@ const parser = new XMLParser({
 
 export const parseRSSFeed = async (xmlText) => {
   try {
-    console.log('Parsing XML text:', xmlText.substring(0, 500) + '...');
     const result = parser.parse(xmlText);
-    console.log('Parsed result:', result);
     
     const items = result.rss?.channel?.item || [];
     
@@ -88,7 +86,6 @@ export const parseRSSFeed = async (xmlText) => {
         }
       }
 
-      console.log('Extracted event data:', eventData);
       return eventData;
     });
   } catch (error) {
@@ -98,7 +95,6 @@ export const parseRSSFeed = async (xmlText) => {
 };
 
 export function transformRssEventToAppEvent(rssEvent) {
-  console.log('Transforming RSS event:', rssEvent);
   
   // Parse dates with better error handling
   let startDate = new Date();
@@ -108,7 +104,7 @@ export function transformRssEventToAppEvent(rssEvent) {
     if (rssEvent.startDate) {
       startDate = new Date(rssEvent.startDate);
       if (isNaN(startDate.getTime())) {
-        console.warn('Invalid start date:', rssEvent.startDate);
+
         startDate = new Date();
       }
     }
@@ -116,16 +112,14 @@ export function transformRssEventToAppEvent(rssEvent) {
     if (rssEvent.endDate) {
       endDate = new Date(rssEvent.endDate);
       if (isNaN(endDate.getTime())) {
-        console.warn('Invalid end date:', rssEvent.endDate);
+
         endDate = null;
       }
     }
   } catch (error) {
     console.error('Error parsing dates:', error);
   }
-  
-  console.log('Parsed dates:', {
-    startDate: startDate.toISOString(),
+
     endDate: endDate ? endDate.toISOString() : null,
     originalStartDate: rssEvent.startDate,
     originalEndDate: rssEvent.endDate
@@ -147,7 +141,6 @@ export function transformRssEventToAppEvent(rssEvent) {
 
 export async function fetchEventsFromWebsite() {
   try {
-    console.log('Fetching events from website...');
     const response = await fetch(`${CORS_PROXY}${encodeURIComponent('https://www.blb.church/events/')}`);
     
     if (!response.ok) {
@@ -155,39 +148,32 @@ export async function fetchEventsFromWebsite() {
     }
     
     const html = await response.text();
-    console.log('Received HTML response:', html.substring(0, 1000)); // Log first 1000 chars
     
     // Create a temporary div to parse the HTML
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
     
-    // Log all h2 and h3 elements to see the structure
-    console.log('All h2 elements:', Array.from(doc.querySelectorAll('h2')).map(h => h.textContent));
-    console.log('All h3 elements:', Array.from(doc.querySelectorAll('h3')).map(h => h.textContent));
+    // Parse h2 and h3 elements
     
     // Find all month sections (they are in h2 elements)
     const monthSections = doc.querySelectorAll('h2');
-    console.log(`Found ${monthSections.length} month sections`);
     
     const events = [];
     
     // Process each month section
     monthSections.forEach(monthSection => {
       const month = monthSection.textContent.trim();
-      console.log('Processing month:', month);
       
       // Get all events until the next h2
       let currentElement = monthSection.nextElementSibling;
       while (currentElement && currentElement.tagName !== 'H2') {
         if (currentElement.tagName === 'H3') {
           const title = currentElement.textContent.trim();
-          console.log('Found event:', title);
           
           // Get the next element which should be the date/time
           const timeElement = currentElement.nextElementSibling;
           if (timeElement) {
             const timeText = timeElement.textContent.trim();
-            console.log('Time text:', timeText);
             
             // Parse the date and time
             const dateMatch = timeText.match(/(\w+)\s+(\d+)(?:\s*-\s*(\d+))?/);
@@ -257,8 +243,7 @@ export async function fetchEventsFromWebsite() {
         currentElement = currentElement.nextElementSibling;
       }
     });
-    
-    console.log('Parsed events:', events);
+
     return events;
     
   } catch (error) {

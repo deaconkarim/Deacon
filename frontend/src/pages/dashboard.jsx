@@ -327,9 +327,6 @@ export function Dashboard() {
 
   // Memoize the date objects to prevent infinite re-renders
 
-
-
-
   const loadDashboardData = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -350,7 +347,7 @@ export function Dashboard() {
       try {
         personalTasksData = await dashboardService.getPersonalTasks(dashboardData.organizationId);
       } catch (error) {
-        console.warn('Could not load personal tasks:', error);
+
         // Don't fail the entire dashboard load for personal tasks
       }
       setPersonalTasks(personalTasksData);
@@ -499,7 +496,7 @@ export function Dashboard() {
           const atRiskData = await SmartInsightsQueries.getAtRiskMembers(dashboardData.organizationId);
           setAtRiskMembers(atRiskData);
         } catch (error) {
-          console.warn('Could not load at-risk members:', error);
+
           // Don't fail the entire dashboard load for at-risk members
         }
       }
@@ -692,8 +689,6 @@ export function Dashboard() {
   const trendContext = trendAnalysis.trendContext || '';
   const currentWeekOfMonth = trendAnalysis.currentWeekOfMonth || 0;
   const weekAnalyzed = trendAnalysis.weekAnalyzed || currentWeekOfMonth;
-  
-  console.log('📊 [Dashboard] Sophisticated donation trend analysis:', trendAnalysis);
 
   // SMS Helper Functions
   const getUniqueMessageCount = (messages) => {
@@ -1588,8 +1583,6 @@ export function Dashboard() {
         </motion.div>
       </div>
 
-
-
         {/* AI Ministry Insights Panel - TEMPORARILY DISABLED */}
         {/* <PermissionFeature permission={PERMISSIONS.MEMBERS_VIEW}>
           <motion.div variants={itemVariants} className="mb-6 sm:mb-12">
@@ -2344,10 +2337,6 @@ export function Dashboard() {
         </div>
       </motion.div>
       </PermissionFeature>
-
-
-
-
 
       {/* Financial Intelligence */}
       <PermissionFeature permission={PERMISSIONS.DONATIONS_VIEW}>

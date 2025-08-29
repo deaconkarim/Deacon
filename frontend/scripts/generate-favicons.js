@@ -67,8 +67,6 @@ const faviconSizes = [
 async function generateFavicons() {
   const publicDir = path.join(__dirname, '../public');
   
-  console.log('Generating favicon files...');
-  
   for (const { size, name } of faviconSizes) {
     try {
       // Use large SVG for icons 144px and above, small SVG for smaller icons
@@ -78,8 +76,7 @@ async function generateFavicons() {
         .resize(size, size)
         .png()
         .toFile(path.join(publicDir, name));
-      
-      console.log(`✓ Generated ${name} (${size}x${size})`);
+
     } catch (error) {
       console.error(`✗ Failed to generate ${name}:`, error.message);
     }
@@ -104,13 +101,11 @@ async function generateFavicons() {
       .resize(32, 32)
       .png()
       .toFile(path.join(publicDir, 'favicon.ico'));
-    
-    console.log('✓ Generated favicon.ico');
+
   } catch (error) {
     console.error('✗ Failed to generate favicon.ico:', error.message);
   }
-  
-  console.log('\nFavicon generation complete!');
+
 }
 
 generateFavicons().catch(console.error);

@@ -12,8 +12,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function createBasicAttendance() {
-  console.log('🔄 Creating basic attendance data...');
-  
+
   try {
     // First, let's get the organization ID
     const { data: orgs, error: orgError } = await supabase
@@ -28,8 +27,7 @@ async function createBasicAttendance() {
     }
     
     const orgId = orgs[0].id;
-    console.log(`📋 Using organization: ${orgs[0].name} (${orgId})`);
-    
+
     // Get members
     const { data: members, error: membersError } = await supabase
       .from('members')
@@ -41,9 +39,7 @@ async function createBasicAttendance() {
     if (!members || members.length === 0) {
       throw new Error('No members found');
     }
-    
-    console.log(`📋 Found ${members.length} members`);
-    
+
     // Create some basic events
     const events = [
       {
@@ -79,8 +75,7 @@ async function createBasicAttendance() {
       .select();
     
     if (eventsError) throw eventsError;
-    console.log(`📅 Created ${insertedEvents.length} events`);
-    
+
     // Create attendance records
     const attendanceRecords = [];
     
@@ -106,8 +101,7 @@ async function createBasicAttendance() {
       .select();
     
     if (attendanceError) throw attendanceError;
-    console.log(`✅ Created ${insertedAttendance.length} attendance records`);
-    
+
     // Verify the data
     const { data: verifyAttendance, error: verifyError } = await supabase
       .from('event_attendance')
@@ -122,10 +116,9 @@ async function createBasicAttendance() {
       .eq('organization_id', orgId);
     
     if (verifyError) throw verifyError;
-    
-    console.log('📊 Verification - Attendance records created:');
+
     verifyAttendance.forEach(record => {
-      console.log(`  - ${record.members.firstname} ${record.members.lastname} attended ${record.events.title} (${record.events.event_type})`);
+
     });
     
     return {
@@ -144,8 +137,7 @@ async function createBasicAttendance() {
 // Run the creation
 createBasicAttendance()
   .then((result) => {
-    console.log('🎉 Basic attendance data created successfully!');
-    console.log('📈 Summary:', result);
+
     process.exit(0);
   })
   .catch((error) => {
@@ -165,8 +157,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function createBasicAttendance() {
-  console.log('🔄 Creating basic attendance data...');
-  
+
   try {
     // First, let's get the organization ID
     const { data: orgs, error: orgError } = await supabase
@@ -181,8 +172,7 @@ async function createBasicAttendance() {
     }
     
     const orgId = orgs[0].id;
-    console.log(`📋 Using organization: ${orgs[0].name} (${orgId})`);
-    
+
     // Get members
     const { data: members, error: membersError } = await supabase
       .from('members')
@@ -194,9 +184,7 @@ async function createBasicAttendance() {
     if (!members || members.length === 0) {
       throw new Error('No members found');
     }
-    
-    console.log(`📋 Found ${members.length} members`);
-    
+
     // Create some basic events
     const events = [
       {
@@ -232,8 +220,7 @@ async function createBasicAttendance() {
       .select();
     
     if (eventsError) throw eventsError;
-    console.log(`📅 Created ${insertedEvents.length} events`);
-    
+
     // Create attendance records
     const attendanceRecords = [];
     
@@ -259,8 +246,7 @@ async function createBasicAttendance() {
       .select();
     
     if (attendanceError) throw attendanceError;
-    console.log(`✅ Created ${insertedAttendance.length} attendance records`);
-    
+
     // Verify the data
     const { data: verifyAttendance, error: verifyError } = await supabase
       .from('event_attendance')
@@ -275,10 +261,9 @@ async function createBasicAttendance() {
       .eq('organization_id', orgId);
     
     if (verifyError) throw verifyError;
-    
-    console.log('📊 Verification - Attendance records created:');
+
     verifyAttendance.forEach(record => {
-      console.log(`  - ${record.members.firstname} ${record.members.lastname} attended ${record.events.title} (${record.events.event_type})`);
+
     });
     
     return {
@@ -297,8 +282,7 @@ async function createBasicAttendance() {
 // Run the creation
 createBasicAttendance()
   .then((result) => {
-    console.log('🎉 Basic attendance data created successfully!');
-    console.log('📈 Summary:', result);
+
     process.exit(0);
   })
   .catch((error) => {
@@ -318,8 +302,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function createBasicAttendance() {
-  console.log('🔄 Creating basic attendance data...');
-  
+
   try {
     // First, let's get the organization ID
     const { data: orgs, error: orgError } = await supabase
@@ -334,8 +317,7 @@ async function createBasicAttendance() {
     }
     
     const orgId = orgs[0].id;
-    console.log(`📋 Using organization: ${orgs[0].name} (${orgId})`);
-    
+
     // Get members
     const { data: members, error: membersError } = await supabase
       .from('members')
@@ -347,9 +329,7 @@ async function createBasicAttendance() {
     if (!members || members.length === 0) {
       throw new Error('No members found');
     }
-    
-    console.log(`📋 Found ${members.length} members`);
-    
+
     // Create some basic events
     const events = [
       {
@@ -385,8 +365,7 @@ async function createBasicAttendance() {
       .select();
     
     if (eventsError) throw eventsError;
-    console.log(`📅 Created ${insertedEvents.length} events`);
-    
+
     // Create attendance records
     const attendanceRecords = [];
     
@@ -412,8 +391,7 @@ async function createBasicAttendance() {
       .select();
     
     if (attendanceError) throw attendanceError;
-    console.log(`✅ Created ${insertedAttendance.length} attendance records`);
-    
+
     // Verify the data
     const { data: verifyAttendance, error: verifyError } = await supabase
       .from('event_attendance')
@@ -428,10 +406,9 @@ async function createBasicAttendance() {
       .eq('organization_id', orgId);
     
     if (verifyError) throw verifyError;
-    
-    console.log('📊 Verification - Attendance records created:');
+
     verifyAttendance.forEach(record => {
-      console.log(`  - ${record.members.firstname} ${record.members.lastname} attended ${record.events.title} (${record.events.event_type})`);
+
     });
     
     return {
@@ -450,8 +427,7 @@ async function createBasicAttendance() {
 // Run the creation
 createBasicAttendance()
   .then((result) => {
-    console.log('🎉 Basic attendance data created successfully!');
-    console.log('📈 Summary:', result);
+
     process.exit(0);
   })
   .catch((error) => {

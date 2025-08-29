@@ -18,8 +18,7 @@ export function AdminRoute({ children }) {
       }
 
       try {
-        console.log('Checking system admin status for user:', user.id);
-        
+
         // First, find the System Administration organization
         const { data: systemOrg, error: orgError } = await supabase
           .from('organizations')
@@ -43,8 +42,6 @@ export function AdminRoute({ children }) {
           return;
         }
 
-        console.log('Found System Administration org:', systemOrg);
-
         // Check if the user is an admin in the System Administration organization
         const { data: orgUser, error: userError } = await supabase
           .from('organization_users')
@@ -61,19 +58,16 @@ export function AdminRoute({ children }) {
         }
 
         if (!orgUser) {
-          console.log('User not found in System Administration organization');
+
           setIsSystemAdmin(false);
           setIsLoading(false);
           return;
         }
 
-        console.log('User org relationship:', orgUser);
-
         // Check if user is an approved admin in the System Administration organization
         const isAdmin = orgUser.role === 'admin' && 
                        true;
 
-        console.log('Is system admin?', isAdmin);
         setIsSystemAdmin(isAdmin);
         
       } catch (error) {

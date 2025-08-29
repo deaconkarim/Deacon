@@ -7,8 +7,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function testDashboardData() {
-  console.log('🧪 Testing dashboard data...');
-  
+
   try {
     const organizationId = '550e8400-e29b-41d4-a716-446655440000';
     
@@ -20,8 +19,6 @@ async function testDashboardData() {
       .order('start_date', { ascending: true });
 
     if (error) throw error;
-
-    console.log(`📅 Events found: ${events?.length || 0}`);
 
     const now = new Date();
     const upcomingEvents = events.filter(e => new Date(e.start_date) >= now).slice(0, 5);
@@ -40,12 +37,6 @@ async function testDashboardData() {
       const eventDate = new Date(e.start_date);
       return eventDate >= now && eventDate <= monthFromNow;
     }).length;
-
-    console.log('📊 Dashboard calculations:');
-    console.log(`   - Total events: ${events.length}`);
-    console.log(`   - Events this week: ${eventsThisWeek}`);
-    console.log(`   - Events this month: ${eventsThisMonth}`);
-    console.log(`   - Upcoming events: ${upcomingEvents.length}`);
 
     // Calculate average events per month
     const sixMonthsAgo = new Date();
@@ -96,9 +87,6 @@ async function testDashboardData() {
       }
     };
 
-    console.log('\n📊 Final result object:');
-    console.log(JSON.stringify(result.stats, null, 2));
-
     return result.stats;
 
   } catch (error) {
@@ -110,11 +98,7 @@ async function testDashboardData() {
 // Run the test
 testDashboardData()
   .then((result) => {
-    console.log('\n🎉 Test completed!');
-    console.log('📈 Expected dashboard values:');
-    console.log(`   - Total Events: ${result.thisWeek}`);
-    console.log(`   - Need Volunteers: ${result.needingVolunteers}`);
-    console.log(`   - Upcoming: ${result.upcoming}`);
+
     process.exit(0);
   })
   .catch((error) => {
@@ -129,8 +113,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function testDashboardData() {
-  console.log('🧪 Testing dashboard data...');
-  
+
   try {
     const organizationId = '550e8400-e29b-41d4-a716-446655440000';
     
@@ -142,8 +125,6 @@ async function testDashboardData() {
       .order('start_date', { ascending: true });
 
     if (error) throw error;
-
-    console.log(`📅 Events found: ${events?.length || 0}`);
 
     const now = new Date();
     const upcomingEvents = events.filter(e => new Date(e.start_date) >= now).slice(0, 5);
@@ -162,12 +143,6 @@ async function testDashboardData() {
       const eventDate = new Date(e.start_date);
       return eventDate >= now && eventDate <= monthFromNow;
     }).length;
-
-    console.log('📊 Dashboard calculations:');
-    console.log(`   - Total events: ${events.length}`);
-    console.log(`   - Events this week: ${eventsThisWeek}`);
-    console.log(`   - Events this month: ${eventsThisMonth}`);
-    console.log(`   - Upcoming events: ${upcomingEvents.length}`);
 
     // Calculate average events per month
     const sixMonthsAgo = new Date();
@@ -218,9 +193,6 @@ async function testDashboardData() {
       }
     };
 
-    console.log('\n📊 Final result object:');
-    console.log(JSON.stringify(result.stats, null, 2));
-
     return result.stats;
 
   } catch (error) {
@@ -232,11 +204,7 @@ async function testDashboardData() {
 // Run the test
 testDashboardData()
   .then((result) => {
-    console.log('\n🎉 Test completed!');
-    console.log('📈 Expected dashboard values:');
-    console.log(`   - Total Events: ${result.thisWeek}`);
-    console.log(`   - Need Volunteers: ${result.needingVolunteers}`);
-    console.log(`   - Upcoming: ${result.upcoming}`);
+
     process.exit(0);
   })
   .catch((error) => {
@@ -251,8 +219,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function testDashboardData() {
-  console.log('🧪 Testing dashboard data...');
-  
+
   try {
     const organizationId = '550e8400-e29b-41d4-a716-446655440000';
     
@@ -264,8 +231,6 @@ async function testDashboardData() {
       .order('start_date', { ascending: true });
 
     if (error) throw error;
-
-    console.log(`📅 Events found: ${events?.length || 0}`);
 
     const now = new Date();
     const upcomingEvents = events.filter(e => new Date(e.start_date) >= now).slice(0, 5);
@@ -284,12 +249,6 @@ async function testDashboardData() {
       const eventDate = new Date(e.start_date);
       return eventDate >= now && eventDate <= monthFromNow;
     }).length;
-
-    console.log('📊 Dashboard calculations:');
-    console.log(`   - Total events: ${events.length}`);
-    console.log(`   - Events this week: ${eventsThisWeek}`);
-    console.log(`   - Events this month: ${eventsThisMonth}`);
-    console.log(`   - Upcoming events: ${upcomingEvents.length}`);
 
     // Calculate average events per month
     const sixMonthsAgo = new Date();
@@ -340,9 +299,6 @@ async function testDashboardData() {
       }
     };
 
-    console.log('\n📊 Final result object:');
-    console.log(JSON.stringify(result.stats, null, 2));
-
     return result.stats;
 
   } catch (error) {
@@ -354,11 +310,7 @@ async function testDashboardData() {
 // Run the test
 testDashboardData()
   .then((result) => {
-    console.log('\n🎉 Test completed!');
-    console.log('📈 Expected dashboard values:');
-    console.log(`   - Total Events: ${result.thisWeek}`);
-    console.log(`   - Need Volunteers: ${result.needingVolunteers}`);
-    console.log(`   - Upcoming: ${result.upcoming}`);
+
     process.exit(0);
   })
   .catch((error) => {

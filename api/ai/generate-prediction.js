@@ -35,8 +35,6 @@ export default async function handler(req, res) {
     const content = completion.choices[0]?.message?.content;
     const usage = completion.usage;
 
-    console.log(`AI Prediction generated - Model: ${model}, Tokens: ${usage?.total_tokens || 'unknown'}`);
-
     res.status(200).json({
       choices: [{
         message: {

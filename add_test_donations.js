@@ -28,8 +28,7 @@ async function addTestDonations() {
     }
     
     const organizationId = orgs[0].id;
-    console.log('Using organization ID:', organizationId);
-    
+
     // Add test donations for current month
     const testDonations = [
       {
@@ -70,7 +69,7 @@ async function addTestDonations() {
     if (error) {
       console.error('Error adding test donations:', error);
     } else {
-      console.log('Test donations added successfully:', data);
+
     }
     
   } catch (error) {

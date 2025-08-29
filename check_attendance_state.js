@@ -7,8 +7,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function checkAttendanceState() {
-  console.log('🔍 Checking attendance state...');
-  
+
   try {
     // Check total attendance records
     const { data: totalAttendance, error: totalError } = await supabase
@@ -16,8 +15,7 @@ async function checkAttendanceState() {
       .select('id', { count: 'exact' });
     
     if (totalError) throw totalError;
-    console.log(`📊 Total attendance records: ${totalAttendance.length}`);
-    
+
     // Check for duplicate records
     const { data: duplicates, error: dupError } = await supabase
       .from('event_attendance')
@@ -38,13 +36,11 @@ async function checkAttendanceState() {
     
     const actualDuplicates = Array.from(duplicateMap.entries())
       .filter(([key, records]) => records.length > 1);
-    
-    console.log(`⚠️  Duplicate records found: ${actualDuplicates.length}`);
-    
+
     if (actualDuplicates.length > 0) {
-      console.log('\n📋 Duplicate details:');
+
       actualDuplicates.forEach(([key, records]) => {
-        console.log(`  - ${key}: ${records.length} records`);
+
       });
     }
     
@@ -55,24 +51,14 @@ async function checkAttendanceState() {
       .order('start_date');
     
     if (eventsError) throw eventsError;
-    console.log(`📅 Events found: ${events.length}`);
-    
+
     // Show event details
     events.forEach(event => {
-      console.log(`  - ${event.title} (${event.event_type})`);
+
     });
     
     // Check unique constraint
-    console.log('\n🔧 Unique constraint issue:');
-    console.log('The error indicates a unique constraint "event_attendance_event_anonymous_unique"');
-    console.log('This prevents the same anonymous person from being checked in multiple times for the same event');
-    console.log('This is actually correct behavior - the issue is duplicate records were created');
-    
-    console.log('\n💡 Solution:');
-    console.log('1. Run the fix_duplicate_attendance.sql script in Supabase SQL Editor');
-    console.log('2. This will remove duplicate records and keep only the first one');
-    console.log('3. The frontend should then work correctly');
-    
+
     return {
       success: true,
       totalRecords: totalAttendance.length,
@@ -89,8 +75,7 @@ async function checkAttendanceState() {
 // Run the check
 checkAttendanceState()
   .then((result) => {
-    console.log('\n🎉 Attendance state check completed!');
-    console.log('📈 Summary:', result);
+
     process.exit(0);
   })
   .catch((error) => {
@@ -105,8 +90,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function checkAttendanceState() {
-  console.log('🔍 Checking attendance state...');
-  
+
   try {
     // Check total attendance records
     const { data: totalAttendance, error: totalError } = await supabase
@@ -114,8 +98,7 @@ async function checkAttendanceState() {
       .select('id', { count: 'exact' });
     
     if (totalError) throw totalError;
-    console.log(`📊 Total attendance records: ${totalAttendance.length}`);
-    
+
     // Check for duplicate records
     const { data: duplicates, error: dupError } = await supabase
       .from('event_attendance')
@@ -136,13 +119,11 @@ async function checkAttendanceState() {
     
     const actualDuplicates = Array.from(duplicateMap.entries())
       .filter(([key, records]) => records.length > 1);
-    
-    console.log(`⚠️  Duplicate records found: ${actualDuplicates.length}`);
-    
+
     if (actualDuplicates.length > 0) {
-      console.log('\n📋 Duplicate details:');
+
       actualDuplicates.forEach(([key, records]) => {
-        console.log(`  - ${key}: ${records.length} records`);
+
       });
     }
     
@@ -153,24 +134,14 @@ async function checkAttendanceState() {
       .order('start_date');
     
     if (eventsError) throw eventsError;
-    console.log(`📅 Events found: ${events.length}`);
-    
+
     // Show event details
     events.forEach(event => {
-      console.log(`  - ${event.title} (${event.event_type})`);
+
     });
     
     // Check unique constraint
-    console.log('\n🔧 Unique constraint issue:');
-    console.log('The error indicates a unique constraint "event_attendance_event_anonymous_unique"');
-    console.log('This prevents the same anonymous person from being checked in multiple times for the same event');
-    console.log('This is actually correct behavior - the issue is duplicate records were created');
-    
-    console.log('\n💡 Solution:');
-    console.log('1. Run the fix_duplicate_attendance.sql script in Supabase SQL Editor');
-    console.log('2. This will remove duplicate records and keep only the first one');
-    console.log('3. The frontend should then work correctly');
-    
+
     return {
       success: true,
       totalRecords: totalAttendance.length,
@@ -187,8 +158,7 @@ async function checkAttendanceState() {
 // Run the check
 checkAttendanceState()
   .then((result) => {
-    console.log('\n🎉 Attendance state check completed!');
-    console.log('📈 Summary:', result);
+
     process.exit(0);
   })
   .catch((error) => {
@@ -203,8 +173,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function checkAttendanceState() {
-  console.log('🔍 Checking attendance state...');
-  
+
   try {
     // Check total attendance records
     const { data: totalAttendance, error: totalError } = await supabase
@@ -212,8 +181,7 @@ async function checkAttendanceState() {
       .select('id', { count: 'exact' });
     
     if (totalError) throw totalError;
-    console.log(`📊 Total attendance records: ${totalAttendance.length}`);
-    
+
     // Check for duplicate records
     const { data: duplicates, error: dupError } = await supabase
       .from('event_attendance')
@@ -234,13 +202,11 @@ async function checkAttendanceState() {
     
     const actualDuplicates = Array.from(duplicateMap.entries())
       .filter(([key, records]) => records.length > 1);
-    
-    console.log(`⚠️  Duplicate records found: ${actualDuplicates.length}`);
-    
+
     if (actualDuplicates.length > 0) {
-      console.log('\n📋 Duplicate details:');
+
       actualDuplicates.forEach(([key, records]) => {
-        console.log(`  - ${key}: ${records.length} records`);
+
       });
     }
     
@@ -251,24 +217,14 @@ async function checkAttendanceState() {
       .order('start_date');
     
     if (eventsError) throw eventsError;
-    console.log(`📅 Events found: ${events.length}`);
-    
+
     // Show event details
     events.forEach(event => {
-      console.log(`  - ${event.title} (${event.event_type})`);
+
     });
     
     // Check unique constraint
-    console.log('\n🔧 Unique constraint issue:');
-    console.log('The error indicates a unique constraint "event_attendance_event_anonymous_unique"');
-    console.log('This prevents the same anonymous person from being checked in multiple times for the same event');
-    console.log('This is actually correct behavior - the issue is duplicate records were created');
-    
-    console.log('\n💡 Solution:');
-    console.log('1. Run the fix_duplicate_attendance.sql script in Supabase SQL Editor');
-    console.log('2. This will remove duplicate records and keep only the first one');
-    console.log('3. The frontend should then work correctly');
-    
+
     return {
       success: true,
       totalRecords: totalAttendance.length,
@@ -285,8 +241,7 @@ async function checkAttendanceState() {
 // Run the check
 checkAttendanceState()
   .then((result) => {
-    console.log('\n🎉 Attendance state check completed!');
-    console.log('📈 Summary:', result);
+
     process.exit(0);
   })
   .catch((error) => {

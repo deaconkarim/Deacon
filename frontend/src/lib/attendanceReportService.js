@@ -71,7 +71,7 @@ export const attendanceReportService = {
             formattedDate = format(eventDate, 'MMM d');
           }
         } catch (error) {
-          console.warn('Invalid date format:', event.start_date);
+
         }
       }
 
@@ -147,7 +147,7 @@ export const attendanceReportService = {
             formattedTime = format(eventDate, 'h:mm a');
           }
         } catch (error) {
-          console.warn('Invalid date format:', event.start_date);
+
         }
       }
 
@@ -247,7 +247,7 @@ export const attendanceReportService = {
             formattedDate = format(eventDate, 'MMM d, yyyy');
           }
         } catch (error) {
-          console.warn('Invalid date format:', record.events.start_date);
+
         }
       }
 

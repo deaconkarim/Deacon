@@ -5,7 +5,6 @@ const isTestMode = process.env.STRIPE_TEST_MODE === 'true';
 const stripeKey = isTestMode ? process.env.STRIPE_TEST_SECRET_KEY : process.env.STRIPE_SECRET_KEY;
 const stripe = Stripe(stripeKey);
 
-console.log(`🔧 Stripe Mode: ${isTestMode ? 'TEST' : 'LIVE'}`);
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -57,13 +56,10 @@ export default async (req, res) => {
     }
 
     org = orgData;
-    console.log(`Creating checkout session for church: ${org.name} (${org.stripe_account_id})`);
 
     // Get the main Stripe account ID to check if it's the same as the church's account
     mainAccount = await stripe.accounts.retrieve();
     const isSameAccount = mainAccount.id === org.stripe_account_id;
-
-    console.log(`Main account: ${mainAccount.id}, Church account: ${org.stripe_account_id}, Same account: ${isSameAccount}`);
 
     // Calculate the amount to charge (original amount + fees if covering)
     const originalAmount = amount;
@@ -84,9 +80,6 @@ export default async (req, res) => {
 
     // Only round when converting to cents for Stripe
     const unitAmount = Math.round(totalAmount * 100);
-
-    console.log(`Original amount: ${originalAmount}, Fee amount: ${feeAmount}, Total amount: ${totalAmount}, Cover fees: ${cover_fees}, Payment method: ${payment_method}`);
-    console.log(`Fee calculation: ${amount} * 0.029 + 0.30 = ${amount * 0.029} + 0.30 = ${amount * 0.029 + 0.30}`);
 
     // Build the session creation object
     const sessionData = {
@@ -170,8 +163,7 @@ export default async (req, res) => {
       // Double-check that the church account is actually a connected account
       try {
         const churchAccount = await stripe.accounts.retrieve(org.stripe_account_id);
-        console.log(`Church account type: ${churchAccount.type}, charges_enabled: ${churchAccount.charges_enabled}`);
-        
+
         if (churchAccount.type === 'express' || churchAccount.type === 'standard') {
           // Calculate application fee (platform fee) based on the original donation amount and payment method
           // This ensures the church receives the full intended donation amount
@@ -197,23 +189,21 @@ export default async (req, res) => {
               cover_fees: cover_fees ? 'true' : 'false',
             },
           };
-          console.log(`Will transfer ${totalAmount} cents to church account: ${org.stripe_account_id} (church receives ${originalAmount} cents, platform fee: ${application_fee_amount} cents)`);
+
         } else {
-          console.log(`Church account is not a connected account type, skipping transfer_data`);
+
         }
       } catch (accountError) {
-        console.log(`Could not retrieve church account details, skipping transfer_data:`, accountError.message);
+
       }
     } else {
-      console.log(`Donation will go directly to main account (no transfer needed)`);
+
     }
 
     // Create the checkout session from the MAIN account (not the church account)
     // This way we can transfer TO the church account
     const session = await stripe.checkout.sessions.create(sessionData);
 
-    console.log(`Checkout session created: ${session.id}`);
-    
     // Return detailed response for debugging
     return res.json({ 
       url: session.url,

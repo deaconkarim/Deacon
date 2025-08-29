@@ -7,8 +7,7 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 async function checkEventsWithAnonKey() {
-  console.log('🔍 Checking events with anon key (frontend access)...');
-  
+
   try {
     // Check all events in the database with anon key
     const { data: allEvents, error: eventsError } = await supabase
@@ -18,8 +17,6 @@ async function checkEventsWithAnonKey() {
 
     if (eventsError) throw eventsError;
 
-    console.log(`📊 Total events visible with anon key: ${allEvents?.length || 0}`);
-
     // Check for Men's Ministry Breakfast specifically
     const mensEvents = allEvents?.filter(event => 
       event.title && event.title.toLowerCase().includes('men') && 
@@ -27,12 +24,10 @@ async function checkEventsWithAnonKey() {
       event.title.toLowerCase().includes('breakfast')
     ) || [];
 
-    console.log(`📋 Men's Ministry Breakfast events visible: ${mensEvents.length}`);
-
     if (mensEvents.length > 0) {
-      console.log('\n📋 Visible Men\'s Ministry Breakfast events:');
+
       mensEvents.forEach((event, index) => {
-        console.log(`${index + 1}. ${event.title} (${event.start_date})`);
+
       });
     }
 
@@ -45,12 +40,10 @@ async function checkEventsWithAnonKey() {
       event.start_date >= thirtyDaysAgoStr
     ) || [];
 
-    console.log(`\n📊 Recent events visible (last 30 days): ${recentEvents.length}`);
-
     if (recentEvents.length > 0) {
-      console.log('\n📋 Recent visible events:');
+
       recentEvents.slice(0, 10).forEach((event, index) => {
-        console.log(`${index + 1}. ${event.title} (${event.start_date})`);
+
       });
     }
 
@@ -61,24 +54,20 @@ async function checkEventsWithAnonKey() {
 
     if (attendanceError) throw attendanceError;
 
-    console.log(`\n📊 Total attendance records: ${allAttendance?.length || 0}`);
-
     // Check which events have attendance
     const eventIdsWithAttendance = [...new Set(allAttendance.map(a => a.event_id))];
     const eventsWithAttendance = allEvents?.filter(event => 
       eventIdsWithAttendance.includes(event.id)
     ) || [];
 
-    console.log(`📊 Events with attendance (visible): ${eventsWithAttendance.length}`);
-
     if (eventsWithAttendance.length > 0) {
-      console.log('\n📋 Events with attendance (visible):');
+
       eventsWithAttendance.forEach((event, index) => {
         const eventAttendance = allAttendance.filter(a => a.event_id === event.id);
         const attendingCount = eventAttendance.filter(a => 
           a.status === 'attending' || a.status === 'checked-in'
         ).length;
-        console.log(`${index + 1}. ${event.title} (${event.start_date}): ${attendingCount} attendees`);
+
       });
     }
 
@@ -94,12 +83,10 @@ async function checkEventsWithAnonKey() {
       restoredEventIds.includes(event.id)
     ) || [];
 
-    console.log(`\n📊 Restored events visible: ${restoredEvents.length}/${restoredEventIds.length}`);
-
     if (restoredEvents.length > 0) {
-      console.log('\n📋 Visible restored events:');
+
       restoredEvents.forEach((event, index) => {
-        console.log(`${index + 1}. ${event.title} (${event.start_date})`);
+
       });
     }
 
@@ -120,20 +107,13 @@ async function checkEventsWithAnonKey() {
 // Run the check
 checkEventsWithAnonKey()
   .then((result) => {
-    console.log('\n✅ Events check with anon key completed!');
-    console.log('📈 Summary:', result);
-    
+
     if (result.totalEvents === 0) {
-      console.log('\n❌ PROBLEM: No events visible with anon key');
-      console.log('   - RLS policy is blocking access to events');
-      console.log('   - Frontend cannot see any events');
-      console.log('   - Need to fix RLS policies');
+
     } else if (result.eventsWithAttendance === 0) {
-      console.log('\n⚠️  WARNING: Events visible but no attendance linked');
-      console.log('   - Events exist but attendance records are orphaned');
+
     } else {
-      console.log('\n✅ SUCCESS: Events and attendance are visible');
-      console.log('   - Dashboard should now show attendance data');
+
     }
     
     process.exit(0);

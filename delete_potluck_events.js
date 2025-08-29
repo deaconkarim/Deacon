@@ -7,8 +7,7 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 
 async function deleteIncorrectPotluckEvents() {
   try {
-    console.log('Starting to delete incorrect potluck events...')
-    
+
     // First, get all potluck events
     const { data: potluckEvents, error: fetchError } = await supabase
       .from('events')
@@ -18,9 +17,7 @@ async function deleteIncorrectPotluckEvents() {
     if (fetchError) {
       throw fetchError
     }
-    
-    console.log(`Found ${potluckEvents.length} potluck events`)
-    
+
     // Find the master recurring event
     const masterEvent = potluckEvents.find(event => 
       event.is_recurring && 
@@ -29,7 +26,7 @@ async function deleteIncorrectPotluckEvents() {
     )
     
     if (!masterEvent) {
-      console.log('No master recurring potluck event found')
+
       return
     }
     
@@ -43,10 +40,7 @@ async function deleteIncorrectPotluckEvents() {
     if (deleteError) {
       throw deleteError
     }
-    
-    console.log('✅ Successfully deleted incorrect potluck events')
-    console.log('✅ Preserved master recurring potluck event')
-    
+
   } catch (error) {
     console.error('❌ Error:', error)
   }

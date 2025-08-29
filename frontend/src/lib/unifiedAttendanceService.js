@@ -15,7 +15,7 @@ export const unifiedAttendanceService = {
         .single();
 
       if (memberError || !member) {
-        console.warn(`Member ${memberId} not found`);
+
         return {
           totalCount: 0,
           records: [],
@@ -30,7 +30,7 @@ export const unifiedAttendanceService = {
 
       // Validate that member belongs to the same organization
       if (member.organization_id !== organizationId) {
-        console.warn(`Member ${memberId} does not belong to organization ${organizationId}`);
+
         return {
           totalCount: 0,
           records: [],
@@ -218,7 +218,6 @@ export const unifiedAttendanceService = {
       );
 
       if (validRecords.length === 0) {
-        console.log('No valid attendance records found');
         return [];
       }
 

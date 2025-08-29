@@ -7,12 +7,10 @@ const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXB
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 async function restoreEventsWithServiceRole() {
-  console.log('🔄 Restoring missing events with service role...');
-  
+
   try {
     // Use the organization ID we found
     const organizationId = '550e8400-e29b-41d4-a716-446655440000';
-    console.log(`📋 Using organization_id: ${organizationId}`);
 
     // Events that need to be restored (based on attendance records)
     const missingEvents = [
@@ -58,8 +56,6 @@ async function restoreEventsWithServiceRole() {
       }
     ];
 
-    console.log(`📅 Attempting to restore ${missingEvents.length} missing events...`);
-
     // Check which events already exist
     const existingEventIds = missingEvents.map(e => e.id);
     const { data: existingEvents, error: existingError } = await supabase
@@ -72,11 +68,8 @@ async function restoreEventsWithServiceRole() {
     const existingIds = existingEvents?.map(e => e.id) || [];
     const eventsToCreate = missingEvents.filter(e => !existingIds.includes(e.id));
 
-    console.log(`📊 Found ${existingIds.length} events already exist`);
-    console.log(`📊 Need to create ${eventsToCreate.length} new events`);
-
     if (eventsToCreate.length === 0) {
-      console.log('✅ All events already exist!');
+
     } else {
       // Create all events at once with service role
       const { data: createdEvents, error: createError } = await supabase
@@ -89,12 +82,10 @@ async function restoreEventsWithServiceRole() {
         throw createError;
       }
 
-      console.log(`✅ Successfully created ${createdEvents?.length || 0} events`);
-      
       if (createdEvents) {
-        console.log('\n📋 Created events:');
+
         createdEvents.forEach(event => {
-          console.log(`   ${event.title} (${event.start_date})`);
+
         });
       }
     }
@@ -105,8 +96,6 @@ async function restoreEventsWithServiceRole() {
       .select('*');
 
     if (verifyError) throw verifyError;
-
-    console.log(`\n📊 Total events in database: ${allEvents?.length || 0}`);
 
     // Check if attendance records now have matching events
     const { data: attendanceWithEvents, error: attendanceError } = await supabase
@@ -124,15 +113,12 @@ async function restoreEventsWithServiceRole() {
 
     const validAttendance = attendanceWithEvents?.filter(a => a.events !== null) || [];
     const orphanedAttendance = attendanceWithEvents?.filter(a => a.events === null) || [];
-    
-    console.log(`📊 Attendance records with valid events: ${validAttendance.length}`);
-    console.log(`📊 Orphaned attendance records: ${orphanedAttendance.length}`);
 
     // Show some sample data
     if (validAttendance.length > 0) {
-      console.log('\n📋 Sample attendance with events:');
+
       validAttendance.slice(0, 5).forEach(attendance => {
-        console.log(`   ${attendance.events.title} (${attendance.events.start_date}): ${attendance.status}`);
+
       });
     }
 
@@ -146,10 +132,9 @@ async function restoreEventsWithServiceRole() {
       attendanceByEvent[eventTitle].push(attendance);
     });
 
-    console.log('\n📊 Attendance summary by event:');
     Object.entries(attendanceByEvent).forEach(([eventTitle, attendees]) => {
       const attendingCount = attendees.filter(a => a.status === 'attending' || a.status === 'checked-in').length;
-      console.log(`   ${eventTitle}: ${attendingCount} attendees`);
+
     });
 
     return {
@@ -168,13 +153,7 @@ async function restoreEventsWithServiceRole() {
 // Run the restore
 restoreEventsWithServiceRole()
   .then((result) => {
-    console.log('\n🎉 Events restoration completed with service role!');
-    console.log('📈 Summary:', result);
-    console.log('\n🔄 Next steps:');
-    console.log('   1. Hard refresh your browser (Ctrl+F5 or Cmd+Shift+R)');
-    console.log('   2. Clear browser cache if needed');
-    console.log('   3. Check the dashboard - attendance should now show!');
-    console.log('   4. The events and attendance should now be properly linked');
+
     process.exit(0);
   })
   .catch((error) => {

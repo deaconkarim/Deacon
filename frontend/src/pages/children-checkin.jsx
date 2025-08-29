@@ -48,10 +48,6 @@ export default function ChildrenCheckin() {
 
         if (guardiansError) throw guardiansError;
 
-        console.log('🔍 [ChildrenCheckin] Organization ID:', organizationId);
-        console.log('🔍 [ChildrenCheckin] Guardians data:', guardiansData);
-        console.log('🔍 [ChildrenCheckin] Guardians count:', guardiansData?.length || 0);
-
         setChildren(childrenData);
         setGuardians(guardiansData);
       } catch (err) {
@@ -274,8 +270,6 @@ export default function ChildrenCheckin() {
         return;
       }
 
-      console.log('🔍 Fetching check-in history for organization:', organizationId);
-      
       // Get the check-in logs for this organization
       const { data: logs, error: logsError } = await supabase
         .from('child_checkin_logs')
@@ -284,9 +278,7 @@ export default function ChildrenCheckin() {
         .order('check_in_time', { ascending: false });
 
       if (logsError) throw logsError;
-      
-      console.log('📊 Found', logs?.length || 0, 'check-in logs');
-      
+
       if (!logs || logs.length === 0) {
         setAllCheckinHistory([]);
         return;
@@ -299,10 +291,6 @@ export default function ChildrenCheckin() {
         ...logs.map(log => log.checked_out_by).filter(Boolean)
       ])];
       const eventIds = [...new Set(logs.map(log => log.event_id).filter(Boolean))];
-
-      console.log('🔍 Child IDs:', childIds);
-      console.log('🔍 Guardian IDs:', guardianIds);
-      console.log('🔍 Event IDs:', eventIds);
 
       // Fetch related data for this organization
       const [childrenData, guardiansData, eventsData] = await Promise.all([
@@ -336,7 +324,6 @@ export default function ChildrenCheckin() {
         event: eventsMap[log.event_id] || null
       }));
 
-      console.log('📊 Enriched logs sample:', enrichedLogs.slice(0, 2));
       setAllCheckinHistory(enrichedLogs);
     } catch (error) {
       console.error('Error fetching all check-in history:', error);

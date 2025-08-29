@@ -107,16 +107,14 @@ export function AdminCenter() {
   }, []);
 
   const checkAdminStatusAndLoadData = async () => {
-    console.log('🔐 Checking admin status...');
+
     try {
       // Check if user is system admin
       const isAdmin = await isSystemAdmin();
-      console.log('🔐 System admin check result:', isAdmin);
-      
+
       // Get current user info for debug
       const { data: { user } } = await supabase.auth.getUser();
-      console.log('👤 Current user:', user?.email);
-      
+
       // Get user's organization memberships for debug
       const { data: orgMemberships } = await supabase
         .from('organization_users')
@@ -126,9 +124,7 @@ export function AdminCenter() {
           organizations(name)
         `)
         .eq('user_id', user?.id);
-      
-      console.log('📝 Organization memberships:', orgMemberships);
-      
+
       const debug = {
         isSystemAdmin: isAdmin,
         currentUser: user?.email,
@@ -139,10 +135,10 @@ export function AdminCenter() {
       setAdminStatus(isAdmin);
       
       if (isAdmin) {
-        console.log('✅ User is admin, loading data...');
+
         loadData();
       } else {
-        console.warn('⚠️ User is not a system admin, skipping data load');
+
         setIsLoading(false);
       }
     } catch (error) {
@@ -158,27 +154,15 @@ export function AdminCenter() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      console.log('🚀 Admin Center: Loading data...');
-      
+
       // Test each function individually
-      console.log('📋 Loading organizations...');
+
       const orgsData = await getOrganizations();
-      console.log('📋 Organizations result:', orgsData);
-      
-      console.log('👥 Loading users...');
+
       const usersData = await getAllUsers();
-      console.log('👥 Users result:', usersData);
-      
-      console.log('📊 Loading stats...');
+
       const statsData = await getSystemStats();
-      console.log('📊 Stats result:', statsData);
-      
-      console.log('📊 Admin Center: Data loaded!', {
-        organizations: orgsData?.length || 0,
-        users: usersData?.length || 0,
-        stats: statsData
-      });
-      
+
       setOrganizations(orgsData || []);
       setUsers(usersData || []);
       setStats(statsData);
@@ -205,9 +189,7 @@ export function AdminCenter() {
 
   const handleDeleteOrganization = async () => {
     if (!orgToDelete) return;
-    
-    console.log('Attempting to delete organization:', orgToDelete);
-    
+
     try {
       await deleteOrganization(orgToDelete.id);
       
@@ -234,14 +216,14 @@ export function AdminCenter() {
   };
 
   const confirmDeleteOrganization = (org) => {
-    console.log('Confirming delete for organization:', org);
+
     setOrgToDelete(org);
     setDeleteConfirmText('');
     setIsDeleteDialogOpen(true);
   };
 
   const handleViewOrganization = async (org) => {
-    console.log('Viewing organization:', org);
+
     setViewingOrg(org);
     setIsViewOrgDialogOpen(true);
     
@@ -307,7 +289,7 @@ export function AdminCenter() {
       };
 
       setOrgDetails(combinedDetails);
-      console.log('Organization details loaded:', combinedDetails);
+
     } catch (error) {
       console.error('Error loading organization details:', error);
       toast({
@@ -318,11 +300,8 @@ export function AdminCenter() {
     }
   };
 
-
-
   const handleLoginAsOrganization = async (org) => {
-    console.log('Attempting to login as organization:', org);
-    
+
     try {
       // Store current session info for later restoration
       localStorage.setItem('system_admin_session', JSON.stringify({
@@ -386,7 +365,6 @@ export function AdminCenter() {
       </header>
 
       <div className="max-w-7xl mx-auto p-6">
-       
 
       {/* Access Denied Message */}
       {adminStatus === false && (
@@ -1024,9 +1002,7 @@ export function AdminCenter() {
                   </div>
                 </div>
               </div>
-              
 
-              
                              {/* Organization Users */}
                <div>
                  <Label className="text-lg font-semibold mb-4 block">Organization Users</Label>

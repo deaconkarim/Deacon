@@ -21,7 +21,6 @@ export const clearAllCaches = () => {
   donationTrendCache = null;
   donationTrendCacheTimestamp = null;
   userCacheService.clearCache();
-  console.log('📊 [DashboardService] All caches cleared');
 };
 
 // Get current user's organization ID
@@ -34,7 +33,6 @@ export const dashboardService = {
   async getDashboardData() {
     try {
       const organizationId = await getCurrentUserOrganizationId();
-      console.log('🔍 [DashboardService] Organization ID:', organizationId);
       
       if (!organizationId) {
         throw new Error('User not associated with any organization');
@@ -45,11 +43,8 @@ export const dashboardService = {
       if (dashboardCache && cacheTimestamp && 
           (currentTime - cacheTimestamp) < CACHE_DURATION &&
           dashboardCache.organizationId === organizationId) {
-        console.log('📊 [DashboardService] Using cached dashboard data');
         return dashboardCache;
       }
-
-      console.log('📊 [DashboardService] Cache miss, fetching fresh data');
 
       // Fetch all data in parallel with optimized queries
       const [membersData, donationsData, eventsData, tasksData, smsData, celebrationsData, attendanceData, familyData] = await Promise.all([
@@ -79,8 +74,6 @@ export const dashboardService = {
       dashboardCache = result;
       cacheTimestamp = currentTime;
 
-      console.log('📊 [DashboardService] Data cached for:', {
-        members: membersData.counts?.total || 0,
         donations: donationsData.all?.length || 0,
         events: eventsData.all?.length || 0,
         tasks: tasksData.all?.length || 0,
@@ -98,7 +91,7 @@ export const dashboardService = {
   clearCache() {
     dashboardCache = null;
     cacheTimestamp = null;
-    console.log('📊 [DashboardService] Cache cleared');
+
   },
 
   // Force clear all caches
@@ -109,13 +102,12 @@ export const dashboardService = {
     if (typeof window !== 'undefined' && window.aiInsightsCache) {
       window.aiInsightsCache = {};
     }
-    console.log('📊 [DashboardService] All caches force cleared');
+
   },
 
   // Members data - single optimized API call with pagination support
   async getMembersData(organizationId) {
-    console.log('🔍 [DashboardService] Fetching members for organization:', organizationId);
-    
+
     // For dashboard, we need member info including contact details for task creation
     const { data: members, error } = await supabase
       .from('members')
@@ -125,8 +117,6 @@ export const dashboardService = {
       .limit(1000); // Limit to prevent excessive data transfer
 
     if (error) throw error;
-
-    console.log('📊 [DashboardService] Members found:', members?.length || 0);
 
     const activeMembers = members.filter(m => m.status === 'active');
     const inactiveMembers = members.filter(m => m.status === 'inactive');
@@ -181,8 +171,6 @@ export const dashboardService = {
     
     const monthlyDonations = Math.round(currentMonthDonations
       .reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0) * 100) / 100;
-    
-
 
     // Last month calculations
     const lastMonth = new Date(currentYear, currentMonth - 1, 1);
@@ -313,11 +301,11 @@ export const dashboardService = {
     const currentTime = Date.now();
     if (donationTrendCache && donationTrendCacheTimestamp && 
         (currentTime - donationTrendCacheTimestamp) < DONATION_TREND_CACHE_DURATION) {
-      console.log('📊 [DashboardService] Using cached donation trend analysis');
+
       donationTrendAnalysis = donationTrendCache.trendAnalysis;
       weeklyDonationBreakdown = donationTrendCache.weeklyBreakdown;
     } else {
-      console.log('📊 [DashboardService] Calculating fresh donation trend analysis');
+
       donationTrendAnalysis = await calculateDonationTrend();
       weeklyDonationBreakdown = await getWeeklyDonationBreakdown();
       
@@ -353,8 +341,7 @@ export const dashboardService = {
 
   // Events data - optimized with pagination
   async getEventsData(organizationId) {
-    console.log('🔍 [DashboardService] Fetching events for organization:', organizationId);
-    
+
     // For dashboard, limit events and only get essential fields
     const { data: events, error } = await supabase
       .from('events')
@@ -364,8 +351,6 @@ export const dashboardService = {
       .limit(500); // Limit to prevent excessive data transfer
 
     if (error) throw error;
-
-    console.log('📅 [DashboardService] Events found:', events?.length || 0);
 
     const now = new Date();
     const upcomingEvents = events.filter(e => new Date(e.start_date) >= now).slice(0, 5);
@@ -403,12 +388,6 @@ export const dashboardService = {
       return eventDateOnly >= startOfMonthOnly && eventDateOnly <= endOfMonthOnly;
     }).length;
 
-    console.log('📊 [DashboardService] Event calculations:', {
-      total: events.length,
-      upcoming: upcomingEvents.length,
-      thisWeek: eventsThisWeek,
-      thisMonth: eventsThisMonth,
-      now: now.toISOString()
     });
 
     // Calculate average events per month using available data
@@ -466,8 +445,6 @@ export const dashboardService = {
              e.needs_volunteers === true;
     });
 
-    console.log('📊 [DashboardService] Events needing volunteers count:', eventsNeedingVolunteers.length);
-    console.log('📊 [DashboardService] Events needing volunteers details:', eventsNeedingVolunteers.map(e => ({
       id: e.id,
       title: e.title,
       start_date: e.start_date,
@@ -491,7 +468,6 @@ export const dashboardService = {
       }
     };
 
-    console.log('📊 [DashboardService] Final event stats:', result.stats);
     return result;
   },
 
@@ -539,12 +515,12 @@ export const dashboardService = {
 
       // If there's an error or no member record, return empty array
       if (memberError) {
-        console.warn('Error fetching member record for personal tasks:', memberError);
+
         return [];
       }
 
       if (!member) {
-        console.info('No member record found for user in this organization - returning empty tasks');
+
         return [];
       }
 

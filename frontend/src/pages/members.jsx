@@ -101,8 +101,6 @@ export function People() {
     leader_id: '',
     members: []
   });
-  
-
 
   // Animation variants
   const containerVariants = {
@@ -507,13 +505,13 @@ export function People() {
   };
 
   const handleEditFamily = async (family) => {
-    console.log('handleEditFamily called with family:', family);
+
     setMemberSearchQuery(''); // Clear search query when dialog opens
     try {
       // Get fresh family data to ensure we have the latest member information
-      console.log('Getting fresh family data for ID:', family.id);
+
       const freshFamily = await familyService.getFamily(family.id);
-      console.log('Fresh family data:', freshFamily);
+
       if (freshFamily) {
         setSelectedFamily(freshFamily);
       } else {
@@ -521,9 +519,9 @@ export function People() {
       }
       
       // Get members that can be added to this family (unassigned + current family members)
-      console.log('Getting available members for family ID:', family.id);
+
       const available = await familyService.getAvailableMembers(family.id);
-      console.log('Available members:', available);
+
       setAvailableMembers(available);
       setIsEditFamilyDialogOpen(true);
     } catch (error) {
@@ -592,10 +590,10 @@ export function People() {
   };
 
   const handleCreateFamily = async () => {
-    console.log('handleCreateFamily called with:', newFamily);
+
     try {
       if (!newFamily.family_name.trim()) {
-        console.log('Family name is empty');
+
         toast({
           title: "Error",
           description: "Family name is required",
@@ -604,10 +602,8 @@ export function People() {
         return;
       }
 
-      console.log('Creating family with data:', newFamily);
       const result = await familyService.createFamily(newFamily);
-      console.log('Family created:', result);
-      
+
       await loadFamilies(); // Reload families to get the complete data with members
       setIsFamilyDialogOpen(false);
       setNewFamily({
@@ -983,7 +979,7 @@ export function People() {
                   <div className="flex justify-end">
                     <Button 
                       onClick={() => {
-                        console.log('Create Family button clicked');
+
                         setIsFamilyDialogOpen(true);
                       }}
                       className="h-12 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 font-medium"
@@ -1017,7 +1013,7 @@ export function People() {
                                 size="sm"
                                 className="h-8 w-8 p-0 bg-white/80 dark:bg-slate-700/80 hover:bg-white dark:hover:bg-slate-600 shadow-sm"
                                 onClick={(e) => {
-                                  console.log('Edit Family button clicked for family:', family);
+
                                   e.stopPropagation();
                                   handleEditFamily(family);
                                 }}

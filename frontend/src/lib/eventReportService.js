@@ -5,7 +5,6 @@ import { format, startOfMonth, endOfMonth, subMonths, parseISO } from 'date-fns'
 // Helper function to get the current organization ID
 const getCurrentOrganizationId = async () => {
   const orgId = await userCacheService.getCurrentUserOrganizationId();
-  console.log('Current organization ID:', orgId);
   return orgId;
 };
 
@@ -16,8 +15,6 @@ export const eventReportService = {
     const startDate = startOfMonth(selectedMonth);
     const endDate = endOfMonth(selectedMonth);
     
-    console.log('EventReportService Debug:', {
-      organizationId,
       startDate: format(startDate, 'yyyy-MM-dd'),
       endDate: format(endDate, 'yyyy-MM-dd'),
       selectedMonth: format(selectedMonth, 'yyyy-MM-dd')
@@ -41,7 +38,6 @@ export const eventReportService = {
 
     // If no events found for the selected month, try to get events from the last 3 months
     if (!events || events.length === 0) {
-      console.log('No events found for selected month, expanding search to last 3 months');
       const threeMonthsAgo = subMonths(selectedMonth, 3);
       
       const { data: expandedEvents, error: expandedError } = await supabase
@@ -57,8 +53,6 @@ export const eventReportService = {
       events = expandedEvents;
     }
 
-    console.log('Events found:', events?.length || 0, events);
-
     // Fetch attendance records for these events
     const { data: attendance, error: attendanceError } = await supabase
       .from('event_attendance')
@@ -73,15 +67,11 @@ export const eventReportService = {
 
     if (attendanceError) throw attendanceError;
 
-    console.log('Attendance records found:', attendance?.length || 0);
-
     return this.processEventData(events, attendance);
   },
 
   // Process event data into report format
   processEventData(events, attendance) {
-    console.log('Processing event data:', {
-      eventsCount: events.length,
       attendanceCount: attendance.length,
       events: events,
       attendance: attendance
@@ -95,16 +85,12 @@ export const eventReportService = {
       return eventAttendance.length > 0;
     });
 
-    console.log('Events with attendees:', eventsWithAttendees.length, 'out of', events.length);
-
     const totalEvents = eventsWithAttendees.length;
     const totalAttendance = attendance.filter(a => 
       a.status === 'checked-in' || a.status === 'attending'
     ).length;
     const averageAttendance = totalEvents > 0 ? Math.round(totalAttendance / totalEvents) : 0;
 
-    console.log('Basic stats:', {
-      totalEvents,
       totalAttendance,
       averageAttendance
     });
@@ -146,7 +132,7 @@ export const eventReportService = {
             formattedDate = format(eventDate, 'MMM d, yyyy');
           }
         } catch (error) {
-          console.warn('Invalid date format:', event.start_date);
+
         }
       }
       
@@ -235,9 +221,7 @@ export const eventReportService = {
       const avgAttendance = eventsWithAttendance.length > 0 
         ? Math.round(eventsWithAttendance.reduce((sum, attendance) => sum + attendance, 0) / eventsWithAttendance.length)
         : 0;
-      
-      console.log(`Location: ${location}, Events: ${data.count}, Events with attendance: ${eventsWithAttendance.length}, Averages: [${data.eventAverages.join(', ')}], Filtered: [${eventsWithAttendance.join(', ')}], Calculated Avg: ${avgAttendance}`);
-      
+
       return {
         location,
         count: data.count,
@@ -245,8 +229,6 @@ export const eventReportService = {
         avgAttendance
       };
     });
-
-    console.log('Event locations data:', eventLocationsData);
 
     // Event engagement (based on attendance vs capacity)
     const eventEngagement = eventsWithAttendees.map(event => {
@@ -270,7 +252,7 @@ export const eventReportService = {
             formattedDate = format(eventDate, 'MMM d, yyyy');
           }
         } catch (error) {
-          console.warn('Invalid date format:', event.start_date);
+
         }
       }
       

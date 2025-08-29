@@ -19,7 +19,6 @@ export function useAttendanceStats(startDate, endDate) {
   // Memoize the loadAttendanceData function to prevent infinite loops
   const loadAttendanceData = useCallback(async () => {
     if (!startDate || !endDate) {
-      console.log('No startDate or endDate provided');
       return;
     }
 
@@ -30,7 +29,6 @@ export function useAttendanceStats(startDate, endDate) {
     if (attendanceCache && attendanceCacheTimestamp && 
         (now - attendanceCacheTimestamp) < ATTENDANCE_CACHE_DURATION &&
         attendanceCache.cacheKey === cacheKey) {
-      console.log('📊 [AttendanceStats] Using cached data');
       setServiceBreakdown(attendanceCache.serviceBreakdown);
       setMemberStats(attendanceCache.memberStats);
       setDailyData(attendanceCache.dailyData);
@@ -83,7 +81,6 @@ export function useAttendanceStats(startDate, endDate) {
       const allAttendance = attendanceResult.data || [];
 
       if (events.length === 0) {
-        console.log('No past events found for date range');
         const emptyData = { serviceBreakdown: [], memberStats: [], dailyData: [], eventDetails: [] };
         
         // Cache empty result
@@ -188,7 +185,6 @@ export function useAttendanceStats(startDate, endDate) {
       setEventDetails(eventDetails);
     } catch (err) {
       if (err.name === 'AbortError') {
-        console.log('Attendance stats request was cancelled');
         return;
       }
       console.error('Error in useAttendanceStats:', err);
@@ -206,7 +202,6 @@ export function useAttendanceStats(startDate, endDate) {
   const clearAttendanceCache = useCallback(() => {
     attendanceCache = null;
     attendanceCacheTimestamp = null;
-    console.log('📊 [AttendanceStats] Cache cleared');
   }, []);
 
   useEffect(() => {

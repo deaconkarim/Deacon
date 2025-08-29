@@ -13,7 +13,6 @@ if (!supabaseUrl || !supabaseKey) {
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function testAttendanceDiscrepancy() {
-  console.log('🔍 Testing attendance count discrepancy for Anthony Grose...\n');
 
   try {
     // First, find Anthony Grose
@@ -24,16 +23,14 @@ async function testAttendanceDiscrepancy() {
       .ilike('lastname', '%grose%');
 
     if (membersError || !members || members.length === 0) {
-      console.log('❌ Anthony Grose not found');
+
       return;
     }
 
     const anthony = members[0];
-    console.log(`👤 Found: ${anthony.firstname} ${anthony.lastname} (${anthony.id})`);
-    console.log(`🏢 Organization ID: ${anthony.organization_id}\n`);
 
     // Test 1: Member Profile Count (30-day window)
-    console.log('📊 Test 1: Member Profile Count (30-day window)');
+
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
     const today = new Date();
@@ -60,17 +57,16 @@ async function testAttendanceDiscrepancy() {
       .order('created_at', { ascending: false });
 
     if (memberProfileError) {
-      console.log('❌ Error fetching member profile attendance:', memberProfileError);
+
     } else {
-      console.log(`✅ Member Profile Count: ${memberProfileAttendance.length} events`);
-      console.log('   Events attended:');
+
       memberProfileAttendance.forEach(record => {
-        console.log(`   - ${record.events.title} (${record.events.start_date}) - ${record.status}`);
+
       });
     }
 
     // Test 2: Dashboard Count (30-day window)
-    console.log('\n📊 Test 2: Dashboard Count (30-day window)');
+
     const { data: dashboardAttendance, error: dashboardError } = await supabase
       .from('event_attendance')
       .select(`
@@ -92,13 +88,13 @@ async function testAttendanceDiscrepancy() {
       .order('created_at', { ascending: false });
 
     if (dashboardError) {
-      console.log('❌ Error fetching dashboard attendance:', dashboardError);
+
     } else {
-      console.log(`✅ Dashboard Count: ${dashboardAttendance.length} events`);
+
     }
 
     // Test 3: Events Page Count (30-day window)
-    console.log('\n📊 Test 3: Events Page Count (30-day window)');
+
     const { data: eventsPageAttendance, error: eventsPageError } = await supabase
       .from('event_attendance')
       .select(`
@@ -120,13 +116,13 @@ async function testAttendanceDiscrepancy() {
       .order('created_at', { ascending: false });
 
     if (eventsPageError) {
-      console.log('❌ Error fetching events page attendance:', eventsPageError);
+
     } else {
-      console.log(`✅ Events Page Count: ${eventsPageAttendance.length} events`);
+
     }
 
     // Test 4: All-time attendance for comparison
-    console.log('\n📊 Test 4: All-time attendance for comparison');
+
     const { data: allTimeAttendance, error: allTimeError } = await supabase
       .from('event_attendance')
       .select(`
@@ -147,21 +143,18 @@ async function testAttendanceDiscrepancy() {
       .order('created_at', { ascending: false });
 
     if (allTimeError) {
-      console.log('❌ Error fetching all-time attendance:', allTimeError);
+
     } else {
-      console.log(`✅ All-time Count: ${allTimeAttendance.length} events`);
+
     }
 
     // Test 5: Check for duplicate records
-    console.log('\n📊 Test 5: Checking for duplicate records');
+
     const eventIds = memberProfileAttendance.map(record => record.event_id);
     const uniqueEventIds = [...new Set(eventIds)];
-    console.log(`   Total attendance records: ${memberProfileAttendance.length}`);
-    console.log(`   Unique events: ${uniqueEventIds.length}`);
-    console.log(`   Duplicate records: ${memberProfileAttendance.length - uniqueEventIds.length}`);
 
     // Test 6: Check event types
-    console.log('\n📊 Test 6: Event type breakdown');
+
     const eventTypeBreakdown = {};
     memberProfileAttendance.forEach(record => {
       let eventType = record.events?.event_type;
@@ -194,23 +187,17 @@ async function testAttendanceDiscrepancy() {
       eventTypeBreakdown[eventType]++;
     });
 
-    console.log('   Event type breakdown:');
     Object.entries(eventTypeBreakdown).forEach(([type, count]) => {
-      console.log(`   - ${type}: ${count} events`);
+
     });
 
     // Summary
-    console.log('\n📋 Summary:');
-    console.log(`   Member Profile (30-day): ${memberProfileAttendance.length}`);
-    console.log(`   Dashboard (30-day): ${dashboardAttendance.length}`);
-    console.log(`   Events Page (30-day): ${eventsPageAttendance.length}`);
-    console.log(`   All-time: ${allTimeAttendance.length}`);
 
     if (memberProfileAttendance.length === dashboardAttendance.length && 
         dashboardAttendance.length === eventsPageAttendance.length) {
-      console.log('\n✅ All counts match! The issue might be in the UI display or caching.');
+
     } else {
-      console.log('\n❌ Counts don\'t match! There\'s a discrepancy in the data or queries.');
+
     }
 
   } catch (error) {
@@ -233,7 +220,6 @@ if (!supabaseUrl || !supabaseKey) {
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function testAttendanceDiscrepancy() {
-  console.log('🔍 Testing attendance count discrepancy for Anthony Grose...\n');
 
   try {
     // First, find Anthony Grose
@@ -244,16 +230,14 @@ async function testAttendanceDiscrepancy() {
       .ilike('lastname', '%grose%');
 
     if (membersError || !members || members.length === 0) {
-      console.log('❌ Anthony Grose not found');
+
       return;
     }
 
     const anthony = members[0];
-    console.log(`👤 Found: ${anthony.firstname} ${anthony.lastname} (${anthony.id})`);
-    console.log(`🏢 Organization ID: ${anthony.organization_id}\n`);
 
     // Test 1: Member Profile Count (30-day window)
-    console.log('📊 Test 1: Member Profile Count (30-day window)');
+
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
     const today = new Date();
@@ -280,17 +264,16 @@ async function testAttendanceDiscrepancy() {
       .order('created_at', { ascending: false });
 
     if (memberProfileError) {
-      console.log('❌ Error fetching member profile attendance:', memberProfileError);
+
     } else {
-      console.log(`✅ Member Profile Count: ${memberProfileAttendance.length} events`);
-      console.log('   Events attended:');
+
       memberProfileAttendance.forEach(record => {
-        console.log(`   - ${record.events.title} (${record.events.start_date}) - ${record.status}`);
+
       });
     }
 
     // Test 2: Dashboard Count (30-day window)
-    console.log('\n📊 Test 2: Dashboard Count (30-day window)');
+
     const { data: dashboardAttendance, error: dashboardError } = await supabase
       .from('event_attendance')
       .select(`
@@ -312,13 +295,13 @@ async function testAttendanceDiscrepancy() {
       .order('created_at', { ascending: false });
 
     if (dashboardError) {
-      console.log('❌ Error fetching dashboard attendance:', dashboardError);
+
     } else {
-      console.log(`✅ Dashboard Count: ${dashboardAttendance.length} events`);
+
     }
 
     // Test 3: Events Page Count (30-day window)
-    console.log('\n📊 Test 3: Events Page Count (30-day window)');
+
     const { data: eventsPageAttendance, error: eventsPageError } = await supabase
       .from('event_attendance')
       .select(`
@@ -340,13 +323,13 @@ async function testAttendanceDiscrepancy() {
       .order('created_at', { ascending: false });
 
     if (eventsPageError) {
-      console.log('❌ Error fetching events page attendance:', eventsPageError);
+
     } else {
-      console.log(`✅ Events Page Count: ${eventsPageAttendance.length} events`);
+
     }
 
     // Test 4: All-time attendance for comparison
-    console.log('\n📊 Test 4: All-time attendance for comparison');
+
     const { data: allTimeAttendance, error: allTimeError } = await supabase
       .from('event_attendance')
       .select(`
@@ -367,21 +350,18 @@ async function testAttendanceDiscrepancy() {
       .order('created_at', { ascending: false });
 
     if (allTimeError) {
-      console.log('❌ Error fetching all-time attendance:', allTimeError);
+
     } else {
-      console.log(`✅ All-time Count: ${allTimeAttendance.length} events`);
+
     }
 
     // Test 5: Check for duplicate records
-    console.log('\n📊 Test 5: Checking for duplicate records');
+
     const eventIds = memberProfileAttendance.map(record => record.event_id);
     const uniqueEventIds = [...new Set(eventIds)];
-    console.log(`   Total attendance records: ${memberProfileAttendance.length}`);
-    console.log(`   Unique events: ${uniqueEventIds.length}`);
-    console.log(`   Duplicate records: ${memberProfileAttendance.length - uniqueEventIds.length}`);
 
     // Test 6: Check event types
-    console.log('\n📊 Test 6: Event type breakdown');
+
     const eventTypeBreakdown = {};
     memberProfileAttendance.forEach(record => {
       let eventType = record.events?.event_type;
@@ -414,23 +394,17 @@ async function testAttendanceDiscrepancy() {
       eventTypeBreakdown[eventType]++;
     });
 
-    console.log('   Event type breakdown:');
     Object.entries(eventTypeBreakdown).forEach(([type, count]) => {
-      console.log(`   - ${type}: ${count} events`);
+
     });
 
     // Summary
-    console.log('\n📋 Summary:');
-    console.log(`   Member Profile (30-day): ${memberProfileAttendance.length}`);
-    console.log(`   Dashboard (30-day): ${dashboardAttendance.length}`);
-    console.log(`   Events Page (30-day): ${eventsPageAttendance.length}`);
-    console.log(`   All-time: ${allTimeAttendance.length}`);
 
     if (memberProfileAttendance.length === dashboardAttendance.length && 
         dashboardAttendance.length === eventsPageAttendance.length) {
-      console.log('\n✅ All counts match! The issue might be in the UI display or caching.');
+
     } else {
-      console.log('\n❌ Counts don\'t match! There\'s a discrepancy in the data or queries.');
+
     }
 
   } catch (error) {
@@ -453,7 +427,6 @@ if (!supabaseUrl || !supabaseKey) {
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function testAttendanceDiscrepancy() {
-  console.log('🔍 Testing attendance count discrepancy for Anthony Grose...\n');
 
   try {
     // First, find Anthony Grose
@@ -464,16 +437,14 @@ async function testAttendanceDiscrepancy() {
       .ilike('lastname', '%grose%');
 
     if (membersError || !members || members.length === 0) {
-      console.log('❌ Anthony Grose not found');
+
       return;
     }
 
     const anthony = members[0];
-    console.log(`👤 Found: ${anthony.firstname} ${anthony.lastname} (${anthony.id})`);
-    console.log(`🏢 Organization ID: ${anthony.organization_id}\n`);
 
     // Test 1: Member Profile Count (30-day window)
-    console.log('📊 Test 1: Member Profile Count (30-day window)');
+
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
     const today = new Date();
@@ -500,17 +471,16 @@ async function testAttendanceDiscrepancy() {
       .order('created_at', { ascending: false });
 
     if (memberProfileError) {
-      console.log('❌ Error fetching member profile attendance:', memberProfileError);
+
     } else {
-      console.log(`✅ Member Profile Count: ${memberProfileAttendance.length} events`);
-      console.log('   Events attended:');
+
       memberProfileAttendance.forEach(record => {
-        console.log(`   - ${record.events.title} (${record.events.start_date}) - ${record.status}`);
+
       });
     }
 
     // Test 2: Dashboard Count (30-day window)
-    console.log('\n📊 Test 2: Dashboard Count (30-day window)');
+
     const { data: dashboardAttendance, error: dashboardError } = await supabase
       .from('event_attendance')
       .select(`
@@ -532,13 +502,13 @@ async function testAttendanceDiscrepancy() {
       .order('created_at', { ascending: false });
 
     if (dashboardError) {
-      console.log('❌ Error fetching dashboard attendance:', dashboardError);
+
     } else {
-      console.log(`✅ Dashboard Count: ${dashboardAttendance.length} events`);
+
     }
 
     // Test 3: Events Page Count (30-day window)
-    console.log('\n📊 Test 3: Events Page Count (30-day window)');
+
     const { data: eventsPageAttendance, error: eventsPageError } = await supabase
       .from('event_attendance')
       .select(`
@@ -560,13 +530,13 @@ async function testAttendanceDiscrepancy() {
       .order('created_at', { ascending: false });
 
     if (eventsPageError) {
-      console.log('❌ Error fetching events page attendance:', eventsPageError);
+
     } else {
-      console.log(`✅ Events Page Count: ${eventsPageAttendance.length} events`);
+
     }
 
     // Test 4: All-time attendance for comparison
-    console.log('\n📊 Test 4: All-time attendance for comparison');
+
     const { data: allTimeAttendance, error: allTimeError } = await supabase
       .from('event_attendance')
       .select(`
@@ -587,21 +557,18 @@ async function testAttendanceDiscrepancy() {
       .order('created_at', { ascending: false });
 
     if (allTimeError) {
-      console.log('❌ Error fetching all-time attendance:', allTimeError);
+
     } else {
-      console.log(`✅ All-time Count: ${allTimeAttendance.length} events`);
+
     }
 
     // Test 5: Check for duplicate records
-    console.log('\n📊 Test 5: Checking for duplicate records');
+
     const eventIds = memberProfileAttendance.map(record => record.event_id);
     const uniqueEventIds = [...new Set(eventIds)];
-    console.log(`   Total attendance records: ${memberProfileAttendance.length}`);
-    console.log(`   Unique events: ${uniqueEventIds.length}`);
-    console.log(`   Duplicate records: ${memberProfileAttendance.length - uniqueEventIds.length}`);
 
     // Test 6: Check event types
-    console.log('\n📊 Test 6: Event type breakdown');
+
     const eventTypeBreakdown = {};
     memberProfileAttendance.forEach(record => {
       let eventType = record.events?.event_type;
@@ -634,23 +601,17 @@ async function testAttendanceDiscrepancy() {
       eventTypeBreakdown[eventType]++;
     });
 
-    console.log('   Event type breakdown:');
     Object.entries(eventTypeBreakdown).forEach(([type, count]) => {
-      console.log(`   - ${type}: ${count} events`);
+
     });
 
     // Summary
-    console.log('\n📋 Summary:');
-    console.log(`   Member Profile (30-day): ${memberProfileAttendance.length}`);
-    console.log(`   Dashboard (30-day): ${dashboardAttendance.length}`);
-    console.log(`   Events Page (30-day): ${eventsPageAttendance.length}`);
-    console.log(`   All-time: ${allTimeAttendance.length}`);
 
     if (memberProfileAttendance.length === dashboardAttendance.length && 
         dashboardAttendance.length === eventsPageAttendance.length) {
-      console.log('\n✅ All counts match! The issue might be in the UI display or caching.');
+
     } else {
-      console.log('\n❌ Counts don\'t match! There\'s a discrepancy in the data or queries.');
+
     }
 
   } catch (error) {

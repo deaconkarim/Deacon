@@ -94,7 +94,6 @@ export class AutomationService {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      console.log('📋 Automation rules for org', organizationId, ':', data);
       return data;
     } catch (error) {
       console.error('Error fetching automation rules:', error);
@@ -175,7 +174,6 @@ export class AutomationService {
   // Trigger automation for a specific event
   async triggerAutomation(triggerType, triggerData, organizationId) {
     try {
-      console.log('🔧 Automation triggered:', { triggerType, triggerData, organizationId });
       
       // Get active rules for this trigger type
       const { data: rules, error: rulesError } = await this.supabase
@@ -187,22 +185,15 @@ export class AutomationService {
 
       if (rulesError) throw rulesError;
 
-      console.log('📋 Found automation rules:', rules);
-
       const executions = [];
 
       for (const rule of rules) {
-        console.log('🔍 Checking rule:', rule.name);
-        console.log('📝 Rule conditions:', rule.trigger_conditions);
-        console.log('📊 Trigger data:', triggerData);
-        
+
         // Check if conditions are met
         const conditionsMet = this.checkTriggerConditions(rule.trigger_conditions, triggerData);
-        console.log('✅ Conditions met:', conditionsMet);
-        
+
         if (conditionsMet) {
-          console.log('🚀 Executing rule:', rule.name);
-          
+
           // Create execution record
           const { data: execution, error: execError } = await this.supabase
             .from('automation_executions')
@@ -223,7 +214,6 @@ export class AutomationService {
         }
       }
 
-      console.log('🎯 Automation executions:', executions);
       return executions;
     } catch (error) {
       console.error('❌ Error triggering automation:', error);
@@ -235,18 +225,15 @@ export class AutomationService {
   checkTriggerConditions(conditions, triggerData) {
     try {
       const cond = typeof conditions === 'string' ? JSON.parse(conditions) : conditions;
-      console.log('🔍 Checking conditions:', cond);
-      console.log('📊 Against trigger data:', triggerData);
-      
+
       for (const [key, value] of Object.entries(cond)) {
-        console.log(`🔍 Comparing ${key}: expected=${value}, actual=${triggerData[key]}`);
+
         if (triggerData[key] !== value) {
-          console.log(`❌ Condition failed: ${key} !== ${value}`);
+
           return false;
         }
       }
-      
-      console.log('✅ All conditions met!');
+
       return true;
     } catch (error) {
       console.error('❌ Error checking trigger conditions:', error);
@@ -305,8 +292,7 @@ export class AutomationService {
   // Create task from automation
   async createTaskFromAutomation(actionData, triggerData) {
     try {
-      console.log('🔧 Creating task from automation:', { actionData, triggerData });
-      
+
       // Get the current user's organization ID
       const { data: { user } } = await this.supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
@@ -379,8 +365,7 @@ export class AutomationService {
           }
         } else {
           // Old format: assigned_to is a role string like "pastor" or "deacon"
-          console.log('🔧 Using legacy role assignment:', actionData.assigned_to);
-          
+
           if (actionData.assigned_to === 'pastor') {
             // Look for members with admin role
             const { data: staffMembers } = await this.supabase
@@ -451,7 +436,6 @@ export class AutomationService {
 
       if (error) throw error;
 
-      console.log('✅ Task created successfully:', task);
       return { 
         action: 'create_task', 
         status: 'success',

@@ -4,14 +4,12 @@ import { supabase } from './supabase';
 
 export async function getOrganizations() {
   try {
-    console.log('🔍 Loading organizations...');
     const { data, error } = await supabase
       .from('organizations')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    console.log('✅ Organizations loaded:', data?.length || 0, 'organizations');
     
     // Get member and user counts separately for each organization
     const processedData = await Promise.all(data?.map(async (org) => {
@@ -82,8 +80,7 @@ export async function updateOrganization(id, orgData) {
 
 export async function deleteOrganization(id) {
   try {
-    console.log('deleteOrganization called with id:', id);
-    
+
     // First, check if the organization exists and get basic info
     const { data: org, error: selectError } = await supabase
       .from('organizations')
@@ -100,11 +97,8 @@ export async function deleteOrganization(id) {
       throw new Error('Organization not found');
     }
 
-    console.log('Found organization to delete:', org);
-
     // Use the stored procedure to handle deletion safely
-    console.log('Using stored procedure to delete organization safely...');
-    
+
     const { data, error: rpcError } = await supabase.rpc('delete_organization_simple', {
       org_id: id
     });
@@ -113,10 +107,9 @@ export async function deleteOrganization(id) {
       console.error('Stored procedure deletion failed:', rpcError);
       
       // Fallback to manual deletion if stored procedure fails
-      console.log('Falling back to manual deletion approach...');
-      
+
       // Delete ALL activity_log entries first to prevent FK violations
-      console.log('Step 1: Deleting ALL activity_log entries...');
+
       try {
         const { error: allActivityError } = await supabase
           .from('activity_log')
@@ -124,16 +117,14 @@ export async function deleteOrganization(id) {
           .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all records
         
         if (allActivityError) {
-          console.warn('Warning: Could not delete all activity_log records:', allActivityError);
+
         } else {
-          console.log('Successfully deleted all activity_log records');
+
         }
       } catch (error) {
-        console.warn('Warning: Error deleting all activity_log records:', error);
+
       }
 
-      console.log('Step 2: Cleaning organization-specific tables...');
-      
       // Essential tables that must be cleaned
       const criticalTables = [
         'donations',
@@ -144,22 +135,20 @@ export async function deleteOrganization(id) {
 
       for (const table of criticalTables) {
         try {
-          console.log(`Cleaning critical table: ${table}`);
+
           const { error } = await supabase
             .from(table)
             .delete()
             .eq('organization_id', id);
           
           if (error) {
-            console.warn(`Warning: Could not clean ${table}:`, error);
+
           }
         } catch (cleanError) {
-          console.warn(`Warning: Error cleaning ${table}:`, cleanError);
+
         }
       }
 
-      console.log('Step 3: Attempting organization deletion...');
-      
       const { error: deleteError } = await supabase
         .from('organizations')
         .delete()
@@ -170,10 +159,9 @@ export async function deleteOrganization(id) {
         throw new Error(`Failed to delete organization: ${deleteError.message}`);
       }
     } else {
-      console.log('Stored procedure executed successfully');
+
     }
 
-    console.log(`Organization ${org.name} deleted successfully`);
   } catch (error) {
     console.error('Error deleting organization:', error);
     throw error;
@@ -233,10 +221,8 @@ export async function getAllUsers() {
       return viewData;
     }
 
-    console.log('⚠️ system_users view failed, falling back to direct queries:', viewError);
-    
     // Fallback: Query auth.users and members directly
-    console.log('🔍 Loading users from members table...');
+
     const { data: authUsers, error: authError } = await supabase
       .from('members')
       .select(`
@@ -270,8 +256,7 @@ export async function getAllUsers() {
       status: member.status,
       created_at: member.created_at
     }));
-    
-    console.log('✅ Users loaded from fallback:', transformedUsers.length, 'users');
+
     return transformedUsers;
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -459,10 +444,8 @@ export async function getSystemStats() {
       };
     }
 
-    console.log('⚠️ system_stats view failed, calculating manually:', error);
-
     // Fallback: Calculate stats manually with parallel queries
-    console.log('🔍 Calculating system stats manually...');
+
     const [
       { count: totalOrgs },
       { count: totalMembers },
@@ -497,8 +480,7 @@ export async function getSystemStats() {
         totalAmount: totalDonationAmount
       }
     };
-    
-    console.log('✅ System stats calculated:', calculatedStats);
+
     return calculatedStats;
   } catch (error) {
     console.error('Error fetching system stats:', error);
@@ -545,8 +527,7 @@ export async function getSystemActivity(limit = 50) {
       .limit(limit);
 
     if (error) {
-      console.log('Activity log query failed, trying without organization join:', error);
-      
+
       // Fallback: Query without organization join
       const { data: fallbackData, error: fallbackError } = await supabase
         .from('activity_log')

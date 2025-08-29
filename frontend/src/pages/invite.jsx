@@ -144,7 +144,7 @@ export function Invite() {
       if (authError) throw authError;
 
       // Update the existing member record with the auth user ID
-      console.log('Updating existing member record with user ID');
+
       const { error: updateMemberError } = await supabase
         .from('members')
         .update({
@@ -158,7 +158,6 @@ export function Invite() {
         console.error('Error updating member:', updateMemberError);
         throw updateMemberError;
       }
-      console.log('Successfully updated member with user ID');
 
       // Create organization membership
       const { error: membershipError } = await supabase

@@ -10,8 +10,7 @@ const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://cccxexvoahyeookqmx
 const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNjY3hleHZvYWh5ZW9va3FteHBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzI3NzY2MTcsImV4cCI6MjA0ODM1MjYxN30.dH6WyqDg';
 
 async function restoreAttendanceData() {
-  console.log('🔄 Restoring attendance data...');
-  
+
   try {
     const response = await fetch(`${supabaseUrl}/functions/v1/generate-demo-data`, {
       method: 'POST',
@@ -33,9 +32,7 @@ async function restoreAttendanceData() {
     }
 
     const result = await response.json();
-    console.log('✅ Attendance data restored successfully!');
-    console.log('📊 Generated data:', result.stats);
-    
+
     return result;
   } catch (error) {
     console.error('❌ Failed to restore attendance data:', error);
@@ -46,7 +43,7 @@ async function restoreAttendanceData() {
 // Run the restoration
 restoreAttendanceData()
   .then(() => {
-    console.log('🎉 Data restoration completed!');
+
     process.exit(0);
   })
   .catch((error) => {
@@ -64,8 +61,7 @@ const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://cccxexvoahyeookqmx
 const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNjY3hleHZvYWh5ZW9va3FteHBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzI3NzY2MTcsImV4cCI6MjA0ODM1MjYxN30.dH6WyqDg';
 
 async function restoreAttendanceData() {
-  console.log('🔄 Restoring attendance data...');
-  
+
   try {
     const response = await fetch(`${supabaseUrl}/functions/v1/generate-demo-data`, {
       method: 'POST',
@@ -87,9 +83,7 @@ async function restoreAttendanceData() {
     }
 
     const result = await response.json();
-    console.log('✅ Attendance data restored successfully!');
-    console.log('📊 Generated data:', result.stats);
-    
+
     return result;
   } catch (error) {
     console.error('❌ Failed to restore attendance data:', error);
@@ -100,7 +94,7 @@ async function restoreAttendanceData() {
 // Run the restoration
 restoreAttendanceData()
   .then(() => {
-    console.log('🎉 Data restoration completed!');
+
     process.exit(0);
   })
   .catch((error) => {
@@ -118,8 +112,7 @@ const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://cccxexvoahyeookqmx
 const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNjY3hleHZvYWh5ZW9va3FteHBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzI3NzY2MTcsImV4cCI6MjA0ODM1MjYxN30.dH6WyqDg';
 
 async function restoreAttendanceData() {
-  console.log('🔄 Restoring attendance data...');
-  
+
   try {
     const response = await fetch(`${supabaseUrl}/functions/v1/generate-demo-data`, {
       method: 'POST',
@@ -141,9 +134,7 @@ async function restoreAttendanceData() {
     }
 
     const result = await response.json();
-    console.log('✅ Attendance data restored successfully!');
-    console.log('📊 Generated data:', result.stats);
-    
+
     return result;
   } catch (error) {
     console.error('❌ Failed to restore attendance data:', error);
@@ -154,7 +145,7 @@ async function restoreAttendanceData() {
 // Run the restoration
 restoreAttendanceData()
   .then(() => {
-    console.log('🎉 Data restoration completed!');
+
     process.exit(0);
   })
   .catch((error) => {

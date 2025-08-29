@@ -7,8 +7,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function checkAttendanceData() {
-  console.log('🔍 Checking attendance data...');
-  
+
   try {
     // Check total attendance records
     const { data: allAttendance, error: attendanceError } = await supabase
@@ -16,8 +15,6 @@ async function checkAttendanceData() {
       .select('*');
 
     if (attendanceError) throw attendanceError;
-    
-    console.log(`📊 Total attendance records: ${allAttendance?.length || 0}`);
 
     // Check events with attendance
     const { data: eventsWithAttendance, error: eventsError } = await supabase
@@ -34,16 +31,14 @@ async function checkAttendanceData() {
 
     if (eventsError) throw eventsError;
 
-    console.log(`📅 Events with attendance: ${eventsWithAttendance?.length || 0}`);
-
     // Show some sample data
     if (eventsWithAttendance && eventsWithAttendance.length > 0) {
-      console.log('\n📋 Sample events with attendance:');
+
       eventsWithAttendance.slice(0, 5).forEach(event => {
         const attendingCount = event.event_attendance?.filter(a => 
           a.status === 'attending' || a.status === 'checked-in'
         ).length || 0;
-        console.log(`   ${event.title} (${event.start_date}): ${attendingCount} attendees`);
+
       });
     }
 
@@ -67,15 +62,13 @@ async function checkAttendanceData() {
 
     if (recentError) throw recentError;
 
-    console.log(`\n📅 Recent events (last 30 days): ${recentEvents?.length || 0}`);
-
     if (recentEvents && recentEvents.length > 0) {
-      console.log('\n📋 Recent events with attendance:');
+
       recentEvents.forEach(event => {
         const attendingCount = event.event_attendance?.filter(a => 
           a.status === 'attending' || a.status === 'checked-in'
         ).length || 0;
-        console.log(`   ${event.title} (${event.start_date}): ${attendingCount} attendees`);
+
       });
     }
 
@@ -94,12 +87,7 @@ async function checkAttendanceData() {
 // Run the check
 checkAttendanceData()
   .then((result) => {
-    console.log('\n✅ Attendance data check completed!');
-    console.log('📈 Summary:', result);
-    console.log('\n🔄 Next steps:');
-    console.log('   1. Hard refresh your browser (Ctrl+F5 or Cmd+Shift+R)');
-    console.log('   2. Clear browser cache if needed');
-    console.log('   3. Check the dashboard again');
+
     process.exit(0);
   })
   .catch((error) => {

@@ -149,7 +149,6 @@ export class WeeklyDigestService {
   static async scheduleWeeklyDigest(organizationId, schedule = 'weekly') {
     // This would integrate with a task scheduler like cron
     // For now, this is a placeholder for future implementation
-    console.log(`Scheduling weekly digest for organization ${organizationId}`);
     
     return {
       success: true,

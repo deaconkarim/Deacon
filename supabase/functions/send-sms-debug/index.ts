@@ -12,20 +12,13 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Debug function called');
-    
+
     // Check environment variables
     const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
     const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
     const phoneNumber = Deno.env.get('TWILIO_PHONE_NUMBER');
-    
-    console.log('Environment check:');
-    console.log('- TWILIO_ACCOUNT_SID:', accountSid ? '✅ Set' : '❌ Missing');
-    console.log('- TWILIO_AUTH_TOKEN:', authToken ? '✅ Set' : '❌ Missing');
-    console.log('- TWILIO_PHONE_NUMBER:', phoneNumber ? '✅ Set' : '❌ Missing');
 
     const body = await req.json();
-    console.log('Request body:', body);
 
     // Test Twilio client initialization
     let twilioTest = 'Not attempted';

@@ -5,8 +5,6 @@ const isTestMode = process.env.STRIPE_TEST_MODE === 'true';
 const stripeKey = isTestMode ? process.env.STRIPE_TEST_SECRET_KEY : process.env.STRIPE_SECRET_KEY;
 const stripe = new Stripe(stripeKey);
 
-console.log(`🔧 Find Subscriptions Mode: ${isTestMode ? 'TEST' : 'LIVE'}`);
-
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -57,17 +55,9 @@ export default async function handler(req, res) {
       sub.status === 'past_due'
     );
 
-    console.log(`Found ${relevantSubscriptions.length} subscriptions for email: ${email}`);
-    
     // Log subscription details for debugging
     relevantSubscriptions.forEach((sub, index) => {
-      console.log(`Subscription ${index + 1}:`, {
-        id: sub.id,
-        status: sub.status,
-        amount: sub.items?.data?.[0]?.price?.unit_amount,
-        interval: sub.items?.data?.[0]?.price?.recurring?.interval,
-        current_period_end: sub.current_period_end
-      });
+
     });
 
     res.json({ 

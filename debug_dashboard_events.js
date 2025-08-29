@@ -7,13 +7,12 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function debugDashboardEvents() {
-  console.log('🔍 Debugging dashboard events calculation...');
-  
+
   try {
     // Get current user's organization ID
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      console.log('❌ No user found');
+
       return;
     }
 
@@ -25,12 +24,11 @@ async function debugDashboardEvents() {
       .single();
 
     if (!userProps?.organization_id) {
-      console.log('❌ No organization found for user');
+
       return;
     }
 
     const organizationId = userProps.organization_id;
-    console.log('🏢 Organization ID:', organizationId);
 
     // Get all events for this organization
     const { data: events, error } = await supabase
@@ -41,12 +39,10 @@ async function debugDashboardEvents() {
 
     if (error) throw error;
 
-    console.log(`📅 Total events in database: ${events?.length || 0}`);
-
     if (events && events.length > 0) {
-      console.log('\n📋 Event details:');
+
       events.forEach((event, index) => {
-        console.log(`${index + 1}. ${event.title} (${event.event_type}) - ${event.start_date}`);
+
       });
     }
 
@@ -70,34 +66,27 @@ async function debugDashboardEvents() {
     const upcomingEvents = events?.filter(e => new Date(e.start_date) >= now).slice(0, 5) || [];
     const eventsNeedingVolunteers = upcomingEvents.filter(e => e.needs_volunteers === true);
 
-    console.log('\n📊 Dashboard calculations:');
-    console.log(`   - Events this week: ${eventsThisWeek.length}`);
-    console.log(`   - Events this month: ${eventsThisMonth.length}`);
-    console.log(`   - Upcoming events: ${upcomingEvents.length}`);
-    console.log(`   - Events needing volunteers: ${eventsNeedingVolunteers.length}`);
-
     if (eventsThisWeek.length > 0) {
-      console.log('\n📅 Events this week:');
+
       eventsThisWeek.forEach(event => {
-        console.log(`   - ${event.title} (${event.start_date})`);
+
       });
     }
 
     if (upcomingEvents.length > 0) {
-      console.log('\n📅 Upcoming events:');
+
       upcomingEvents.forEach(event => {
-        console.log(`   - ${event.title} (${event.start_date}) - needs volunteers: ${event.needs_volunteers || false}`);
+
       });
     }
 
     // Check if there are any events with future dates that might be causing issues
     const futureEvents = events?.filter(e => new Date(e.start_date) > now) || [];
-    console.log(`\n🔮 Future events: ${futureEvents.length}`);
 
     if (futureEvents.length > 0) {
-      console.log('📅 Future event dates:');
+
       futureEvents.forEach(event => {
-        console.log(`   - ${event.title}: ${event.start_date}`);
+
       });
     }
 
@@ -118,8 +107,7 @@ async function debugDashboardEvents() {
 // Run the debug
 debugDashboardEvents()
   .then((result) => {
-    console.log('\n🎉 Debug completed!');
-    console.log('📈 Summary:', result);
+
     process.exit(0);
   })
   .catch((error) => {
@@ -134,13 +122,12 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function debugDashboardEvents() {
-  console.log('🔍 Debugging dashboard events calculation...');
-  
+
   try {
     // Get current user's organization ID
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      console.log('❌ No user found');
+
       return;
     }
 
@@ -152,12 +139,11 @@ async function debugDashboardEvents() {
       .single();
 
     if (!userProps?.organization_id) {
-      console.log('❌ No organization found for user');
+
       return;
     }
 
     const organizationId = userProps.organization_id;
-    console.log('🏢 Organization ID:', organizationId);
 
     // Get all events for this organization
     const { data: events, error } = await supabase
@@ -168,12 +154,10 @@ async function debugDashboardEvents() {
 
     if (error) throw error;
 
-    console.log(`📅 Total events in database: ${events?.length || 0}`);
-
     if (events && events.length > 0) {
-      console.log('\n📋 Event details:');
+
       events.forEach((event, index) => {
-        console.log(`${index + 1}. ${event.title} (${event.event_type}) - ${event.start_date}`);
+
       });
     }
 
@@ -197,34 +181,27 @@ async function debugDashboardEvents() {
     const upcomingEvents = events?.filter(e => new Date(e.start_date) >= now).slice(0, 5) || [];
     const eventsNeedingVolunteers = upcomingEvents.filter(e => e.needs_volunteers === true);
 
-    console.log('\n📊 Dashboard calculations:');
-    console.log(`   - Events this week: ${eventsThisWeek.length}`);
-    console.log(`   - Events this month: ${eventsThisMonth.length}`);
-    console.log(`   - Upcoming events: ${upcomingEvents.length}`);
-    console.log(`   - Events needing volunteers: ${eventsNeedingVolunteers.length}`);
-
     if (eventsThisWeek.length > 0) {
-      console.log('\n📅 Events this week:');
+
       eventsThisWeek.forEach(event => {
-        console.log(`   - ${event.title} (${event.start_date})`);
+
       });
     }
 
     if (upcomingEvents.length > 0) {
-      console.log('\n📅 Upcoming events:');
+
       upcomingEvents.forEach(event => {
-        console.log(`   - ${event.title} (${event.start_date}) - needs volunteers: ${event.needs_volunteers || false}`);
+
       });
     }
 
     // Check if there are any events with future dates that might be causing issues
     const futureEvents = events?.filter(e => new Date(e.start_date) > now) || [];
-    console.log(`\n🔮 Future events: ${futureEvents.length}`);
 
     if (futureEvents.length > 0) {
-      console.log('📅 Future event dates:');
+
       futureEvents.forEach(event => {
-        console.log(`   - ${event.title}: ${event.start_date}`);
+
       });
     }
 
@@ -245,8 +222,7 @@ async function debugDashboardEvents() {
 // Run the debug
 debugDashboardEvents()
   .then((result) => {
-    console.log('\n🎉 Debug completed!');
-    console.log('📈 Summary:', result);
+
     process.exit(0);
   })
   .catch((error) => {
@@ -261,13 +237,12 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function debugDashboardEvents() {
-  console.log('🔍 Debugging dashboard events calculation...');
-  
+
   try {
     // Get current user's organization ID
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      console.log('❌ No user found');
+
       return;
     }
 
@@ -279,12 +254,11 @@ async function debugDashboardEvents() {
       .single();
 
     if (!userProps?.organization_id) {
-      console.log('❌ No organization found for user');
+
       return;
     }
 
     const organizationId = userProps.organization_id;
-    console.log('🏢 Organization ID:', organizationId);
 
     // Get all events for this organization
     const { data: events, error } = await supabase
@@ -295,12 +269,10 @@ async function debugDashboardEvents() {
 
     if (error) throw error;
 
-    console.log(`📅 Total events in database: ${events?.length || 0}`);
-
     if (events && events.length > 0) {
-      console.log('\n📋 Event details:');
+
       events.forEach((event, index) => {
-        console.log(`${index + 1}. ${event.title} (${event.event_type}) - ${event.start_date}`);
+
       });
     }
 
@@ -324,34 +296,27 @@ async function debugDashboardEvents() {
     const upcomingEvents = events?.filter(e => new Date(e.start_date) >= now).slice(0, 5) || [];
     const eventsNeedingVolunteers = upcomingEvents.filter(e => e.needs_volunteers === true);
 
-    console.log('\n📊 Dashboard calculations:');
-    console.log(`   - Events this week: ${eventsThisWeek.length}`);
-    console.log(`   - Events this month: ${eventsThisMonth.length}`);
-    console.log(`   - Upcoming events: ${upcomingEvents.length}`);
-    console.log(`   - Events needing volunteers: ${eventsNeedingVolunteers.length}`);
-
     if (eventsThisWeek.length > 0) {
-      console.log('\n📅 Events this week:');
+
       eventsThisWeek.forEach(event => {
-        console.log(`   - ${event.title} (${event.start_date})`);
+
       });
     }
 
     if (upcomingEvents.length > 0) {
-      console.log('\n📅 Upcoming events:');
+
       upcomingEvents.forEach(event => {
-        console.log(`   - ${event.title} (${event.start_date}) - needs volunteers: ${event.needs_volunteers || false}`);
+
       });
     }
 
     // Check if there are any events with future dates that might be causing issues
     const futureEvents = events?.filter(e => new Date(e.start_date) > now) || [];
-    console.log(`\n🔮 Future events: ${futureEvents.length}`);
 
     if (futureEvents.length > 0) {
-      console.log('📅 Future event dates:');
+
       futureEvents.forEach(event => {
-        console.log(`   - ${event.title}: ${event.start_date}`);
+
       });
     }
 
@@ -372,8 +337,7 @@ async function debugDashboardEvents() {
 // Run the debug
 debugDashboardEvents()
   .then((result) => {
-    console.log('\n🎉 Debug completed!');
-    console.log('📈 Summary:', result);
+
     process.exit(0);
   })
   .catch((error) => {

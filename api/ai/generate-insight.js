@@ -46,7 +46,6 @@ export default async function handler(req, res) {
     const response = completion.choices[0]?.message?.content || 'Unable to generate insight';
 
     // Log usage for cost tracking
-    console.log(`AI Insight generated - Model: ${model}, Tokens: ${completion.usage?.total_tokens || 'unknown'}`);
 
     res.status(200).json({
       choices: [{

@@ -135,26 +135,20 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
   // Load organization timezone and initialize form data
   useEffect(() => {
     const initializeForm = async () => {
-      console.log('=== EVENT FORM INITIALIZATION START ===');
-      console.log('Initial data:', initialData);
       
       try {
         const orgId = await getCurrentUserOrganizationId();
-        console.log('Organization ID:', orgId);
         
         if (orgId) {
           const tz = await getOrganizationTimezone(orgId);
-          console.log('Organization timezone:', tz);
+
           setOrganizationTimezone(tz);
           
           // Initialize form data with proper timezone handling
           if (initialData.startDate) {
-            console.log('=== INITIALIZING START DATE ===');
-            console.log('Original start date (UTC):', initialData.startDate);
             
             // Parse the UTC date and convert to local timezone
             const startDate = new Date(initialData.startDate);
-            console.log('Start date object (local):', startDate.toString());
             
             // Extract components in local timezone
             const startDateStr = startDate.toLocaleDateString('en-CA'); // YYYY-MM-DD format
@@ -163,10 +157,6 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
               minute: '2-digit', 
               hour12: false 
             });
-            
-            console.log('Extracted start date components (local):', {
-              startDateStr,
-              startTimeStr
             });
             
             setEventData(prev => ({
@@ -177,12 +167,9 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
           }
           
           if (initialData.endDate) {
-            console.log('=== INITIALIZING END DATE ===');
-            console.log('Original end date (UTC):', initialData.endDate);
             
             // Parse the UTC date and convert to local timezone
             const endDate = new Date(initialData.endDate);
-            console.log('End date object (local):', endDate.toString());
             
             // Extract components in local timezone
             const endDateStr = endDate.toLocaleDateString('en-CA'); // YYYY-MM-DD format
@@ -191,10 +178,6 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
               minute: '2-digit', 
               hour12: false 
             });
-            
-            console.log('Extracted end date components (local):', {
-              endDateStr,
-              endTimeStr
             });
             
             setEventData(prev => ({
@@ -206,17 +189,13 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
           
           // CRITICAL FIX: Load existing reminders for editing
           if (initialData.id) {
-            console.log('=== LOADING EXISTING REMINDERS ===');
-            console.log('Event ID:', initialData.id);
-            
+
             try {
               // For virtual instances, use the master_id to load reminders
               const eventIdForReminders = initialData.master_id || initialData.id;
-              console.log('Loading reminders for event ID:', eventIdForReminders);
-              
+
               const existingReminders = await eventReminderService.getEventReminders(eventIdForReminders);
-              console.log('Loaded existing reminders:', existingReminders);
-              
+
               if (existingReminders && existingReminders.length > 0) {
                 // Convert database reminders to form format
                 const formattedReminders = existingReminders.map(reminder => ({
@@ -229,9 +208,7 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
                   target_groups: reminder.target_groups || [],
                   is_enabled: reminder.is_active
                 }));
-                
-                console.log('Formatted reminders:', formattedReminders);
-                
+
                 setEventData(prev => ({
                   ...prev,
                   enable_reminders: true,
@@ -247,8 +224,7 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
       } catch (error) {
         console.error('Error initializing form with timezone:', error);
       }
-      
-      console.log('=== EVENT FORM INITIALIZATION END ===');
+
     };
     
     initializeForm();
@@ -394,18 +370,12 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
 
   const handleFormChange = (e) => {
     const { name, value, type, checked } = e.target;
-    
-    console.log('Form field changed:', { name, value, type, checked });
-    
+
     if (name === 'startDate' && value) {
       // Set end date to 1 hour after start date when start date changes
       const startDateTime = new Date(value);
       const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000); // Add 1 hour
       const endDateString = endDateTime.toISOString().slice(0, 16); // Format as YYYY-MM-DDTHH:MM
-      
-      console.log('Auto-setting end date:', {
-        startDateTime: startDateTime.toString(),
-        endDateTime: endDateTime.toString(),
         endDateString,
         endTime: endDateTime.toTimeString().slice(0, 5)
       });
@@ -417,7 +387,7 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
           endDate: endDateString,
           endTime: endDateTime.toTimeString().slice(0, 5) // Update end time to HH:MM
         };
-        console.log('Updated eventData after start date change:', newData);
+
         return newData;
       });
     } else {
@@ -426,7 +396,7 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
           ...prev,
           [name]: type === 'checkbox' ? checked : value
         };
-        console.log('Updated eventData:', newData);
+
         return newData;
       });
     }
@@ -452,19 +422,11 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
   };
 
   const handleSubmit = (e) => {
-    console.log('=== FORM SUBMIT TRIGGERED ===');
+
     e.preventDefault();
-    
-    console.log('=== EVENT FORM SUBMIT START ===');
-    console.log('Current eventData:', JSON.stringify(eventData, null, 2));
-    console.log('Organization timezone:', organizationTimezone);
-    
+
     if (!eventData.title || !eventData.startDate || !eventData.endDate) {
-      console.log('Missing required fields:', {
-        title: !!eventData.title,
-        startDate: !!eventData.startDate,
-        endDate: !!eventData.endDate
-      });
+
       toast({ title: "Missing Information", description: "Please fill in all required fields.", variant: "destructive" });
       return;
     }
@@ -490,14 +452,7 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
     }
 
     // PROPER SOLUTION: Create Date objects and convert to UTC
-    console.log('=== PROPER DATE PROCESSING ===');
-    console.log('User entered dates:', {
-      startDate: eventData.startDate,
-      startTime: eventData.startTime,
-      endDate: eventData.endDate,
-      endTime: eventData.endTime
-    });
-    
+
     // Validate that dates are provided
     if (!eventData.startDate || !eventData.endDate || !eventData.startTime || !eventData.endTime) {
       console.error('Missing date/time fields');
@@ -512,19 +467,10 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
     
     const startDateTime = `${startDateOnly}T${eventData.startTime}:00`;
     const endDateTime = `${endDateOnly}T${eventData.endTime}:00`;
-    
-    console.log('Combined date strings:', {
-      startDateTime,
-      endDateTime
-    });
-    
+
     // Create Date objects (these will be interpreted as local time)
     const startDateObj = new Date(startDateTime);
     const endDateObj = new Date(endDateTime);
-    
-    console.log('Date objects created:', {
-      startDateObj: startDateObj.toString(),
-      endDateObj: endDateObj.toString(),
       startDateValid: !isNaN(startDateObj.getTime()),
       endDateValid: !isNaN(endDateObj.getTime()),
       startDateTime: startDateTime,
@@ -557,17 +503,6 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
     // Convert to UTC for database storage
     const finalStartDateISO = startDateObj.toISOString();
     const finalEndDateISO = endDateObj.toISOString();
-    
-    console.log('Final UTC dates:', {
-      finalStartDateISO,
-      finalEndDateISO
-    });
-    
-    console.log('=== FINAL DATES ===');
-    console.log('Final ISO dates:', {
-      finalStartDateISO,
-      finalEndDateISO
-    });
 
     // Format volunteer roles as JSON array of objects
     const formattedVolunteerRoles = Array.isArray(eventData.volunteer_roles) 
@@ -586,10 +521,6 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
       enable_reminders: eventData.enable_reminders,
       reminders: eventData.reminders || []
     };
-
-    console.log('=== FINAL FORMATTED DATA ===');
-    console.log('Formatted data being sent to onSave:', JSON.stringify(formattedData, null, 2));
-    console.log('=== EVENT FORM SUBMIT END ===');
 
     onSave(formattedData);
   };
@@ -651,7 +582,7 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
                 const date = e.target.value;
                 const time = eventData.startTime || '09:00';
                 const dateTime = `${date}T${time}`;
-                console.log('Start date input changed:', { date, time, dateTime });
+
                 handleFormChange({ target: { name: 'startDate', value: dateTime } });
               }}
               required 
@@ -661,7 +592,7 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
               onValueChange={(time) => {
                 const date = eventData.startDate ? eventData.startDate.split('T')[0] : '';
                 const dateTime = date ? `${date}T${time}` : '';
-                console.log('Start time select changed:', { time, date, dateTime });
+
                 setEventData(prev => ({ ...prev, startTime: time }));
                 if (dateTime) {
                   handleFormChange({ target: { name: 'startDate', value: dateTime } });
@@ -699,7 +630,7 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
                 const date = e.target.value;
                 const time = eventData.endTime || '10:00';
                 const dateTime = `${date}T${time}`;
-                console.log('End date input changed:', { date, time, dateTime });
+
                 handleFormChange({ target: { name: 'endDate', value: dateTime } });
               }}
               required 
@@ -709,7 +640,7 @@ const EventForm = ({ initialData, onSave, onCancel }) => {
               onValueChange={(time) => {
                 const date = eventData.endDate ? eventData.endDate.split('T')[0] : '';
                 const dateTime = date ? `${date}T${time}` : '';
-                console.log('End time select changed:', { time, date, dateTime });
+
                 setEventData(prev => ({ ...prev, endTime: time }));
                 if (dateTime) {
                   handleFormChange({ target: { name: 'endDate', value: dateTime } });

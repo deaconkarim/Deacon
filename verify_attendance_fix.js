@@ -7,8 +7,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function verifyAttendanceFix() {
-  console.log('🔍 Verifying attendance fix...');
-  
+
   try {
     // Check events
     const { data: events, error: eventsError } = await supabase
@@ -17,8 +16,7 @@ async function verifyAttendanceFix() {
       .order('start_date');
     
     if (eventsError) throw eventsError;
-    console.log(`📅 Events found: ${events.length}`);
-    
+
     // Check attendance
     const { data: attendance, error: attendanceError } = await supabase
       .from('event_attendance')
@@ -26,8 +24,7 @@ async function verifyAttendanceFix() {
       .order('created_at');
     
     if (attendanceError) throw attendanceError;
-    console.log(`👥 Attendance records found: ${attendance.length}`);
-    
+
     // Check for duplicates
     const duplicateMap = new Map();
     attendance.forEach(record => {
@@ -42,30 +39,25 @@ async function verifyAttendanceFix() {
     
     const duplicates = Array.from(duplicateMap.entries())
       .filter(([key, records]) => records.length > 1);
-    
-    console.log(`⚠️  Duplicate records remaining: ${duplicates.length}`);
-    
+
     // Check orphaned records
     const orphanedRecords = attendance.filter(record => {
       return !events.some(event => event.id === record.event_id);
     });
-    
-    console.log(`🔗 Orphaned records: ${orphanedRecords.length}`);
-    
+
     // Show sample data
-    console.log('\n📊 Sample events:');
+
     events.slice(0, 3).forEach(event => {
-      console.log(`  - ${event.title} (${event.event_type})`);
+
     });
-    
-    console.log('\n📊 Sample attendance:');
+
     attendance.slice(0, 5).forEach(record => {
       const event = events.find(e => e.id === record.event_id);
-      console.log(`  - ${record.anonymous_name || 'Anonymous'} attended ${event?.title || 'Unknown Event'}`);
+
     });
     
     // Test the unique constraint
-    console.log('\n🧪 Testing unique constraint...');
+
     try {
       const testRecord = {
         event_id: events[0]?.id,
@@ -79,14 +71,14 @@ async function verifyAttendanceFix() {
         .insert(testRecord);
       
       if (testError && testError.code === '23505') {
-        console.log('✅ Unique constraint is working correctly');
+
       } else if (testError) {
-        console.log(`⚠️  Test insert failed: ${testError.message}`);
+
       } else {
-        console.log('✅ Test insert succeeded');
+
       }
     } catch (error) {
-      console.log(`⚠️  Test failed: ${error.message}`);
+
     }
     
     return {
@@ -106,13 +98,11 @@ async function verifyAttendanceFix() {
 // Run the verification
 verifyAttendanceFix()
   .then((result) => {
-    console.log('\n🎉 Verification completed!');
-    console.log('📈 Summary:', result);
-    
+
     if (result.duplicates === 0 && result.orphaned === 0) {
-      console.log('✅ Attendance data is now clean and ready to use!');
+
     } else {
-      console.log('⚠️  Some issues remain. Run the comprehensive fix SQL script.');
+
     }
     
     process.exit(0);
@@ -129,8 +119,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function verifyAttendanceFix() {
-  console.log('🔍 Verifying attendance fix...');
-  
+
   try {
     // Check events
     const { data: events, error: eventsError } = await supabase
@@ -139,8 +128,7 @@ async function verifyAttendanceFix() {
       .order('start_date');
     
     if (eventsError) throw eventsError;
-    console.log(`📅 Events found: ${events.length}`);
-    
+
     // Check attendance
     const { data: attendance, error: attendanceError } = await supabase
       .from('event_attendance')
@@ -148,8 +136,7 @@ async function verifyAttendanceFix() {
       .order('created_at');
     
     if (attendanceError) throw attendanceError;
-    console.log(`👥 Attendance records found: ${attendance.length}`);
-    
+
     // Check for duplicates
     const duplicateMap = new Map();
     attendance.forEach(record => {
@@ -164,30 +151,25 @@ async function verifyAttendanceFix() {
     
     const duplicates = Array.from(duplicateMap.entries())
       .filter(([key, records]) => records.length > 1);
-    
-    console.log(`⚠️  Duplicate records remaining: ${duplicates.length}`);
-    
+
     // Check orphaned records
     const orphanedRecords = attendance.filter(record => {
       return !events.some(event => event.id === record.event_id);
     });
-    
-    console.log(`🔗 Orphaned records: ${orphanedRecords.length}`);
-    
+
     // Show sample data
-    console.log('\n📊 Sample events:');
+
     events.slice(0, 3).forEach(event => {
-      console.log(`  - ${event.title} (${event.event_type})`);
+
     });
-    
-    console.log('\n📊 Sample attendance:');
+
     attendance.slice(0, 5).forEach(record => {
       const event = events.find(e => e.id === record.event_id);
-      console.log(`  - ${record.anonymous_name || 'Anonymous'} attended ${event?.title || 'Unknown Event'}`);
+
     });
     
     // Test the unique constraint
-    console.log('\n🧪 Testing unique constraint...');
+
     try {
       const testRecord = {
         event_id: events[0]?.id,
@@ -201,14 +183,14 @@ async function verifyAttendanceFix() {
         .insert(testRecord);
       
       if (testError && testError.code === '23505') {
-        console.log('✅ Unique constraint is working correctly');
+
       } else if (testError) {
-        console.log(`⚠️  Test insert failed: ${testError.message}`);
+
       } else {
-        console.log('✅ Test insert succeeded');
+
       }
     } catch (error) {
-      console.log(`⚠️  Test failed: ${error.message}`);
+
     }
     
     return {
@@ -228,13 +210,11 @@ async function verifyAttendanceFix() {
 // Run the verification
 verifyAttendanceFix()
   .then((result) => {
-    console.log('\n🎉 Verification completed!');
-    console.log('📈 Summary:', result);
-    
+
     if (result.duplicates === 0 && result.orphaned === 0) {
-      console.log('✅ Attendance data is now clean and ready to use!');
+
     } else {
-      console.log('⚠️  Some issues remain. Run the comprehensive fix SQL script.');
+
     }
     
     process.exit(0);
@@ -251,8 +231,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function verifyAttendanceFix() {
-  console.log('🔍 Verifying attendance fix...');
-  
+
   try {
     // Check events
     const { data: events, error: eventsError } = await supabase
@@ -261,8 +240,7 @@ async function verifyAttendanceFix() {
       .order('start_date');
     
     if (eventsError) throw eventsError;
-    console.log(`📅 Events found: ${events.length}`);
-    
+
     // Check attendance
     const { data: attendance, error: attendanceError } = await supabase
       .from('event_attendance')
@@ -270,8 +248,7 @@ async function verifyAttendanceFix() {
       .order('created_at');
     
     if (attendanceError) throw attendanceError;
-    console.log(`👥 Attendance records found: ${attendance.length}`);
-    
+
     // Check for duplicates
     const duplicateMap = new Map();
     attendance.forEach(record => {
@@ -286,30 +263,25 @@ async function verifyAttendanceFix() {
     
     const duplicates = Array.from(duplicateMap.entries())
       .filter(([key, records]) => records.length > 1);
-    
-    console.log(`⚠️  Duplicate records remaining: ${duplicates.length}`);
-    
+
     // Check orphaned records
     const orphanedRecords = attendance.filter(record => {
       return !events.some(event => event.id === record.event_id);
     });
-    
-    console.log(`🔗 Orphaned records: ${orphanedRecords.length}`);
-    
+
     // Show sample data
-    console.log('\n📊 Sample events:');
+
     events.slice(0, 3).forEach(event => {
-      console.log(`  - ${event.title} (${event.event_type})`);
+
     });
-    
-    console.log('\n📊 Sample attendance:');
+
     attendance.slice(0, 5).forEach(record => {
       const event = events.find(e => e.id === record.event_id);
-      console.log(`  - ${record.anonymous_name || 'Anonymous'} attended ${event?.title || 'Unknown Event'}`);
+
     });
     
     // Test the unique constraint
-    console.log('\n🧪 Testing unique constraint...');
+
     try {
       const testRecord = {
         event_id: events[0]?.id,
@@ -323,14 +295,14 @@ async function verifyAttendanceFix() {
         .insert(testRecord);
       
       if (testError && testError.code === '23505') {
-        console.log('✅ Unique constraint is working correctly');
+
       } else if (testError) {
-        console.log(`⚠️  Test insert failed: ${testError.message}`);
+
       } else {
-        console.log('✅ Test insert succeeded');
+
       }
     } catch (error) {
-      console.log(`⚠️  Test failed: ${error.message}`);
+
     }
     
     return {
@@ -350,13 +322,11 @@ async function verifyAttendanceFix() {
 // Run the verification
 verifyAttendanceFix()
   .then((result) => {
-    console.log('\n🎉 Verification completed!');
-    console.log('📈 Summary:', result);
-    
+
     if (result.duplicates === 0 && result.orphaned === 0) {
-      console.log('✅ Attendance data is now clean and ready to use!');
+
     } else {
-      console.log('⚠️  Some issues remain. Run the comprehensive fix SQL script.');
+
     }
     
     process.exit(0);

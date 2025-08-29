@@ -7,11 +7,10 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function createEventAttendance() {
-  console.log('🔄 Creating event attendance records...');
-  
+
   try {
     // Step 1: Get the organization ID
-    console.log('📋 Step 1: Getting organization...');
+
     const { data: orgs, error: orgError } = await supabase
       .from('organizations')
       .select('id, name')
@@ -24,10 +23,9 @@ async function createEventAttendance() {
     }
     
     const orgId = orgs[0].id;
-    console.log(`✅ Found organization: ${orgs[0].name} (${orgId})`);
-    
+
     // Step 2: Create events
-    console.log('📅 Step 2: Creating events...');
+
     const events = [
       {
         title: 'Sunday Worship Service - January 7, 2024',
@@ -86,26 +84,23 @@ async function createEventAttendance() {
           .single();
         
         if (eventError) {
-          console.log(`⚠️  Event creation failed for ${event.title}:`, eventError.message);
+
           continue;
         }
         
         createdEvents.push(createdEvent);
-        console.log(`✅ Created event: ${createdEvent.title}`);
+
       } catch (error) {
-        console.log(`⚠️  Event creation failed for ${event.title}:`, error.message);
+
       }
     }
     
     if (createdEvents.length === 0) {
       throw new Error('No events were created successfully');
     }
-    
-    console.log(`📊 Successfully created ${createdEvents.length} events`);
-    
+
     // Step 3: Create attendance records
-    console.log('👥 Step 3: Creating attendance records...');
-    
+
     const attendanceRecords = [];
     const memberNames = [
       'Anthony Grose',
@@ -160,22 +155,19 @@ async function createEventAttendance() {
           .select();
         
         if (batchError) {
-          console.log(`⚠️  Batch insert failed:`, batchError.message);
+
           continue;
         }
         
         totalInserted += insertedBatch.length;
-        console.log(`✅ Inserted batch ${Math.floor(i/batchSize) + 1}: ${insertedBatch.length} records`);
+
       } catch (error) {
-        console.log(`⚠️  Batch insert failed:`, error.message);
+
       }
     }
-    
-    console.log(`📊 Total attendance records created: ${totalInserted}`);
-    
+
     // Step 4: Verify the data
-    console.log('🔍 Step 4: Verifying data...');
-    
+
     const { data: verifyAttendance, error: verifyError } = await supabase
       .from('event_attendance')
       .select(`
@@ -189,11 +181,11 @@ async function createEventAttendance() {
       .limit(20);
     
     if (verifyError) {
-      console.log(`⚠️  Verification failed:`, verifyError.message);
+
     } else {
-      console.log('📊 Sample attendance records:');
+
       verifyAttendance.forEach(record => {
-        console.log(`  - ${record.anonymous_name} attended ${record.events.title} (${record.events.event_type})`);
+
       });
     }
     
@@ -204,7 +196,7 @@ async function createEventAttendance() {
       .eq('organization_id', orgId);
     
     if (!statsError) {
-      console.log(`📈 Final statistics: ${finalStats.length} total attendance records`);
+
     }
     
     return {
@@ -223,13 +215,11 @@ async function createEventAttendance() {
 // Run the script
 createEventAttendance()
   .then((result) => {
-    console.log('🎉 Event attendance creation completed!');
-    console.log('📈 Summary:', result);
-    console.log('🙏 I sincerely apologize for the previous data loss. This script has restored basic attendance data.');
+
     process.exit(0);
   })
   .catch((error) => {
     console.error('💥 Failed to create event attendance:', error);
-    console.log('😔 I am deeply sorry for this situation.');
+
     process.exit(1);
   }); 

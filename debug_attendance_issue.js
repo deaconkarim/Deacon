@@ -13,7 +13,6 @@ if (!supabaseUrl || !supabaseKey) {
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function debugAttendanceIssue() {
-  console.log('🔍 Debugging attendance inconsistency and "Other" event type issue...\n');
 
   try {
     // First, find Anthony Grose
@@ -24,12 +23,11 @@ async function debugAttendanceIssue() {
       .ilike('lastname', '%grose%');
 
     if (membersError || !members || members.length === 0) {
-      console.log('❌ Anthony Grose not found');
+
       return;
     }
 
     const anthony = members[0];
-    console.log(`👤 Found: ${anthony.firstname} ${anthony.lastname} (${anthony.id})`);
 
     // Get all attendance records for Anthony in the last 30 days
     const now = new Date();
@@ -55,11 +53,9 @@ async function debugAttendanceIssue() {
       .order('created_at', { ascending: false });
 
     if (attendanceError) {
-      console.log('❌ Error fetching attendance:', attendanceError);
+
       return;
     }
-
-    console.log(`📊 Total attendance records (30 days): ${attendanceRecords.length}`);
 
     // Analyze each attendance record
     const eventTypeBreakdown = {};
@@ -85,33 +81,27 @@ async function debugAttendanceIssue() {
       });
     });
 
-    console.log('\n📋 Event Type Breakdown:');
     Object.entries(eventTypeBreakdown).forEach(([type, count]) => {
-      console.log(`   ${type}: ${count} events`);
+
     });
 
-    console.log('\n📅 Detailed Event List:');
     eventDetails.forEach(detail => {
-      console.log(`   ${detail.index}. "${detail.title}" (${detail.eventId})`);
-      console.log(`      Type: "${detail.eventType}" (original: "${detail.originalEventType}")`);
-      console.log(`      Date: ${detail.startDate}`);
-      console.log(`      Status: ${detail.status}`);
-      console.log('');
+
     });
 
     // Check for events with null/empty event_type
     const eventsWithNullType = eventDetails.filter(d => !d.originalEventType || d.originalEventType === '');
     if (eventsWithNullType.length > 0) {
-      console.log('⚠️  Events with null/empty event_type:');
+
       eventsWithNullType.forEach(event => {
-        console.log(`   - "${event.title}" (${event.eventId})`);
+
       });
     }
 
     // Check for events that should be categorized differently
     const eventsWithOtherType = eventDetails.filter(d => d.eventType === 'Other');
     if (eventsWithOtherType.length > 0) {
-      console.log('\n🔍 Events categorized as "Other" that might need reclassification:');
+
       eventsWithOtherType.forEach(event => {
         const title = event.title.toLowerCase();
         let suggestedType = 'Other';
@@ -129,17 +119,12 @@ async function debugAttendanceIssue() {
         } else if (title.includes('ministry') || title.includes('group')) {
           suggestedType = 'Ministry Meeting';
         }
-        
-        console.log(`   - "${event.title}"`);
-        console.log(`     Current: "${event.eventType}" (original: "${event.originalEventType}")`);
-        console.log(`     Suggested: "${suggestedType}"`);
-        console.log('');
+
       });
     }
 
     // Test the unified service
-    console.log('\n🧪 Testing Unified Attendance Service:');
-    
+
     const unifiedAttendanceService = {
       async getMemberAttendanceCount(memberId, options = {}) {
         try {
@@ -225,9 +210,6 @@ async function debugAttendanceIssue() {
       includeDeclined: false
     });
 
-    console.log(`✅ Unified service (30 days): ${unifiedResult30Days.totalCount} events`);
-    console.log('✅ Event type breakdown:', unifiedResult30Days.eventTypeBreakdown);
-
     // Test with all-time
     const unifiedResultAllTime = await unifiedAttendanceService.getMemberAttendanceCount(anthony.id, {
       useLast30Days: false,
@@ -235,18 +217,10 @@ async function debugAttendanceIssue() {
       includeDeclined: false
     });
 
-    console.log(`✅ Unified service (all-time): ${unifiedResultAllTime.totalCount} events`);
-    console.log('✅ Event type breakdown:', unifiedResultAllTime.eventTypeBreakdown);
-
-    console.log('\n📊 Summary:');
-    console.log(`   - Direct query (30 days): ${attendanceRecords.length} events`);
-    console.log(`   - Unified service (30 days): ${unifiedResult30Days.totalCount} events`);
-    console.log(`   - Unified service (all-time): ${unifiedResultAllTime.totalCount} events`);
-    
     if (attendanceRecords.length === unifiedResult30Days.totalCount) {
-      console.log('   ✅ 30-day counts match!');
+
     } else {
-      console.log('   ❌ 30-day counts do not match!');
+
     }
 
   } catch (error) {
@@ -270,7 +244,6 @@ if (!supabaseUrl || !supabaseKey) {
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function debugAttendanceIssue() {
-  console.log('🔍 Debugging attendance inconsistency and "Other" event type issue...\n');
 
   try {
     // First, find Anthony Grose
@@ -281,12 +254,11 @@ async function debugAttendanceIssue() {
       .ilike('lastname', '%grose%');
 
     if (membersError || !members || members.length === 0) {
-      console.log('❌ Anthony Grose not found');
+
       return;
     }
 
     const anthony = members[0];
-    console.log(`👤 Found: ${anthony.firstname} ${anthony.lastname} (${anthony.id})`);
 
     // Get all attendance records for Anthony in the last 30 days
     const now = new Date();
@@ -312,11 +284,9 @@ async function debugAttendanceIssue() {
       .order('created_at', { ascending: false });
 
     if (attendanceError) {
-      console.log('❌ Error fetching attendance:', attendanceError);
+
       return;
     }
-
-    console.log(`📊 Total attendance records (30 days): ${attendanceRecords.length}`);
 
     // Analyze each attendance record
     const eventTypeBreakdown = {};
@@ -342,33 +312,27 @@ async function debugAttendanceIssue() {
       });
     });
 
-    console.log('\n📋 Event Type Breakdown:');
     Object.entries(eventTypeBreakdown).forEach(([type, count]) => {
-      console.log(`   ${type}: ${count} events`);
+
     });
 
-    console.log('\n📅 Detailed Event List:');
     eventDetails.forEach(detail => {
-      console.log(`   ${detail.index}. "${detail.title}" (${detail.eventId})`);
-      console.log(`      Type: "${detail.eventType}" (original: "${detail.originalEventType}")`);
-      console.log(`      Date: ${detail.startDate}`);
-      console.log(`      Status: ${detail.status}`);
-      console.log('');
+
     });
 
     // Check for events with null/empty event_type
     const eventsWithNullType = eventDetails.filter(d => !d.originalEventType || d.originalEventType === '');
     if (eventsWithNullType.length > 0) {
-      console.log('⚠️  Events with null/empty event_type:');
+
       eventsWithNullType.forEach(event => {
-        console.log(`   - "${event.title}" (${event.eventId})`);
+
       });
     }
 
     // Check for events that should be categorized differently
     const eventsWithOtherType = eventDetails.filter(d => d.eventType === 'Other');
     if (eventsWithOtherType.length > 0) {
-      console.log('\n🔍 Events categorized as "Other" that might need reclassification:');
+
       eventsWithOtherType.forEach(event => {
         const title = event.title.toLowerCase();
         let suggestedType = 'Other';
@@ -386,17 +350,12 @@ async function debugAttendanceIssue() {
         } else if (title.includes('ministry') || title.includes('group')) {
           suggestedType = 'Ministry Meeting';
         }
-        
-        console.log(`   - "${event.title}"`);
-        console.log(`     Current: "${event.eventType}" (original: "${event.originalEventType}")`);
-        console.log(`     Suggested: "${suggestedType}"`);
-        console.log('');
+
       });
     }
 
     // Test the unified service
-    console.log('\n🧪 Testing Unified Attendance Service:');
-    
+
     const unifiedAttendanceService = {
       async getMemberAttendanceCount(memberId, options = {}) {
         try {
@@ -482,9 +441,6 @@ async function debugAttendanceIssue() {
       includeDeclined: false
     });
 
-    console.log(`✅ Unified service (30 days): ${unifiedResult30Days.totalCount} events`);
-    console.log('✅ Event type breakdown:', unifiedResult30Days.eventTypeBreakdown);
-
     // Test with all-time
     const unifiedResultAllTime = await unifiedAttendanceService.getMemberAttendanceCount(anthony.id, {
       useLast30Days: false,
@@ -492,18 +448,10 @@ async function debugAttendanceIssue() {
       includeDeclined: false
     });
 
-    console.log(`✅ Unified service (all-time): ${unifiedResultAllTime.totalCount} events`);
-    console.log('✅ Event type breakdown:', unifiedResultAllTime.eventTypeBreakdown);
-
-    console.log('\n📊 Summary:');
-    console.log(`   - Direct query (30 days): ${attendanceRecords.length} events`);
-    console.log(`   - Unified service (30 days): ${unifiedResult30Days.totalCount} events`);
-    console.log(`   - Unified service (all-time): ${unifiedResultAllTime.totalCount} events`);
-    
     if (attendanceRecords.length === unifiedResult30Days.totalCount) {
-      console.log('   ✅ 30-day counts match!');
+
     } else {
-      console.log('   ❌ 30-day counts do not match!');
+
     }
 
   } catch (error) {
@@ -527,7 +475,6 @@ if (!supabaseUrl || !supabaseKey) {
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function debugAttendanceIssue() {
-  console.log('🔍 Debugging attendance inconsistency and "Other" event type issue...\n');
 
   try {
     // First, find Anthony Grose
@@ -538,12 +485,11 @@ async function debugAttendanceIssue() {
       .ilike('lastname', '%grose%');
 
     if (membersError || !members || members.length === 0) {
-      console.log('❌ Anthony Grose not found');
+
       return;
     }
 
     const anthony = members[0];
-    console.log(`👤 Found: ${anthony.firstname} ${anthony.lastname} (${anthony.id})`);
 
     // Get all attendance records for Anthony in the last 30 days
     const now = new Date();
@@ -569,11 +515,9 @@ async function debugAttendanceIssue() {
       .order('created_at', { ascending: false });
 
     if (attendanceError) {
-      console.log('❌ Error fetching attendance:', attendanceError);
+
       return;
     }
-
-    console.log(`📊 Total attendance records (30 days): ${attendanceRecords.length}`);
 
     // Analyze each attendance record
     const eventTypeBreakdown = {};
@@ -599,33 +543,27 @@ async function debugAttendanceIssue() {
       });
     });
 
-    console.log('\n📋 Event Type Breakdown:');
     Object.entries(eventTypeBreakdown).forEach(([type, count]) => {
-      console.log(`   ${type}: ${count} events`);
+
     });
 
-    console.log('\n📅 Detailed Event List:');
     eventDetails.forEach(detail => {
-      console.log(`   ${detail.index}. "${detail.title}" (${detail.eventId})`);
-      console.log(`      Type: "${detail.eventType}" (original: "${detail.originalEventType}")`);
-      console.log(`      Date: ${detail.startDate}`);
-      console.log(`      Status: ${detail.status}`);
-      console.log('');
+
     });
 
     // Check for events with null/empty event_type
     const eventsWithNullType = eventDetails.filter(d => !d.originalEventType || d.originalEventType === '');
     if (eventsWithNullType.length > 0) {
-      console.log('⚠️  Events with null/empty event_type:');
+
       eventsWithNullType.forEach(event => {
-        console.log(`   - "${event.title}" (${event.eventId})`);
+
       });
     }
 
     // Check for events that should be categorized differently
     const eventsWithOtherType = eventDetails.filter(d => d.eventType === 'Other');
     if (eventsWithOtherType.length > 0) {
-      console.log('\n🔍 Events categorized as "Other" that might need reclassification:');
+
       eventsWithOtherType.forEach(event => {
         const title = event.title.toLowerCase();
         let suggestedType = 'Other';
@@ -643,17 +581,12 @@ async function debugAttendanceIssue() {
         } else if (title.includes('ministry') || title.includes('group')) {
           suggestedType = 'Ministry Meeting';
         }
-        
-        console.log(`   - "${event.title}"`);
-        console.log(`     Current: "${event.eventType}" (original: "${event.originalEventType}")`);
-        console.log(`     Suggested: "${suggestedType}"`);
-        console.log('');
+
       });
     }
 
     // Test the unified service
-    console.log('\n🧪 Testing Unified Attendance Service:');
-    
+
     const unifiedAttendanceService = {
       async getMemberAttendanceCount(memberId, options = {}) {
         try {
@@ -739,9 +672,6 @@ async function debugAttendanceIssue() {
       includeDeclined: false
     });
 
-    console.log(`✅ Unified service (30 days): ${unifiedResult30Days.totalCount} events`);
-    console.log('✅ Event type breakdown:', unifiedResult30Days.eventTypeBreakdown);
-
     // Test with all-time
     const unifiedResultAllTime = await unifiedAttendanceService.getMemberAttendanceCount(anthony.id, {
       useLast30Days: false,
@@ -749,18 +679,10 @@ async function debugAttendanceIssue() {
       includeDeclined: false
     });
 
-    console.log(`✅ Unified service (all-time): ${unifiedResultAllTime.totalCount} events`);
-    console.log('✅ Event type breakdown:', unifiedResultAllTime.eventTypeBreakdown);
-
-    console.log('\n📊 Summary:');
-    console.log(`   - Direct query (30 days): ${attendanceRecords.length} events`);
-    console.log(`   - Unified service (30 days): ${unifiedResult30Days.totalCount} events`);
-    console.log(`   - Unified service (all-time): ${unifiedResultAllTime.totalCount} events`);
-    
     if (attendanceRecords.length === unifiedResult30Days.totalCount) {
-      console.log('   ✅ 30-day counts match!');
+
     } else {
-      console.log('   ❌ 30-day counts do not match!');
+
     }
 
   } catch (error) {

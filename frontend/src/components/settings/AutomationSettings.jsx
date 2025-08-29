@@ -61,7 +61,6 @@ export default function AutomationSettings() {
     const fetchOrganizationId = async () => {
       try {
         const orgId = await getCurrentUserOrganizationId();
-        console.log('AutomationSettings: organization_id =', orgId);
         setOrganizationId(orgId);
         if (orgId) {
           await loadAutomationData(orgId);
@@ -79,7 +78,6 @@ export default function AutomationSettings() {
 
   const loadAutomationData = async (orgId) => {
     try {
-      console.log('Loading automation data for organization:', orgId);
       setLoading(true);
       const [settingsData, rulesData, executionsData] = await Promise.all([
         automationService.getAutomationSettings(orgId),
@@ -87,7 +85,6 @@ export default function AutomationSettings() {
         automationService.getAutomationExecutions(orgId, 10)
       ]);
 
-      console.log('Automation data loaded:', { settingsData, rulesData, executionsData });
       setSettings(settingsData);
       setRules(rulesData);
       setExecutions(executionsData);
@@ -100,8 +97,7 @@ export default function AutomationSettings() {
 
   const loadUsers = async (orgId) => {
     try {
-      console.log('Loading users for organization:', orgId);
-      
+
       // Get organization users with member data
       const [orgUsersResult, membersResult] = await Promise.all([
         supabase
@@ -143,7 +139,6 @@ export default function AutomationSettings() {
         }
       });
 
-      console.log('Users loaded:', userList);
       setUsers(userList);
     } catch (error) {
       console.error('Error loading users:', error);
@@ -222,9 +217,7 @@ export default function AutomationSettings() {
     if (!editingRule) return;
     try {
       setSaving(true);
-      console.log('🔧 Saving automation rule:', editingRule.id);
-      console.log('📝 Edit form data:', editForm);
-      
+
       // Always assemble from form fields for consistency
       const assembledTC = {};
       if (editForm.tc_event_type && editForm.tc_event_type !== 'any') assembledTC.event_type = editForm.tc_event_type;
@@ -239,10 +232,7 @@ export default function AutomationSettings() {
       if (editForm.ad_priority) assembledAD.priority = editForm.ad_priority;
       if (editForm.ad_assigned_to) assembledAD.assigned_to = editForm.ad_assigned_to;
       if (editForm.ad_due_date_offset_days) assembledAD.due_date_offset_days = Number(editForm.ad_due_date_offset_days);
-      
-      console.log('🔧 Assembled trigger conditions:', assembledTC);
-      console.log('🔧 Assembled action data:', assembledAD);
-      
+
       const updatedRule = {
         name: editForm.name,
         description: editForm.description,
@@ -252,12 +242,9 @@ export default function AutomationSettings() {
         action_data: assembledAD,
         is_active: editForm.is_active
       };
-      
-      console.log('🔧 Final updated rule:', updatedRule);
-      
+
       const result = await automationService.updateAutomationRule(editingRule.id, updatedRule);
-      console.log('✅ Rule updated successfully:', result);
-      
+
       setRules(prev => prev.map(rule => rule.id === editingRule.id ? { ...rule, ...updatedRule } : rule));
       setIsEditDialogOpen(false);
       setEditingRule(null);

@@ -234,23 +234,17 @@ export const smsService = {
   },
 
   async sendMessage(messageData) {
-    console.log('🚀 SMS Service: Starting sendMessage function');
-    console.log('📱 Message Data:', JSON.stringify(messageData, null, 2));
-    
+
     // Get organization ID
     const organizationId = await getCurrentUserOrganizationId();
     if (!organizationId) {
       throw new Error('User not associated with any organization');
     }
-    
-    console.log('🏢 Organization ID for SMS:', organizationId);
-    
+
     // Get Twilio phone number from environment (try both VITE_ and non-VITE_ versions)
     const twilioPhoneNumber = import.meta.env.VITE_TWILIO_PHONE_NUMBER || import.meta.env.TWILIO_PHONE_NUMBER;
-    console.log('📞 Twilio Phone Number:', twilioPhoneNumber ? '✅ Configured' : '❌ Not configured');
-    
+
     // Debug: Check all available environment variables
-    console.log('🔍 Available environment variables:', {
       VITE_TWILIO_PHONE_NUMBER: import.meta.env.VITE_TWILIO_PHONE_NUMBER,
       TWILIO_PHONE_NUMBER: import.meta.env.TWILIO_PHONE_NUMBER,
       VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL ? '✅ Set' : '❌ Not set',
@@ -264,8 +258,7 @@ export const smsService = {
     // Render template if template_id is provided
     let finalMessageBody = messageData.body;
     if (messageData.template_id) {
-      console.log('📝 Rendering template with ID:', messageData.template_id);
-      
+
       // Get the template
       const { data: template, error: templateError } = await supabase
         .from('sms_templates')
@@ -288,13 +281,12 @@ export const smsService = {
       
       // Render the template
       finalMessageBody = await this.renderTemplate(template, variableValues);
-      console.log('✅ Template rendered:', finalMessageBody);
+
     }
 
     // Handle group messaging - if group_id is provided, use existing conversation
     if (messageData.group_id && !messageData.conversation_id) {
-      console.log('👥 Group message detected, looking for existing group conversation...');
-      
+
       // Look for existing conversation for this group
       const { data: existingConversation, error: conversationError } = await supabase
         .from('sms_conversations')
@@ -309,10 +301,9 @@ export const smsService = {
 
       if (existingConversation) {
         messageData.conversation_id = existingConversation.id;
-        console.log('✅ Found existing group conversation:', messageData.conversation_id);
+
       } else {
-        console.log('📝 Creating new group conversation...');
-        
+
         // Get group name for conversation title
         const { data: group } = await supabase
           .from('groups')
@@ -349,9 +340,7 @@ export const smsService = {
             }
           }
         }
-        
 
-        
         const { data: newConversation, error: createError } = await supabase
           .from('sms_conversations')
           .insert({
@@ -370,14 +359,13 @@ export const smsService = {
         }
 
         messageData.conversation_id = newConversation.id;
-        console.log('✅ New group conversation created:', messageData.conversation_id);
+
       }
     }
     
     // Handle multi-recipient messaging (individual recipients, not groups)
     if (messageData.multiple_recipients && !messageData.conversation_id) {
-      console.log('👥 Multi-recipient message detected, creating conversation...');
-      
+
       const truncatedMessage = finalMessageBody.length > 30 
         ? finalMessageBody.substring(0, 27) + '...' 
         : finalMessageBody;
@@ -424,13 +412,12 @@ export const smsService = {
       }
 
       messageData.conversation_id = newConversation.id;
-      console.log('✅ New multi-recipient conversation created:', messageData.conversation_id);
+
     }
 
     // Create or find conversation for this message (only if not already set by group logic)
     if (!messageData.conversation_id) {
-      console.log('💬 Looking for existing conversation or creating new one...');
-      
+
       // Try to find member by phone number
       let memberId = messageData.member_id;
       if (!memberId && messageData.to_number) {
@@ -441,12 +428,12 @@ export const smsService = {
           .maybeSingle(); // Use maybeSingle() instead of single() to handle no results
         
         if (memberError) {
-          console.warn('⚠️ Member lookup error:', memberError);
+
         } else if (member) {
           memberId = member.id;
-          console.log('✅ Found member:', member.firstname, member.lastname);
+
         } else {
-          console.log('ℹ️ No member found for phone number:', messageData.to_number);
+
         }
       }
 
@@ -472,7 +459,7 @@ export const smsService = {
         
         if (memberConversations && memberConversations.length > 0) {
           existingConversation = memberConversations[0];
-          console.log('✅ Found existing conversation for member:', existingConversation.id);
+
         }
       }
       
@@ -495,18 +482,17 @@ export const smsService = {
         
         if (phoneConversations && phoneConversations.length > 0) {
           existingConversation = phoneConversations[0];
-          console.log('✅ Found existing conversation for phone number:', existingConversation.id);
+
         }
       }
       
       // If we found an existing conversation, use it
       if (existingConversation) {
         messageData.conversation_id = existingConversation.id;
-        console.log('✅ Using existing conversation:', messageData.conversation_id);
+
       } else {
         // Create new conversation
-        console.log('📝 Creating new conversation...');
-        
+
         const createTitle = (messageBody, memberName, phoneNumber) => {
           // Truncate message to 50 characters for title
           const truncatedMessage = messageBody.length > 50 
@@ -576,13 +562,12 @@ export const smsService = {
         }
 
         messageData.conversation_id = conversation.id;
-        console.log('✅ New conversation created:', messageData.conversation_id);
+
       }
     }
 
     // Create the message record with conversation_id
-    console.log('💾 Creating message record in database...');
-    
+
     // Remove template_id, variables, group_id, and multiple_recipients from messageData for database insert
     const { template_id, variables, group_id, multiple_recipients, ...messageDataForDb } = messageData;
     
@@ -605,30 +590,21 @@ export const smsService = {
       throw messageError;
     }
 
-    console.log('✅ Message created in database:', message.id);
-
     // Then send via Twilio
-    console.log('📤 Attempting to send via Edge Function...');
+
     try {
       const functionPayload = {
         to: messageData.to_number,
         body: finalMessageBody, // Use the rendered template body
         messageId: message.id
       };
-      
-      console.log('📦 Function Payload:', JSON.stringify(functionPayload, null, 2));
-      
+
       const { data: functionResponse, error: twilioError } = await supabase.functions.invoke('send-sms', {
         body: functionPayload
       });
 
-      console.log('📡 Function Response:', functionResponse);
-      console.log('🔍 Function Error:', twilioError);
-
       if (twilioError) {
-        console.warn('⚠️ Edge function error, marking as queued:', twilioError.message);
-        console.log('📋 Full Error Object:', JSON.stringify(twilioError, null, 2));
-        
+
         // Don't throw error, just mark as queued for now
         await supabase
           .from('sms_messages')
@@ -637,25 +613,20 @@ export const smsService = {
             error_message: `Edge function error: ${twilioError.message}`
           })
           .eq('id', message.id);
-        
-        console.log('✅ Message marked as queued due to Edge Function error');
+
         return message;
       }
 
       // Update message status to sent
-      console.log('✅ SMS sent successfully, updating status...');
+
       await supabase
         .from('sms_messages')
         .update({ status: 'sent' })
         .eq('id', message.id);
 
-      console.log('🎉 SMS process completed successfully');
       return message;
     } catch (error) {
-      console.error('💥 SMS sending failed:', error);
-      console.log('📋 Full Error Object:', JSON.stringify(error, null, 2));
-      console.log('🔍 Error Message:', error.message);
-      console.log('🔍 Error Stack:', error.stack);
+      console.error('SMS sending failed:', error);
       
       // Don't throw error, just mark as queued for now
       await supabase
@@ -665,8 +636,7 @@ export const smsService = {
           error_message: `SMS sending failed: ${error.message}`
         })
         .eq('id', message.id);
-      
-      console.log('✅ Message marked as queued due to sending error');
+
       return message;
     }
   },
@@ -851,7 +821,7 @@ export const smsService = {
       .single();
 
     if (error) {
-      console.warn('Could not fetch church settings:', error);
+
       return { church_name: 'Our Church' }; // Default fallback
     }
 

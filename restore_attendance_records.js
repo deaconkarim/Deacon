@@ -7,8 +7,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function restoreAttendanceRecords() {
-  console.log('🔄 Restoring attendance records...');
-  
+
   try {
     // Attendance records that were deleted - based on cleanup output
     const attendanceRecords = [
@@ -87,11 +86,8 @@ async function restoreAttendanceRecords() {
       { event_id: 'men-s-ministry-breakfast-1747497600000', member_id: 'd99c0c0f-0d71-4099-aff2-635c29441268', status: 'attending' }
     ];
 
-    console.log(`📊 Attempting to restore ${attendanceRecords.length} attendance records...`);
-
     // Filter out records with null member_id
     const validRecords = attendanceRecords.filter(record => record.member_id !== null);
-    console.log(`📊 Valid records to restore: ${validRecords.length}`);
 
     // Insert the attendance records in batches
     const batchSize = 50;
@@ -111,10 +107,8 @@ async function restoreAttendanceRecords() {
       }
 
       createdCount += createdBatch?.length || 0;
-      console.log(`✅ Created batch ${Math.floor(i/batchSize) + 1}: ${createdBatch?.length || 0} records`);
-    }
 
-    console.log(`✅ Successfully restored ${createdCount} attendance records`);
+    }
 
     // Verify the restoration
     const { data: allAttendance, error: verifyError } = await supabase
@@ -122,8 +116,6 @@ async function restoreAttendanceRecords() {
       .select('*');
 
     if (verifyError) throw verifyError;
-
-    console.log(`\n📊 Total attendance records in database: ${allAttendance?.length || 0}`);
 
     return {
       totalRecords: allAttendance?.length || 0,
@@ -140,12 +132,7 @@ async function restoreAttendanceRecords() {
 // Run the restoration
 restoreAttendanceRecords()
   .then((result) => {
-    console.log('\n🎉 Attendance restoration completed!');
-    console.log('📈 Summary:', result);
-    console.log('\n🔄 Next steps:');
-    console.log('   1. Refresh the dashboard page');
-    console.log('   2. The attendance data should now show correctly');
-    console.log('   3. Check that events show proper attendance counts');
+
     process.exit(0);
   })
   .catch((error) => {

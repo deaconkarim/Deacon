@@ -22,14 +22,14 @@ const PWATest = () => {
 
     // Listen for install prompt
     const handleBeforeInstallPrompt = (e) => {
-      console.log('beforeinstallprompt event fired');
+
       e.preventDefault();
       setDeferredPrompt(e);
     };
 
     // Listen for app installed
     const handleAppInstalled = () => {
-      console.log('appinstalled event fired');
+
       setIsInstalled(true);
       setIsStandalone(true);
       setDeferredPrompt(null);
@@ -59,16 +59,15 @@ const PWATest = () => {
 
   const handleInstall = async () => {
     if (!deferredPrompt || typeof deferredPrompt.prompt !== 'function') {
-      console.log('No valid deferred prompt available');
+
       return;
     }
 
     try {
-      console.log('Triggering install prompt');
+
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
-      console.log('Install outcome:', outcome);
-      
+
       if (outcome === 'accepted') {
         setIsInstalled(true);
         setIsStandalone(true);
@@ -82,11 +81,7 @@ const PWATest = () => {
 
   const forceShowPrompt = () => {
     // Don't create fake events - just log the current state
-    console.log('Current PWA state:');
-    console.log('- Deferred prompt:', deferredPrompt);
-    console.log('- Is installed:', isInstalled);
-    console.log('- Is standalone:', isStandalone);
-    console.log('- Supports PWA:', supportsPWA);
+
   };
 
   return (

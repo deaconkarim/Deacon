@@ -7,12 +7,10 @@ const supabase = createClient(
 );
 
 async function testSMSFixes() {
-  console.log('🧪 Testing SMS conversation and response handling fixes...');
 
   try {
     // Test 1: Check if organization_id columns exist
-    console.log('\n📋 Test 1: Checking database schema...');
-    
+
     const { data: conversations, error: convError } = await supabase
       .from('sms_conversations')
       .select('*')
@@ -21,10 +19,10 @@ async function testSMSFixes() {
     if (convError) {
       console.error('❌ Error checking conversations table:', convError);
     } else {
-      console.log('✅ Conversations table accessible');
+
       if (conversations && conversations.length > 0) {
         const hasOrgId = 'organization_id' in conversations[0];
-        console.log(`✅ organization_id column exists: ${hasOrgId}`);
+
       }
     }
 
@@ -36,16 +34,15 @@ async function testSMSFixes() {
     if (msgError) {
       console.error('❌ Error checking messages table:', msgError);
     } else {
-      console.log('✅ Messages table accessible');
+
       if (messages && messages.length > 0) {
         const hasOrgId = 'organization_id' in messages[0];
-        console.log(`✅ organization_id column exists: ${hasOrgId}`);
+
       }
     }
 
     // Test 2: Test conversation creation and finding logic
-    console.log('\n📝 Test 2: Testing conversation creation and finding...');
-    
+
     // Get a test member
     const { data: testMember } = await supabase
       .from('members')
@@ -55,8 +52,7 @@ async function testSMSFixes() {
       .single();
 
     if (testMember) {
-      console.log(`✅ Found test member: ${testMember.firstname} ${testMember.lastname} (${testMember.phone})`);
-      
+
       // Get organization_id for this member
       const { data: orgUser } = await supabase
         .from('organization_users')
@@ -66,8 +62,7 @@ async function testSMSFixes() {
         .single();
 
       if (orgUser) {
-        console.log(`✅ Found organization_id: ${orgUser.organization_id}`);
-        
+
         // Test creating a conversation
         const { data: newConversation, error: createError } = await supabase
           .from('sms_conversations')
@@ -83,8 +78,7 @@ async function testSMSFixes() {
         if (createError) {
           console.error('❌ Error creating test conversation:', createError);
         } else {
-          console.log(`✅ Created test conversation: ${newConversation.id}`);
-          
+
           // Test finding existing conversation
           const { data: existingConversations } = await supabase
             .from('sms_conversations')
@@ -102,21 +96,20 @@ async function testSMSFixes() {
             .limit(1);
 
           if (existingConversations && existingConversations.length > 0) {
-            console.log(`✅ Found existing conversation for member: ${existingConversations[0].id}`);
+
           } else {
-            console.log('ℹ️ No existing conversations found for member (this is expected for new members)');
+
           }
         }
       } else {
-        console.log('⚠️ No organization found for test member');
+
       }
     } else {
-      console.log('⚠️ No test member found');
+
     }
 
     // Test 3: Test phone number matching logic
-    console.log('\n📱 Test 3: Testing phone number matching...');
-    
+
     if (testMember && testMember.phone) {
       // Test phone number normalization
       const normalizePhone = (phone) => {
@@ -130,7 +123,6 @@ async function testSMSFixes() {
       };
 
       const normalizedPhone = normalizePhone(testMember.phone);
-      console.log(`✅ Phone normalization: ${testMember.phone} -> ${normalizedPhone}`);
 
       // Test finding conversations by phone number
       const { data: phoneConversations } = await supabase
@@ -148,15 +140,14 @@ async function testSMSFixes() {
         .limit(1);
 
       if (phoneConversations && phoneConversations.length > 0) {
-        console.log(`✅ Found conversation by phone number: ${phoneConversations[0].id}`);
+
       } else {
-        console.log('ℹ️ No conversations found by phone number (this is expected if no messages sent yet)');
+
       }
     }
 
     // Test 4: Test response routing logic
-    console.log('\n🔄 Test 4: Testing response routing logic...');
-    
+
     // Simulate the logic from receive-sms function
     if (testMember) {
       // Strategy 1: Find by member
@@ -180,8 +171,7 @@ async function testSMSFixes() {
         .limit(5);
 
       if (memberConversations && memberConversations.length > 0) {
-        console.log(`✅ Found ${memberConversations.length} conversations for member`);
-        
+
         // Find most recent conversation
         let mostRecentConversation = null;
         let mostRecentMessageTime = null;
@@ -201,14 +191,12 @@ async function testSMSFixes() {
         }
         
         if (mostRecentConversation) {
-          console.log(`✅ Most recent conversation: ${mostRecentConversation.id} (last message: ${mostRecentMessageTime})`);
+
         }
       } else {
-        console.log('ℹ️ No conversations found for member');
+
       }
     }
-
-    console.log('\n✅ SMS fixes test completed successfully!');
 
   } catch (error) {
     console.error('❌ Test error:', error);
